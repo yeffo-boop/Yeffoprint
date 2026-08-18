@@ -1,0 +1,44 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"1200px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:group {"className":"yp-section","layout":{"type":"constrained"}} -->
+	<div class="wp-block-group yp-section">
+		<!-- wp:heading {"level":1} -->
+		<h1 class="wp-block-heading">Shop Labels</h1>
+		<!-- /wp:heading -->
+		<!-- wp:paragraph -->
+		<p>The full gallery — no forced starting point. Filter by style, color, or material; size and quantity are set once you're customizing.</p>
+		<!-- /wp:paragraph -->
+	</div>
+	<!-- /wp:group -->
+
+	<!-- wp:yeffoprint/gallery-toolbar /-->
+
+	<!-- wp:query {"queryId":3,"query":{"perPage":24,"postType":"yp_template","inherit":true},"className":"yp-shop-labels-query"} -->
+	<div class="wp-block-query yp-shop-labels-query">
+
+		<!-- wp:post-template {"className":"yp-card-grid"} -->
+			<!-- wp:yeffoprint/template-card /-->
+		<!-- /wp:post-template -->
+
+		<!-- wp:query-no-results -->
+			<!-- wp:paragraph {"className":"yp-gallery-empty"} -->
+			<p class="yp-gallery-empty">No designs match those filters yet. Try clearing one, or check back soon.</p>
+			<!-- /wp:paragraph -->
+		<!-- /wp:query-no-results -->
+
+		<!-- wp:query-pagination {"layout":{"type":"flex","justifyContent":"center"}} -->
+			<!-- wp:query-pagination-previous /-->
+			<!-- wp:query-pagination-numbers /-->
+			<!-- wp:query-pagination-next /-->
+		<!-- /wp:query-pagination -->
+
+	</div>
+	<!-- /wp:query -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

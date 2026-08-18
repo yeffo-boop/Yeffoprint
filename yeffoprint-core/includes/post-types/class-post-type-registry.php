@@ -18,11 +18,20 @@ class YeffoPrint_Post_Type_Registry {
 	}
 
 	public function register_post_types(): void {
-		register_post_type( 'yp_template', $this->args(
-			__( 'Templates', 'yeffoprint-core' ),
-			__( 'Template', 'yeffoprint-core' ),
-			[ 'title', 'editor', 'thumbnail', 'custom-fields' ],
-			true // publicly queryable: the storefront gallery reads these.
+		register_post_type( 'yp_template', array_merge(
+			$this->args(
+				__( 'Templates', 'yeffoprint-core' ),
+				__( 'Template', 'yeffoprint-core' ),
+				[ 'title', 'editor', 'thumbnail', 'custom-fields' ],
+				true // publicly queryable: the storefront gallery reads these.
+			),
+			[
+				// Archive lives at /shop-labels/ per PROJECT_SPEC §9 — the
+				// Shop Labels page *is* the yp_template archive.
+				'has_archive' => 'shop-labels',
+				'rewrite'     => [ 'slug' => 'shop-labels', 'with_front' => false ],
+				'query_var'   => 'yp_template',
+			]
 		) );
 
 		register_post_type( 'yp_material', $this->args(

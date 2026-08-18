@@ -27,12 +27,27 @@ final class YeffoPrint_Core {
 	 */
 	private function includes(): void {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-post-type-registry.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-taxonomies.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/query/class-template-query.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/search/class-template-search.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/pricing/class-pricing-placeholder.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/api/template-api.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 
 		new YeffoPrint_Post_Type_Registry();
+		new YeffoPrint_Template_Taxonomies();
+		new YeffoPrint_Template_Meta();
+		new YeffoPrint_Template_Query();
+		new YeffoPrint_Template_Search();
 
 		if ( is_admin() ) {
 			new YeffoPrint_Admin_Menu();
+		}
+
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-seed-command.php';
+			( new YeffoPrint_Seed_Command() )->register();
 		}
 	}
 }

@@ -70,8 +70,9 @@
 		<div class="yp-drawer__body">
 			<form role="search" method="get" class="yp-search-form" action="/">
 				<label class="screen-reader-text" for="yp-search-input">Search designs, styles, materials</label>
-				<input type="search" id="yp-search-input" name="s" placeholder="Search designs, styles, materials&hellip;" />
+				<input type="search" id="yp-search-input" name="s" placeholder="Search designs, styles, materials&hellip;" autocomplete="off" />
 			</form>
+			<div id="yp-search-results" class="yp-search-results" aria-live="polite"></div>
 		</div>
 	</div>
 </div>

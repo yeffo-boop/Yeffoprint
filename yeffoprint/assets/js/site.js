@@ -144,8 +144,27 @@
 		} );
 	}
 
+	/* ---------- Gallery sort auto-submit ---------- */
+
+	/**
+	 * The sort <select> in blocks/gallery-toolbar/render.php is a real
+	 * form with an Apply button, so this is optional enhancement only —
+	 * without it, sorting still works via the button.
+	 */
+	function initGalleryToolbar() {
+		var select = document.getElementById( 'yp-sort-select' );
+		if ( ! select ) {
+			return;
+		}
+
+		select.addEventListener( 'change', function () {
+			select.form.submit();
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initHeaderScroll();
 		initDrawers();
+		initGalleryToolbar();
 	} );
 } )();
