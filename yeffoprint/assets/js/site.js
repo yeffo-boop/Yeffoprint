@@ -162,9 +162,72 @@
 		} );
 	}
 
+	/* ---------- Cart drawer ---------- */
+
+	/**
+	 * PROJECT_SPEC §14: Add to Cart opens the drawer (not immediate
+	 * navigation). configurator.js does the actual add-to-cart REST
+	 * call and dispatches `yp:cart-updated` with the server-rendered
+	 * drawer contents on success — this just renders that payload and
+	 * opens the drawer that's already been here since Phase 2. Also
+	 * refreshes on open in case the cart changed in another tab.
+	 */
+	function initCartDrawer() {
+		var cartDrawer = document.getElementById( 'yp-cart-drawer' );
+		if ( ! cartDrawer || typeof yeffoprintCart === 'undefined' ) {
+			return;
+		}
+
+		var body = cartDrawer.querySelector( '.yp-drawer__body' );
+		var countEls = document.querySelectorAll( '[data-yp-cart-count]' );
+
+		function setCount( count ) {
+			countEls.forEach( function ( el ) {
+				el.textContent = count;
+			} );
+		}
+
+		function setDrawerHtml( html ) {
+			if ( body && html ) {
+				body.innerHTML = html;
+			}
+		}
+
+		function refreshDrawer() {
+			fetch( yeffoprintCart.restUrl + 'cart/drawer' )
+				.then( function ( response ) {
+					return response.ok ? response.json() : null;
+				} )
+				.then( function ( data ) {
+					if ( data ) {
+						setCount( data.cart_count );
+						setDrawerHtml( data.drawer_html );
+					}
+				} )
+				.catch( function () {} );
+		}
+
+		var trigger = document.querySelector( '[data-yp-drawer-trigger="yp-cart-drawer"]' );
+		if ( trigger ) {
+			trigger.addEventListener( 'click', refreshDrawer );
+		}
+
+		// So the header badge reflects an existing session's cart
+		// immediately, not just after the next add/open.
+		refreshDrawer();
+
+		document.addEventListener( 'yp:cart-updated', function ( event ) {
+			var detail = event.detail || {};
+			setCount( detail.count );
+			setDrawerHtml( detail.drawerHtml );
+			openDrawer( cartDrawer );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initHeaderScroll();
 		initDrawers();
 		initGalleryToolbar();
+		initCartDrawer();
 	} );
 } )();

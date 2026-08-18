@@ -38,6 +38,11 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/api/template-api.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-template-schema-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-pricing-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-item-keys.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-linked-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-item-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-cart-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 
 		new YeffoPrint_Post_Type_Registry();
@@ -48,6 +53,10 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Template_Search();
 		new YeffoPrint_Template_Schema_Controller();
 		new YeffoPrint_Pricing_Controller();
+		new YeffoPrint_Linked_Product();
+		new YeffoPrint_Cart_Pricing();
+		new YeffoPrint_Order_Item_Meta();
+		new YeffoPrint_Cart_Controller();
 
 		if ( is_admin() ) {
 			new YeffoPrint_Admin_Menu();
@@ -63,7 +72,9 @@ final class YeffoPrint_Core {
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-seed-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-shipping-setup-command.php';
 			( new YeffoPrint_Seed_Command() )->register();
+			( new YeffoPrint_Shipping_Setup_Command() )->register();
 		}
 	}
 }

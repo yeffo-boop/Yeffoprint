@@ -60,7 +60,8 @@
 		sizeId: null,
 		materialId: null,
 		activeVariantIndex: 0,
-		variants: []
+		variants: [],
+		editKey: null
 	};
 	var nextVariantId = 1;
 
@@ -102,16 +103,64 @@
 			schema.field_schema = [];
 		}
 
-		state.sizeId = schema.sizes && schema.sizes.length ? schema.sizes[ 0 ].id : null;
-		state.materialId = schema.materials && schema.materials.length ? schema.materials[ 0 ].id : null;
-		state.variants = [ createVariant() ];
-
 		statusEl.hidden = true;
 		layoutEl.hidden = false;
 
 		titleEl.textContent = schema.title || '';
 		document.title = schema.title ? schema.title + ' — YeffoPrint' : document.title;
 
+		var editKey = new URLSearchParams( window.location.search ).get( 'edit' );
+
+		if ( editKey ) {
+			loadCartItemForEdit( editKey );
+		} else {
+			applyDefaultState();
+			finishInit();
+		}
+	}
+
+	function applyDefaultState() {
+		state.sizeId = schema.sizes && schema.sizes.length ? schema.sizes[ 0 ].id : null;
+		state.materialId = schema.materials && schema.materials.length ? schema.materials[ 0 ].id : null;
+		state.variants = [ createVariant() ];
+	}
+
+	/**
+	 * "Edit customization" (PROJECT_SPEC §14): a cart drawer/cart-page
+	 * link sends the customer back here with ?edit=<cart_item_key>.
+	 * Rehydrates state from the cart item's stored batch data instead
+	 * of schema defaults; Add to Cart becomes an in-place update (see
+	 * submitAddToCart) rather than adding a second line item.
+	 */
+	function loadCartItemForEdit( key ) {
+		fetch( yeffoprintConfigurator.restUrl + 'cart/item/' + encodeURIComponent( key ) )
+			.then( function ( response ) {
+				return response.ok ? response.json() : null;
+			} )
+			.then( function ( item ) {
+				if ( item && parseInt( item.template_id, 10 ) === schema.id && Array.isArray( item.variants ) && item.variants.length ) {
+					state.editKey = key;
+					state.sizeId = item.size_id ? parseInt( item.size_id, 10 ) : null;
+					state.materialId = item.material_id ? parseInt( item.material_id, 10 ) : null;
+					state.variants = item.variants.map( function ( variant ) {
+						return {
+							id: nextVariantId++,
+							quantity: variant.quantity || 1,
+							values: variant.values || {}
+						};
+					} );
+				} else {
+					applyDefaultState();
+				}
+				finishInit();
+			} )
+			.catch( function () {
+				applyDefaultState();
+				finishInit();
+			} );
+	}
+
+	function finishInit() {
 		renderSizeOptions();
 		renderMaterialOptions();
 		renderFieldInputStructure();
@@ -122,6 +171,12 @@
 
 		if ( stickyBar ) {
 			stickyBar.hidden = false;
+		}
+
+		if ( state.editKey ) {
+			addToCartButtons.forEach( function ( button ) {
+				button.textContent = 'Update Cart';
+			} );
 		}
 	}
 
@@ -557,16 +612,87 @@
 		}
 	}
 
-	addToCartButtons.forEach( function ( button ) {
-		button.addEventListener( 'click', function () {
-			var status = document.createElement( 'p' );
-			status.className = 'yp-configurator__cart-status';
-			status.textContent = "Cart isn't connected yet — check back soon.";
-			button.insertAdjacentElement( 'afterend', status );
-			window.setTimeout( function () {
-				status.remove();
-			}, 4000 );
+	/* ---------- Add to Cart ---------- */
+
+	var cartStatusEl = null;
+
+	function showCartStatus( message, isError ) {
+		if ( ! cartStatusEl ) {
+			cartStatusEl = document.createElement( 'p' );
+			cartStatusEl.className = 'yp-configurator__cart-status';
+			summaryEl.insertAdjacentElement( 'afterend', cartStatusEl );
+		}
+		cartStatusEl.textContent = message;
+		cartStatusEl.classList.toggle( 'is-error', !! isError );
+	}
+
+	function clearCartStatus() {
+		if ( cartStatusEl ) {
+			cartStatusEl.remove();
+			cartStatusEl = null;
+		}
+	}
+
+	function submitAddToCart() {
+		clearCartStatus();
+		addToCartButtons.forEach( function ( button ) {
+			button.disabled = true;
 		} );
+
+		var payload = {
+			template_id: schema.id,
+			size_id: state.sizeId,
+			material_id: state.materialId,
+			variants: state.variants.map( function ( variant ) {
+				return { quantity: variant.quantity, values: variant.values };
+			} )
+		};
+
+		if ( state.editKey ) {
+			payload.edit_key = state.editKey;
+		}
+
+		fetch( yeffoprintConfigurator.restUrl + 'cart/add', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( payload )
+		} )
+			.then( function ( response ) {
+				return response.json().then( function ( data ) {
+					return { ok: response.ok, data: data };
+				} );
+			} )
+			.then( function ( result ) {
+				addToCartButtons.forEach( function ( button ) {
+					button.disabled = false;
+				} );
+
+				if ( ! result.ok ) {
+					showCartStatus( ( result.data && result.data.message ) || "Couldn't add this to your cart.", true );
+					return;
+				}
+
+				document.dispatchEvent( new CustomEvent( 'yp:cart-updated', {
+					detail: {
+						count: result.data.cart_count,
+						drawerHtml: result.data.drawer_html
+					}
+				} ) );
+
+				if ( state.editKey ) {
+					showCartStatus( 'Cart updated.', false );
+				}
+			} )
+			.catch( function () {
+				addToCartButtons.forEach( function ( button ) {
+					button.disabled = false;
+				} );
+				showCartStatus( "Couldn't reach the server — please try again.", true );
+			} );
+	}
+
+	addToCartButtons.forEach( function ( button ) {
+		button.addEventListener( 'click', submitAddToCart );
 	} );
 
 	init();

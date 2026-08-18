@@ -321,6 +321,11 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+.yp-configurator__cart-status.is-error {
+	color: var(--wp--preset--color--magenta);
+	font-weight: 600;
+}
+
 .yp-sticky-bar {
 	position: sticky;
 	bottom: 0;
