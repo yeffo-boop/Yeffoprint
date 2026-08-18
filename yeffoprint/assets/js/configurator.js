@@ -15,10 +15,13 @@
  * never lost while typing — a full re-render on every keystroke would
  * reset cursor position in the field inputs.
  *
- * Pricing here is provisional only (base + material/size adjustments
- * already in the REST payload) — no bulk-discount tiers yet, since
- * PricingRule / the authoritative server calc is Phase 6. See
- * docs/ARCHITECTURE.md §9.
+ * Pricing (Architecture §3): renderSummary() first shows an instant
+ * client-side estimate (base + material/size adjustments already in
+ * the REST payload, no discount tiers — the client doesn't know
+ * those), then a debounced call to /pricing/calculate replaces it
+ * with the authoritative, discount-aware breakdown. That server value
+ * — never the client estimate — is what a future Add to Cart (Phase
+ * 7) would submit. See docs/ARCHITECTURE.md §9.
  */
 ( function () {
 	'use strict';
@@ -448,30 +451,109 @@
 		} );
 	} );
 
-	/* ---------- Pricing (provisional — Phase 6 replaces this) ---------- */
+	/* ---------- Pricing ---------- */
 
-	function unitPrice() {
+	var pricingRequestId = 0;
+	var pricingDebounceTimer = null;
+
+	function unitAdjustments() {
 		var material = ( schema.materials || [] ).filter( function ( m ) { return m.id === state.materialId; } )[ 0 ];
 		var size = ( schema.sizes || [] ).filter( function ( s ) { return s.id === state.sizeId; } )[ 0 ];
 
-		return schema.base_unit_price + ( material ? material.price_adjustment : 0 ) + ( size ? size.price_adjustment : 0 );
+		return {
+			material: material ? material.price_adjustment : 0,
+			size: size ? size.price_adjustment : 0
+		};
 	}
 
 	function totalQuantity() {
 		return state.variants.reduce( function ( sum, variant ) { return sum + variant.quantity; }, 0 );
 	}
 
-	function renderSummary() {
-		var perUnit = unitPrice();
-		var qty = totalQuantity();
-		var total = perUnit * qty;
-		var text = formatCurrency( total );
+	function signedCurrency( amount ) {
+		return ( amount > 0 ? '+' : '' ) + formatCurrency( amount );
+	}
 
-		summaryEl.innerHTML = 'Estimated total <strong style="float:right;">' + text + '</strong>' +
-			'<small>' + qty + ' labels &times; ' + formatCurrency( perUnit ) + ' — before shipping. Final price is confirmed at checkout.</small>';
+	function renderSummary() {
+		renderEstimatedSummary();
+		window.clearTimeout( pricingDebounceTimer );
+		pricingDebounceTimer = window.setTimeout( fetchAuthoritativePricing, 300 );
+	}
+
+	function renderEstimatedSummary() {
+		var adjustments = unitAdjustments();
+		var perUnit = schema.base_unit_price + adjustments.material + adjustments.size;
+		var qty = totalQuantity();
+
+		renderBreakdown( {
+			label: 'Estimated total',
+			total: perUnit * qty,
+			lines: [
+				'Base: ' + formatCurrency( schema.base_unit_price ) + '/label',
+				adjustments.material ? 'Material: ' + signedCurrency( adjustments.material ) + '/label' : null,
+				adjustments.size ? 'Size: ' + signedCurrency( adjustments.size ) + '/label' : null,
+				'Quantity: ' + qty
+			],
+			note: 'Confirming final price…'
+		} );
+	}
+
+	function fetchAuthoritativePricing() {
+		var qty = totalQuantity();
+		var requestId = ++pricingRequestId;
+		var url = yeffoprintConfigurator.restUrl + 'pricing/calculate?quantity=' + qty +
+			( state.sizeId ? '&size_id=' + state.sizeId : '' ) +
+			( state.materialId ? '&material_id=' + state.materialId : '' );
+
+		fetch( url )
+			.then( function ( response ) {
+				return response.ok ? response.json() : Promise.reject( new Error( 'pricing-request-failed' ) );
+			} )
+			.then( function ( data ) {
+				if ( requestId === pricingRequestId ) {
+					renderAuthoritativeSummary( data );
+				}
+			} )
+			.catch( function () {
+				if ( requestId === pricingRequestId ) {
+					var note = summaryEl.querySelector( '.yp-configurator__summary-note' );
+					if ( note ) {
+						note.textContent = "Couldn't confirm final pricing — showing an estimate.";
+					}
+				}
+			} );
+	}
+
+	function renderAuthoritativeSummary( data ) {
+		renderBreakdown( {
+			label: 'Total',
+			total: data.total,
+			lines: [
+				'Base: ' + formatCurrency( data.base_unit_price ) + '/label',
+				data.material_adjustment ? 'Material: ' + signedCurrency( data.material_adjustment ) + '/label' : null,
+				data.size_adjustment ? 'Size: ' + signedCurrency( data.size_adjustment ) + '/label' : null,
+				'Quantity: ' + data.quantity,
+				data.applied_tier ? 'Bulk discount: −' + formatCurrency( data.discount_per_unit ) + '/label' : null
+			],
+			note: 'Before shipping — confirmed at checkout.'
+		} );
+	}
+
+	function renderBreakdown( summary ) {
+		var lines = summary.lines.filter( function ( line ) { return line; } );
+
+		summaryEl.innerHTML =
+			'<div class="yp-configurator__summary-row">' +
+				'<span>' + escapeHtml( summary.label ) + '</span>' +
+				'<strong>' + formatCurrency( summary.total ) + '</strong>' +
+			'</div>' +
+			'<ul class="yp-configurator__summary-lines">' +
+				lines.map( function ( line ) { return '<li>' + escapeHtml( line ) + '</li>'; } ).join( '' ) +
+			'</ul>' +
+			'<small class="yp-configurator__summary-note">' + escapeHtml( summary.note ) + '</small>';
 
 		if ( stickyTotalEl ) {
-			stickyTotalEl.textContent = text + ' (' + qty + ' labels)';
+			stickyTotalEl.textContent = formatCurrency( summary.total ) + ' (' + totalQuantity() + ' labels)';
 		}
 	}
 
