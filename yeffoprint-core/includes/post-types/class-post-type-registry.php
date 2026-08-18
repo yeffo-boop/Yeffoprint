@@ -37,14 +37,18 @@ class YeffoPrint_Post_Type_Registry {
 		register_post_type( 'yp_material', $this->args(
 			__( 'Materials', 'yeffoprint-core' ),
 			__( 'Material', 'yeffoprint-core' ),
-			[ 'title', 'thumbnail', 'custom-fields' ],
+			// 'editor' is the material's description; 'thumbnail' is its
+			// swatch image; 'page-attributes' gives native drag-orderable
+			// sort_order via menu_order. Active/inactive reuses post_status
+			// (publish/draft) rather than a redundant meta flag.
+			[ 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields' ],
 			false
 		) );
 
 		register_post_type( 'yp_size', $this->args(
 			__( 'Sizes', 'yeffoprint-core' ),
 			__( 'Size', 'yeffoprint-core' ),
-			[ 'title', 'custom-fields' ],
+			[ 'title', 'page-attributes', 'custom-fields' ],
 			false
 		) );
 
