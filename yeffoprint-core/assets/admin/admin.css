@@ -1,7 +1,33 @@
 /*
- * YeffoPrint admin styles — Template/Material/Size editor screens only
- * (enqueued conditionally; see includes/admin/class-template-editor.php).
+ * YeffoPrint admin styles — Template/Material/Size/Pricing Rule editor
+ * screens only (enqueued conditionally per screen).
  */
+
+.yp-pricing-tier-row {
+	display: flex;
+	align-items: flex-end;
+	gap: 16px;
+	padding: 12px 0;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.yp-pricing-tier-row label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-weight: 600;
+	font-size: 12px;
+}
+
+.yp-pricing-tier-row input,
+.yp-pricing-tier-row select {
+	font-weight: 400;
+}
+
+.yp-pricing-tier-row .button-link-delete {
+	margin-left: auto;
+	color: #b32d2e;
+}
 
 .yp-field-schema-row {
 	border: 1px solid #dcdcde;

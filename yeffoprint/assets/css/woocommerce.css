@@ -1,0 +1,105 @@
+/*
+ * Cart/Checkout/My Account branding (PROJECT_SPEC §14: "clean branded
+ * WooCommerce checkout"). Applies our design tokens to WooCommerce's
+ * own markup rather than replacing it with custom templates — see
+ * docs/ARCHITECTURE.md §9 for why, and for the classic-vs-Blocks
+ * caveat these selectors work around by targeting both.
+ */
+
+.woocommerce-cart .entry-content,
+.woocommerce-checkout .entry-content,
+.woocommerce-account .entry-content {
+	max-width: 1200px;
+	margin-inline: auto;
+	padding: var(--wp--preset--spacing--md) var(--wp--preset--spacing--sm) var(--wp--preset--spacing--xl);
+}
+
+/* Buttons: classic (.button) and block (.wp-block-button-ish) share our token-based look already via theme.json's button element styles — just tighten a few WooCommerce-specific ones. */
+.woocommerce a.button,
+.woocommerce button.button,
+.woocommerce input.button,
+.wc-block-cart__submit-container .wc-block-cart__submit-button,
+.wc-block-components-checkout-place-order-button {
+	border-radius: var(--wp--custom--radius--input) !important;
+	background: var(--wp--preset--color--near-black) !important;
+	color: var(--wp--preset--color--warm-white) !important;
+	border: none !important;
+}
+
+.woocommerce a.button:hover,
+.woocommerce button.button:hover,
+.wc-block-components-checkout-place-order-button:hover {
+	background: var(--wp--preset--color--charcoal) !important;
+}
+
+/* Tables */
+.woocommerce table.shop_table,
+.woocommerce-checkout-review-order-table {
+	border-radius: var(--wp--custom--radius--card);
+	border-collapse: separate;
+	border-spacing: 0;
+	overflow: hidden;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.woocommerce table.shop_table th,
+.woocommerce table.shop_table td {
+	border: none;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+	padding: 1rem;
+}
+
+/* Form fields: classic + block */
+.woocommerce form .form-row input.input-text,
+.woocommerce form .form-row select,
+.woocommerce form .form-row textarea,
+.wc-block-components-text-input input,
+.wc-block-components-address-form select {
+	border-radius: var(--wp--custom--radius--input) !important;
+	border: 1.5px solid var(--wp--preset--color--light-gray) !important;
+}
+
+/* Checkout two-column layout (classic already does this structurally via .col2-set; this just gives it breathing room and a right-column card treatment matching PROJECT_SPEC §14: "left contact/shipping/payment + right order summary"). */
+.woocommerce-checkout .col2-set {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--wp--preset--spacing--lg);
+}
+
+@media (min-width: 961px) {
+	.woocommerce-checkout .col2-set {
+		grid-template-columns: 1.3fr 1fr;
+	}
+}
+
+.woocommerce-checkout #order_review,
+.wc-block-checkout__sidebar {
+	background: var(--wp--preset--color--warm-white);
+	border-radius: var(--wp--custom--radius--card);
+	padding: var(--wp--preset--spacing--md);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	align-self: start;
+}
+
+/* Account page */
+.woocommerce-MyAccount-navigation ul {
+	list-style: none;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.woocommerce-MyAccount-navigation a {
+	display: inline-block;
+	padding: 0.5rem 1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	text-decoration: none;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.woocommerce-MyAccount-navigation .is-active a {
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
+}

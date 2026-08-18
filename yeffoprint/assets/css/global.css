@@ -390,6 +390,58 @@ fieldset {
 	padding-left: 0;
 }
 
+/* ---------- Cart drawer contents (server-rendered, see PROJECT_SPEC §14) ---------- */
+
+.yp-cart-drawer__item {
+	display: flex;
+	gap: 0.9rem;
+	padding-block: 1rem;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-cart-drawer__thumb {
+	width: 4.5rem;
+	height: 4.5rem;
+	object-fit: cover;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	flex-shrink: 0;
+}
+
+.yp-cart-drawer__details {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-cart-drawer__details strong {
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-cart-drawer__price {
+	font-weight: 600;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-cart-drawer__total {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 600;
+}
+
+.yp-cart-drawer__actions {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	margin-top: 1rem;
+}
+
 /* ---------- Footer ---------- */
 
 .yp-footer {

@@ -67,6 +67,14 @@ add_action( 'wp_enqueue_scripts', function () {
 		'restUrl' => esc_url_raw( rest_url( 'wp/v2/yp_template' ) ),
 	] );
 
+	// Cart drawer data — global (the cart icon/drawer live in the
+	// header on every page), not just on the configurator screen.
+	if ( function_exists( 'WC' ) ) {
+		wp_localize_script( 'yeffoprint-site', 'yeffoprintCart', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+		] );
+	}
+
 	if ( is_singular( 'yp_template' ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',
@@ -87,6 +95,15 @@ add_action( 'wp_enqueue_scripts', function () {
 			'restUrl'    => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'templateId' => get_the_ID(),
 		] );
+	}
+
+	if ( function_exists( 'is_cart' ) && ( is_cart() || is_checkout() || is_account_page() ) ) {
+		wp_enqueue_style(
+			'yeffoprint-woocommerce',
+			get_theme_file_uri( 'assets/css/woocommerce.css' ),
+			[ 'yeffoprint-global' ],
+			$theme_version
+		);
 	}
 } );
 
