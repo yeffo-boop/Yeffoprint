@@ -34,7 +34,9 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/query/class-template-query.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/search/class-template-search.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/pricing/class-pricing-placeholder.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/configurator/quantity-presets.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/api/template-api.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-template-schema-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 
 		new YeffoPrint_Post_Type_Registry();
@@ -43,6 +45,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Commerce_Record_Meta();
 		new YeffoPrint_Template_Query();
 		new YeffoPrint_Template_Search();
+		new YeffoPrint_Template_Schema_Controller();
 
 		if ( is_admin() ) {
 			new YeffoPrint_Admin_Menu();

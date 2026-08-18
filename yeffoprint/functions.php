@@ -66,6 +66,28 @@ add_action( 'wp_enqueue_scripts', function () {
 	wp_localize_script( 'yeffoprint-search', 'yeffoprintSearch', [
 		'restUrl' => esc_url_raw( rest_url( 'wp/v2/yp_template' ) ),
 	] );
+
+	if ( is_singular( 'yp_template' ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			$theme_version
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/js/configurator.js' ),
+			[],
+			$theme_version,
+			[ 'strategy' => 'defer' ]
+		);
+
+		wp_localize_script( 'yeffoprint-configurator', 'yeffoprintConfigurator', [
+			'restUrl'    => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'templateId' => get_the_ID(),
+		] );
+	}
 } );
 
 /**
