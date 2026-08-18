@@ -36,7 +36,18 @@
 				"lg": "2.5rem",
 				"xl": "4rem",
 				"2xl": "6rem"
-			}
+			},
+			"shadow-elevation": {
+				"low": "0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04)",
+				"medium": "0 6px 20px rgba(20, 20, 20, 0.08), 0 2px 6px rgba(20, 20, 20, 0.05)",
+				"high": "0 16px 40px rgba(20, 20, 20, 0.12), 0 4px 12px rgba(20, 20, 20, 0.06)"
+			},
+			"glass": {
+				"background": "rgba(255, 255, 255, 0.72)",
+				"border": "rgba(255, 255, 255, 0.5)",
+				"blur": "16px"
+			},
+			"focus-ring": "var(--wp--preset--color--cyan)"
 		},
 		"typography": {
 			"fontFamilies": [
@@ -60,7 +71,15 @@
 			]
 		},
 		"spacing": {
-			"units": ["px", "%", "rem", "vh", "vw"]
+			"units": ["px", "%", "rem", "vh", "vw"],
+			"spacingSizes": [
+				{ "slug": "xs", "name": "XS", "size": "0.5rem" },
+				{ "slug": "sm", "name": "S", "size": "1rem" },
+				{ "slug": "md", "name": "M", "size": "1.5rem" },
+				{ "slug": "lg", "name": "L", "size": "2.5rem" },
+				{ "slug": "xl", "name": "XL", "size": "4rem" },
+				{ "slug": "2xl", "name": "2XL", "size": "6rem" }
+			]
 		}
 	},
 	"styles": {
@@ -81,12 +100,41 @@
 			"link": {
 				"color": {
 					"text": "var(--wp--preset--color--near-black)"
+				},
+				":hover": {
+					"color": {
+						"text": "var(--wp--preset--color--charcoal)"
+					}
+				}
+			},
+			"button": {
+				"color": {
+					"text": "var(--wp--preset--color--warm-white)",
+					"background": "var(--wp--preset--color--near-black)"
+				},
+				"border": {
+					"radius": "var(--wp--custom--radius--input)"
+				},
+				"spacing": {
+					"padding": {
+						"top": "0.85rem",
+						"bottom": "0.85rem",
+						"left": "1.75rem",
+						"right": "1.75rem"
+					}
+				},
+				":hover": {
+					"color": {
+						"text": "var(--wp--preset--color--warm-white)",
+						"background": "var(--wp--preset--color--charcoal)"
+					}
 				}
 			}
 		}
 	},
 	"templateParts": [
 		{ "name": "header", "area": "header" },
-		{ "name": "footer", "area": "footer" }
+		{ "name": "footer", "area": "footer" },
+		{ "name": "announcement-bar", "area": "uncategorized", "title": "Announcement Bar" }
 	]
 }

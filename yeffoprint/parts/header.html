@@ -1,5 +1,98 @@
-<!-- wp:group {"tagName":"header","layout":{"type":"constrained"}} -->
-<header class="wp-block-group">
-	<!-- wp:site-title /-->
+<!-- wp:template-part {"slug":"announcement-bar"} /-->
+
+<!-- wp:group {"tagName":"header","className":"yp-header","layout":{"type":"constrained","contentSize":"1200px"}} -->
+<header class="wp-block-group yp-header">
+
+	<!-- wp:group {"className":"yp-header__row","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"nowrap"}} -->
+	<div class="wp-block-group yp-header__row">
+
+		<!-- wp:group {"className":"yp-header__logo","layout":{"type":"flex","flexWrap":"nowrap"}} -->
+		<div class="wp-block-group yp-header__logo">
+			<!-- wp:site-logo {"width":40,"shouldSyncIcon":false} /-->
+			<!-- wp:site-title {"level":0} /-->
+		</div>
+		<!-- /wp:group -->
+
+		<!-- wp:navigation {"className":"yp-header__nav","overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"center"}} -->
+			<!-- wp:navigation-link {"label":"Shop Labels","url":"/shop-labels/"} /-->
+			<!-- wp:navigation-link {"label":"Custom Design","url":"/custom-design/"} /-->
+			<!-- wp:navigation-link {"label":"Custom Stickers","url":"/custom-stickers/"} /-->
+			<!-- wp:navigation-link {"label":"How It Works","url":"/how-it-works/"} /-->
+		<!-- /wp:navigation -->
+
+		<!-- wp:group {"className":"yp-header__actions","layout":{"type":"flex","flexWrap":"nowrap"}} -->
+		<div class="wp-block-group yp-header__actions">
+
+			<!-- wp:html -->
+			<button type="button" class="yp-icon-button" data-yp-drawer-trigger="yp-search-drawer" aria-label="Search" aria-haspopup="dialog">
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+					<circle cx="8.5" cy="8.5" r="6" stroke="currentColor" stroke-width="1.5" />
+					<line x1="13" y1="13" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
+			</button>
+			<!-- /wp:html -->
+
+			<!-- wp:woocommerce/customer-account {"displayStyle":"icon_only","iconClass":"yp-icon-button"} /-->
+
+			<!-- wp:html -->
+			<button type="button" class="yp-icon-button" data-yp-drawer-trigger="yp-cart-drawer" aria-label="Cart" aria-haspopup="dialog">
+				<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+					<path d="M2 5h2l1.6 9.2a1.5 1.5 0 0 0 1.48 1.3h7.3a1.5 1.5 0 0 0 1.48-1.24L17 8H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+					<circle cx="8.5" cy="18" r="1.1" fill="currentColor" />
+					<circle cx="15" cy="18" r="1.1" fill="currentColor" />
+				</svg>
+				<span class="yp-icon-button__count" data-yp-cart-count>0</span>
+			</button>
+			<!-- /wp:html -->
+
+		</div>
+		<!-- /wp:group -->
+
+	</div>
+	<!-- /wp:group -->
+
 </header>
 <!-- /wp:group -->
+
+<!-- wp:html -->
+<div id="yp-search-drawer" class="yp-drawer yp-drawer--top" aria-hidden="true">
+	<div class="yp-drawer__backdrop"></div>
+	<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="Search">
+		<div class="yp-drawer__header">
+			<span>Search</span>
+			<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close search">
+				<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+					<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
+			</button>
+		</div>
+		<div class="yp-drawer__body">
+			<form role="search" method="get" class="yp-search-form" action="/">
+				<label class="screen-reader-text" for="yp-search-input">Search designs, styles, materials</label>
+				<input type="search" id="yp-search-input" name="s" placeholder="Search designs, styles, materials&hellip;" />
+			</form>
+		</div>
+	</div>
+</div>
+<!-- /wp:html -->
+
+<!-- wp:html -->
+<div id="yp-cart-drawer" class="yp-drawer" aria-hidden="true">
+	<div class="yp-drawer__backdrop"></div>
+	<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="Your cart">
+		<div class="yp-drawer__header">
+			<span>Your Cart</span>
+			<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close cart">
+				<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+					<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
+			</button>
+		</div>
+		<div class="yp-drawer__body">
+			<p>Your cart is empty.</p>
+		</div>
+	</div>
+</div>
+<!-- /wp:html -->

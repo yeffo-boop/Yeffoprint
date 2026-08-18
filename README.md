@@ -16,4 +16,7 @@ Business-critical functionality lives in `yeffoprint-core` and must never depend
 
 ## Status
 
-Phase 1 (Foundation) in progress: repo scaffolding, `theme.json` design tokens, and the core data-record post types (Templates, Materials, Sizes, Pricing Rules, Custom Orders, Proofs). See `docs/PROJECT_SPEC.md` §21 for the full phased delivery plan.
+- **Phase 1 (Foundation)** — done: repo scaffolding, `theme.json` design tokens, and the core data-record post types (Templates, Materials, Sizes, Pricing Rules, Custom Orders, Proofs).
+- **Phase 2 (Global UI)** — done: floating glass header with announcement bar, search/cart drawers, footer, button/card/form styles, and accessibility foundations (focus-visible, reduced-motion, skip link, drawer focus trapping).
+
+See `docs/PROJECT_SPEC.md` §21 for the full phased delivery plan.
