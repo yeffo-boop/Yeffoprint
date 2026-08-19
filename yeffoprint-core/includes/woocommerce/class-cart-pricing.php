@@ -40,11 +40,19 @@ class YeffoPrint_Cart_Pricing {
 		}
 
 		foreach ( $cart->get_cart() as $cart_item ) {
-			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
+			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) && empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
+				// The flat $25 design fee line item — no batch/quantity
+				// data, always priced as the fee. A Custom Order's *labels*
+				// line item also carries CUSTOM_ORDER_ID (to link it back
+				// to the same record) but has TOTAL_QTY too, so it falls
+				// through to the normal per-unit calculation below instead.
 				$cart_item['data']->set_price( YeffoPrint_Pricing_Rule::get_custom_design_fee() );
 				continue;
 			}
 
+			// Both a normal Template batch and a Custom Order's own labels
+			// line item reach here and price identically — the formula
+			// only needs size/material/quantity, never a template_id.
 			$breakdown = self::calculate_for_cart_item( $cart_item );
 			if ( null !== $breakdown ) {
 				$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
@@ -94,8 +102,12 @@ class YeffoPrint_Cart_Pricing {
 	 * those without an additional Store API schema extension.
 	 */
 	public function display_item_data( array $item_data, array $cart_item ): array {
-		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
-			$custom_order = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] );
+		$custom_order_id = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ?? 0 );
+		$is_labels_item  = $custom_order_id && ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] );
+
+		if ( $custom_order_id && ! $is_labels_item ) {
+			// The flat $25 design fee line item.
+			$custom_order = get_post( $custom_order_id );
 			if ( $custom_order ) {
 				$brand = get_post_meta( $custom_order->ID, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
 				$item_data[] = [ 'key' => __( 'Brand', 'yeffoprint-core' ), 'value' => $brand ?: '—' ];
@@ -115,6 +127,17 @@ class YeffoPrint_Cart_Pricing {
 		$material = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
 		if ( $material ) {
 			$item_data[] = [ 'key' => __( 'Material', 'yeffoprint-core' ), 'value' => $material->post_title ];
+		}
+
+		if ( $is_labels_item ) {
+			// A Custom Order's own labels: a single print run, not a
+			// batch of per-variant customizations — there's no
+			// field_schema/variants to render here (Architecture §2).
+			$item_data[] = [
+				'key'   => __( 'Quantity', 'yeffoprint-core' ),
+				'value' => number_format_i18n( (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ),
+			];
+			return $item_data;
 		}
 
 		$variants = $cart_item[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [];
@@ -167,7 +190,8 @@ class YeffoPrint_Cart_Pricing {
 	 */
 	public function require_batch_data( bool $passed, int $product_id, int $quantity ): bool {
 		$is_linked_product = YeffoPrint_Linked_Product::get_template_id( $product_id )
-			|| $product_id === YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id();
+			|| $product_id === YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id()
+			|| $product_id === YeffoPrint_Custom_Order_Labels_Product::get_existing_product_id();
 
 		if ( ! $is_linked_product || self::$bypass_validation ) {
 			return $passed;

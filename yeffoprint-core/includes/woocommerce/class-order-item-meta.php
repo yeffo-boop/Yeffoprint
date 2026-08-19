@@ -27,8 +27,10 @@ class YeffoPrint_Order_Item_Meta {
 	}
 
 	public function snapshot( \WC_Order_Item_Product $item, string $cart_item_key, array $values, \WC_Order $order ): void {
-		if ( ! empty( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
-			$this->snapshot_custom_order_fee( $item, (int) $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] );
+		$custom_order_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ?? 0 );
+
+		if ( $custom_order_id && empty( $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
+			$this->snapshot_custom_order_fee( $item, $custom_order_id );
 			return;
 		}
 
@@ -36,14 +38,22 @@ class YeffoPrint_Order_Item_Meta {
 			return;
 		}
 
-		$template_id  = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
-		$size_id      = (int) ( $values[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
-		$material_id  = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
-		$variants     = (array) ( $values[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [] );
-		$quantity     = (int) $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
-		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+		$size_id     = (int) ( $values[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
+		$material_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
+		$quantity    = (int) $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
+		$pricing     = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values );
 
-		$pricing = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values );
+		if ( $custom_order_id ) {
+			// A Custom Order's own labels: same Size/Material/pricing
+			// snapshot shape as a Template batch, but there's no
+			// template/field_schema/variants behind it (Architecture §2).
+			$this->snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing );
+			return;
+		}
+
+		$template_id  = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
+		$variants     = (array) ( $values[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [] );
+		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
 
 		$item->add_meta_data( '_yp_template_snapshot', wp_json_encode( [
 			'id'           => $template_id,
@@ -64,6 +74,18 @@ class YeffoPrint_Order_Item_Meta {
 		$item->add_meta_data( __( 'Labels in this batch', 'yeffoprint-core' ), count( $variants ), true );
 
 		$this->add_variant_rows( $item, $variants, $field_schema );
+	}
+
+	private function snapshot_custom_order_labels( \WC_Order_Item_Product $item, int $custom_order_id, int $size_id, int $material_id, int $quantity, ?array $pricing ): void {
+		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
+		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( $this->record_snapshot( $size_id ) ), true );
+		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( $this->record_snapshot( $material_id ) ), true );
+		$item->add_meta_data( '_yp_batch_quantity', $quantity, true );
+		$item->add_meta_data( '_yp_pricing_snapshot', wp_json_encode( $pricing ), true );
+
+		$item->add_meta_data( __( 'Size', 'yeffoprint-core' ), $size_id ? get_the_title( $size_id ) : '—', true );
+		$item->add_meta_data( __( 'Material', 'yeffoprint-core' ), $material_id ? get_the_title( $material_id ) : '—', true );
+		$item->add_meta_data( __( 'Quantity', 'yeffoprint-core' ), $quantity, true );
 	}
 
 	/**

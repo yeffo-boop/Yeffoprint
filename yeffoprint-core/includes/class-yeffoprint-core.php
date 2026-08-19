@@ -46,6 +46,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-item-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-cart-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-design-fee-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-order-labels-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/uploads/class-secure-upload.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-meta.php';

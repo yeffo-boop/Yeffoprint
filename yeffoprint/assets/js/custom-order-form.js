@@ -28,11 +28,60 @@
 	var filesInput = document.getElementById( 'yp-co-files' );
 	var fileListEl = root.querySelector( '[data-yp-co-file-list]' );
 	var submitButton = root.querySelector( '[data-yp-co-submit]' );
+	var labelQtyEl = root.querySelector( '[data-yp-co-label-qty]' );
+	var unitPriceEl = root.querySelector( '[data-yp-co-unit-price]' );
+	var labelsTotalEl = root.querySelector( '[data-yp-co-labels-total]' );
+	var totalEl = root.querySelector( '[data-yp-co-total]' );
 
 	var quantityPresets = [];
 	var quantity = 25;
 	var uploadedFiles = []; // { name, id, error }
 	var formErrorEl = null;
+	var designFee = 0;
+	var pricingRequestId = 0;
+
+	function formatCurrency( amount ) {
+		return '$' + amount.toFixed( 2 );
+	}
+
+	/**
+	 * A provisional preview only — same as the Template configurator,
+	 * the server recalculates the authoritative price at add-to-cart
+	 * time (class-cart-pricing.php's apply_price()), so nothing here
+	 * needs to be trusted, just kept close enough to avoid surprises
+	 * before checkout.
+	 */
+	function updatePricePreview() {
+		if ( ! sizeSelect.value || ! materialSelect.value || ! quantity ) {
+			return;
+		}
+
+		var requestId = ++pricingRequestId;
+		var params = new URLSearchParams( {
+			quantity: quantity,
+			size_id: sizeSelect.value,
+			material_id: materialSelect.value
+		} );
+
+		fetch( yeffoprintCustomOrder.restUrl + 'pricing/calculate?' + params.toString() )
+			.then( function ( response ) {
+				return response.ok ? response.json() : Promise.reject( new Error( 'pricing-failed' ) );
+			} )
+			.then( function ( data ) {
+				if ( requestId !== pricingRequestId ) {
+					return; // A newer request has since superseded this one.
+				}
+
+				labelQtyEl.textContent = quantity;
+				unitPriceEl.textContent = formatCurrency( data.unit_price_after_discount );
+				labelsTotalEl.textContent = formatCurrency( data.total );
+				totalEl.textContent = formatCurrency( designFee + data.total );
+			} )
+			.catch( function () {} );
+	}
+
+	sizeSelect.addEventListener( 'change', updatePricePreview );
+	materialSelect.addEventListener( 'change', updatePricePreview );
 
 	function escapeHtml( value ) {
 		var div = document.createElement( 'div' );
@@ -63,6 +112,7 @@
 			quantityContainer.querySelectorAll( '[data-preset]' ).forEach( function ( button ) {
 				button.classList.toggle( 'is-active', parseInt( button.getAttribute( 'data-preset' ), 10 ) === quantity );
 			} );
+			updatePricePreview();
 		} );
 	}
 
@@ -72,6 +122,7 @@
 		quantityContainer.querySelectorAll( '[data-preset]' ).forEach( function ( button ) {
 			button.classList.toggle( 'is-active', parseInt( button.getAttribute( 'data-preset' ), 10 ) === amount );
 		} );
+		updatePricePreview();
 	}
 
 	function init() {
@@ -85,10 +136,12 @@
 				sizeSelect.innerHTML = optionsHtml( data.sizes || [] );
 				materialSelect.innerHTML = optionsHtml( data.materials || [] );
 				feeEl.textContent = data.design_fee || '$25.00';
+				designFee = parseFloat( String( data.design_fee || '25' ).replace( /[^0-9.]/g, '' ) ) || 0;
 
 				quantityPresets = data.quantity_presets && data.quantity_presets.length ? data.quantity_presets : [ 25 ];
 				quantity = quantityPresets[ 0 ];
 				renderQuantity();
+				updatePricePreview();
 
 				statusEl.hidden = true;
 				form.hidden = false;
@@ -145,6 +198,8 @@
 					} );
 					renderFileList();
 				}
+
+				updatePricePreview();
 			} )
 			.catch( function () {} );
 	}

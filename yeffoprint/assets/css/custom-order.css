@@ -35,14 +35,23 @@
 	color: var(--wp--preset--color--magenta-deep);
 }
 
+.yp-custom-order__pricing {
+	margin-top: 1.5rem;
+	background: var(--wp--preset--color--warm-white);
+	border-radius: var(--wp--custom--radius--control);
+	overflow: hidden;
+}
+
 .yp-custom-order__fee {
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
-	padding: 1rem;
-	background: var(--wp--preset--color--warm-white);
-	border-radius: var(--wp--custom--radius--control);
+	padding: 0.85rem 1rem;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-custom-order__fee--total {
 	font-size: var(--wp--preset--font-size--large);
-	font-weight: 600;
-	margin-top: 1.5rem;
+	font-weight: 700;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
 }

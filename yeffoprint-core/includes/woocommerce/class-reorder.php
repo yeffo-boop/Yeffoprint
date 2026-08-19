@@ -50,7 +50,11 @@ class YeffoPrint_Reorder {
 		// GET /custom-orders/{id}, ownership-checked there).
 		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
 
-		if ( $custom_order_id ) {
+		// A Custom Order's fee and labels line items both carry
+		// _yp_custom_order_id (class-order-item-meta.php) so the price
+		// snapshot has one meaning; only the fee item (no batch
+		// quantity) renders the link, or it would print twice per order.
+		if ( $custom_order_id && ! $item->get_meta( '_yp_batch_quantity' ) ) {
 			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
 
 			printf(

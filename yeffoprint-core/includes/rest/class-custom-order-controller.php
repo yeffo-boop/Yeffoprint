@@ -264,6 +264,11 @@ class YeffoPrint_Custom_Order_Controller {
 			return new \WP_Error( 'yeffoprint_no_fee_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 
+		$labels_product_id = YeffoPrint_Custom_Order_Labels_Product::get_product_id();
+		if ( ! $labels_product_id ) {
+			return new \WP_Error( 'yeffoprint_no_labels_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
+		}
+
 		YeffoPrint_Cart_Pricing::allow_next_add( true );
 		$cart_item_key = WC()->cart->add_to_cart( $fee_product_id, 1, 0, [], [
 			YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID => $custom_order_id,
@@ -273,6 +278,27 @@ class YeffoPrint_Custom_Order_Controller {
 		if ( ! $cart_item_key ) {
 			wp_delete_post( $custom_order_id, true );
 			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add the design fee to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		// The customer's own print run — priced per-unit from the same
+		// size/material adjustments and bulk tiers as a Template batch
+		// (class-cart-pricing.php's apply_price()), on top of the flat
+		// design fee added above. CUSTOM_ORDER_ID links it back to the
+		// same record; TOTAL_QTY (present here, absent on the fee item)
+		// is what tells apply_price() this item prices per-unit instead.
+		YeffoPrint_Cart_Pricing::allow_next_add( true );
+		$labels_cart_item_key = WC()->cart->add_to_cart( $labels_product_id, $quantity, 0, [], [
+			YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID => $custom_order_id,
+			YeffoPrint_Cart_Item_Keys::SIZE_ID         => $size_id,
+			YeffoPrint_Cart_Item_Keys::MATERIAL_ID     => $material_id,
+			YeffoPrint_Cart_Item_Keys::TOTAL_QTY       => $quantity,
+		] );
+		YeffoPrint_Cart_Pricing::allow_next_add( false );
+
+		if ( ! $labels_cart_item_key ) {
+			WC()->cart->remove_cart_item( $cart_item_key );
+			wp_delete_post( $custom_order_id, true );
+			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add your labels to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
 		return rest_ensure_response( [
