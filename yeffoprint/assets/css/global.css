@@ -100,13 +100,15 @@ svg {
 /* ---------- Header ---------- */
 
 .yp-header {
+	/* Dark, not the original light glass — the real logo (white
+	   wordmark) needs a dark background to read at all. */
 	position: sticky;
 	top: 0;
 	z-index: 900;
-	background: var(--wp--custom--glass--background);
+	background: rgba(20, 20, 20, 0.88);
 	backdrop-filter: blur(var(--wp--custom--glass--blur));
 	-webkit-backdrop-filter: blur(var(--wp--custom--glass--blur));
-	border-bottom: 1px solid var(--wp--custom--glass--border);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	transition: padding 200ms ease, box-shadow 200ms ease;
 	padding-block: 1.25rem;
 }
@@ -127,19 +129,26 @@ svg {
 	text-decoration: none;
 	font-family: var(--wp--preset--font-family--heading);
 	font-weight: 700;
-	color: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
 }
 
 @supports (background-clip: text) or (-webkit-background-clip: text) {
 	.yp-header__logo a {
-		/* The gradient text-clip IS the visible foreground color, so it
-		   needs to meet text contrast against the header background —
-		   the "deep" variant, not the brighter decorative gradient. */
-		background: var(--wp--custom--gradient-brand-deep);
+		/* The bright gradient (not the "-deep" text-safe variant used
+		   elsewhere) — that variant exists for text on a LIGHT
+		   background; against this dark header the bright originals
+		   give the better contrast. Text fallback, until the real logo
+		   image (uploaded via Site Identity) replaces this wordmark. */
+		background: var(--wp--custom--gradient-brand);
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
 	}
+}
+
+.yp-header__logo img {
+	max-height: 32px;
+	width: auto;
 }
 
 .yp-header__nav {
@@ -153,12 +162,28 @@ svg {
 .yp-header__nav a.wp-block-navigation-item__content {
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 500;
-	color: var(--wp--preset--color--charcoal);
+	color: rgba(255, 255, 255, 0.78);
 	text-decoration: none;
 }
 
 .yp-header__nav a.wp-block-navigation-item__content:hover {
-	color: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
+}
+
+/* The mobile hamburger overlay (core Navigation block, overlayMenu:
+   "mobile") defaults to a plain white panel with no explicit color set
+   — matches the header's own dark treatment instead of clashing with it. */
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open {
+	background: var(--wp--preset--color--near-black);
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open a.wp-block-navigation-item__content {
+	color: var(--wp--preset--color--warm-white);
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container-close,
+.yp-header__nav .wp-block-navigation__responsive-container-open {
+	color: var(--wp--preset--color--warm-white);
 }
 
 .yp-header__actions {
@@ -177,14 +202,14 @@ svg {
 	border-radius: var(--wp--custom--radius--control);
 	background: transparent;
 	border: none;
-	color: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
 	cursor: pointer;
 	position: relative;
 	transition: background-color 150ms ease;
 }
 
 .yp-icon-button:hover {
-	background: var(--wp--preset--color--light-gray);
+	background: rgba(255, 255, 255, 0.12);
 }
 
 .yp-icon-button__count {
