@@ -46,15 +46,16 @@ svg {
    but the first (core's `.wp-site-blocks > * + *` rule) — this
    theme.json never sets blockGap, so that falls back to core's own
    default (~2em), showing as a thin strip of bare warm-white between
-   the header template part and each page's actual content, since
-   `main` is always the second root-level block after it. Every
-   template in this theme follows the same header-then-main(-then-
-   footer) structure, so this is fixed once here rather than per
+   consecutive root-level blocks. Every template in this theme follows
+   the same header-then-main(-then-footer) structure (plus the
+   persistent search bar, now also a root-level block right after the
+   header on every page), so this is fixed once here rather than per
    template — same root cause already hit and fixed the same way
    inside individual patterns (.yp-steps, .yp-hero__grid), just at the
    template root this time. */
 .wp-site-blocks > main,
-.wp-site-blocks > footer {
+.wp-site-blocks > footer,
+.wp-site-blocks > .yp-search-bar {
 	margin-block-start: 0 !important;
 }
 
@@ -303,6 +304,127 @@ main.wp-block-group {
 	font-size: 0.65rem;
 	line-height: 1.1rem;
 	text-align: center;
+}
+
+/* ---------- Persistent search bar (below the header) ---------- */
+/* Dark bar + mono-placeholder input + solid accent button — the same
+   treatment the approved brand mockup used for its "search templates"
+   band, adapted from a mid-page rounded card into a slim full-width
+   strip that sits directly under the header on every page. */
+
+.yp-search-bar {
+	position: relative;
+	background: var(--wp--preset--color--near-black);
+}
+
+.yp-search-bar__form {
+	display: flex;
+	gap: 0.6rem;
+	max-width: 1200px;
+	margin-inline: auto;
+	padding: 0.75rem var(--wp--preset--spacing--sm);
+}
+
+@media (min-width: 782px) {
+	.yp-search-bar__form {
+		padding-inline: var(--wp--preset--spacing--md);
+	}
+}
+
+.yp-search-bar__form input {
+	flex: 1;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: var(--wp--custom--radius--input);
+	padding: 0.7rem 1rem;
+	color: var(--wp--preset--color--warm-white);
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.85rem;
+}
+
+.yp-search-bar__form input::placeholder {
+	color: rgba(250, 249, 246, 0.45);
+}
+
+.yp-search-bar__form input:focus {
+	border-color: var(--wp--preset--color--cyan);
+}
+
+.yp-search-bar__button {
+	flex-shrink: 0;
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--near-black);
+	border: 0;
+	font-weight: 700;
+	font-size: 0.85rem;
+	border-radius: var(--wp--custom--radius--input);
+	padding: 0 1.3rem;
+	cursor: pointer;
+	transition: background-color 150ms ease;
+}
+
+.yp-search-bar__button:hover {
+	background: var(--wp--preset--color--white);
+}
+
+.yp-search-bar__results {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 850;
+}
+
+.yp-search-bar__results:empty {
+	display: none;
+}
+
+.yp-search-bar__results .yp-search-results__list,
+.yp-search-bar__results .yp-search-results__empty {
+	max-width: 1200px;
+	margin-inline: auto;
+}
+
+.yp-search-bar__results .yp-search-results__list {
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--high);
+	border-radius: 0 0 var(--wp--custom--radius--container) var(--wp--custom--radius--container);
+	overflow: hidden;
+}
+
+.yp-search-bar__results .yp-search-results__empty {
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--high);
+	border-radius: 0 0 var(--wp--custom--radius--container) var(--wp--custom--radius--container);
+}
+
+/* Shared result list styling — also used by the header's search
+   drawer (same markup, no absolute positioning needed there since
+   it's already inside a modal panel). */
+.yp-search-results__list {
+	list-style: none;
+	margin: 0;
+	padding: 0.5rem;
+}
+
+.yp-search-results__item {
+	display: block;
+	padding: 0.65rem 0.85rem;
+	border-radius: var(--wp--custom--radius--control);
+	text-decoration: none;
+	color: var(--wp--preset--color--near-black);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-search-results__item:hover {
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-search-results__empty {
+	margin: 0;
+	padding: 1rem 0.85rem;
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 /* ---------- Buttons ---------- */
