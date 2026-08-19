@@ -73,12 +73,25 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Item_Controller();
 		new YeffoPrint_Reorder();
 
-		// Flag set on activation (yeffoprint-core.php) — flush now that
-		// CPT/endpoint rewrite rules have just registered above.
+		// Flush once whenever needed — not just on activation. The
+		// activation-hook flag (yeffoprint-core.php) covers a normal
+		// install; the version check covers every other real-world
+		// deployment path that skips activation entirely (uploading
+		// updated plugin files over FTP/hosting file manager, syncing
+		// from git, staging→production pushes) — those never fire
+		// register_activation_hook, so without this, /shop-labels/ and
+		// every custom rewrite rule silently 404 until someone happens
+		// to open Settings → Permalinks and hits Save. Runs at priority
+		// 20, after every CPT/endpoint has registered its rewrite rules
+		// above at the default priority 10, in the same request.
 		add_action( 'init', function () {
-			if ( get_option( 'yeffoprint_core_flush_rewrite_rules' ) ) {
+			$needs_flush = get_option( 'yeffoprint_core_flush_rewrite_rules' )
+				|| get_option( 'yeffoprint_core_rewrite_version' ) !== YEFFOPRINT_CORE_VERSION;
+
+			if ( $needs_flush ) {
 				flush_rewrite_rules();
 				delete_option( 'yeffoprint_core_flush_rewrite_rules' );
+				update_option( 'yeffoprint_core_rewrite_version', YEFFOPRINT_CORE_VERSION );
 			}
 		}, 20 );
 
