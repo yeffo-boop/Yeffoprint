@@ -29,9 +29,9 @@ defined( 'ABSPATH' ) || exit;
 	</div>
 	<!-- /wp:group -->
 
-	<!-- wp:query {"queryId":1,"query":{"perPage":4,"postType":"yp_template","order":"desc","orderBy":"date","inherit":false,"metaKey":"_yp_featured","metaValue":"1"},"className":"yp-card-grid"} -->
-	<div class="wp-block-query yp-card-grid">
-		<!-- wp:post-template -->
+	<!-- wp:query {"queryId":1,"query":{"perPage":4,"postType":"yp_template","order":"desc","orderBy":"date","inherit":false,"metaKey":"_yp_featured","metaValue":"1"}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template {"className":"yp-card-grid"} -->
 			<!-- wp:yeffoprint/template-card /-->
 		<!-- /wp:post-template -->
 	</div>

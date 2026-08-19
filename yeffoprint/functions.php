@@ -163,3 +163,15 @@ add_action( 'init', function () {
 	] );
 } );
 
+/**
+ * WooCommerce auto-injects its own Mini Cart block into block-theme
+ * headers via the Block Hooks API. The header already has its own
+ * cart icon + slide-out drawer (parts/header.html, assets/js/site.js)
+ * wired to yeffoprint-core's cart endpoints, so the auto-injected one
+ * is a second, independently-updating cart UI rather than a fallback —
+ * strip it instead of letting both render. See docs/ARCHITECTURE.md §9.
+ */
+add_filter( 'hooked_block_types', function ( array $hooked_block_types, string $relative_position, string $anchor_block_type, $context ) {
+	return array_values( array_diff( $hooked_block_types, [ 'woocommerce/mini-cart' ] ) );
+}, 20, 4 );
+
