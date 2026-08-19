@@ -24,7 +24,7 @@ class YeffoPrint_Cart_Controller {
 		register_rest_route( self::NAMESPACE, '/cart/add', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'add' ],
-			'permission_callback' => '__return_true',
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'guest_or_nonced_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/cart/drawer', [

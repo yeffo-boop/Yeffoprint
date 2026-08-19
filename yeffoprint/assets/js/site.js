@@ -22,8 +22,18 @@
 		var threshold = 24;
 		var ticking = false;
 
+		// Published as a CSS custom property so anything needing to clear
+		// the sticky header (e.g. the configurator's sticky preview panel,
+		// assets/css/configurator.css) can read the real, current height
+		// instead of a guessed pixel value — the header's own height
+		// changes with scroll compaction, nav wrapping, and zoom.
+		function publishHeaderHeight() {
+			document.documentElement.style.setProperty( '--yp-header-height', header.offsetHeight + 'px' );
+		}
+
 		function update() {
 			header.classList.toggle( 'is-scrolled', window.scrollY > threshold );
+			publishHeaderHeight();
 			ticking = false;
 		}
 
@@ -37,6 +47,12 @@
 			},
 			{ passive: true }
 		);
+
+		if ( 'ResizeObserver' in window ) {
+			new ResizeObserver( publishHeaderHeight ).observe( header );
+		} else {
+			window.addEventListener( 'resize', publishHeaderHeight );
+		}
 
 		update();
 	}
@@ -224,10 +240,38 @@
 		} );
 	}
 
+	/* ---------- Newsletter form ---------- */
+
+	// No email service is connected yet — submitting silently reloaded
+	// the page with no feedback either way, which fails PROJECT_SPEC
+	// §18's "non-silent error handling" bar. Same stub pattern as the
+	// Phase 5 Add to Cart button before Phase 7 wired it up for real:
+	// a clear, honest status message instead of a broken-looking no-op.
+	function initNewsletterForm() {
+		var form = document.querySelector( '.yp-newsletter-form' );
+		if ( ! form ) {
+			return;
+		}
+
+		form.addEventListener( 'submit', function ( event ) {
+			event.preventDefault();
+
+			var status = form.querySelector( '.yp-newsletter-form__status' );
+			if ( ! status ) {
+				status = document.createElement( 'p' );
+				status.className = 'yp-newsletter-form__status';
+				status.setAttribute( 'role', 'status' );
+				form.insertAdjacentElement( 'afterend', status );
+			}
+			status.textContent = "Newsletter signups aren't open yet — check back soon.";
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initHeaderScroll();
 		initDrawers();
 		initGalleryToolbar();
 		initCartDrawer();
+		initNewsletterForm();
 	} );
 } )();

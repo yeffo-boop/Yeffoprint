@@ -132,7 +132,10 @@ svg {
 
 @supports (background-clip: text) or (-webkit-background-clip: text) {
 	.yp-header__logo a {
-		background: var(--wp--custom--gradient-brand);
+		/* The gradient text-clip IS the visible foreground color, so it
+		   needs to meet text contrast against the header background —
+		   the "deep" variant, not the brighter decorative gradient. */
+		background: var(--wp--custom--gradient-brand-deep);
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
@@ -192,7 +195,7 @@ svg {
 	height: 1.1rem;
 	padding: 0 0.25rem;
 	border-radius: 999px;
-	background: var(--wp--preset--color--magenta);
+	background: var(--wp--preset--color--magenta-deep);
 	color: var(--wp--preset--color--white);
 	font-size: 0.65rem;
 	line-height: 1.1rem;
@@ -221,7 +224,10 @@ svg {
 }
 
 .wp-block-button.is-style-accent .wp-block-button__link {
-	background: var(--wp--custom--gradient-brand);
+	/* "deep" variant: white button text on top needs to meet contrast,
+	   which the brighter decorative gradient (used for washes/glows
+	   elsewhere) doesn't reliably clear at its cyan end. */
+	background: var(--wp--custom--gradient-brand-deep);
 	background-size: 160% 160%;
 	background-position: 0% 50%;
 	color: var(--wp--preset--color--white);
@@ -274,7 +280,7 @@ svg {
 	letter-spacing: 0.04em;
 	padding: 0.25rem 0.65rem;
 	border-radius: var(--wp--custom--radius--control);
-	background: var(--wp--custom--gradient-brand);
+	background: var(--wp--custom--gradient-brand-deep);
 	border: none;
 	color: var(--wp--preset--color--white);
 	box-shadow: 0 4px 12px rgba(236, 0, 140, 0.25);
@@ -395,6 +401,12 @@ fieldset {
 .yp-newsletter-form input {
 	flex: 1;
 	min-width: 10rem;
+}
+
+.yp-newsletter-form__status {
+	margin-top: 0.5rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
 }
 
 .yp-search-form input {

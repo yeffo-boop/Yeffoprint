@@ -38,6 +38,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/api/template-api.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-template-schema-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-pricing-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-rest-security.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-item-keys.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-linked-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';

@@ -32,7 +32,7 @@
 }
 
 .yp-custom-order__file-list .is-error {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 }
 
 .yp-custom-order__fee {

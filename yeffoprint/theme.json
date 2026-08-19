@@ -16,7 +16,9 @@
 				{ "slug": "near-black", "name": "Near Black", "color": "#141414" },
 				{ "slug": "cyan", "name": "CMYK Cyan", "color": "#00AEEF" },
 				{ "slug": "magenta", "name": "CMYK Magenta", "color": "#EC008C" },
-				{ "slug": "yellow", "name": "CMYK Yellow", "color": "#FFF200" }
+				{ "slug": "yellow", "name": "CMYK Yellow", "color": "#FFF200" },
+				{ "slug": "cyan-deep", "name": "Cyan (text-safe)", "color": "#0078A4" },
+				{ "slug": "magenta-deep", "name": "Magenta (text-safe)", "color": "#C2007A" }
 			],
 			"customDuotone": false,
 			"customGradient": false,
@@ -48,7 +50,8 @@
 				"blur": "16px"
 			},
 			"focus-ring": "var(--wp--preset--color--cyan)",
-			"gradient-brand": "linear-gradient(135deg, var(--wp--preset--color--magenta) 0%, var(--wp--preset--color--cyan) 100%)"
+			"gradient-brand": "linear-gradient(135deg, var(--wp--preset--color--magenta) 0%, var(--wp--preset--color--cyan) 100%)",
+			"gradient-brand-deep": "linear-gradient(135deg, var(--wp--preset--color--magenta-deep) 0%, var(--wp--preset--color--cyan-deep) 100%)"
 		},
 		"typography": {
 			"fontFamilies": [

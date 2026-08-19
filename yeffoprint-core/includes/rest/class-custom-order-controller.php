@@ -18,6 +18,13 @@ class YeffoPrint_Custom_Order_Controller {
 
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
+	// Unauthenticated, multi-file, 10MB-per-file uploads are exactly the
+	// kind of endpoint abuse tries first — this caps how many upload
+	// requests one IP can make in a window, independent of
+	// YeffoPrint_Secure_Upload's per-request file count/size limits.
+	private const UPLOAD_RATE_LIMIT_WINDOW  = 600; // 10 minutes
+	private const UPLOAD_RATE_LIMIT_MAX     = 20;
+
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
 	}
@@ -26,13 +33,13 @@ class YeffoPrint_Custom_Order_Controller {
 		register_rest_route( self::NAMESPACE, '/custom-orders/uploads', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'upload' ],
-			'permission_callback' => '__return_true',
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'guest_or_nonced_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/custom-orders', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'submit' ],
-			'permission_callback' => '__return_true',
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'guest_or_nonced_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/custom-orders/options', [
@@ -43,6 +50,11 @@ class YeffoPrint_Custom_Order_Controller {
 	}
 
 	public function upload( \WP_REST_Request $request ) {
+		$rate_limited = $this->check_upload_rate_limit();
+		if ( is_wp_error( $rate_limited ) ) {
+			return $rate_limited;
+		}
+
 		$files = $request->get_file_params();
 
 		if ( empty( $files ) ) {
@@ -98,6 +110,31 @@ class YeffoPrint_Custom_Order_Controller {
 		}
 
 		return rest_ensure_response( [ 'files' => $results ] );
+	}
+
+	/**
+	 * @return \WP_Error|null Error if this IP has hit the window's cap;
+	 *                        null (and the attempt is now counted) otherwise.
+	 */
+	private function check_upload_rate_limit(): ?\WP_Error {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( '' === $ip ) {
+			return null; // Can't key a limit without an IP — fail open rather than block legitimate requests.
+		}
+
+		$key   = 'yp_upload_rl_' . md5( $ip );
+		$count = (int) get_transient( $key );
+
+		if ( $count >= self::UPLOAD_RATE_LIMIT_MAX ) {
+			return new \WP_Error(
+				'yeffoprint_rate_limited',
+				__( 'Too many upload attempts. Please wait a few minutes and try again.', 'yeffoprint-core' ),
+				[ 'status' => 429 ]
+			);
+		}
+
+		set_transient( $key, $count + 1, self::UPLOAD_RATE_LIMIT_WINDOW );
+		return null;
 	}
 
 	public function options() {

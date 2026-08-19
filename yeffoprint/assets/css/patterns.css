@@ -42,7 +42,7 @@
 	letter-spacing: 0.08em;
 	font-size: 0.75rem;
 	font-weight: 700;
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 	margin-bottom: 0.5rem;
 }
 
@@ -134,7 +134,12 @@
 }
 
 .yp-template-card__media {
+	/* Real label size is 45mm x 21mm — 15:7 keeps that exact ratio
+	   (not the generic .yp-card__media 4:5 used by other card types,
+	   e.g. the customer-work placeholder tiles) scaled up to something
+	   legible on screen. Upload artwork/photos cropped to this ratio. */
 	position: relative;
+	aspect-ratio: 15 / 7;
 }
 
 .yp-template-card__image {
@@ -225,7 +230,7 @@
 }
 
 .yp-step:nth-child(2) .yp-step__index {
-	background: var(--wp--preset--color--magenta);
+	background: var(--wp--preset--color--magenta-deep);
 	color: var(--wp--preset--color--white);
 	box-shadow: 0 6px 16px rgba(236, 0, 140, 0.35);
 }
@@ -311,7 +316,7 @@
 }
 
 .yp-review-card__stars {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 	letter-spacing: 0.15em;
 	margin-bottom: 0.75rem;
 }

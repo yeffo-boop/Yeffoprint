@@ -12,7 +12,7 @@
 }
 
 .yp-configurator__status[data-state="error"] {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 }
 
 .yp-configurator__noscript {
@@ -36,7 +36,11 @@
 
 .yp-configurator__preview {
 	position: sticky;
-	top: 96px;
+	/* --yp-header-height is published live by site.js (initHeaderScroll)
+	   — the header's real height changes with scroll compaction and nav
+	   wrapping, so a fixed guess doesn't reliably clear it at every
+	   viewport/zoom combination. 96px is the pre-JS/no-JS fallback. */
+	top: calc(var(--yp-header-height, 96px) + var(--wp--preset--spacing--xs));
 }
 
 @media (max-width: 960px) {
@@ -202,7 +206,7 @@
 }
 
 .yp-field__counter.is-over {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 	font-weight: 600;
 }
 
@@ -322,7 +326,7 @@
 }
 
 .yp-configurator__cart-status.is-error {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 	font-weight: 600;
 }
 

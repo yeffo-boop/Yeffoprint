@@ -253,7 +253,7 @@
 
 	function optionPillHtml( group, id, name, meta, isSelected, leadingHtml ) {
 		return (
-			'<button type="button" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + '" data-option-group="' + group + '" data-option-id="' + id + '">' +
+			'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + '" data-option-group="' + group + '" data-option-id="' + id + '">' +
 				( leadingHtml || '' ) +
 				'<span class="yp-option-pill__name">' + escapeHtml( name ) + '</span>' +
 				'<span class="yp-option-pill__meta">' + escapeHtml( meta ) + '</span>' +
@@ -263,7 +263,9 @@
 
 	function updateSelectedPill( container, selectedId ) {
 		container.querySelectorAll( '[data-option-id]' ).forEach( function ( button ) {
-			button.classList.toggle( 'is-selected', parseInt( button.getAttribute( 'data-option-id' ), 10 ) === selectedId );
+			var isSelected = parseInt( button.getAttribute( 'data-option-id' ), 10 ) === selectedId;
+			button.classList.toggle( 'is-selected', isSelected );
+			button.setAttribute( 'aria-checked', isSelected ? 'true' : 'false' );
 		} );
 	}
 
@@ -292,7 +294,7 @@
 				var fieldId = input.getAttribute( 'data-field-id' );
 				activeVariant().values[ fieldId ] = input.value;
 				updateCounter( fieldId );
-				renderStage();
+				updateStageField( fieldId );
 			} );
 		} );
 
@@ -446,6 +448,9 @@
 
 	/* ---------- Preview (Label View / Vial View) ---------- */
 
+	// Rebuilds every field element — view toggle, variant switch, and
+	// initial load, where every field's position/value can change at
+	// once. Typing in one field only needs updateStageField() below.
 	function renderStage() {
 		var backgroundUrl = 'vial' === state.view ? schema.vial_mockup_url : schema.artwork_url;
 
@@ -454,24 +459,60 @@
 			: '';
 		stageEl.setAttribute( 'data-view', state.view );
 
-		var stageRect = stageEl.getBoundingClientRect();
 		var variant = activeVariant();
-		var anyOverflow = false;
 
 		schema.field_schema.forEach( function ( field ) {
 			var el = document.createElement( 'div' );
 			el.className = 'yp-stage__field' + ( 'textarea' === field.type ? ' is-multiline' : '' );
+			el.setAttribute( 'data-field-id', field.id );
 			el.style.left = field.position.x + '%';
 			el.style.top = field.position.y + '%';
 			el.style.textAlign = field.alignment;
 			el.style.textTransform = textTransformFor( field.formatting_rule );
 			el.textContent = variant.values[ field.id ] || '';
 			stageEl.appendChild( el );
-
-			var overflowing = fitText( el, field, stageRect.width, stageRect.height );
-			anyOverflow = anyOverflow || overflowing;
 		} );
 
+		refitStageFields();
+	}
+
+	function refitStageFields() {
+		var stageRect = stageEl.getBoundingClientRect();
+		var anyOverflow = false;
+
+		schema.field_schema.forEach( function ( field ) {
+			var el = stageEl.querySelector( '[data-field-id="' + field.id + '"]' );
+			if ( ! el ) {
+				return;
+			}
+			anyOverflow = fitText( el, field, stageRect.width, stageRect.height ) || anyOverflow;
+		} );
+
+		overflowWarningEl.hidden = ! anyOverflow;
+	}
+
+	// Typing on the hot path: updates and refits only the one field that
+	// changed instead of tearing down and rebuilding every field's DOM
+	// node on each keystroke (that was previously renderStage()'s job
+	// here too, forcing a full layout reflow loop per field per
+	// keystroke rather than one field's).
+	function updateStageField( fieldId ) {
+		var field = schema.field_schema.filter( function ( f ) { return f.id === fieldId; } )[ 0 ];
+		var el = stageEl.querySelector( '[data-field-id="' + fieldId + '"]' );
+		if ( ! field || ! el ) {
+			return;
+		}
+
+		var stageRect = stageEl.getBoundingClientRect();
+		el.textContent = activeVariant().values[ fieldId ] || '';
+		var overflowing = fitText( el, field, stageRect.width, stageRect.height );
+
+		var anyOverflow = overflowing || Array.prototype.some.call(
+			stageEl.querySelectorAll( '.yp-stage__field' ),
+			function ( otherEl ) {
+				return otherEl !== el && otherEl.classList.contains( 'is-overflowing' );
+			}
+		);
 		overflowWarningEl.hidden = ! anyOverflow;
 	}
 
@@ -488,41 +529,98 @@
 		var maxWidth = stageWidth * FIELD_BOX_WIDTH_RATIO;
 		var maxHeight = stageHeight * FIELD_BOX_HEIGHT_RATIO;
 		var isMultiline = 'textarea' === field.type;
-		var size = field.font_size_max;
 
 		el.style.maxWidth = maxWidth + 'px';
 		if ( isMultiline ) {
 			el.style.maxHeight = maxHeight + 'px';
 		}
 
-		function overflowing() {
+		// Each call sets fontSize and reads scrollWidth/Height, which
+		// forces a synchronous layout — worth minimizing since this runs
+		// on every keystroke. Shrinking a field's font never *increases*
+		// its box (monotonic), so the largest non-overflowing integer
+		// size can be binary-searched instead of walked down 1px at a
+		// time, trading a handful of reflows for what could be dozens
+		// on a wide font-size range.
+		function overflowsAt( size ) {
+			el.style.fontSize = size + 'px';
 			var widthOverflow = el.scrollWidth > maxWidth + 1;
 			var heightOverflow = isMultiline && el.scrollHeight > maxHeight + 1;
 			return widthOverflow || heightOverflow;
 		}
 
-		el.style.fontSize = size + 'px';
-		while ( size > field.font_size_min && overflowing() ) {
-			size -= 1;
-			el.style.fontSize = size + 'px';
+		var min = field.font_size_min;
+		var max = field.font_size_max;
+		var best;
+
+		if ( ! overflowsAt( max ) ) {
+			best = max;
+		} else if ( overflowsAt( min ) ) {
+			best = min;
+		} else {
+			var low = min;
+			var high = max;
+			while ( low < high ) {
+				var mid = Math.ceil( ( low + high ) / 2 );
+				if ( overflowsAt( mid ) ) {
+					high = mid - 1;
+				} else {
+					low = mid;
+				}
+			}
+			best = low;
 		}
 
-		var stillOverflowing = overflowing();
+		var stillOverflowing = overflowsAt( best );
 		el.classList.toggle( 'is-overflowing', stillOverflowing );
 		return stillOverflowing;
 	}
 
-	root.querySelectorAll( '[data-yp-view]' ).forEach( function ( tab ) {
+	var viewTabs = Array.prototype.slice.call( root.querySelectorAll( '[data-yp-view]' ) );
+
+	function activateViewTab( tab, focusTab ) {
+		state.view = tab.getAttribute( 'data-yp-view' );
+
+		viewTabs.forEach( function ( t ) {
+			var isActive = t === tab;
+			t.classList.toggle( 'is-active', isActive );
+			t.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
+			t.setAttribute( 'tabindex', isActive ? '0' : '-1' );
+		} );
+
+		stageEl.setAttribute( 'aria-labelledby', tab.id );
+
+		if ( focusTab ) {
+			tab.focus();
+		}
+
+		renderStage();
+	}
+
+	viewTabs.forEach( function ( tab, index ) {
 		tab.addEventListener( 'click', function () {
-			state.view = tab.getAttribute( 'data-yp-view' );
+			activateViewTab( tab, false );
+		} );
 
-			root.querySelectorAll( '[data-yp-view]' ).forEach( function ( t ) {
-				var isActive = t === tab;
-				t.classList.toggle( 'is-active', isActive );
-				t.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
-			} );
+		// ARIA APG "tabs" pattern: arrow keys move focus between tabs
+		// and activate the newly-focused one (roving tabindex above).
+		tab.addEventListener( 'keydown', function ( event ) {
+			var targetIndex = null;
 
-			renderStage();
+			if ( 'ArrowRight' === event.key || 'ArrowDown' === event.key ) {
+				targetIndex = ( index + 1 ) % viewTabs.length;
+			} else if ( 'ArrowLeft' === event.key || 'ArrowUp' === event.key ) {
+				targetIndex = ( index - 1 + viewTabs.length ) % viewTabs.length;
+			} else if ( 'Home' === event.key ) {
+				targetIndex = 0;
+			} else if ( 'End' === event.key ) {
+				targetIndex = viewTabs.length - 1;
+			}
+
+			if ( null !== targetIndex ) {
+				event.preventDefault();
+				activateViewTab( viewTabs[ targetIndex ], true );
+			}
 		} );
 	} );
 
@@ -674,7 +772,7 @@
 
 		fetch( yeffoprintConfigurator.restUrl + 'cart/add', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintConfigurator.nonce },
 			body: JSON.stringify( payload )
 		} )
 			.then( function ( response ) {

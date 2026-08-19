@@ -50,7 +50,6 @@
 		quantityContainer.innerHTML = quantityPresets.map( function ( amount ) {
 			return '<button type="button" class="yp-quantity-preset' + ( amount === quantity ? ' is-active' : '' ) + '" data-preset="' + amount + '">' + amount + '</button>';
 		} ).join( '' ) +
-			'<label class="screen-reader-text" for="yp-co-quantity-input">Custom quantity</label>' +
 			'<input type="number" min="1" id="yp-co-quantity-input" class="yp-quantity-input" value="' + quantity + '" />';
 
 		quantityContainer.querySelectorAll( '[data-preset]' ).forEach( function ( button ) {
@@ -139,6 +138,7 @@
 
 		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders/uploads', {
 			method: 'POST',
+			headers: { 'X-WP-Nonce': yeffoprintCustomOrder.nonce },
 			body: formData
 		} )
 			.then( function ( response ) {
@@ -212,7 +212,7 @@
 
 		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintCustomOrder.nonce },
 			body: JSON.stringify( payload )
 		} )
 			.then( function ( response ) {
