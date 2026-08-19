@@ -24,8 +24,8 @@
 	position: absolute;
 	inset: 0;
 	background:
-		radial-gradient(32rem 22rem at 15% 0%, rgba(0, 174, 239, 0.35), transparent 65%),
-		radial-gradient(30rem 24rem at 90% 100%, rgba(236, 0, 140, 0.32), transparent 65%);
+		radial-gradient(32rem 22rem at 15% 0%, rgba(0, 174, 239, 0.45), transparent 65%),
+		radial-gradient(30rem 24rem at 90% 100%, rgba(236, 0, 140, 0.4), transparent 65%);
 	z-index: -1;
 	pointer-events: none;
 }
@@ -80,11 +80,11 @@
 .yp-hero::before {
 	content: "";
 	position: absolute;
-	inset: -20%;
+	inset: 0;
 	background:
-		radial-gradient(38rem 24rem at 12% 15%, rgba(0, 174, 239, 0.24), transparent 60%),
-		radial-gradient(34rem 26rem at 88% 10%, rgba(236, 0, 140, 0.2), transparent 60%),
-		radial-gradient(30rem 22rem at 50% 105%, rgba(255, 242, 0, 0.18), transparent 60%);
+		radial-gradient(38rem 26rem at 8% 10%, rgba(0, 174, 239, 0.4), transparent 62%),
+		radial-gradient(34rem 28rem at 92% 8%, rgba(236, 0, 140, 0.34), transparent 62%),
+		radial-gradient(32rem 24rem at 50% 100%, rgba(255, 242, 0, 0.28), transparent 62%);
 	z-index: -1;
 	pointer-events: none;
 }
@@ -108,27 +108,27 @@
 /* ---------- Card grids (Featured Designs, Popular Designs) ---------- */
 
 .yp-card-grid {
+	/* auto-fit (not auto-fill/a fixed repeat count) collapses empty
+	   column tracks instead of leaving them blank — a row with fewer
+	   cards than fit a full row (e.g. one Featured Design on a fresh
+	   site) no longer leaves large empty gaps next to it. This also
+	   handles every viewport width on its own, so the old fixed
+	   2-column/1-column breakpoints are no longer needed. */
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 	gap: var(--wp--preset--spacing--sm);
-}
-
-@media (max-width: 1024px) {
-	.yp-card-grid {
-		grid-template-columns: repeat(2, 1fr);
-	}
-}
-
-@media (max-width: 600px) {
-	.yp-card-grid {
-		grid-template-columns: 1fr;
-	}
 }
 
 /* ---------- Template card (gallery + homepage rails) ---------- */
 
 .yp-template-card {
+	/* max-width, not the grid cell itself, caps how big a card gets —
+	   .yp-card-grid's auto-fit columns are 1fr so a full row of cards
+	   still spans edge-to-edge, but a lone card in a mostly-empty row
+	   (e.g. only one Featured Design published) doesn't stretch to
+	   fill the whole row and look outsized. */
 	display: block;
+	max-width: 320px;
 	color: inherit;
 	text-decoration: none;
 }
