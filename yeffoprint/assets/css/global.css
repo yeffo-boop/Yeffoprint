@@ -269,11 +269,23 @@ svg {
 /* ---------- Cards ---------- */
 
 .yp-card {
+	position: relative;
 	background: var(--wp--preset--color--white);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	overflow: hidden;
 	transition: box-shadow 200ms ease, transform 200ms ease;
+}
+
+.yp-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: var(--wp--custom--gradient-brand);
+	z-index: 1;
 }
 
 .yp-card:hover {

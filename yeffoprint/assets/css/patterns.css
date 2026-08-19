@@ -232,13 +232,28 @@
 	   three cards' description text differs slightly in length, and
 	   this guarantees identical card heights regardless of that rather
 	   than leaving it to each browser's own stretch/sizing behavior. */
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	background: var(--wp--preset--color--white);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	padding: var(--wp--preset--spacing--md);
+	overflow: hidden;
 }
+
+.yp-step::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+}
+
+.yp-step:nth-child(1)::before { background: var(--wp--preset--color--cyan); }
+.yp-step:nth-child(2)::before { background: var(--wp--preset--color--magenta-deep); }
+.yp-step:nth-child(3)::before { background: var(--wp--preset--color--yellow); }
 
 .yp-step__index {
 	display: inline-flex;

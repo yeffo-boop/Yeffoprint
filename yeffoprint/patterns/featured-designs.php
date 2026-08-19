@@ -7,8 +7,8 @@
 
 defined( 'ABSPATH' ) || exit;
 ?>
-<!-- wp:group {"tagName":"section","className":"yp-section","layout":{"type":"constrained","contentSize":"1200px"}} -->
-<section class="wp-block-group yp-section">
+<!-- wp:group {"tagName":"section","className":"yp-section yp-section--tint","layout":{"type":"constrained","contentSize":"1200px"}} -->
+<section class="wp-block-group yp-section yp-section--tint">
 
 	<!-- wp:group {"layout":{"type":"flex","justifyContent":"space-between"}} -->
 	<div class="wp-block-group">
