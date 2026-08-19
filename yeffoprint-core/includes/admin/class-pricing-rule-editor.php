@@ -34,14 +34,14 @@ class YeffoPrint_Pricing_Rule_Editor {
 			'yeffoprint-core-admin',
 			YEFFOPRINT_CORE_URL . 'assets/admin/admin.css',
 			[],
-			YEFFOPRINT_CORE_VERSION
+			yeffoprint_core_asset_version( 'assets/admin/admin.css' )
 		);
 
 		wp_enqueue_script(
 			'yeffoprint-core-pricing-tiers',
 			YEFFOPRINT_CORE_URL . 'assets/admin/pricing-tiers.js',
 			[],
-			YEFFOPRINT_CORE_VERSION,
+			yeffoprint_core_asset_version( 'assets/admin/pricing-tiers.js' ),
 			true
 		);
 

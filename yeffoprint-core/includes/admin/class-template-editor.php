@@ -58,14 +58,14 @@ class YeffoPrint_Template_Editor {
 			'yeffoprint-core-admin',
 			YEFFOPRINT_CORE_URL . 'assets/admin/admin.css',
 			[],
-			YEFFOPRINT_CORE_VERSION
+			yeffoprint_core_asset_version( 'assets/admin/admin.css' )
 		);
 
 		wp_enqueue_script(
 			'yeffoprint-core-field-schema',
 			YEFFOPRINT_CORE_URL . 'assets/admin/field-schema.js',
 			[],
-			YEFFOPRINT_CORE_VERSION,
+			yeffoprint_core_asset_version( 'assets/admin/field-schema.js' ),
 			true
 		);
 
@@ -73,7 +73,7 @@ class YeffoPrint_Template_Editor {
 			'yeffoprint-core-vial-mockup-picker',
 			YEFFOPRINT_CORE_URL . 'assets/admin/vial-mockup-picker.js',
 			[ 'media-editor' ],
-			YEFFOPRINT_CORE_VERSION,
+			yeffoprint_core_asset_version( 'assets/admin/vial-mockup-picker.js' ),
 			true
 		);
 
@@ -85,12 +85,19 @@ class YeffoPrint_Template_Editor {
 			'alignments' => YeffoPrint_Field_Schema::ALIGNMENTS,
 			'formattingRules' => YeffoPrint_Field_Schema::FORMATTING_RULES,
 			'previewBehaviors' => YeffoPrint_Field_Schema::PREVIEW_BEHAVIORS,
+			// The Template's own artwork — lets the position picker show
+			// fields on the actual label instead of leaving x/y as blind
+			// percentage guesses (Architecture §9: deferred from Phase 4
+			// until the preview surface existed; it does now).
+			'previewImageUrl' => $post_id ? ( get_the_post_thumbnail_url( $post_id, 'large' ) ?: '' ) : '',
 			'i18n'      => [
 				'addField'    => __( 'Add Field', 'yeffoprint-core' ),
 				'removeField' => __( 'Remove', 'yeffoprint-core' ),
 				'moveUp'      => __( 'Move up', 'yeffoprint-core' ),
 				'moveDown'    => __( 'Move down', 'yeffoprint-core' ),
 				'empty'       => __( 'No customization fields yet. Add one below.', 'yeffoprint-core' ),
+				'noPreview'   => __( 'Set a featured image above to preview and drag-position fields here.', 'yeffoprint-core' ),
+				'dragHint'    => __( 'Drag a label to reposition it on the artwork — or set exact percentages below.', 'yeffoprint-core' ),
 			],
 		] );
 	}
@@ -188,6 +195,7 @@ class YeffoPrint_Template_Editor {
 	public function render_field_schema_box( \WP_Post $post ): void {
 		?>
 		<div id="yp-field-schema-app">
+			<div id="yp-field-position-preview"></div>
 			<div class="yp-field-schema-list" role="list"></div>
 			<p>
 				<button type="button" class="button button-secondary" id="yp-field-schema-add"><?php esc_html_e( 'Add Field', 'yeffoprint-core' ); ?></button>

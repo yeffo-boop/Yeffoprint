@@ -469,6 +469,7 @@
 			el.style.top = field.position.y + '%';
 			el.style.textAlign = field.alignment;
 			el.style.textTransform = textTransformFor( field.formatting_rule );
+			el.style.color = field.text_color || '#000000';
 			el.textContent = variant.values[ field.id ] || '';
 			stageEl.appendChild( el );
 		} );

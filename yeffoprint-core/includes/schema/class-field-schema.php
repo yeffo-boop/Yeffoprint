@@ -57,6 +57,7 @@ class YeffoPrint_Field_Schema {
 		'alignment'         => 'center',
 		'font_size_min'     => 10,
 		'font_size_max'     => 24,
+		'text_color'        => '#000000',
 		'formatting_rule'   => 'none',
 		'preview_behavior'  => 'scale-to-fit',
 		'admin_description' => '',
@@ -126,6 +127,11 @@ class YeffoPrint_Field_Schema {
 			$position_x = min( 100, max( 0, $position_x ) );
 			$position_y = min( 100, max( 0, $position_y ) );
 
+			$text_color = isset( $field['text_color'] ) ? sanitize_hex_color( $field['text_color'] ) : null;
+			if ( ! $text_color ) {
+				$text_color = self::DEFAULT_FIELD['text_color'];
+			}
+
 			$clean[] = [
 				'id'                => $unique_id,
 				'label'             => $label,
@@ -137,6 +143,7 @@ class YeffoPrint_Field_Schema {
 				'alignment'         => $alignment,
 				'font_size_min'     => $font_size_min,
 				'font_size_max'     => $font_size_max,
+				'text_color'        => $text_color,
 				'formatting_rule'   => $formatting_rule,
 				'preview_behavior'  => $preview_behavior,
 				'admin_description' => isset( $field['admin_description'] ) ? sanitize_text_field( $field['admin_description'] ) : '',

@@ -38,7 +38,7 @@ class YeffoPrint_Proof_Editor {
 			'yeffoprint-core-vial-mockup-picker', // Generic wp.media picker script from Phase 4 — reused as-is.
 			YEFFOPRINT_CORE_URL . 'assets/admin/vial-mockup-picker.js',
 			[ 'media-editor' ],
-			YEFFOPRINT_CORE_VERSION,
+			yeffoprint_core_asset_version( 'assets/admin/vial-mockup-picker.js' ),
 			true
 		);
 	}

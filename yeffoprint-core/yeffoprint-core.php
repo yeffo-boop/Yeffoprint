@@ -25,6 +25,24 @@ require_once YEFFOPRINT_CORE_PATH . 'includes/class-yeffoprint-core.php';
 YeffoPrint_Core::instance();
 
 /**
+ * A content hash of the asset file, not YEFFOPRINT_CORE_VERSION — same
+ * reasoning as the theme's yeffoprint_asset_version() (functions.php):
+ * a manually-maintained version constant risks every admin CSS/JS
+ * change being served stale from cache until someone remembers to
+ * bump it, and a content hash has no such dependency — it changes if
+ * and only if the file's actual bytes did.
+ */
+function yeffoprint_core_asset_version( string $relative_path ) {
+	$path = YEFFOPRINT_CORE_PATH . $relative_path;
+	if ( ! file_exists( $path ) ) {
+		return YEFFOPRINT_CORE_VERSION;
+	}
+
+	$hash = md5_file( $path );
+	return $hash ? substr( $hash, 0, 12 ) : YEFFOPRINT_CORE_VERSION;
+}
+
+/**
  * The Template CPT's archive/rewrite slug (Phase 3) and the My Account
  * endpoints (Phase 9) both need a rewrite flush to start working.
  * Activation runs before 'init' has registered them in this request,
