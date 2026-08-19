@@ -105,6 +105,26 @@ final class YeffoPrint_Core {
 			return $gateways;
 		} );
 
+		// Separate registration for the Checkout *block* (Store API) —
+		// found live: the classic WC_Payment_Gateway above worked fine
+		// (enabled, saved, even present in the checkout page's initial
+		// HTML) but never showed as a selectable option, because this
+		// site's Checkout page uses the block, not the classic
+		// [woocommerce_checkout] shortcode. Core WooCommerce gateways
+		// ship this same registration built into WooCommerce itself,
+		// which is why only the custom ones were missing. Same lazy-
+		// require reasoning as the filter above — AbstractPaymentMethodType
+		// is also a class *declaration* dependency, and this action only
+		// ever fires from deep inside WooCommerce Blocks' own bootstrap.
+		add_action( 'woocommerce_blocks_payment_method_type_registration', static function ( $registry ): void {
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-manual-payment-blocks-support.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-venmo-blocks-support.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-zelle-blocks-support.php';
+
+			$registry->register( new YeffoPrint_Venmo_Blocks_Support() );
+			$registry->register( new YeffoPrint_Zelle_Blocks_Support() );
+		} );
+
 		// Flush once whenever needed — not just on activation. The
 		// activation-hook flag (yeffoprint-core.php) covers a normal
 		// install; the version check covers every other real-world
