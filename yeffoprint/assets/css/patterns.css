@@ -163,10 +163,15 @@
 	text-decoration: none;
 }
 
-.yp-template-card__media {
-	/* Real label size is 45mm x 21mm — 15:7 keeps that exact ratio
-	   (not the generic .yp-card__media 4:5 used by other card types,
-	   e.g. the customer-work placeholder tiles) scaled up to something
+.yp-card__media.yp-template-card__media {
+	/* Both classes in the selector, not just .yp-template-card__media
+	   alone — .yp-card__media (global.css) sets aspect-ratio:4/5 on the
+	   exact same element (render.php outputs both classes together),
+	   and with equal single-class specificity on each, which one wins
+	   depended entirely on stylesheet load order rather than being
+	   guaranteed. Real label size is 45mm x 21mm — 15:7 keeps that
+	   exact ratio (not the generic 4:5 used by other card types, e.g.
+	   the customer-work placeholder tiles) scaled up to something
 	   legible on screen. Upload artwork/photos cropped to this ratio. */
 	position: relative;
 	aspect-ratio: 15 / 7;
