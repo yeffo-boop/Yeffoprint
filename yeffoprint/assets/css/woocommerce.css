@@ -82,21 +82,35 @@
 }
 
 /* Account page */
+/* Vertical stack, not wrapped horizontal pills — with 9 items now
+   (Dashboard/Orders/Saved Designs/Rewards/Proofs/Downloads/Addresses/
+   Account details/Log out) a flex-wrap row was packing unevenly by
+   available width, reading as disorganized clusters rather than a
+   predictable list. A stack has no such wrapping ambiguity regardless
+   of how many endpoints this ever grows to. */
 .woocommerce-MyAccount-navigation ul {
 	list-style: none;
 	padding: 0;
+	margin: 0;
 	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
+	flex-direction: column;
+	gap: 0.35rem;
 }
 
 .woocommerce-MyAccount-navigation a {
-	display: inline-block;
-	padding: 0.5rem 1rem;
+	display: block;
+	padding: 0.6rem 1rem;
 	border-radius: var(--wp--custom--radius--control);
 	background: var(--wp--preset--color--light-gray);
 	text-decoration: none;
 	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--near-black);
+	transition: background-color 150ms ease, color 150ms ease;
+}
+
+.woocommerce-MyAccount-navigation a:hover {
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
 }
 
 .woocommerce-MyAccount-navigation .is-active a {
