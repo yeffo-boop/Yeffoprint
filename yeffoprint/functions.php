@@ -105,6 +105,37 @@ add_action( 'wp_enqueue_scripts', function () {
 			$theme_version
 		);
 	}
+
+	// Custom template slug is stored without the .html extension on
+	// some WP versions and with it on others — check both rather than
+	// guessing which this install uses.
+	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-design-form', 'custom-design-form.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			$theme_version
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-custom-order',
+			get_theme_file_uri( 'assets/css/custom-order.css' ),
+			[ 'yeffoprint-configurator' ],
+			$theme_version
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-custom-order-form',
+			get_theme_file_uri( 'assets/js/custom-order-form.js' ),
+			[],
+			$theme_version,
+			[ 'strategy' => 'defer' ]
+		);
+
+		wp_localize_script( 'yeffoprint-custom-order-form', 'yeffoprintCustomOrder', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+		] );
+	}
 } );
 
 /**

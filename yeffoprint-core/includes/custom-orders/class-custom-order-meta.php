@@ -1,0 +1,84 @@
+<?php
+/**
+ * Data model for the Fully Custom Design flow (PROJECT_SPEC §13).
+ *
+ * Separate from Template/Batch/Variant entirely — a CustomOrder is a
+ * one-off request, not a premade design (Architecture §2). Payment
+ * and production tracking are deliberately split, same pattern as
+ * Material/Size's post_status reuse: `post_status` is draft while the
+ * $25 design fee is unpaid, publish once it's paid (see
+ * class-custom-order-payment.php), and the customer-facing 6-state
+ * `_yp_status` value only starts meaning anything at that point —
+ * "WooCommerce order status drives payment/fulfillment; CustomOrder.
+ * status drives the production workflow" (Architecture §6).
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+class YeffoPrint_Custom_Order_Meta {
+
+	public const SIZE_ID             = '_yp_size_id';
+	public const MATERIAL_ID         = '_yp_material_id';
+	public const QUANTITY            = '_yp_quantity';
+	public const COMPOUND_STRENGTH   = '_yp_compound_strength';
+	public const BRAND_NAME          = '_yp_brand_name';
+	public const STYLE_NOTES         = '_yp_style_notes';
+	public const INSTRUCTIONS        = '_yp_instructions';
+	public const INSPIRATION_UPLOADS = '_yp_inspiration_uploads';
+	public const DESIGN_FEE          = '_yp_design_fee';
+	public const STATUS              = '_yp_status';
+	public const WC_ORDER_ID         = '_yp_wc_order_id';
+	public const CUSTOMER_EMAIL      = '_yp_customer_email';
+	public const CUSTOMER_NAME       = '_yp_customer_name';
+
+	/** In pipeline order — PROJECT_SPEC §13. */
+	public const STATUSES = [
+		'design_in_progress' => 'Design in progress',
+		'proof_ready'        => 'Proof ready',
+		'awaiting_approval'  => 'Awaiting approval',
+		'approved'           => 'Approved',
+		'printing'           => 'Printing',
+		'shipped'            => 'Shipped',
+	];
+
+	public function __construct() {
+		add_filter( 'manage_yp_custom_order_posts_columns', [ $this, 'columns' ] );
+		add_action( 'manage_yp_custom_order_posts_custom_column', [ $this, 'render_column' ], 10, 2 );
+	}
+
+	public static function get_status_label( string $status ): string {
+		return self::STATUSES[ $status ] ?? '';
+	}
+
+	public function columns( array $columns ): array {
+		$result = [];
+
+		foreach ( $columns as $key => $label ) {
+			$result[ $key ] = $label;
+			if ( 'title' === $key ) {
+				$result['yp_status']   = __( 'Status', 'yeffoprint-core' );
+				$result['yp_customer'] = __( 'Customer', 'yeffoprint-core' );
+				$result['yp_paid']     = __( 'Paid', 'yeffoprint-core' );
+			}
+		}
+
+		return $result;
+	}
+
+	public function render_column( string $column, int $post_id ): void {
+		switch ( $column ) {
+			case 'yp_status':
+				$status = (string) get_post_meta( $post_id, self::STATUS, true );
+				echo $status ? esc_html( self::get_status_label( $status ) ) : esc_html__( '—', 'yeffoprint-core' );
+				break;
+
+			case 'yp_customer':
+				echo esc_html( get_post_meta( $post_id, self::CUSTOMER_NAME, true ) ?: get_post_meta( $post_id, self::CUSTOMER_EMAIL, true ) );
+				break;
+
+			case 'yp_paid':
+				echo 'publish' === get_post_status( $post_id ) ? '✓' : '—';
+				break;
+		}
+	}
+}

@@ -215,3 +215,9 @@ if ( ! function_exists( 'yeffoprint_core_starting_price_label' ) ) {
 		);
 	}
 }
+
+if ( ! function_exists( 'yeffoprint_core_custom_design_fee_label' ) ) {
+	function yeffoprint_core_custom_design_fee_label(): string {
+		return '$' . number_format_i18n( YeffoPrint_Pricing_Rule::get_custom_design_fee(), 2 );
+	}
+}

@@ -1,0 +1,173 @@
+<?php
+/**
+ * Admin view for a Fully Custom Design request (PROJECT_SPEC §17
+ * "Custom Orders" admin section).
+ *
+ * Everything except Status is read-only here — it's what the customer
+ * submitted (class-custom-order-controller.php) or what payment
+ * completion filled in (class-custom-order-payment.php). Status is
+ * the one thing staff actively drive, advancing it through PROJECT_SPEC
+ * §13's six states as the job moves through production.
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+class YeffoPrint_Custom_Order_Editor {
+
+	private const NONCE_ACTION = 'yeffoprint_save_custom_order';
+	private const NONCE_NAME   = 'yeffoprint_custom_order_nonce';
+
+	public function __construct() {
+		add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
+		add_action( 'save_post_yp_custom_order', [ $this, 'save' ] );
+	}
+
+	public function add_meta_boxes(): void {
+		add_meta_box(
+			'yp-custom-order-details',
+			__( 'Request Details', 'yeffoprint-core' ),
+			[ $this, 'render_details_box' ],
+			'yp_custom_order',
+			'normal'
+		);
+
+		add_meta_box(
+			'yp-custom-order-status',
+			__( 'Status', 'yeffoprint-core' ),
+			[ $this, 'render_status_box' ],
+			'yp_custom_order',
+			'side'
+		);
+
+		add_meta_box(
+			'yp-custom-order-proofs',
+			__( 'Proofs', 'yeffoprint-core' ),
+			[ $this, 'render_proofs_box' ],
+			'yp_custom_order',
+			'side'
+		);
+	}
+
+	public function render_details_box( \WP_Post $post ): void {
+		$m = static function ( string $key ) use ( $post ) {
+			return get_post_meta( $post->ID, $key, true );
+		};
+
+		$size_id     = (int) $m( YeffoPrint_Custom_Order_Meta::SIZE_ID );
+		$material_id = (int) $m( YeffoPrint_Custom_Order_Meta::MATERIAL_ID );
+		$uploads     = (array) $m( YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS );
+		$wc_order_id = (int) $m( YeffoPrint_Custom_Order_Meta::WC_ORDER_ID );
+		?>
+		<table class="widefat striped">
+			<tbody>
+				<tr><th><?php esc_html_e( 'Customer', 'yeffoprint-core' ); ?></th><td>
+					<?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME ) ); ?>
+					<?php if ( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ) ) : ?>
+						&mdash; <a href="mailto:<?php echo esc_attr( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ) ); ?>"><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ) ); ?></a>
+					<?php endif; ?>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Brand Name', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::BRAND_NAME ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Compound / Strength', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH ) ?: '—' ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Size', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $size_id ? get_the_title( $size_id ) : '—' ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Material', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $material_id ? get_the_title( $material_id ) : '—' ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Style / Colors', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::STYLE_NOTES ) ?: '—' ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
+				<tr><th><?php esc_html_e( 'Inspiration Files', 'yeffoprint-core' ); ?></th><td>
+					<?php if ( $uploads ) : ?>
+						<ul>
+							<?php foreach ( $uploads as $attachment_id ) :
+								$url = wp_get_attachment_url( $attachment_id );
+								if ( ! $url ) {
+									continue;
+								}
+								?>
+								<li><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( basename( $url ) ); ?></a></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php else : ?>
+						—
+					<?php endif; ?>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Design Fee', 'yeffoprint-core' ); ?></th><td>
+					<?php
+					$fee = $m( YeffoPrint_Custom_Order_Meta::DESIGN_FEE );
+					echo $fee ? esc_html( '$' . number_format_i18n( (float) $fee, 2 ) . ' — paid' ) : esc_html__( 'Awaiting payment', 'yeffoprint-core' );
+					?>
+				</td></tr>
+				<?php if ( $wc_order_id ) : ?>
+					<tr><th><?php esc_html_e( 'Order', 'yeffoprint-core' ); ?></th><td>
+						<a href="<?php echo esc_url( admin_url( 'post.php?post=' . $wc_order_id . '&action=edit' ) ); ?>">#<?php echo esc_html( (string) $wc_order_id ); ?></a>
+					</td></tr>
+				<?php endif; ?>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	public function render_status_box( \WP_Post $post ): void {
+		wp_nonce_field( self::NONCE_ACTION, self::NONCE_NAME );
+
+		if ( 'publish' !== $post->post_status ) {
+			echo '<p>' . esc_html__( 'Awaiting the design fee payment. Status is set automatically once paid.', 'yeffoprint-core' ) . '</p>';
+			return;
+		}
+
+		$status = (string) get_post_meta( $post->ID, YeffoPrint_Custom_Order_Meta::STATUS, true );
+		?>
+		<select name="yp_custom_order_status" class="widefat">
+			<?php foreach ( YeffoPrint_Custom_Order_Meta::STATUSES as $value => $label ) : ?>
+				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $status, $value ); ?>><?php echo esc_html( $label ); ?></option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	public function render_proofs_box( \WP_Post $post ): void {
+		$proof_ids = YeffoPrint_Proof_Meta::get_for_custom_order( $post->ID );
+
+		if ( ! $proof_ids ) {
+			echo '<p>' . esc_html__( 'No proofs uploaded yet — add one from the Proofs screen.', 'yeffoprint-core' ) . '</p>';
+		} else {
+			echo '<ul>';
+			foreach ( $proof_ids as $proof_id ) {
+				$file_id = (int) get_post_meta( $proof_id, YeffoPrint_Proof_Meta::FILE_ID, true );
+				$url     = $file_id ? wp_get_attachment_url( $file_id ) : '';
+				printf(
+					'<li><a href="%s">%s</a> — %s</li>',
+					esc_url( $url ?: '#' ),
+					esc_html( get_the_date( '', $proof_id ) ),
+					esc_html( get_the_title( $proof_id ) ?: __( 'Proof', 'yeffoprint-core' ) )
+				);
+			}
+			echo '</ul>';
+		}
+
+		printf(
+			'<p><a class="button" href="%s">%s</a></p>',
+			esc_url( admin_url( 'post-new.php?post_type=yp_proof&custom_order=' . $post->ID ) ),
+			esc_html__( 'Add Proof', 'yeffoprint-core' )
+		);
+	}
+
+	public function save( int $post_id ): void {
+		if ( ! isset( $_POST[ self::NONCE_NAME ] ) || ! wp_verify_nonce( wp_unslash( $_POST[ self::NONCE_NAME ] ), self::NONCE_ACTION ) ) {
+			return;
+		}
+
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		if ( isset( $_POST['yp_custom_order_status'] ) ) {
+			$status = sanitize_key( wp_unslash( $_POST['yp_custom_order_status'] ) );
+			if ( array_key_exists( $status, YeffoPrint_Custom_Order_Meta::STATUSES ) ) {
+				update_post_meta( $post_id, YeffoPrint_Custom_Order_Meta::STATUS, $status );
+			}
+		}
+	}
+}

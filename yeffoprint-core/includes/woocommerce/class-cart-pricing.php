@@ -40,6 +40,11 @@ class YeffoPrint_Cart_Pricing {
 		}
 
 		foreach ( $cart->get_cart() as $cart_item ) {
+			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
+				$cart_item['data']->set_price( YeffoPrint_Pricing_Rule::get_custom_design_fee() );
+				continue;
+			}
+
 			$breakdown = self::calculate_for_cart_item( $cart_item );
 			if ( null !== $breakdown ) {
 				$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
@@ -89,6 +94,15 @@ class YeffoPrint_Cart_Pricing {
 	 * those without an additional Store API schema extension.
 	 */
 	public function display_item_data( array $item_data, array $cart_item ): array {
+		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
+			$custom_order = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] );
+			if ( $custom_order ) {
+				$brand = get_post_meta( $custom_order->ID, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
+				$item_data[] = [ 'key' => __( 'Brand', 'yeffoprint-core' ), 'value' => $brand ?: '—' ];
+			}
+			return $item_data;
+		}
+
 		if ( empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
 			return $item_data;
 		}
@@ -118,18 +132,21 @@ class YeffoPrint_Cart_Pricing {
 	}
 
 	/**
-	 * Defensive net: our own REST endpoint (class-cart-controller.php)
-	 * is the only intended entry point for adding a linked product to
-	 * the cart, but this rejects anyone who reaches WooCommerce's
-	 * native add-to-cart directly for one of these hidden products
-	 * without the batch data it requires.
+	 * Defensive net: our own REST controllers (class-cart-controller.php,
+	 * class-custom-order-controller.php) are the only intended entry
+	 * points for adding a linked Template product or the custom design
+	 * fee product to the cart. This rejects anyone who reaches
+	 * WooCommerce's native add-to-cart directly for one of these hidden
+	 * products without the required batch/custom-order data —
+	 * including, for the fee product, a bare add that would otherwise
+	 * check out at whatever price is on the product record itself
+	 * rather than the live PricingRule fee.
 	 */
 	public function require_batch_data( bool $passed, int $product_id, int $quantity ): bool {
-		if ( ! YeffoPrint_Linked_Product::get_template_id( $product_id ) ) {
-			return $passed;
-		}
+		$is_linked_product = YeffoPrint_Linked_Product::get_template_id( $product_id )
+			|| $product_id === YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id();
 
-		if ( self::$bypass_validation ) {
+		if ( ! $is_linked_product || self::$bypass_validation ) {
 			return $passed;
 		}
 

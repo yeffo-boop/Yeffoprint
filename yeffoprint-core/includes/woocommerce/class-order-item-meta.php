@@ -4,7 +4,10 @@
  * checkout — Architecture §5: order metadata must be able to
  * re-render the exact configurator state (future "Edit"/"Reorder")
  * and preserve which PricingRule version priced the order, even after
- * Templates/Sizes/Materials/pricing change later.
+ * Templates/Sizes/Materials/pricing change later. Also handles the
+ * custom design fee line item (PROJECT_SPEC §13), which just needs a
+ * back-reference to its yp_custom_order record — the actual linking/
+ * status-advancing happens on payment, see class-custom-order-payment.php.
  *
  * Deliberately separate, named meta keys per fact (template snapshot,
  * size snapshot, material snapshot, pricing snapshot, variants) rather
@@ -24,6 +27,11 @@ class YeffoPrint_Order_Item_Meta {
 	}
 
 	public function snapshot( \WC_Order_Item_Product $item, string $cart_item_key, array $values, \WC_Order $order ): void {
+		if ( ! empty( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
+			$this->snapshot_custom_order_fee( $item, (int) $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] );
+			return;
+		}
+
 		if ( empty( $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
 			return;
 		}
@@ -55,6 +63,11 @@ class YeffoPrint_Order_Item_Meta {
 		$item->add_meta_data( __( 'Labels in this batch', 'yeffoprint-core' ), count( $variants ), true );
 	}
 
+	private function snapshot_custom_order_fee( \WC_Order_Item_Product $item, int $custom_order_id ): void {
+		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
+		$item->add_meta_data( __( 'Custom Design Request', 'yeffoprint-core' ), $custom_order_id ? get_the_title( $custom_order_id ) : '—', true );
+	}
+
 	private function record_snapshot( int $post_id ): array {
 		if ( ! $post_id ) {
 			return [];
@@ -75,6 +88,7 @@ class YeffoPrint_Order_Item_Meta {
 			'_yp_variants',
 			'_yp_batch_quantity',
 			'_yp_pricing_snapshot',
+			'_yp_custom_order_id',
 		] );
 	}
 }

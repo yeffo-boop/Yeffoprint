@@ -136,5 +136,12 @@
 		{ "name": "header", "area": "header" },
 		{ "name": "footer", "area": "footer" },
 		{ "name": "announcement-bar", "area": "uncategorized", "title": "Announcement Bar" }
+	],
+	"customTemplates": [
+		{
+			"name": "custom-design-form",
+			"title": "Custom Design Form",
+			"postTypes": [ "page" ]
+		}
 	]
 }
