@@ -90,6 +90,18 @@ if ( ! function_exists( 'yeffoprint_core_get_announcement_bar_text' ) ) {
 	}
 }
 
+if ( ! function_exists( 'yeffoprint_core_rewards_points_per_dollar_label' ) ) {
+	/**
+	 * Used by patterns/rewards-promo.php so the homepage promo's earn
+	 * rate is always the same live, admin-configurable number the
+	 * points engine itself uses (includes/rewards/class-rewards.php),
+	 * never a hardcoded copy of it.
+	 */
+	function yeffoprint_core_rewards_points_per_dollar_label(): string {
+		return class_exists( 'YeffoPrint_Rewards' ) ? YeffoPrint_Rewards::points_per_dollar_label() : '1';
+	}
+}
+
 if ( ! function_exists( 'yeffoprint_core_badge_label' ) ) {
 	function yeffoprint_core_badge_label( string $badge ): string {
 		$labels = [

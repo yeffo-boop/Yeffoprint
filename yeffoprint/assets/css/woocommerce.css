@@ -353,6 +353,83 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+/* ---------- Rewards tab ---------- */
+
+.yp-rewards-balance {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 1rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: linear-gradient(120deg, rgba(0, 174, 239, 0.1), rgba(236, 0, 140, 0.1), rgba(255, 242, 0, 0.1));
+	border: 1.5px solid rgba(236, 0, 140, 0.22);
+}
+
+.yp-rewards-balance__points {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--xx-large);
+	font-weight: 700;
+}
+
+.yp-rewards-balance__label {
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rewards-balance__value {
+	width: 100%;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rewards-redeem-form {
+	margin-bottom: 2rem;
+}
+
+.yp-rewards-history {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.yp-rewards-history__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.85rem 1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-rewards-history__date {
+	display: block;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.8rem;
+}
+
+.yp-rewards-history__amounts {
+	display: flex;
+	gap: 0.6rem;
+	font-family: var(--wp--preset--font-family--mono);
+	font-weight: 600;
+	flex-shrink: 0;
+}
+
+.yp-rewards-history__earned {
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-rewards-history__redeemed {
+	color: var(--wp--preset--color--magenta-deep);
+}
+
 /* ---------- Proofs tab ---------- */
 
 .yp-proofs-list {

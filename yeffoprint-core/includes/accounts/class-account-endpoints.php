@@ -4,9 +4,9 @@
  * §16: "Orders, Saved Designs, Rewards, Proofs, Addresses").
  *
  * Orders and Addresses are native WooCommerce — presentation-only
- * restyling lives in the theme. Rewards is still a V1 non-goal
- * (PROJECT_SPEC §19): its tab exists so the account navigation matches
- * spec, but its content is a plain "coming soon" state, not a feature.
+ * restyling lives in the theme. Rewards is real as of this pass — see
+ * includes/rewards/class-rewards.php for the actual points engine;
+ * this tab is just the customer-facing balance/history/redeem view.
  * Saved Designs is real as of the V2 pass — see
  * includes/rest/class-saved-design-controller.php for the create/list/
  * fetch/delete REST endpoints this tab's list and "Remove" action use.
@@ -30,11 +30,15 @@ class YeffoPrint_Account_Endpoints {
 	private const REMOVE_NONCE_ACTION = 'yeffoprint_remove_saved_design';
 	private const REMOVE_NONCE_NAME   = 'yp_saved_design_nonce';
 
+	private const REWARDS_NONCE_ACTION = 'yeffoprint_rewards_redeem';
+	private const REWARDS_NONCE_NAME   = 'yp_rewards_nonce';
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_endpoints' ] );
 		add_filter( 'query_vars', [ $this, 'register_query_vars' ] );
 		add_filter( 'woocommerce_account_menu_items', [ $this, 'reorder_menu_items' ] );
 		add_action( 'template_redirect', [ $this, 'maybe_handle_remove_saved_design' ] );
+		add_action( 'template_redirect', [ $this, 'maybe_handle_rewards_redeem' ] );
 
 		add_action( 'woocommerce_account_saved-designs_endpoint', [ $this, 'render_saved_designs' ] );
 		add_action( 'woocommerce_account_rewards_endpoint', [ $this, 'render_rewards' ] );
@@ -69,6 +73,42 @@ class YeffoPrint_Account_Endpoints {
 		}
 
 		wp_safe_redirect( function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( 'saved-designs' ) : home_url( '/my-account/saved-designs/' ) );
+		exit;
+	}
+
+	/**
+	 * Same plain POST-and-redirect pattern as
+	 * maybe_handle_remove_saved_design() above — no REST/JS needed for
+	 * a once-in-a-while account-page action. Two values only: apply the
+	 * customer's full current balance to their next cart, or cancel an
+	 * already-pending one. Actually spending it happens later, when
+	 * that cart is checked out (YeffoPrint_Rewards::apply_pending_
+	 * redemption(), then finalize_order() at payment) — this just
+	 * records the customer's choice.
+	 */
+	public function maybe_handle_rewards_redeem(): void {
+		if ( ! isset( $_POST['yp_rewards_action'], $_POST[ self::REWARDS_NONCE_NAME ] ) ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( wp_unslash( $_POST[ self::REWARDS_NONCE_NAME ] ), self::REWARDS_NONCE_ACTION ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		$user_id = get_current_user_id();
+		$action  = sanitize_text_field( wp_unslash( $_POST['yp_rewards_action'] ) );
+
+		if ( 'apply' === $action ) {
+			update_user_meta( $user_id, YeffoPrint_Rewards::PENDING_REDEEM_META, YeffoPrint_Rewards::get_balance( $user_id ) );
+		} elseif ( 'cancel' === $action ) {
+			update_user_meta( $user_id, YeffoPrint_Rewards::PENDING_REDEEM_META, 0 );
+		}
+
+		wp_safe_redirect( function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( 'rewards' ) : home_url( '/my-account/rewards/' ) );
 		exit;
 	}
 
@@ -173,7 +213,109 @@ class YeffoPrint_Account_Endpoints {
 	}
 
 	public function render_rewards(): void {
-		echo '<p>' . esc_html__( 'YeffoPrint Rewards is coming soon — you\'ll earn credit toward future orders every time you print.', 'yeffoprint-core' ) . '</p>';
+		$user_id = get_current_user_id();
+		$balance = YeffoPrint_Rewards::get_balance( $user_id );
+		$pending = min( YeffoPrint_Rewards::get_pending_redeem( $user_id ), $balance );
+		?>
+		<div class="yp-rewards-balance">
+			<span class="yp-rewards-balance__points"><?php echo esc_html( number_format_i18n( $balance ) ); ?></span>
+			<span class="yp-rewards-balance__label"><?php esc_html_e( 'points', 'yeffoprint-core' ); ?></span>
+			<span class="yp-rewards-balance__value">
+				<?php
+				echo wp_kses_post( wc_price( YeffoPrint_Rewards::points_to_dollars( $balance ) ) );
+				esc_html_e( ' available to spend', 'yeffoprint-core' );
+				?>
+			</span>
+		</div>
+
+		<p class="description">
+			<?php
+			printf(
+				/* translators: %s: points earned per dollar spent, formatted */
+				esc_html__( 'Earn %s point(s) for every $1 you spend — added automatically once an order is paid.', 'yeffoprint-core' ),
+				esc_html( YeffoPrint_Rewards::points_per_dollar_label() )
+			);
+			?>
+		</p>
+
+		<?php if ( $balance > 0 ) : ?>
+			<form method="post" class="yp-rewards-redeem-form">
+				<?php wp_nonce_field( self::REWARDS_NONCE_ACTION, self::REWARDS_NONCE_NAME ); ?>
+				<?php if ( $pending > 0 ) : ?>
+					<p>
+						<?php
+						printf(
+							/* translators: 1: points pending redemption, 2: dollar value */
+							esc_html__( 'Currently set to apply %1$s points (%2$s) to your next order.', 'yeffoprint-core' ),
+							'<strong>' . esc_html( number_format_i18n( $pending ) ) . '</strong>',
+							wp_kses_post( wc_price( YeffoPrint_Rewards::points_to_dollars( $pending ) ) )
+						);
+						?>
+					</p>
+					<button type="submit" name="yp_rewards_action" value="cancel" class="button-link"><?php esc_html_e( 'Stop applying rewards', 'yeffoprint-core' ); ?></button>
+				<?php else : ?>
+					<button type="submit" name="yp_rewards_action" value="apply" class="wp-block-button__link"><?php esc_html_e( 'Apply my balance to my next order', 'yeffoprint-core' ); ?></button>
+				<?php endif; ?>
+			</form>
+		<?php endif; ?>
+
+		<?php $this->render_rewards_history( $user_id ); ?>
+		<?php
+	}
+
+	private function render_rewards_history( int $user_id ): void {
+		$orders = wc_get_orders( [
+			'customer_id' => $user_id,
+			'limit'       => 10,
+			'orderby'     => 'date',
+			'order'       => 'DESC',
+			'meta_query'  => [
+				[
+					'key'     => YeffoPrint_Rewards::ORDER_POINTS_EARNED_META,
+					'compare' => 'EXISTS',
+				],
+			],
+		] );
+
+		if ( ! $orders ) {
+			return;
+		}
+
+		echo '<h3>' . esc_html__( 'Recent activity', 'yeffoprint-core' ) . '</h3>';
+		echo '<ul class="yp-rewards-history">';
+
+		foreach ( $orders as $order ) {
+			$earned   = (int) $order->get_meta( YeffoPrint_Rewards::ORDER_POINTS_EARNED_META );
+			$redeemed = (int) $order->get_meta( YeffoPrint_Rewards::ORDER_POINTS_REDEEMED_META );
+
+			if ( ! $earned && ! $redeemed ) {
+				continue; // A guest order, or one with nothing to show either direction.
+			}
+			?>
+			<li class="yp-rewards-history__row">
+				<span class="yp-rewards-history__order">
+					<?php
+					printf(
+						/* translators: %s: order number */
+						esc_html__( 'Order #%s', 'yeffoprint-core' ),
+						esc_html( $order->get_order_number() )
+					);
+					?>
+					<span class="yp-rewards-history__date"><?php echo esc_html( wc_format_datetime( $order->get_date_created() ) ); ?></span>
+				</span>
+				<span class="yp-rewards-history__amounts">
+					<?php if ( $earned > 0 ) : ?>
+						<span class="yp-rewards-history__earned">+<?php echo esc_html( number_format_i18n( $earned ) ); ?></span>
+					<?php endif; ?>
+					<?php if ( $redeemed > 0 ) : ?>
+						<span class="yp-rewards-history__redeemed">&minus;<?php echo esc_html( number_format_i18n( $redeemed ) ); ?></span>
+					<?php endif; ?>
+				</span>
+			</li>
+			<?php
+		}
+
+		echo '</ul>';
 	}
 
 	public function render_proofs(): void {

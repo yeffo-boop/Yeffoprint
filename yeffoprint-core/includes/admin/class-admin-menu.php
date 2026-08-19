@@ -28,6 +28,12 @@ class YeffoPrint_Admin_Menu {
 	const ANNOUNCEMENT_BAR_OPTION  = 'yeffoprint_announcement_bar_text';
 	const ANNOUNCEMENT_BAR_DEFAULT = 'Free proofing on every fully custom order.';
 
+	/** Also read by YeffoPrint_Rewards (includes/rewards/class-rewards.php) — same reasoning as the announcement bar option above. */
+	const REWARDS_POINTS_PER_DOLLAR_OPTION = 'yeffoprint_rewards_points_per_dollar';
+	const REWARDS_DOLLARS_PER_POINT_OPTION = 'yeffoprint_rewards_dollars_per_point';
+	const REWARDS_POINTS_PER_DOLLAR_DEFAULT = 1;
+	const REWARDS_DOLLARS_PER_POINT_DEFAULT = 0.01;
+
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
 		// Runs after WordPress has built every submenu (including the
@@ -81,6 +87,50 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_announcement_bar'
 		);
+
+		register_setting( 'yeffoprint_settings', self::REWARDS_POINTS_PER_DOLLAR_OPTION, [
+			'type'              => 'number',
+			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
+			'default'           => self::REWARDS_POINTS_PER_DOLLAR_DEFAULT,
+		] );
+
+		register_setting( 'yeffoprint_settings', self::REWARDS_DOLLARS_PER_POINT_OPTION, [
+			'type'              => 'number',
+			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
+			'default'           => self::REWARDS_DOLLARS_PER_POINT_DEFAULT,
+		] );
+
+		add_settings_section(
+			'yeffoprint_rewards',
+			__( 'Rewards', 'yeffoprint-core' ),
+			'__return_false',
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::REWARDS_POINTS_PER_DOLLAR_OPTION,
+			__( 'Points earned per $1 spent', 'yeffoprint-core' ),
+			[ $this, 'render_rewards_points_per_dollar_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_rewards'
+		);
+
+		add_settings_field(
+			self::REWARDS_DOLLARS_PER_POINT_OPTION,
+			__( 'Redemption value per point', 'yeffoprint-core' ),
+			[ $this, 'render_rewards_dollars_per_point_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_rewards'
+		);
+	}
+
+	/**
+	 * Both rewards fields are positive rates, not free text — a
+	 * negative or non-numeric value would let a customer earn negative
+	 * points or redeem for an unbounded discount.
+	 */
+	public function sanitize_positive_number( $value ): float {
+		return max( 0, (float) $value );
 	}
 
 	public function render_announcement_bar_field(): void {
@@ -93,6 +143,34 @@ class YeffoPrint_Admin_Menu {
 			value="<?php echo esc_attr( $value ); ?>"
 		/>
 		<p class="description"><?php esc_html_e( 'Shown in the thin bar above the header, on every page. Leave blank to hide the bar entirely.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_rewards_points_per_dollar_field(): void {
+		$value = get_option( self::REWARDS_POINTS_PER_DOLLAR_OPTION, self::REWARDS_POINTS_PER_DOLLAR_DEFAULT );
+		?>
+		<input
+			type="number"
+			step="0.01"
+			min="0"
+			name="<?php echo esc_attr( self::REWARDS_POINTS_PER_DOLLAR_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'How many points a customer earns for every $1 of merchandise (shipping and tax excluded), awarded once an order is paid.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_rewards_dollars_per_point_field(): void {
+		$value = get_option( self::REWARDS_DOLLARS_PER_POINT_OPTION, self::REWARDS_DOLLARS_PER_POINT_DEFAULT );
+		?>
+		<input
+			type="number"
+			step="0.001"
+			min="0"
+			name="<?php echo esc_attr( self::REWARDS_DOLLARS_PER_POINT_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Dollar discount each point is worth when a customer redeems their balance. Default 0.01 means 100 points = $1.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 
