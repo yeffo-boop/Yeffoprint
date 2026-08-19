@@ -61,6 +61,10 @@ class YeffoPrint_Template_Schema_Controller {
 			'description'      => wp_strip_all_tags( apply_filters( 'the_content', $template->post_content ) ),
 			'artwork_url'      => get_the_post_thumbnail_url( $template, 'large' ) ?: null,
 			'vial_mockup_url'  => $this->vial_mockup_url( $template->ID ),
+			// Empty string (the default/unset state) tells configurator.js
+			// to leave Label View on the site's own font rather than set
+			// an empty font-family.
+			'preview_font'     => (string) get_post_meta( $template->ID, YeffoPrint_Template_Meta::PREVIEW_FONT, true ),
 			'base_unit_price'  => function_exists( 'yeffoprint_core_base_unit_price' ) ? yeffoprint_core_base_unit_price() : 0,
 			'quantity_presets' => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
 			'field_schema'     => YeffoPrint_Field_Schema::get( $template->ID ),

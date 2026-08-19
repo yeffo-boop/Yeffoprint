@@ -135,6 +135,7 @@ class YeffoPrint_Template_Editor {
 		$featured    = (bool) get_post_meta( $post->ID, YeffoPrint_Template_Meta::FEATURED, true );
 		$badge       = (string) get_post_meta( $post->ID, YeffoPrint_Template_Meta::BADGE, true );
 		$popularity  = (int) get_post_meta( $post->ID, YeffoPrint_Template_Meta::POPULARITY, true );
+		$preview_font = (string) get_post_meta( $post->ID, YeffoPrint_Template_Meta::PREVIEW_FONT, true );
 		$vial_id     = (int) get_post_meta( $post->ID, YeffoPrint_Template_Meta::VIAL_MOCKUP, true );
 		$vial_url    = $vial_id ? wp_get_attachment_image_url( $vial_id, 'thumbnail' ) : '';
 		$compat_sizes = array_map( 'absint', (array) get_post_meta( $post->ID, YeffoPrint_Template_Meta::COMPATIBLE_SIZES, true ) );
@@ -145,6 +146,24 @@ class YeffoPrint_Template_Editor {
 				<input type="checkbox" name="yp_featured" value="1" <?php checked( $featured ); ?> />
 				<?php esc_html_e( 'Featured', 'yeffoprint-core' ); ?>
 			</label>
+		</p>
+		<p>
+			<label for="yp-preview-font"><?php esc_html_e( 'Preview font', 'yeffoprint-core' ); ?></label><br />
+			<input
+				type="text"
+				id="yp-preview-font"
+				name="yp_preview_font"
+				value="<?php echo esc_attr( $preview_font ); ?>"
+				list="yp-preview-font-suggestions"
+				class="widefat"
+				placeholder="<?php esc_attr_e( 'Default (site font)', 'yeffoprint-core' ); ?>"
+			/>
+			<datalist id="yp-preview-font-suggestions">
+				<?php foreach ( YeffoPrint_Template_Meta::PREVIEW_FONT_SUGGESTIONS as $font_name ) : ?>
+					<option value="<?php echo esc_attr( $font_name ); ?>"></option>
+				<?php endforeach; ?>
+			</datalist>
+			<span class="description"><?php esc_html_e( 'Any Google Fonts family name — sets what Label View renders the customer\'s live text in, so the configurator preview matches the actual printed label. Leave blank to use the site\'s default font.', 'yeffoprint-core' ); ?></span>
 		</p>
 		<p>
 			<label for="yp-badge"><?php esc_html_e( 'Badge', 'yeffoprint-core' ); ?></label><br />
@@ -238,6 +257,17 @@ class YeffoPrint_Template_Editor {
 
 		if ( isset( $_POST['yp_popularity'] ) ) {
 			update_post_meta( $post_id, YeffoPrint_Template_Meta::POPULARITY, absint( $_POST['yp_popularity'] ) );
+		}
+
+		if ( isset( $_POST['yp_preview_font'] ) ) {
+			// Free text on purpose (not validated against
+			// PREVIEW_FONT_SUGGESTIONS) — a designer can type any Google
+			// Fonts family name, the datalist is autocomplete, not an
+			// allow-list. sanitize_text_field() is enough protection
+			// since this only ever becomes a Google Fonts URL query
+			// param (functions.php) and a CSS font-family value
+			// (configurator.js), never raw HTML.
+			update_post_meta( $post_id, YeffoPrint_Template_Meta::PREVIEW_FONT, sanitize_text_field( wp_unslash( $_POST['yp_preview_font'] ) ) );
 		}
 
 		if ( isset( $_POST['yp_vial_mockup_id'] ) ) {

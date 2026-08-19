@@ -137,6 +137,29 @@ add_action( 'wp_enqueue_scripts', function () {
 			[ 'strategy' => 'defer' ]
 		);
 
+		// Direct request: Label View's live preview should render in
+		// whatever font the real printed label actually uses, set per
+		// Template from the admin (class-template-editor.php) — loaded
+		// only here, on that one Template's own page, not site-wide,
+		// since it's specific to this one design. Requesting a handful
+		// of weights covers the field-fitting range configurator.js
+		// already uses (field_size_min/max) without pulling every cut
+		// of the family.
+		$preview_font = get_post_meta( get_the_ID(), YeffoPrint_Template_Meta::PREVIEW_FONT, true );
+		if ( $preview_font ) {
+			wp_enqueue_style(
+				'yeffoprint-preview-font',
+				// urlencode(), not rawurlencode() — Google Fonts' family
+				// param expects a space as "+" (the convention the
+				// hardcoded Geist/Inter/IBM Plex Mono link elsewhere in
+				// this function already uses), which is what urlencode()
+				// produces; rawurlencode() would emit "%20" instead.
+				'https://fonts.googleapis.com/css2?family=' . urlencode( $preview_font ) . ':wght@400;500;600;700&display=swap',
+				[],
+				null
+			);
+		}
+
 		// This page bakes a nonce for the *current visitor's session*
 		// into its HTML (below). If a page cache (host-level cache
 		// plugin, a CDN) ever serves that same cached response back to

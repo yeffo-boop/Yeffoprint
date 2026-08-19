@@ -556,6 +556,15 @@
 				el.style.transform = anchorTransformFor( field.alignment );
 				el.style.textTransform = textTransformFor( field.formatting_rule );
 				el.style.color = field.text_color || '#000000';
+				// Set per Template from the admin (class-template-editor.php),
+				// loaded on this page via functions.php — direct request, so
+				// the live preview reads as close to the actual printed
+				// label as possible instead of always showing in the site's
+				// own body font. Quoted, since a Google Fonts family name
+				// can contain spaces; empty when unset, which leaves this
+				// inheriting the theme's default rather than setting an
+				// empty font-family.
+				el.style.fontFamily = schema.preview_font ? '"' + schema.preview_font + '", sans-serif' : '';
 				el.textContent = variant.values[ field.id ] || '';
 			}
 
