@@ -39,6 +39,25 @@ svg {
 	}
 }
 
+/* ---------- Root template spacing ---------- */
+
+/* WordPress spaces top-level template blocks with
+   margin-block-start: var(--wp--style--block-gap) on every root child
+   but the first (core's `.wp-site-blocks > * + *` rule) — this
+   theme.json never sets blockGap, so that falls back to core's own
+   default (~2em), showing as a thin strip of bare warm-white between
+   the header template part and each page's actual content, since
+   `main` is always the second root-level block after it. Every
+   template in this theme follows the same header-then-main(-then-
+   footer) structure, so this is fixed once here rather than per
+   template — same root cause already hit and fixed the same way
+   inside individual patterns (.yp-steps, .yp-hero__grid), just at the
+   template root this time. */
+.wp-site-blocks > main,
+.wp-site-blocks > footer {
+	margin-block-start: 0 !important;
+}
+
 /* ---------- Accessibility foundations ---------- */
 
 .screen-reader-text {
