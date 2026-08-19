@@ -16,6 +16,25 @@
 	   swatch copy) address that together rather than through padding
 	   alone. */
 	padding-block: 3rem;
+	/* Every .yp-section is a direct child of `main.wp-block-group`,
+	   which now carries its own padding-inline (global.css, "Root
+	   template spacing") so mobile content isn't flush against the
+	   screen edge. That padding would also inset a --dark/--tint
+	   section's own background, though, which is meant to bleed full-
+	   width — clawed back here with a matching negative margin, then
+	   restored as this element's own padding so its *content* still
+	   gets the same inset. A background always paints under an
+	   element's own padding regardless, so this two-step is only
+	   needed to keep main's padding from doubling up visually. */
+	margin-inline: calc(-1 * var(--wp--preset--spacing--sm));
+	padding-inline: var(--wp--preset--spacing--sm);
+}
+
+@media (min-width: 782px) {
+	.yp-section {
+		margin-inline: calc(-1 * var(--wp--preset--spacing--md));
+		padding-inline: var(--wp--preset--spacing--md);
+	}
 }
 
 .yp-section--dark {

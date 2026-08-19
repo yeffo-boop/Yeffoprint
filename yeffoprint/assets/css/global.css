@@ -58,6 +58,35 @@ svg {
 	margin-block-start: 0 !important;
 }
 
+/* WordPress's "constrained" layout (used on `main` and most section
+   wrappers across this theme) only ever caps max-width and centers
+   via margin-inline:auto — it never adds its own padding-inline. On
+   any viewport narrower than that max-width (i.e. any phone screen,
+   since every contentSize in this theme is 1200px+), the cap and the
+   centering both do nothing, so text/buttons/form fields sit flush
+   against the actual screen edges. Padding on `main` itself, not on
+   .yp-section/.yp-hero's own text content, because that's the one
+   wrapper every template already shares (homepage, Shop Labels, the
+   configurator, custom design form, proof approval, and — since
+   these are `wp:post-content`, not the classic-template `.entry-
+   content` div the WooCommerce-specific padding rule further down
+   this file was written for and which never matches in a block
+   theme — cart/checkout/my-account too), so this is fixed once
+   instead of per page. Sections that want a full-bleed background
+   (.yp-hero, .yp-section) opt back out with a negative margin below,
+   the standard "inset content, full-bleed section" pattern — a
+   background always paints under an element's own padding, so this
+   never affects anything that *doesn't* also claw the width back. */
+main.wp-block-group {
+	padding-inline: var(--wp--preset--spacing--sm);
+}
+
+@media (min-width: 782px) {
+	main.wp-block-group {
+		padding-inline: var(--wp--preset--spacing--md);
+	}
+}
+
 /* ---------- Accessibility foundations ---------- */
 
 .screen-reader-text {
@@ -131,6 +160,13 @@ svg {
 	border-bottom: 1px solid var(--wp--preset--color--light-gray);
 	transition: padding 200ms ease, box-shadow 200ms ease;
 	padding-block: 1.25rem;
+	padding-inline: var(--wp--preset--spacing--sm);
+}
+
+@media (min-width: 782px) {
+	.yp-header {
+		padding-inline: var(--wp--preset--spacing--md);
+	}
 }
 
 .yp-header.is-scrolled {
@@ -555,6 +591,13 @@ fieldset {
 	background: var(--wp--preset--color--warm-white);
 	border-top: 1px solid var(--wp--preset--color--light-gray);
 	padding-block: var(--wp--preset--spacing--xl);
+	padding-inline: var(--wp--preset--spacing--sm);
+}
+
+@media (min-width: 782px) {
+	.yp-footer {
+		padding-inline: var(--wp--preset--spacing--md);
+	}
 }
 
 .yp-footer a {
