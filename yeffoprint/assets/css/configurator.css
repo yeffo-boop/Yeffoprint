@@ -157,20 +157,6 @@
 	box-shadow: 0 0 0 1px rgba(20, 20, 20, 0.15), var(--wp--custom--shadow-elevation--low);
 }
 
-/*
- * Vial View reuses the exact same field DOM/positions as Label View
- * (Architecture §4: one state, two renderers) — only the background
- * image and this visual scale differ, standing in for "the label
- * wrapped smaller onto a bottle" until per-template vial placement
- * data exists. See docs/ARCHITECTURE.md §9. The actual scale is now
- * folded into configurator.js's anchorTransformFor() (alongside the
- * alignment-aware anchor above) since JS sets `transform` inline per
- * field, which would otherwise override this rule outright rather
- * than combining with it — this is only the pre-JS fallback. */
-.yp-configurator__stage[data-view="vial"] .yp-stage__field {
-	transform: translate(-50%, -50%) scale(0.55);
-}
-
 .yp-configurator__description {
 	margin-top: 0.9rem;
 	color: var(--wp--preset--color--charcoal);

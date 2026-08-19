@@ -3,10 +3,14 @@
  *
  * Vanilla JS, no framework/build step, per the spec's "richer JS is
  * justified [only in] the configurator" stance (this is that one
- * area). Single state object drives two synced preview renderers
- * (Label View / Vial View — same field DOM, just a different
- * background image and a CSS scale on Vial View) plus the controls
- * pane, matching Architecture §4: "never a separate data source."
+ * area). Single state object drives two preview renderers: Label View
+ * is the live, per-keystroke WYSIWYG proof (field DOM built from
+ * field_schema, updated on every input event); Vial View is a plain
+ * reference photo of the vial with no field overlays at all — direct
+ * request that live-as-you-type only ever show up on the label, not
+ * the vial mockup. Both still read from the same state object and the
+ * same controls pane (Architecture §4: "never a separate data
+ * source") — Vial View just renders none of it as on-image text.
  *
  * Rendering strategy: structural panels (size/material options, field
  * inputs, variant cards) render once per data change that actually
@@ -497,6 +501,18 @@
 			: '';
 		stageEl.setAttribute( 'data-view', state.view );
 
+		// Vial View is a plain reference photo of the vial, not a live
+		// proof — direct request: live-as-you-type editing should only
+		// ever show up on Label View. No field elements get appended
+		// here, which also means updateStageField() (the per-keystroke
+		// path below) naturally no-ops while this view is active: it
+		// looks a field up by data-field-id and bails out when nothing
+		// matches.
+		if ( 'vial' === state.view ) {
+			overflowWarningEl.hidden = true;
+			return;
+		}
+
 		var variant = activeVariant();
 
 		schema.field_schema.forEach( function ( field ) {
@@ -510,7 +526,7 @@
 				// label — this field's value is rendered as a small color
 				// swatch instead, still positioned like any other field.
 				el.className = 'yp-stage__field is-swatch';
-				el.style.transform = 'translate(-50%, -50%)' + ( 'vial' === state.view ? ' scale(0.55)' : '' );
+				el.style.transform = 'translate(-50%, -50%)';
 				el.style.background = variant.values[ field.id ] || '#cccccc';
 			} else {
 				el.className = 'yp-stage__field' + ( 'textarea' === field.type ? ' is-multiline' : '' );
@@ -591,16 +607,13 @@
 	 * stays centered on y either way — only PROJECT_SPEC's left/center/
 	 * right alignments exist, no vertical equivalent.
 	 *
-	 * Also carries the Vial View scale-down (previously a separate CSS
-	 * rule, `.yp-configurator__stage[data-view="vial"] .yp-stage__field`)
-	 * — setting `transform` inline here overrides that class-level rule
-	 * entirely regardless of specificity, so it has to be included in
-	 * the same value rather than left to the stylesheet.
+	 * No Vial View scale-down anymore — this is only ever called from
+	 * renderStage()'s field-building loop, which now never runs while
+	 * Vial View is active.
 	 */
 	function anchorTransformFor( alignment ) {
 		var anchorX = 'left' === alignment ? '0%' : 'right' === alignment ? '-100%' : '-50%';
-		var scale = 'vial' === state.view ? ' scale(0.55)' : '';
-		return 'translate(' + anchorX + ', -50%)' + scale;
+		return 'translate(' + anchorX + ', -50%)';
 	}
 
 	function fitText( el, field, stageWidth, stageHeight ) {

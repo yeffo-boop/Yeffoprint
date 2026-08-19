@@ -412,10 +412,15 @@
 	   exact same element (render.php outputs both classes together),
 	   and with equal single-class specificity on each, which one wins
 	   depended entirely on stylesheet load order rather than being
-	   guaranteed. Real label size is 45mm x 21mm — 15:7 keeps that
-	   exact ratio (not the generic 4:5 used by other card types, e.g.
-	   the customer-work placeholder tiles) scaled up to something
-	   legible on screen. Upload artwork/photos cropped to this ratio.
+	   guaranteed. Was 15:7 (the real flat label's 45mm x 21mm ratio)
+	   back when the flat label artwork was the primary card image —
+	   now that the vial-mockup photo is primary (direct request: show
+	   the vial preview, not just the label), that wide/short box would
+	   object-fit:cover-crop a tall standing-vial photo down to a
+	   narrow middle strip, cutting off most of the actual label. No
+	   override needed: falls through to .yp-card__media's own 4:5,
+	   which is also what the approved brand mockup used for these
+	   cards.
 
 	   The navy gradient background is the approved brand mockup's
 	   product-photography backdrop — kept on this combined selector
@@ -425,7 +430,6 @@
 	   reads as a considered "on a light table" backdrop even when the
 	   image fills the box completely. */
 	position: relative;
-	aspect-ratio: 15 / 7;
 	background: var(--wp--custom--gradient-navy);
 }
 

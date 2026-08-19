@@ -21,22 +21,33 @@ $card = yeffoprint_core_get_template_card_data( (int) $post_id );
 if ( ! $card ) {
 	return;
 }
+
+/**
+ * Vial mockup leads (direct request: show the vial preview, not just
+ * the flat label, on the gallery cards), flat artwork is the
+ * hover-swap — the reverse of Phase 3's original pairing. Falls back
+ * to artwork-only when a Template has no vial mockup uploaded yet
+ * (still admin-optional per template-api.php), rather than showing an
+ * empty media box.
+ */
+$primary_image_url = $card['vial_mockup_url'] ?: $card['artwork_url'];
+$hover_image_url   = $card['vial_mockup_url'] ? $card['artwork_url'] : null;
 ?>
 <a class="yp-card yp-template-card" href="<?php echo esc_url( $card['permalink'] ); ?>">
 	<div class="yp-card__media yp-template-card__media">
-		<?php if ( $card['artwork_url'] ) : ?>
+		<?php if ( $primary_image_url ) : ?>
 			<img
 				class="yp-template-card__image yp-template-card__image--primary"
-				src="<?php echo esc_url( $card['artwork_url'] ); ?>"
+				src="<?php echo esc_url( $primary_image_url ); ?>"
 				alt=""
 				loading="lazy"
 				decoding="async"
 			/>
 		<?php endif; ?>
-		<?php if ( $card['vial_mockup_url'] ) : ?>
+		<?php if ( $hover_image_url ) : ?>
 			<img
 				class="yp-template-card__image yp-template-card__image--hover"
-				src="<?php echo esc_url( $card['vial_mockup_url'] ); ?>"
+				src="<?php echo esc_url( $hover_image_url ); ?>"
 				alt=""
 				loading="lazy"
 				decoding="async"
