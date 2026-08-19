@@ -53,6 +53,7 @@
 	var stickyBar = document.querySelector( '[data-yp-sticky-bar]' );
 	var stickyTotalEl = stickyBar ? stickyBar.querySelector( '[data-yp-sticky-total]' ) : null;
 	var addToCartButtons = document.querySelectorAll( '[data-yp-add-to-cart]' );
+	var saveDesignButton = root.querySelector( '[data-yp-save-design]' );
 
 	var schema = null;
 	var state = {
@@ -112,6 +113,7 @@
 		var params = new URLSearchParams( window.location.search );
 		var editKey = params.get( 'edit' );
 		var reorderRef = params.get( 'reorder' ); // "<order_id>:<item_id>"
+		var savedId = params.get( 'saved' );
 
 		if ( editKey ) {
 			// "Edit customization" (PROJECT_SPEC §14): rehydrates from a
@@ -134,6 +136,15 @@
 			var parts = reorderRef.split( ':' );
 			loadExternalBatch(
 				yeffoprintConfigurator.restUrl + 'orders/' + encodeURIComponent( parts[ 0 ] ) + '/items/' + encodeURIComponent( parts[ 1 ] ),
+				{ headers: { 'X-WP-Nonce': yeffoprintConfigurator.nonce } },
+				hydrateFromBatch
+			);
+		} else if ( savedId ) {
+			// Saved Designs: same rehydration path as Edit/Reorder above,
+			// just sourced from a design the customer previously saved to
+			// their account instead of a cart item or order.
+			loadExternalBatch(
+				yeffoprintConfigurator.restUrl + 'saved-designs/' + encodeURIComponent( savedId ),
 				{ headers: { 'X-WP-Nonce': yeffoprintConfigurator.nonce } },
 				hydrateFromBatch
 			);
@@ -813,6 +824,62 @@
 	addToCartButtons.forEach( function ( button ) {
 		button.addEventListener( 'click', submitAddToCart );
 	} );
+
+	/* ---------- Save this design ---------- */
+	// Saved Designs needs an account — there's nothing to attach an
+	// anonymous save to. The button stays visible either way (rather
+	// than being omitted server-side, which templates/*.html can't do)
+	// and just relabels/redirects to login instead of no-op'ing.
+
+	if ( saveDesignButton ) {
+		if ( ! yeffoprintConfigurator.isLoggedIn ) {
+			saveDesignButton.textContent = 'Log in to save this design';
+		}
+
+		saveDesignButton.addEventListener( 'click', function () {
+			if ( ! yeffoprintConfigurator.isLoggedIn ) {
+				window.location.href = yeffoprintConfigurator.accountUrl;
+				return;
+			}
+
+			clearCartStatus();
+			saveDesignButton.disabled = true;
+
+			var payload = {
+				template_id: schema.id,
+				size_id: state.sizeId,
+				material_id: state.materialId,
+				variants: state.variants.map( function ( variant ) {
+					return { quantity: variant.quantity, values: variant.values };
+				} )
+			};
+
+			fetch( yeffoprintConfigurator.restUrl + 'saved-designs', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintConfigurator.nonce },
+				body: JSON.stringify( payload )
+			} )
+				.then( function ( response ) {
+					return response.json().then( function ( data ) {
+						return { ok: response.ok, data: data };
+					} );
+				} )
+				.then( function ( result ) {
+					saveDesignButton.disabled = false;
+
+					if ( ! result.ok ) {
+						showCartStatus( ( result.data && result.data.message ) || "Couldn't save this design.", true );
+						return;
+					}
+
+					showCartStatus( 'Design saved — find it under Saved Designs in My Account.', false );
+				} )
+				.catch( function () {
+					saveDesignButton.disabled = false;
+					showCartStatus( "Couldn't reach the server — please try again.", true );
+				} );
+		} );
+	}
 
 	init();
 } )();

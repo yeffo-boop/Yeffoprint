@@ -170,6 +170,73 @@ class YeffoPrint_Field_Schema {
 	}
 
 	/**
+	 * Validates and cleans a whole batch's variants array against a
+	 * Template's field_schema — shared by every entry point that
+	 * accepts customer-submitted batch data (cart add, saved designs),
+	 * so the same rules (quantity, max_chars, which fields exist) can
+	 * never drift between them.
+	 *
+	 * $enforce_required is the one behavioral difference between
+	 * callers: cart/checkout must reject a missing required field
+	 * outright (it's about to be printed), but a *saved* design is
+	 * explicitly allowed to be an unfinished draft the customer intends
+	 * to come back and complete later — rejecting an incomplete save
+	 * would defeat the point of saving it.
+	 *
+	 * @param mixed $raw
+	 * @return array|\WP_Error
+	 */
+	public static function sanitize_variants( $raw, array $field_schema, bool $enforce_required = true ) {
+		if ( ! is_array( $raw ) || empty( $raw ) ) {
+			return new \WP_Error( 'yeffoprint_no_variants', __( 'Add at least one label to this batch.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$clean = [];
+
+		foreach ( $raw as $variant ) {
+			if ( ! is_array( $variant ) ) {
+				continue;
+			}
+
+			$quantity = isset( $variant['quantity'] ) ? absint( $variant['quantity'] ) : 0;
+			if ( $quantity < 1 ) {
+				return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Each label needs a quantity of at least 1.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			$submitted_values = is_array( $variant['values'] ?? null ) ? $variant['values'] : [];
+			$values = [];
+
+			foreach ( $field_schema as $field ) {
+				$value = isset( $submitted_values[ $field['id'] ] ) ? sanitize_text_field( $submitted_values[ $field['id'] ] ) : '';
+
+				if ( $enforce_required && $field['required'] && '' === $value ) {
+					return new \WP_Error(
+						'yeffoprint_missing_field',
+						/* translators: %s: field label */
+						sprintf( __( '"%s" is required.', 'yeffoprint-core' ), $field['label'] ),
+						[ 'status' => 400 ]
+					);
+				}
+
+				if ( mb_strlen( $value ) > $field['max_chars'] ) {
+					return new \WP_Error(
+						'yeffoprint_field_too_long',
+						/* translators: 1: field label, 2: max character count */
+						sprintf( __( '"%1$s" must be %2$d characters or fewer.', 'yeffoprint-core' ), $field['label'], $field['max_chars'] ),
+						[ 'status' => 400 ]
+					);
+				}
+
+				$values[ $field['id'] ] = $value;
+			}
+
+			$clean[] = [ 'quantity' => $quantity, 'values' => $values ];
+		}
+
+		return $clean;
+	}
+
+	/**
 	 * Renders one batch variant's customization as a single
 	 * human-readable line (e.g. "Compound: NAD+ — Strength: 500mg") for
 	 * cart/checkout item data and order line item meta — using each

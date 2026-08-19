@@ -96,7 +96,7 @@ class YeffoPrint_Cart_Controller {
 			return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$variants = $this->sanitize_variants( $request->get_param( 'variants' ), YeffoPrint_Field_Schema::get( $template_id ) );
+		$variants = YeffoPrint_Field_Schema::sanitize_variants( $request->get_param( 'variants' ), YeffoPrint_Field_Schema::get( $template_id ) );
 		if ( is_wp_error( $variants ) ) {
 			return $variants;
 		}
@@ -162,61 +162,6 @@ class YeffoPrint_Cart_Controller {
 			'material_id' => $item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ],
 			'variants'    => $item[ YeffoPrint_Cart_Item_Keys::VARIANTS ],
 		] );
-	}
-
-	/**
-	 * @param mixed $raw
-	 * @param array $field_schema
-	 * @return array|\WP_Error
-	 */
-	private function sanitize_variants( $raw, array $field_schema ) {
-		if ( ! is_array( $raw ) || empty( $raw ) ) {
-			return new \WP_Error( 'yeffoprint_no_variants', __( 'Add at least one label to this batch.', 'yeffoprint-core' ), [ 'status' => 400 ] );
-		}
-
-		$clean = [];
-
-		foreach ( $raw as $variant ) {
-			if ( ! is_array( $variant ) ) {
-				continue;
-			}
-
-			$quantity = isset( $variant['quantity'] ) ? absint( $variant['quantity'] ) : 0;
-			if ( $quantity < 1 ) {
-				return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Each label needs a quantity of at least 1.', 'yeffoprint-core' ), [ 'status' => 400 ] );
-			}
-
-			$submitted_values = is_array( $variant['values'] ?? null ) ? $variant['values'] : [];
-			$values = [];
-
-			foreach ( $field_schema as $field ) {
-				$value = isset( $submitted_values[ $field['id'] ] ) ? sanitize_text_field( $submitted_values[ $field['id'] ] ) : '';
-
-				if ( $field['required'] && '' === $value ) {
-					return new \WP_Error(
-						'yeffoprint_missing_field',
-						/* translators: %s: field label */
-						sprintf( __( '"%s" is required.', 'yeffoprint-core' ), $field['label'] ),
-						[ 'status' => 400 ]
-					);
-				}
-
-				if ( mb_strlen( $value ) > $field['max_chars'] ) {
-					return new \WP_Error(
-						'yeffoprint_field_too_long',
-						/* translators: 1: field label, 2: max character count */
-						sprintf( __( '"%1$s" must be %2$d characters or fewer.', 'yeffoprint-core' ), $field['label'], $field['max_chars'] ),
-						[ 'status' => 400 ]
-					);
-				}
-
-				$values[ $field['id'] ] = $value;
-			}
-
-			$clean[] = [ 'quantity' => $quantity, 'values' => $values ];
-		}
-
-		return $clean;
 	}
 
 	private function render_drawer(): string {

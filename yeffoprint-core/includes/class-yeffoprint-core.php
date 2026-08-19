@@ -30,6 +30,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-taxonomies.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-commerce-record-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-saved-design-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/schema/class-field-schema.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/query/class-template-query.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/search/class-template-search.php';
@@ -52,6 +53,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-custom-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-endpoints.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-item-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-saved-design-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 
@@ -72,6 +74,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Custom_Order_Controller();
 		new YeffoPrint_Account_Endpoints();
 		new YeffoPrint_Order_Item_Controller();
+		new YeffoPrint_Saved_Design_Controller();
 		new YeffoPrint_Reorder();
 
 		// Flush once whenever needed — not just on activation. The

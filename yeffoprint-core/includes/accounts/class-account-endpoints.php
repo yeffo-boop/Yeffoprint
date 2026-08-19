@@ -4,14 +4,17 @@
  * §16: "Orders, Saved Designs, Rewards, Proofs, Addresses").
  *
  * Orders and Addresses are native WooCommerce — presentation-only
- * restyling lives in the theme. Saved Designs and Rewards are explicit
- * V1 non-goals (PROJECT_SPEC §19): their tabs exist so the account
- * navigation matches spec, but their content is a plain "coming soon"
- * state, not a feature. Proofs is real: it queries the customer's own
- * CustomOrders and any Proofs uploaded against them — this is the
- * "foundation" half of "Proof Foundation" (Phase 8) actually being
- * visible to the customer it belongs to, still short of the
- * customer-facing approve/request-changes UI that stays out of scope.
+ * restyling lives in the theme. Rewards is still a V1 non-goal
+ * (PROJECT_SPEC §19): its tab exists so the account navigation matches
+ * spec, but its content is a plain "coming soon" state, not a feature.
+ * Saved Designs is real as of the V2 pass — see
+ * includes/rest/class-saved-design-controller.php for the create/list/
+ * fetch/delete REST endpoints this tab's list and "Remove" action use.
+ * Proofs is real too: it queries the customer's own CustomOrders and
+ * any Proofs uploaded against them — this is the "foundation" half of
+ * "Proof Foundation" (Phase 8) actually being visible to the customer
+ * it belongs to, still short of the customer-facing approve/request-
+ * changes UI that's its own V2 item.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -24,14 +27,49 @@ class YeffoPrint_Account_Endpoints {
 		'proofs'        => 'Proofs',
 	];
 
+	private const REMOVE_NONCE_ACTION = 'yeffoprint_remove_saved_design';
+	private const REMOVE_NONCE_NAME   = 'yp_saved_design_nonce';
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_endpoints' ] );
 		add_filter( 'query_vars', [ $this, 'register_query_vars' ] );
 		add_filter( 'woocommerce_account_menu_items', [ $this, 'reorder_menu_items' ] );
+		add_action( 'template_redirect', [ $this, 'maybe_handle_remove_saved_design' ] );
 
 		add_action( 'woocommerce_account_saved-designs_endpoint', [ $this, 'render_saved_designs' ] );
 		add_action( 'woocommerce_account_rewards_endpoint', [ $this, 'render_rewards' ] );
 		add_action( 'woocommerce_account_proofs_endpoint', [ $this, 'render_proofs' ] );
+	}
+
+	/**
+	 * Plain POST-and-redirect, no REST/JS needed — the "Remove" form
+	 * posts back to the same account page, this processes it on
+	 * template_redirect (before any output starts, so a real redirect
+	 * is still possible) and sends the customer back to a clean URL
+	 * rather than leaving a resubmit-on-refresh POST in their history.
+	 */
+	public function maybe_handle_remove_saved_design(): void {
+		if ( empty( $_POST['yp_remove_saved_design'] ) || ! isset( $_POST[ self::REMOVE_NONCE_NAME ] ) ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( wp_unslash( $_POST[ self::REMOVE_NONCE_NAME ] ), self::REMOVE_NONCE_ACTION ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		$design_id = absint( $_POST['yp_remove_saved_design'] );
+		$design    = get_post( $design_id );
+
+		if ( $design && 'yp_saved_design' === $design->post_type && (int) $design->post_author === get_current_user_id() ) {
+			wp_delete_post( $design_id, true );
+		}
+
+		wp_safe_redirect( function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( 'saved-designs' ) : home_url( '/my-account/saved-designs/' ) );
+		exit;
 	}
 
 	public function register_endpoints(): void {
@@ -76,8 +114,62 @@ class YeffoPrint_Account_Endpoints {
 	}
 
 	public function render_saved_designs(): void {
-		echo '<p>' . esc_html__( 'Saved designs are coming soon — you\'ll be able to bookmark a design mid-customization and pick it back up later.', 'yeffoprint-core' ) . '</p>';
-		echo '<p><a class="wp-block-button__link" href="' . esc_url( home_url( '/shop-labels/' ) ) . '">' . esc_html__( 'Browse Designs', 'yeffoprint-core' ) . '</a></p>';
+		$design_ids = YeffoPrint_Saved_Design_Meta::get_for_customer( get_current_user_id() );
+
+		if ( ! $design_ids ) {
+			echo '<p>' . esc_html__( "You haven't saved any designs yet — while customizing a label, use \"Save this design\" to bookmark it and pick it back up later.", 'yeffoprint-core' ) . '</p>';
+			echo '<p><a class="wp-block-button__link" href="' . esc_url( home_url( '/shop-labels/' ) ) . '">' . esc_html__( 'Browse Designs', 'yeffoprint-core' ) . '</a></p>';
+			return;
+		}
+
+		echo '<div class="yp-saved-designs-list">';
+		foreach ( $design_ids as $design_id ) {
+			$this->render_saved_design_card( $design_id );
+		}
+		echo '</div>';
+	}
+
+	private function render_saved_design_card( int $design_id ): void {
+		$template_id = (int) get_post_meta( $design_id, YeffoPrint_Saved_Design_Meta::TEMPLATE_ID, true );
+		$template    = $template_id ? get_post( $template_id ) : null;
+		$size        = get_post( (int) get_post_meta( $design_id, YeffoPrint_Saved_Design_Meta::SIZE_ID, true ) );
+		$material    = get_post( (int) get_post_meta( $design_id, YeffoPrint_Saved_Design_Meta::MATERIAL_ID, true ) );
+		$variants    = (array) get_post_meta( $design_id, YeffoPrint_Saved_Design_Meta::VARIANTS, true );
+		$thumbnail   = $template ? get_the_post_thumbnail_url( $template, 'thumbnail' ) : '';
+		$edit_url    = $template ? add_query_arg( 'saved', $design_id, get_permalink( $template ) ) : '';
+		?>
+		<div class="yp-saved-design-card">
+			<?php if ( $thumbnail ) : ?>
+				<img class="yp-saved-design-card__thumb" src="<?php echo esc_url( $thumbnail ); ?>" alt="" />
+			<?php endif; ?>
+			<div class="yp-saved-design-card__body">
+				<strong><?php echo esc_html( $template ? get_the_title( $template ) : __( '(design removed)', 'yeffoprint-core' ) ); ?></strong>
+				<span>
+					<?php
+					echo esc_html( implode( ' · ', array_filter( [
+						$size ? $size->post_title : '',
+						$material ? $material->post_title : '',
+						sprintf(
+							/* translators: %d: number of label variants in the batch */
+							_n( '%d label variant', '%d label variants', count( $variants ), 'yeffoprint-core' ),
+							count( $variants )
+						),
+					] ) ) );
+					?>
+				</span>
+				<span class="yp-saved-design-card__date"><?php echo esc_html( get_the_date( '', $design_id ) ); ?></span>
+				<div class="yp-saved-design-card__actions">
+					<?php if ( $edit_url ) : ?>
+						<a class="wp-block-button__link" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit & Order', 'yeffoprint-core' ); ?></a>
+					<?php endif; ?>
+					<form method="post">
+						<?php wp_nonce_field( self::REMOVE_NONCE_ACTION, self::REMOVE_NONCE_NAME ); ?>
+						<button type="submit" name="yp_remove_saved_design" value="<?php echo esc_attr( $design_id ); ?>" class="button-link-delete"><?php esc_html_e( 'Remove', 'yeffoprint-core' ); ?></button>
+					</form>
+				</div>
+			</div>
+		</div>
+		<?php
 	}
 
 	public function render_rewards(): void {

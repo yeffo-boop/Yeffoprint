@@ -72,6 +72,18 @@ class YeffoPrint_Post_Type_Registry {
 			[ 'title', 'custom-fields' ],
 			false
 		) );
+
+		// Customer-owned, not admin-managed content — created/read/
+		// deleted entirely through REST by the customer who owns it
+		// (post_author), same as a cart session but persisted without
+		// purchasing (Architecture §8's "Saved Designs" anticipation).
+		// Still a CPT for consistency with every other record here.
+		register_post_type( 'yp_saved_design', $this->args(
+			__( 'Saved Designs', 'yeffoprint-core' ),
+			__( 'Saved Design', 'yeffoprint-core' ),
+			[ 'title', 'custom-fields', 'author' ],
+			false
+		) );
 	}
 
 	/**

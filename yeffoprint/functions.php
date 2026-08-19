@@ -118,13 +118,19 @@ add_action( 'wp_enqueue_scripts', function () {
 		);
 
 		wp_localize_script( 'yeffoprint-configurator', 'yeffoprintConfigurator', [
-			'restUrl'    => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
-			'templateId' => get_the_ID(),
+			'restUrl'     => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'templateId'  => get_the_ID(),
 			// Required for the ?reorder= flow (class-order-item-controller.php
 			// requires a logged-in request) and sent on every cart/add call
 			// too — guests aren't checked (class-rest-security.php), but a
 			// signed-in customer's request needs a valid nonce to pass.
-			'nonce'      => wp_create_nonce( 'wp_rest' ),
+			'nonce'       => wp_create_nonce( 'wp_rest' ),
+			// Saved Designs needs an account (nothing to attach an
+			// anonymous save to) — the button's label/behavior branches
+			// on this rather than hiding it outright, since
+			// templates/*.html isn't PHP and can't conditionally omit it.
+			'isLoggedIn'  => is_user_logged_in(),
+			'accountUrl'  => function_exists( 'wc_get_page_permalink' ) ? esc_url_raw( wc_get_page_permalink( 'myaccount' ) ) : esc_url_raw( home_url( '/my-account/' ) ),
 		] );
 	}
 

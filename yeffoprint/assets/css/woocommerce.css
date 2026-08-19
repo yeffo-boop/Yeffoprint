@@ -195,3 +195,52 @@
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
 }
+
+/* ---------- Saved Designs (My Account) ---------- */
+
+.yp-saved-designs-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.yp-saved-design-card {
+	display: flex;
+	gap: 1rem;
+	padding: 1.25rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-saved-design-card__thumb {
+	width: 5rem;
+	height: 5rem;
+	object-fit: cover;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	flex-shrink: 0;
+}
+
+.yp-saved-design-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	flex: 1;
+}
+
+.yp-saved-design-card__body span {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-saved-design-card__actions {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-top: 0.5rem;
+}
+
+.yp-saved-design-card__actions form {
+	margin: 0;
+}
