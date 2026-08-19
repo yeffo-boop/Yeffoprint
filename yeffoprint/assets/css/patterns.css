@@ -132,8 +132,12 @@
 	   the container allows at any viewport, down to one on mobile. */
 	display: grid;
 	grid-template-columns: repeat(auto-fill, 270px);
+	/* justify-content only — align-items stays the grid default
+	   (stretch), which keeps every card the same outer height across a
+	   row even when body text length differs between cards; align-
+	   items:start would let each card size to its own content instead,
+	   leaving bottom edges misaligned whenever text length differs. */
 	justify-content: start;
-	align-items: start;
 	gap: var(--wp--preset--spacing--sm);
 }
 
