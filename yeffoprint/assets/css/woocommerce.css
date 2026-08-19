@@ -112,6 +112,26 @@
 	margin-top: var(--wp--preset--spacing--sm);
 }
 
+/* WooCommerce Blocks' own default stylesheet puts a card treatment
+   (border/background/box-shadow) on the checkout/cart root and on the
+   left "fields" column out of the box — invisible on this site until
+   page-checkout.html/page-cart.html started rendering these blocks
+   wrapped in our own layout for the first time. Stripped here so the
+   only boxes on the page are the ones this file adds on purpose (the
+   sidebar card further down, individual steps/radio options) instead
+   of stacking a second, unstyled one underneath them. Deliberately
+   NOT touching the totals/sidebar column classes — the order-summary
+   rule below relies on styling one of those itself. */
+.wp-block-woocommerce-checkout,
+.wp-block-woocommerce-cart,
+.wp-block-woocommerce-checkout-fields-block,
+.wp-block-woocommerce-cart-items-block {
+	background: none !important;
+	border: none !important;
+	box-shadow: none !important;
+	padding: 0 !important;
+}
+
 /* Each checkout step ("Contact information," "Shipping address,"
    "Payment options," …) as a clearly separated section rather than
    WC Blocks' own unstyled default flow. */
@@ -178,12 +198,23 @@
 /* Same navy backdrop as the cart page and Shop Labels gallery cards —
    this is the checkout sidebar's own copy of the line-item thumbnail. */
 .wc-block-components-order-summary-item__image {
+	/* Explicit square box + object-fit below — without both, a source
+	   photo that's naturally tall and narrow (a standing vial, not a
+	   square product shot) renders at its own intrinsic aspect ratio
+	   inside this flex row: full height, barely any width, cropping
+	   out almost the entire label. */
+	width: 3.5rem !important;
+	height: 3.5rem !important;
+	flex-shrink: 0;
 	background: var(--wp--custom--gradient-navy) !important;
 	border-radius: var(--wp--custom--radius--control) !important;
 	overflow: hidden;
 }
 
 .wc-block-components-order-summary-item__image img {
+	width: 100% !important;
+	height: 100% !important;
+	object-fit: cover !important;
 	border-radius: var(--wp--custom--radius--control) !important;
 }
 
@@ -230,12 +261,18 @@
    cards (patterns.css) — consistent product-photography treatment
    from browsing through to checkout. */
 .wc-block-cart-item__image {
+	width: 5.5rem !important;
+	height: 5.5rem !important;
+	flex-shrink: 0;
 	background: var(--wp--custom--gradient-navy) !important;
 	border-radius: var(--wp--custom--radius--control) !important;
 	overflow: hidden;
 }
 
 .wc-block-cart-item__image img {
+	width: 100% !important;
+	height: 100% !important;
+	object-fit: cover !important;
 	border-radius: var(--wp--custom--radius--control) !important;
 }
 
