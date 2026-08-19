@@ -57,6 +57,8 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-item-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-saved-design-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-webhook-secret.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-payment-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 
 		new YeffoPrint_Post_Type_Registry();
@@ -79,6 +81,29 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Item_Controller();
 		new YeffoPrint_Saved_Design_Controller();
 		new YeffoPrint_Reorder();
+		new YeffoPrint_Payment_Webhook_Controller();
+
+		// The gateway classes extend \WC_Payment_Gateway directly (a
+		// class declaration, not a lazy reference inside a method body)
+		// — unlike every other class in this plugin, that means the
+		// *file itself* needs WooCommerce's class already resolvable
+		// the moment it's require_once'd, not just by the time it's
+		// used. Loading them here, inside the one filter WooCommerce
+		// itself calls to ask "what gateways exist" (fired from deep
+		// inside its own fully-booted payment-gateway registry), is the
+		// standard safe pattern — it can never fire before WC_Payment_
+		// Gateway exists, regardless of plugin load order edge cases
+		// `Requires Plugins: woocommerce` (yeffoprint-core.php) doesn't
+		// fully rule out on its own.
+		add_filter( 'woocommerce_payment_gateways', static function ( array $gateways ): array {
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-manual-payment-gateway.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-venmo-gateway.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-zelle-gateway.php';
+
+			$gateways[] = 'YeffoPrint_Venmo_Gateway';
+			$gateways[] = 'YeffoPrint_Zelle_Gateway';
+			return $gateways;
+		} );
 
 		// Flush once whenever needed — not just on activation. The
 		// activation-hook flag (yeffoprint-core.php) covers a normal
