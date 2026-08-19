@@ -161,4 +161,30 @@ class YeffoPrint_Field_Schema {
 	public static function default_field(): array {
 		return self::DEFAULT_FIELD;
 	}
+
+	/**
+	 * Renders one batch variant's customization as a single
+	 * human-readable line (e.g. "Compound: NAD+ — Strength: 500mg") for
+	 * cart/checkout item data and order line item meta — using each
+	 * field's own label, not its internal id, and skipping anything the
+	 * customer left blank.
+	 *
+	 * @param array $variant      One entry from a batch's variants
+	 *                            array: ['quantity' => int, 'values' => [field_id => string]].
+	 * @param array $field_schema The owning Template's field_schema (self::get()).
+	 */
+	public static function format_variant_summary( array $variant, array $field_schema ): string {
+		$values = (array) ( $variant['values'] ?? [] );
+		$parts  = [];
+
+		foreach ( $field_schema as $field ) {
+			$value = trim( (string) ( $values[ $field['id'] ] ?? '' ) );
+			if ( '' === $value ) {
+				continue;
+			}
+			$parts[] = $field['label'] . ': ' . $value;
+		}
+
+		return implode( ' — ', $parts );
+	}
 }

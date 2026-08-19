@@ -128,6 +128,29 @@ class YeffoPrint_Cart_Pricing {
 			),
 		];
 
+		// The actual customization (compound, strength, brand name —
+		// whatever the Template's field_schema defines) so the customer
+		// can verify it on the cart/checkout review before paying, not
+		// just after — matches the rows added to the order line item
+		// once it's placed (class-order-item-meta.php).
+		$template_id  = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
+		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+		$multiple     = count( $variants ) > 1;
+
+		foreach ( $variants as $index => $variant ) {
+			$summary = YeffoPrint_Field_Schema::format_variant_summary( $variant, $field_schema );
+			if ( '' === $summary ) {
+				continue;
+			}
+
+			$item_data[] = [
+				'key'   => $multiple
+					? sprintf( /* translators: %d: label number within the batch */ __( 'Label %d', 'yeffoprint-core' ), $index + 1 )
+					: __( 'Customization', 'yeffoprint-core' ),
+				'value' => $summary,
+			];
+		}
+
 		return $item_data;
 	}
 

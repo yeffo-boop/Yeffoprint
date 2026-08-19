@@ -36,18 +36,19 @@ class YeffoPrint_Order_Item_Meta {
 			return;
 		}
 
-		$template_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
-		$size_id     = (int) ( $values[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
-		$material_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
-		$variants    = (array) ( $values[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [] );
-		$quantity    = (int) $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
+		$template_id  = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
+		$size_id      = (int) ( $values[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
+		$material_id  = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
+		$variants     = (array) ( $values[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [] );
+		$quantity     = (int) $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
+		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
 
 		$pricing = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values );
 
 		$item->add_meta_data( '_yp_template_snapshot', wp_json_encode( [
 			'id'           => $template_id,
 			'title'        => $template_id ? get_the_title( $template_id ) : '',
-			'field_schema' => $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [],
+			'field_schema' => $field_schema,
 		] ), true );
 
 		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( $this->record_snapshot( $size_id ) ), true );
@@ -61,6 +62,37 @@ class YeffoPrint_Order_Item_Meta {
 		$item->add_meta_data( __( 'Size', 'yeffoprint-core' ), $size_id ? get_the_title( $size_id ) : '—', true );
 		$item->add_meta_data( __( 'Material', 'yeffoprint-core' ), $material_id ? get_the_title( $material_id ) : '—', true );
 		$item->add_meta_data( __( 'Labels in this batch', 'yeffoprint-core' ), count( $variants ), true );
+
+		$this->add_variant_rows( $item, $variants, $field_schema );
+	}
+
+	/**
+	 * The actual per-label customization (compound, strength, brand
+	 * name — whatever the Template's field_schema defines) was
+	 * previously only stored in the hidden _yp_variants JSON, invisible
+	 * on the order screen and in customer emails even though it's the
+	 * one thing staff actually need to know what to print.
+	 */
+	private function add_variant_rows( \WC_Order_Item_Product $item, array $variants, array $field_schema ): void {
+		$multiple = count( $variants ) > 1;
+
+		foreach ( $variants as $index => $variant ) {
+			$summary = YeffoPrint_Field_Schema::format_variant_summary( $variant, $field_schema );
+			if ( '' === $summary ) {
+				continue;
+			}
+
+			$row_label = $multiple
+				? sprintf(
+					/* translators: 1: label number within the batch, 2: that label's own quantity */
+					__( 'Label %1$d (qty %2$d)', 'yeffoprint-core' ),
+					$index + 1,
+					(int) ( $variant['quantity'] ?? 0 )
+				)
+				: __( 'Customization', 'yeffoprint-core' );
+
+			$item->add_meta_data( $row_label, $summary, true );
+		}
 	}
 
 	private function snapshot_custom_order_fee( \WC_Order_Item_Product $item, int $custom_order_id ): void {
