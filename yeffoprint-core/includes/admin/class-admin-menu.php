@@ -5,10 +5,15 @@
  * Post types register with show_in_menu => 'yeffoprint' (see
  * class-post-type-registry.php) and attach as submenus here. Richer
  * dashboard content lands in a later phase — see PROJECT_SPEC.md §17.
- * The announcement bar text (below) is the first real Site Setting;
- * it lives directly on this dashboard page rather than a dedicated
- * Settings submenu since it's one field — split it out once there are
- * enough settings to justify their own page.
+ *
+ * The announcement bar text (below) is the first real Site Setting,
+ * on its own explicitly-labeled "Settings" submenu — not on the
+ * top-level dashboard page itself, which is only reachable through
+ * WordPress's own default same-labeled ("YeffoPrint") self-link
+ * submenu item it adds automatically once other real submenus exist
+ * (the CPT ones above), easy to miss/mistake for just a toggle rather
+ * than a page. A distinctly-named submenu is worth it even for one
+ * field.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -44,6 +49,15 @@ class YeffoPrint_Admin_Menu {
 			'dashicons-store',
 			25
 		);
+
+		add_submenu_page(
+			'yeffoprint',
+			__( 'Settings', 'yeffoprint-core' ),
+			__( 'Settings', 'yeffoprint-core' ),
+			'manage_options',
+			'yeffoprint-settings',
+			[ $this, 'render_settings_page' ]
+		);
 	}
 
 	public function register_settings(): void {
@@ -57,14 +71,14 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint_announcement_bar',
 			__( 'Announcement Bar', 'yeffoprint-core' ),
 			'__return_false',
-			'yeffoprint'
+			'yeffoprint-settings'
 		);
 
 		add_settings_field(
 			self::ANNOUNCEMENT_BAR_OPTION,
 			__( 'Announcement text', 'yeffoprint-core' ),
 			[ $this, 'render_announcement_bar_field' ],
-			'yeffoprint',
+			'yeffoprint-settings',
 			'yeffoprint_announcement_bar'
 		);
 	}
@@ -84,10 +98,14 @@ class YeffoPrint_Admin_Menu {
 
 	public function render_dashboard(): void {
 		echo '<div class="wrap"><h1>' . esc_html__( 'YeffoPrint', 'yeffoprint-core' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Templates, Materials, Sizes, Pricing Rules, Custom Orders, and Proofs are managed from this menu.', 'yeffoprint-core' ) . '</p>';
+		echo '<p>' . esc_html__( 'Templates, Materials, Sizes, Pricing Rules, Custom Orders, and Proofs are managed from this menu.', 'yeffoprint-core' ) . '</p></div>';
+	}
+
+	public function render_settings_page(): void {
+		echo '<div class="wrap"><h1>' . esc_html__( 'YeffoPrint Settings', 'yeffoprint-core' ) . '</h1>';
 		echo '<form method="post" action="options.php">';
 		settings_fields( 'yeffoprint_settings' );
-		do_settings_sections( 'yeffoprint' );
+		do_settings_sections( 'yeffoprint-settings' );
 		submit_button();
 		echo '</form></div>';
 	}
