@@ -34,8 +34,8 @@ class YeffoPrint_Pricing_Rule {
 	public const META_VERSION           = '_yp_rule_version';
 
 	public const TIER_TYPES = [
-		'percent'          => 'Percent off',
-		'fixed_unit_price' => 'Fixed resulting unit price',
+		'percent'          => 'Percent off base price',
+		'fixed_unit_price' => 'Fixed resulting base price',
 	];
 
 	private const DEFAULT_BASE_UNIT_PRICE   = 0.35;
@@ -143,26 +143,38 @@ class YeffoPrint_Pricing_Rule {
 	}
 
 	/**
-	 * The authoritative formula: (base + adjustments − discount) ×
+	 * The authoritative formula: ((base − discount) + adjustments) ×
 	 * quantity.
 	 *
-	 * `$tier_quantity` — not just `$quantity` — is what the discount
-	 * tier is resolved against: direct request, "they can mix and match
-	 * to meet that minimum to get a discount," so a customer combining
-	 * several different designs/sizes/materials into one order gets the
-	 * bulk rate on all of them once their *combined* label count crosses
-	 * a threshold, not just whichever single line item happens to be
-	 * large enough alone. Callers that only have one quantity in hand
-	 * (no cart/order context, e.g. a bare test calculation) can omit it
-	 * and it defaults to `$quantity` — the old, single-item behavior.
-	 * `$quantity` itself still only ever means *this* line's own units,
-	 * for the `total` this call returns — mixing in other line items'
-	 * units there would double-count them across multiple calls.
+	 * The bulk discount is resolved against, and applied to, the *base*
+	 * price only — direct request: "the bulk discount just adjusts the
+	 * base price of the label. If the customer uses more expensive
+	 * material or a bigger label, those charges need to be added on
+	 * top." So a discount tier's percent/fixed value is never allowed
+	 * to shave anything off a material or size upcharge; it only ever
+	 * reduces the base rate, and material/size adjustments are added
+	 * back on afterward, full price, regardless of which tier applies.
 	 *
-	 * A `fixed_unit_price` tier sets the resulting per-unit price
-	 * directly (`value`); the per-unit "discount" is derived as the
-	 * difference so the formula still holds structurally for either
-	 * tier type. See docs/ARCHITECTURE.md §9.
+	 * `$tier_quantity` — not just `$quantity` — is what the tier
+	 * threshold is resolved against: direct request, "they can mix and
+	 * match to meet that minimum to get a discount," so a customer
+	 * combining several different designs/sizes/materials into one
+	 * order gets the bulk rate on all of them once their *combined*
+	 * label count crosses a threshold, not just whichever single line
+	 * item happens to be large enough alone. Callers that only have one
+	 * quantity in hand (no cart/order context, e.g. a bare test
+	 * calculation) can omit it and it defaults to `$quantity` — the
+	 * old, single-item behavior. `$quantity` itself still only ever
+	 * means *this* line's own units, for the `total` this call returns
+	 * — mixing in other line items' units there would double-count them
+	 * across multiple calls.
+	 *
+	 * A `fixed_unit_price` tier sets the resulting *base* price
+	 * directly (`value`) — material/size adjustments still apply on top
+	 * of that, same as the percent-off tier type; the per-unit
+	 * "discount" is derived as the difference so the formula still
+	 * holds structurally for either tier type. See docs/ARCHITECTURE.md
+	 * §9.
 	 *
 	 * @return array{
 	 *   base_unit_price:float, material_adjustment:float, size_adjustment:float,
@@ -188,14 +200,18 @@ class YeffoPrint_Pricing_Rule {
 		}
 
 		if ( $applied_tier ) {
+			// Discount computed from $base alone, never from
+			// $unit_price_before_discount — a material/size upcharge is
+			// never itself discounted, only added on top afterward.
 			if ( 'percent' === $applied_tier['type'] ) {
-				$discount_per_unit = $unit_price_before_discount * ( $applied_tier['value'] / 100 );
+				$discount_per_unit = $base * ( $applied_tier['value'] / 100 );
 			} else {
-				$discount_per_unit = max( 0, $unit_price_before_discount - $applied_tier['value'] );
+				$discount_per_unit = max( 0, $base - $applied_tier['value'] );
 			}
 		}
 
-		$unit_price_after_discount = max( 0, $unit_price_before_discount - $discount_per_unit );
+		$discounted_base            = max( 0, $base - $discount_per_unit );
+		$unit_price_after_discount = max( 0, $discounted_base + $material_adjustment + $size_adjustment );
 
 		return [
 			'base_unit_price'            => $base,
