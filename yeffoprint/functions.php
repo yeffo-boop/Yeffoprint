@@ -240,6 +240,7 @@ add_action( 'wp_enqueue_scripts', function () {
 add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/template-card' ) );
 	register_block_type( get_theme_file_path( 'blocks/gallery-toolbar' ) );
+	register_block_type( get_theme_file_path( 'blocks/announcement-bar' ) );
 } );
 
 /**

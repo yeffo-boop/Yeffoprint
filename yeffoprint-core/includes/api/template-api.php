@@ -74,6 +74,22 @@ if ( ! function_exists( 'yeffoprint_core_compatible_record_label' ) ) {
 	}
 }
 
+if ( ! function_exists( 'yeffoprint_core_get_announcement_bar_text' ) ) {
+	/**
+	 * Set from the YeffoPrint admin menu (class-admin-menu.php); read
+	 * here by the theme's yeffoprint/announcement-bar block instead of
+	 * the block calling get_option() directly, same "theme consumes a
+	 * plugin API, never plugin-owned data, directly" split as every
+	 * other template tag in this file.
+	 */
+	function yeffoprint_core_get_announcement_bar_text(): string {
+		return (string) get_option(
+			YeffoPrint_Admin_Menu::ANNOUNCEMENT_BAR_OPTION,
+			YeffoPrint_Admin_Menu::ANNOUNCEMENT_BAR_DEFAULT
+		);
+	}
+}
+
 if ( ! function_exists( 'yeffoprint_core_badge_label' ) ) {
 	function yeffoprint_core_badge_label( string $badge ): string {
 		$labels = [

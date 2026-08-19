@@ -329,6 +329,34 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	gap: 1rem;
+}
+
+/* "+ Add another label" as a real button, not an easy-to-miss text
+   link — this is the one action that starts the batch feature, so it
+   should read as clearly clickable. */
+.yp-add-variant-btn {
+	flex-shrink: 0;
+	padding: 0.5rem 0.9rem;
+	border: 1.5px dashed var(--wp--preset--color--charcoal);
+	border-radius: var(--wp--custom--radius--control);
+	background: transparent;
+	color: var(--wp--preset--color--near-black);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-style 150ms ease, background-color 150ms ease;
+}
+
+.yp-add-variant-btn:hover {
+	border-style: solid;
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-variants-blurb {
+	margin: 0.5rem 0 1rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
 }
 
 .yp-variant-cards {
@@ -342,21 +370,57 @@
 	justify-content: space-between;
 	align-items: center;
 	gap: 0.75rem;
-	padding: 0.75rem 1rem;
+	padding: 0.6rem 0.85rem;
 	border: 1.5px solid var(--wp--preset--color--light-gray);
 	border-radius: var(--wp--custom--radius--control);
 }
 
 .yp-variant-card.is-active {
 	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
 }
 
 .yp-variant-card__summary {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
 	font-size: var(--wp--preset--font-size--small);
+	text-align: left;
 }
 
 .yp-variant-card__summary strong {
 	display: block;
+}
+
+/* Numbered badge per label, cycling the same three brand colors as
+   the "How It Works" step numbers — makes each row in the batch read
+   as its own distinct item at a glance instead of a plain list. */
+.yp-variant-card__index {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex-shrink: 0;
+	border-radius: 999px;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.78rem;
+	font-weight: 700;
+}
+
+.yp-variant-card:nth-child(3n+1) .yp-variant-card__index {
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-variant-card:nth-child(3n+2) .yp-variant-card__index {
+	background: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-variant-card:nth-child(3n) .yp-variant-card__index {
+	background: var(--wp--preset--color--yellow);
+	color: var(--wp--preset--color--near-black);
 }
 
 .yp-variant-card__actions {

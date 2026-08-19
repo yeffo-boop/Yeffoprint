@@ -48,7 +48,7 @@ defined( 'ABSPATH' ) || exit;
 			<ul class="yp-hero__stats">
 				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--cyan)"></span>Waterproof, solvent-resistant stock</li>
 				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--magenta)"></span>Free proof before printing</li>
-				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--yellow)"></span>Low minimums, from 25 labels</li>
+				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--yellow)"></span>Low minimums, from 10 labels</li>
 			</ul>
 			<!-- /wp:html -->
 

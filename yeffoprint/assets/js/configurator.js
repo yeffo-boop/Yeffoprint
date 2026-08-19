@@ -337,6 +337,7 @@
 				activeVariant().values[ fieldId ] = input.value;
 				updateCounter( fieldId );
 				updateStageField( fieldId );
+				updateActiveVariantCardSummary();
 			} );
 		} );
 
@@ -408,13 +409,34 @@
 
 	/* ---------- Variants (batch) ---------- */
 
+	function variantCardSummaryHtml( variant, index ) {
+		return '<span class="yp-variant-card__index">' + ( index + 1 ) + '</span>' +
+			'<span class="yp-variant-card__text"><strong>Label ' + ( index + 1 ) + '</strong>' + escapeHtml( variantSummaryLabel( variant ) ) + ' &middot; ' + variant.quantity + ' units</span>';
+	}
+
+	// The full rebuild below only runs on switch/add/duplicate/remove/
+	// quantity change — not on every keystroke in a field input, which
+	// would tear down and re-attach every card's click listeners on
+	// each character typed. That left a stale-looking bug: the active
+	// batch's own card kept showing whatever text was on it when one of
+	// those actions last ran, not what's actually been typed since —
+	// invisible with a single batch (nothing to compare it to), obvious
+	// with two or more. Called from the field-input handler alongside
+	// updateStageField() so just this one card's label stays live
+	// without rebuilding the whole list.
+	function updateActiveVariantCardSummary() {
+		var button = variantCardsEl.querySelector( '[data-switch-variant="' + state.activeVariantIndex + '"]' );
+		if ( button ) {
+			button.innerHTML = variantCardSummaryHtml( activeVariant(), state.activeVariantIndex );
+		}
+	}
+
 	function renderVariantCards() {
 		variantCardsEl.innerHTML = state.variants.map( function ( variant, index ) {
-			var label = variantSummaryLabel( variant );
 			return (
 				'<div class="yp-variant-card' + ( index === state.activeVariantIndex ? ' is-active' : '' ) + '">' +
 					'<button type="button" class="yp-variant-card__summary" data-switch-variant="' + index + '">' +
-						'<strong>Label ' + ( index + 1 ) + '</strong>' + escapeHtml( label ) + ' &middot; ' + variant.quantity + ' units' +
+						variantCardSummaryHtml( variant, index ) +
 					'</button>' +
 					'<span class="yp-variant-card__actions">' +
 						'<button type="button" class="button-link" data-duplicate-variant="' + index + '">Duplicate</button>' +
