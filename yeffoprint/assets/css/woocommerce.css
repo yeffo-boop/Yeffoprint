@@ -4,6 +4,21 @@
  * own markup rather than replacing it with custom templates — see
  * docs/ARCHITECTURE.md §9 for why, and for the classic-vs-Blocks
  * caveat these selectors work around by targeting both.
+ *
+ * Confirmed live (Venmo/Zelle checkout investigation) that this site's
+ * Cart and Checkout pages use the WooCommerce Cart/Checkout *blocks*
+ * (Store API), not the classic [woocommerce_cart]/[woocommerce_checkout]
+ * shortcodes — most of this file's classic-only selectors (.col2-set,
+ * #order_review, table.shop_table) have therefore never applied on the
+ * live site at all. Kept for the My Account pages, which are still
+ * classic templates regardless (confirmed unaffected), but the block
+ * classes below (wc-block-*) are what actually render Cart/Checkout —
+ * this only adds decorative styling (color/radius/shadow/spacing) on
+ * top of WooCommerce Blocks' own structural layout CSS, not a rebuilt
+ * layout, since that base CSS is already correct and I can't verify a
+ * rebuilt one visually from here. Class names are WooCommerce's
+ * documented, stable Blocks theming API; if anything doesn't land
+ * pixel-perfect, a screenshot beats guessing further blind.
  */
 
 .woocommerce-cart .entry-content,
@@ -73,12 +88,109 @@
 }
 
 .woocommerce-checkout #order_review,
-.wc-block-checkout__sidebar {
+.wc-block-checkout__sidebar,
+.wc-block-cart__sidebar {
 	background: var(--wp--preset--color--warm-white);
 	border-radius: var(--wp--custom--radius--card);
 	padding: var(--wp--preset--spacing--md);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	align-self: start;
+}
+
+/* ---------- Cart & Checkout blocks (Store API) ---------- */
+
+.wp-block-woocommerce-checkout,
+.wp-block-woocommerce-cart {
+	margin-top: var(--wp--preset--spacing--sm);
+}
+
+/* Each checkout step ("Contact information," "Shipping address,"
+   "Payment options," …) as a clearly separated section rather than
+   WC Blocks' own unstyled default flow. */
+.wc-block-components-checkout-step {
+	padding-bottom: var(--wp--preset--spacing--md);
+	margin-bottom: var(--wp--preset--spacing--md);
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.wc-block-components-checkout-step:last-child {
+	border-bottom: none;
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+
+.wc-block-components-checkout-step__title {
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 700;
+}
+
+.wc-block-components-checkout-step__description {
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* Radio options — shipping method AND payment method (Venmo/Zelle
+   included) both use this same component. [aria-checked] rather than
+   guessing an exact BEM "is-selected" modifier class name, since the
+   component is built on an accessible role="radio" pattern. */
+.wc-block-components-radio-control__option {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.85rem 1rem;
+	margin-bottom: 0.6rem;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.wc-block-components-radio-control__option[aria-checked="true"] {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-blocks-payment-description {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin-top: 0.35rem;
+}
+
+/* Order summary (right column): line items + totals */
+.wc-block-components-order-summary-item {
+	padding-block: 0.6rem;
+}
+
+.wc-block-components-totals-item {
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wc-block-components-totals-footer-item {
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 700;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+/* Coupon code / any other collapsible panel */
+.wc-block-components-panel {
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+	padding-top: 1rem;
+	margin-top: 1rem;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* Notices (errors, "your session expired," etc.) */
+.wc-block-components-notice-banner {
+	border-radius: var(--wp--custom--radius--control);
+}
+
+/* Cart line items */
+.wc-block-cart-items {
+	border-radius: var(--wp--custom--radius--card);
+	overflow: hidden;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.wc-block-cart-item__image img {
+	border-radius: var(--wp--custom--radius--control);
 }
 
 /* Account page */
