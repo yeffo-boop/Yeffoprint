@@ -39,6 +39,12 @@ class YeffoPrint_Cart_Pricing {
 			return;
 		}
 
+		// Computed once per recalculation, not per item — every label
+		// line item shares the same combined total (see
+		// combined_label_quantity() below), so there's no reason to
+		// re-sum the whole cart on every iteration of the loop.
+		$tier_quantity = self::combined_label_quantity( $cart );
+
 		foreach ( $cart->get_cart() as $cart_item ) {
 			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) && empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
 				// The flat $25 design fee line item — no batch/quantity
@@ -53,11 +59,48 @@ class YeffoPrint_Cart_Pricing {
 			// Both a normal Template batch and a Custom Order's own labels
 			// line item reach here and price identically — the formula
 			// only needs size/material/quantity, never a template_id.
-			$breakdown = self::calculate_for_cart_item( $cart_item );
+			$breakdown = self::calculate_for_cart_item( $cart_item, $tier_quantity );
 			if ( null !== $breakdown ) {
 				$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
 			}
 		}
+	}
+
+	/**
+	 * The bulk-discount threshold a customer's whole order is measured
+	 * against — direct request: "they can mix and match to meet that
+	 * minimum to get a discount," so every label-bearing line item
+	 * (a Template batch or a Custom Order's own labels item — both
+	 * share TOTAL_QTY, regardless of which design/size/material each
+	 * one is) counts toward one shared total, not just whichever single
+	 * line happens to be large enough alone. The flat design-fee line
+	 * item has no TOTAL_QTY and is correctly excluded by the same check
+	 * calculate_for_cart_item() already uses.
+	 *
+	 * Takes an explicit `$cart` when the live `woocommerce_before_
+	 * calculate_totals` hook already has one in hand (apply_price());
+	 * falls back to `WC()->cart` for every other caller (the order-item
+	 * snapshot at checkout, the pricing-preview REST endpoint before
+	 * anything's even been added yet) — both are the *same* cart object
+	 * within one request, this just avoids requiring every caller to
+	 * thread it through by hand.
+	 */
+	public static function combined_label_quantity( ?\WC_Cart $cart = null, ?string $exclude_cart_item_key = null ): int {
+		$cart = $cart ?? ( function_exists( 'WC' ) ? WC()->cart : null );
+		if ( ! $cart ) {
+			return 0;
+		}
+
+		$total = 0;
+		foreach ( $cart->get_cart() as $key => $cart_item ) {
+			if ( $exclude_cart_item_key && $key === $exclude_cart_item_key ) {
+				continue; // The item currently being edited — its own (possibly stale) quantity would double-count against the new one a caller is about to preview.
+			}
+
+			$total += (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ?? 0 );
+		}
+
+		return $total;
 	}
 
 	/**
@@ -67,9 +110,13 @@ class YeffoPrint_Cart_Pricing {
 	 * would re-register this class's hooks a second time (duplicating,
 	 * e.g., the cart's displayed Size/Material rows).
 	 *
+	 * @param int|null $tier_quantity Combined cart-wide quantity to resolve
+	 *   the bulk discount against; defaults to a fresh combined_label_quantity()
+	 *   read (correct for a one-off caller like the checkout snapshot — see
+	 *   combined_label_quantity()'s own doc for why that's safe there).
 	 * @return array|null The pricing breakdown, or null if this isn't a YeffoPrint batch item.
 	 */
-	public static function calculate_for_cart_item( array $cart_item ): ?array {
+	public static function calculate_for_cart_item( array $cart_item, ?int $tier_quantity = null ): ?array {
 		if ( empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
 			return null;
 		}
@@ -78,7 +125,7 @@ class YeffoPrint_Cart_Pricing {
 		$size_adjustment     = self::adjustment( 'yp_size', (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 ) );
 		$quantity             = (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
 
-		return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $quantity );
+		return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $quantity, $tier_quantity ?? self::combined_label_quantity() );
 	}
 
 	private static function adjustment( string $post_type, int $post_id ): float {

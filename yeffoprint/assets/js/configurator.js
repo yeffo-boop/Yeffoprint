@@ -688,7 +688,11 @@
 		var requestId = ++pricingRequestId;
 		var url = yeffoprintConfigurator.restUrl + 'pricing/calculate?quantity=' + qty +
 			( state.sizeId ? '&size_id=' + state.sizeId : '' ) +
-			( state.materialId ? '&material_id=' + state.materialId : '' );
+			( state.materialId ? '&material_id=' + state.materialId : '' ) +
+			// Editing a batch already in the cart: exclude its own (pre-edit)
+			// quantity from the bulk-discount count, or it'd double-count
+			// against the new quantity being previewed here.
+			( state.editKey ? '&exclude_cart_item_key=' + encodeURIComponent( state.editKey ) : '' );
 
 		fetch( url )
 			.then( function ( response ) {

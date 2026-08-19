@@ -101,7 +101,7 @@ class YeffoPrint_Pricing_Rule_Editor {
 				<button type="button" class="button button-secondary" id="yp-pricing-tiers-add"><?php esc_html_e( 'Add Tier', 'yeffoprint-core' ); ?></button>
 			</p>
 			<input type="hidden" name="yp_bulk_discount_tiers" id="yp-pricing-tiers-input" />
-			<p class="description"><?php esc_html_e( 'The highest threshold at or below the order quantity applies. "Percent off" discounts a share of the per-label price; "Fixed resulting unit price" sets the per-label price directly for that tier.', 'yeffoprint-core' ); ?></p>
+			<p class="description"><?php esc_html_e( 'The highest threshold at or below the customer\'s combined label count applies to their whole order — they can mix and match different designs, sizes, and materials to reach it, it doesn\'t need to come from one design alone. "Percent off" discounts a share of the per-label price; "Fixed resulting unit price" sets the per-label price directly for that tier.', 'yeffoprint-core' ); ?></p>
 		</div>
 		<?php
 	}
