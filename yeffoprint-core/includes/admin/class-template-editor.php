@@ -90,6 +90,13 @@ class YeffoPrint_Template_Editor {
 			// percentage guesses (Architecture §9: deferred from Phase 4
 			// until the preview surface existed; it does now).
 			'previewImageUrl' => $post_id ? ( get_the_post_thumbnail_url( $post_id, 'large' ) ?: '' ) : '',
+			// "Insert from preset" (V2, direct request: recreating the same
+			// fields on every Template "is a lot") — every reusable Field
+			// Preset, so a click can copy its fields into this Template's
+			// own list without a REST round-trip. Position still needs
+			// setting per-Template afterward (drag picker, same as any
+			// other field) since it depends on this Template's own artwork.
+			'presets'   => YeffoPrint_Field_Schema::get_presets(),
 			'i18n'      => [
 				'addField'    => __( 'Add Field', 'yeffoprint-core' ),
 				'removeField' => __( 'Remove', 'yeffoprint-core' ),
@@ -98,6 +105,8 @@ class YeffoPrint_Template_Editor {
 				'empty'       => __( 'No customization fields yet. Add one below.', 'yeffoprint-core' ),
 				'noPreview'   => __( 'Set a featured image above to preview and drag-position fields here.', 'yeffoprint-core' ),
 				'dragHint'    => __( 'Drag a label to reposition it on the artwork — or set exact percentages below.', 'yeffoprint-core' ),
+				'insertPreset' => __( 'Insert Preset', 'yeffoprint-core' ),
+				'selectPreset' => __( '— Select a preset —', 'yeffoprint-core' ),
 			],
 		] );
 	}

@@ -73,6 +73,23 @@ class YeffoPrint_Post_Type_Registry {
 			false
 		) );
 
+		// A reusable set of field *definitions* (label, type, max chars,
+		// alignment, font sizing, formatting rule, admin/tooltip text —
+		// everything but position, which is inherently per-template
+		// since it's placed against that template's own artwork) an
+		// admin builds once and inserts into any Template's own field
+		// schema instead of recreating the same fields from scratch each
+		// time (direct request). Stores field data in the identical
+		// shape/meta key as a Template's own field_schema
+		// (YeffoPrint_Field_Schema) — a preset is really just a
+		// field_schema that isn't attached to any one Template yet.
+		register_post_type( 'yp_field_preset', $this->args(
+			__( 'Field Presets', 'yeffoprint-core' ),
+			__( 'Field Preset', 'yeffoprint-core' ),
+			[ 'title', 'custom-fields' ],
+			false
+		) );
+
 		// Customer-owned, not admin-managed content — created/read/
 		// deleted entirely through REST by the customer who owns it
 		// (post_author), same as a cart session but persisted without

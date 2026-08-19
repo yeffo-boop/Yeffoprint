@@ -106,12 +106,14 @@ final class YeffoPrint_Core {
 			new YeffoPrint_Admin_Menu();
 
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-template-editor.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-field-preset-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-material-size-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-pricing-rule-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-custom-order-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-proof-editor.php';
 
 			new YeffoPrint_Template_Editor();
+			new YeffoPrint_Field_Preset_Editor();
 			new YeffoPrint_Material_Size_Editor();
 			new YeffoPrint_Pricing_Rule_Editor();
 			new YeffoPrint_Custom_Order_Editor();

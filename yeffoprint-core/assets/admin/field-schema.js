@@ -31,6 +31,47 @@
 		var addButton = document.getElementById( 'yp-field-schema-add' );
 		var preview = document.getElementById( 'yp-field-position-preview' );
 
+		/* ---------- Insert from preset ----------
+		   Copies a reusable Field Preset's fields (label, type, max
+		   chars, alignment, font sizing, formatting, tooltip text) into
+		   this Template's own list — direct request: recreating the same
+		   fields on every Template "is a lot." Position isn't part of
+		   what's reused (a preset's saved position is just whatever
+		   default it was authored with) — the admin still drags each
+		   inserted field into place on *this* Template's own artwork via
+		   the existing picker below, same as any other field. Duplicate
+		   field ids across inserted/existing fields are fine to leave
+		   as-is here: the server (YeffoPrint_Field_Schema::sanitize())
+		   already de-duplicates ids on save regardless of source. */
+		if ( config.presets && config.presets.length ) {
+			var presetWrap = document.createElement( 'p' );
+			presetWrap.className = 'yp-field-preset-insert';
+			presetWrap.innerHTML =
+				'<select id="yp-field-preset-select">' +
+					'<option value="">' + escapeHtml( config.i18n.selectPreset || 'Select a preset' ) + '</option>' +
+					config.presets.map( function ( preset ) {
+						return '<option value="' + preset.id + '">' + escapeHtml( preset.name ) + ' (' + preset.fields.length + ')</option>';
+					} ).join( '' ) +
+				'</select> ' +
+				'<button type="button" class="button" id="yp-field-preset-insert">' + escapeHtml( config.i18n.insertPreset || 'Insert Preset' ) + '</button>';
+
+			addButton.closest( 'p' ).insertAdjacentElement( 'beforebegin', presetWrap );
+
+			document.getElementById( 'yp-field-preset-insert' ).addEventListener( 'click', function () {
+				var select = document.getElementById( 'yp-field-preset-select' );
+				var preset = config.presets.filter( function ( p ) { return String( p.id ) === select.value; } )[ 0 ];
+				if ( ! preset || ! preset.fields.length ) {
+					return;
+				}
+
+				preset.fields.forEach( function ( field ) {
+					state.push( JSON.parse( JSON.stringify( field ) ) );
+				} );
+				select.value = '';
+				render();
+			} );
+		}
+
 		function escapeHtml( value ) {
 			var div = document.createElement( 'div' );
 			div.textContent = value == null ? '' : String( value );
@@ -64,7 +105,7 @@
 						labeled( 'Vertical position (%)', inputHtml( 'number', index, 'position.y', field.position && field.position.y, { min: 0, max: 100 } ) ) +
 						labeled( 'Formatting rule', selectHtml( index, 'formatting_rule', config.formattingRules, field.formatting_rule ) ) +
 						labeled( 'Preview behavior', selectHtml( index, 'preview_behavior', config.previewBehaviors, field.preview_behavior ) ) +
-						labeled( 'Admin description', '<textarea data-index="' + index + '" data-key="admin_description" rows="2" class="widefat">' + escapeHtml( field.admin_description ) + '</textarea>' ) +
+						labeled( 'Tooltip / help text (shown to the customer next to this field)', '<textarea data-index="' + index + '" data-key="admin_description" rows="2" class="widefat">' + escapeHtml( field.admin_description ) + '</textarea>' ) +
 						'<label class="yp-field-schema-checkbox"><input type="checkbox" data-index="' + index + '" data-key="required"' + ( field.required ? ' checked' : '' ) + ' /> Required</label>' +
 					'</div>' +
 					'<div class="yp-field-schema-row-actions">' +

@@ -173,6 +173,34 @@ class YeffoPrint_Field_Schema {
 		return is_array( $decoded ) ? $decoded : [];
 	}
 
+	/**
+	 * Every published yp_field_preset, each with its own saved
+	 * field_schema (same meta key/shape as a Template's) — for the
+	 * Template editor's "Insert from preset" control (assets/admin/
+	 * field-schema.js) to copy fields from without a separate REST
+	 * round-trip; localized wholesale since there's no reason to expect
+	 * more than a handful of presets on a real site.
+	 *
+	 * @return array<int, array{id:int, name:string, fields:array}>
+	 */
+	public static function get_presets(): array {
+		$posts = get_posts( [
+			'post_type'      => 'yp_field_preset',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+		] );
+
+		return array_map( static function ( \WP_Post $post ) {
+			return [
+				'id'     => $post->ID,
+				'name'   => get_the_title( $post ),
+				'fields' => self::get( $post->ID ),
+			];
+		}, $posts );
+	}
+
 	public static function update( int $template_id, array $fields ): void {
 		$clean = self::sanitize( $fields );
 		update_post_meta( $template_id, self::META_KEY, wp_json_encode( $clean ) );

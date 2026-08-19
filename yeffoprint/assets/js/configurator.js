@@ -299,17 +299,33 @@
 				control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
 			}
 
+			var tooltip = field.admin_description
+				? ' <button type="button" class="yp-field__tooltip-trigger" data-tooltip-trigger="' + field.id + '" aria-expanded="false" aria-controls="yp-field-tooltip-' + field.id + '" aria-label="More info about ' + escapeHtml( field.label ) + '">?</button>'
+				: '';
+
 			return (
 				'<div class="yp-field">' +
 					'<div class="yp-field__label-row">' +
-						'<label for="yp-field-' + field.id + '">' + escapeHtml( field.label ) + ( field.required ? ' *' : '' ) + '</label>' +
+						'<label for="yp-field-' + field.id + '">' + escapeHtml( field.label ) + ( field.required ? ' *' : '' ) + tooltip + '</label>' +
 						( 'color' === field.type ? '' : '<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' ) +
 					'</div>' +
+					( field.admin_description ? '<p class="yp-field__tooltip" id="yp-field-tooltip-' + field.id + '" hidden>' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
 					control.replace( '<textarea', '<textarea id="yp-field-' + field.id + '"' ).replace( '<input', '<input id="yp-field-' + field.id + '"' ) +
-					( field.admin_description ? '<p class="description">' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
 				'</div>'
 			);
 		} ).join( '' ) || '<p class="description">This design has no customization fields.</p>';
+
+		fieldInputsEl.querySelectorAll( '[data-tooltip-trigger]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var tooltipEl = document.getElementById( 'yp-field-tooltip-' + button.getAttribute( 'data-tooltip-trigger' ) );
+				if ( ! tooltipEl ) {
+					return;
+				}
+				var isOpen = ! tooltipEl.hidden;
+				tooltipEl.hidden = isOpen;
+				button.setAttribute( 'aria-expanded', isOpen ? 'false' : 'true' );
+			} );
+		} );
 
 		fieldInputsEl.querySelectorAll( '[data-field-id]' ).forEach( function ( input ) {
 			input.addEventListener( 'input', function () {
