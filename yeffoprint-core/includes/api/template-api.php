@@ -17,7 +17,8 @@ if ( ! function_exists( 'yeffoprint_core_get_template_card_data' ) ) {
 	 * @return array{
 	 *     id:int, title:string, permalink:string, badge:string,
 	 *     badge_label:string, starting_price:string,
-	 *     artwork_url:string|null, vial_mockup_url:string|null
+	 *     artwork_url:string|null, vial_mockup_url:string|null,
+	 *     material_label:string|null, size_label:string|null
 	 * }|null
 	 */
 	function yeffoprint_core_get_template_card_data( int $post_id ): ?array {
@@ -41,7 +42,35 @@ if ( ! function_exists( 'yeffoprint_core_get_template_card_data' ) ) {
 			'starting_price'  => yeffoprint_core_starting_price_label(),
 			'artwork_url'     => get_the_post_thumbnail_url( $post_id, 'medium_large' ) ?: null,
 			'vial_mockup_url' => $vial_mockup_url ?: null,
+			'material_label'  => yeffoprint_core_compatible_record_label( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS, 'materials' ),
+			'size_label'      => yeffoprint_core_compatible_record_label( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_SIZES, 'sizes' ),
 		];
+	}
+}
+
+if ( ! function_exists( 'yeffoprint_core_compatible_record_label' ) ) {
+	/**
+	 * A one- or two-word gallery-card teaser for a Template's compatible
+	 * Materials/Sizes: the record's own name when there's exactly one,
+	 * otherwise a count ("4 materials") — the full list is what the
+	 * configurator's own pickers are for, not this card.
+	 */
+	function yeffoprint_core_compatible_record_label( int $template_id, string $meta_key, string $plural ): ?string {
+		$ids = array_map( 'absint', (array) get_post_meta( $template_id, $meta_key, true ) );
+
+		$published = array_values( array_filter( $ids, static function ( $id ) {
+			return 'publish' === get_post_status( $id );
+		} ) );
+
+		if ( ! $published ) {
+			return null;
+		}
+
+		if ( 1 === count( $published ) ) {
+			return get_the_title( $published[0] ) ?: null;
+		}
+
+		return count( $published ) . ' ' . $plural;
 	}
 }
 

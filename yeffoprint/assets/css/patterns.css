@@ -148,13 +148,142 @@
 	list-style: none;
 	display: flex;
 	flex-wrap: wrap;
-	justify-content: center;
+	justify-content: flex-start;
 	gap: 0.75rem 1.75rem;
 	margin: 2rem 0 0;
 	padding: 0;
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
 	color: var(--wp--preset--color--charcoal);
+}
+
+/* ---------- Hero: two-column grid + press-proof visual ---------- */
+
+/* layout:"default" on the block (a flow container) so WordPress's own
+   blockGap CSS custom property stays available to fall back on, then
+   overridden into an actual grid here — the same technique already
+   used by .yp-steps below, for the same reason: a real grid, not a
+   flex/flow approximation of one. */
+.yp-hero__grid {
+	display: grid;
+	grid-template-columns: 1.05fr 0.95fr;
+	gap: clamp(2rem, 5vw, 4rem);
+	align-items: center;
+}
+
+/* Same fix as .yp-steps below: layout:"default" auto-injects
+   margin-block-start on every child but the first, meant for a
+   stacked flow layout — this container is a grid instead, already
+   spaced by `gap` above, so that margin only pushes the second column
+   out of vertical alignment with the first. */
+.yp-hero__grid > * {
+	margin-block-start: 0 !important;
+	margin-block-end: 0 !important;
+}
+
+@media (max-width: 900px) {
+	.yp-hero__grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.yp-hero__visual {
+	display: flex;
+	justify-content: center;
+}
+
+.yp-proof {
+	position: relative;
+	aspect-ratio: 1 / 1;
+	width: 100%;
+	max-width: 400px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--container);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+}
+
+.yp-proof__corner {
+	position: absolute;
+	width: 20px;
+	height: 20px;
+	opacity: 0.35;
+}
+
+.yp-proof__corner::before,
+.yp-proof__corner::after {
+	content: "";
+	position: absolute;
+	background: var(--wp--preset--color--charcoal);
+}
+
+.yp-proof__corner::before { top: 0; left: 0; width: 1.4px; height: 100%; }
+.yp-proof__corner::after { top: 0; left: 0; width: 100%; height: 1.4px; }
+
+.yp-proof__corner--tl { top: 16px; left: 16px; }
+.yp-proof__corner--tr { top: 16px; right: 16px; transform: scaleX(-1); }
+.yp-proof__corner--bl { bottom: 16px; left: 16px; transform: scaleY(-1); }
+.yp-proof__corner--br { bottom: 16px; right: 16px; transform: scale(-1); }
+
+.yp-proof__mark {
+	width: 42%;
+	filter: drop-shadow(0 14px 20px rgba(20, 20, 20, 0.18));
+}
+
+/* Each bar snaps in from a slightly different direction/delay — a
+   small nod to a press proof's colors dropping into registration one
+   pass at a time. */
+.yp-proof__bar {
+	transform-origin: bottom;
+	animation-duration: 1.1s;
+	animation-timing-function: cubic-bezier(0.2, 0.9, 0.25, 1);
+	animation-iteration-count: 1;
+	animation-fill-mode: both;
+}
+
+.yp-proof__bar--c { animation-name: yp-proof-snap-left; animation-delay: 0s; }
+.yp-proof__bar--m { animation-name: yp-proof-snap-down; animation-delay: 0.06s; }
+.yp-proof__bar--y { animation-name: yp-proof-snap-right; animation-delay: 0.12s; }
+
+@keyframes yp-proof-snap-left {
+	0% { transform: translateX(-14px); opacity: 0; }
+	60% { opacity: 1; }
+	100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes yp-proof-snap-down {
+	0% { transform: translateY(14px); opacity: 0; }
+	60% { opacity: 1; }
+	100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes yp-proof-snap-right {
+	0% { transform: translateX(14px); opacity: 0; }
+	60% { opacity: 1; }
+	100% { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yp-proof__bar {
+		animation: none;
+	}
+}
+
+.yp-proof__caption {
+	position: absolute;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--charcoal);
+	opacity: 0.55;
+	white-space: nowrap;
 }
 
 .yp-hero__stats li {
@@ -266,9 +395,18 @@
 	   guaranteed. Real label size is 45mm x 21mm — 15:7 keeps that
 	   exact ratio (not the generic 4:5 used by other card types, e.g.
 	   the customer-work placeholder tiles) scaled up to something
-	   legible on screen. Upload artwork/photos cropped to this ratio. */
+	   legible on screen. Upload artwork/photos cropped to this ratio.
+
+	   The navy gradient background is the approved brand mockup's
+	   product-photography backdrop — kept on this combined selector
+	   (not the shared .yp-card__media base) so other card types, e.g.
+	   the customer-work tiles, keep their own background. It only
+	   shows through where an image has transparent padding, but still
+	   reads as a considered "on a light table" backdrop even when the
+	   image fills the box completely. */
 	position: relative;
 	aspect-ratio: 15 / 7;
+	background: var(--wp--custom--gradient-navy);
 }
 
 .yp-template-card__image {
@@ -313,13 +451,38 @@
 
 .yp-template-card__body {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0.5rem;
+	flex-direction: column;
+	gap: 0.6rem;
 }
 
 .yp-template-card__title {
 	font-weight: 600;
+}
+
+.yp-template-card__specs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+.yp-spec-chip {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--wp--preset--color--charcoal);
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.2rem 0.5rem;
+}
+
+.yp-template-card__foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-top: auto;
 }
 
 .yp-template-card__price {
@@ -327,6 +490,20 @@
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
 	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-template-card__cta {
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--warm-white);
+	background: var(--wp--preset--color--near-black);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.4rem 0.85rem;
+	transition: background 150ms ease, color 150ms ease;
+}
+
+.yp-template-card:hover .yp-template-card__cta {
+	background: var(--wp--custom--gradient-brand-deep);
 }
 
 /* ---------- How It Works ---------- */

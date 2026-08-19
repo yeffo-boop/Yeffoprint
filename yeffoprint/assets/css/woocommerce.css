@@ -175,6 +175,18 @@
 	padding-block: 0.6rem !important;
 }
 
+/* Same navy backdrop as the cart page and Shop Labels gallery cards —
+   this is the checkout sidebar's own copy of the line-item thumbnail. */
+.wc-block-components-order-summary-item__image {
+	background: var(--wp--custom--gradient-navy) !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+	overflow: hidden;
+}
+
+.wc-block-components-order-summary-item__image img {
+	border-radius: var(--wp--custom--radius--control) !important;
+}
+
 .wc-block-components-totals-item {
 	font-size: var(--wp--preset--font-size--small) !important;
 }
@@ -212,6 +224,15 @@
 	border-radius: var(--wp--custom--radius--card) !important;
 	overflow: hidden;
 	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
+}
+
+/* Same navy "on a light table" backdrop as the Shop Labels gallery
+   cards (patterns.css) — consistent product-photography treatment
+   from browsing through to checkout. */
+.wc-block-cart-item__image {
+	background: var(--wp--custom--gradient-navy) !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+	overflow: hidden;
 }
 
 .wc-block-cart-item__image img {

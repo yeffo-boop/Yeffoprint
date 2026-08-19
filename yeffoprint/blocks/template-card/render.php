@@ -48,6 +48,19 @@ if ( ! $card ) {
 	</div>
 	<div class="yp-card__body yp-template-card__body">
 		<span class="yp-template-card__title"><?php echo esc_html( $card['title'] ); ?></span>
-		<span class="yp-template-card__price"><?php echo esc_html( $card['starting_price'] ); ?></span>
+		<?php if ( $card['material_label'] || $card['size_label'] ) : ?>
+			<div class="yp-template-card__specs">
+				<?php if ( $card['size_label'] ) : ?>
+					<span class="yp-spec-chip"><?php echo esc_html( $card['size_label'] ); ?></span>
+				<?php endif; ?>
+				<?php if ( $card['material_label'] ) : ?>
+					<span class="yp-spec-chip"><?php echo esc_html( $card['material_label'] ); ?></span>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+		<div class="yp-template-card__foot">
+			<span class="yp-template-card__price"><?php echo esc_html( $card['starting_price'] ); ?></span>
+			<span class="yp-template-card__cta">Customize</span>
+		</div>
 	</div>
 </a>

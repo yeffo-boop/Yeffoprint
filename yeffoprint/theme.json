@@ -51,7 +51,8 @@
 			},
 			"focus-ring": "var(--wp--preset--color--cyan)",
 			"gradient-brand": "linear-gradient(135deg, var(--wp--preset--color--magenta) 0%, var(--wp--preset--color--cyan) 100%)",
-			"gradient-brand-deep": "linear-gradient(135deg, var(--wp--preset--color--magenta-deep) 0%, var(--wp--preset--color--cyan-deep) 100%)"
+			"gradient-brand-deep": "linear-gradient(135deg, var(--wp--preset--color--magenta-deep) 0%, var(--wp--preset--color--cyan-deep) 100%)",
+			"gradient-navy": "linear-gradient(160deg, #1B2352 0%, #0D1130 70%)"
 		},
 		"typography": {
 			"fontFamilies": [
