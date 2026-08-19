@@ -64,6 +64,11 @@
 					"slug": "body",
 					"name": "Body",
 					"fontFamily": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+				},
+				{
+					"slug": "mono",
+					"name": "Mono",
+					"fontFamily": "'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace"
 				}
 			],
 			"fontSizes": [

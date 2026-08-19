@@ -110,8 +110,28 @@
 
 .yp-hero__eyebrow-accent {
 	display: inline-flex;
+	align-items: center;
 	gap: 0.4rem;
 	margin-bottom: 1rem;
+	padding: 0 0.6rem;
+	position: relative;
+}
+
+/* A pair of print registration ticks flanking the CMY dots — a small,
+   literal nod to the press-proof motif (crop marks/registration marks)
+   without touching the hero's existing copy or layout. */
+.yp-hero__eyebrow-accent::before,
+.yp-hero__eyebrow-accent::after {
+	content: "";
+	width: 9px;
+	height: 9px;
+	flex-shrink: 0;
+	border: 1.2px solid var(--wp--preset--color--charcoal);
+	border-radius: 50%;
+	opacity: 0.3;
+	background:
+		linear-gradient(var(--wp--preset--color--charcoal), var(--wp--preset--color--charcoal)) center / 1px 100% no-repeat,
+		linear-gradient(var(--wp--preset--color--charcoal), var(--wp--preset--color--charcoal)) center / 100% 1px no-repeat;
 }
 
 .yp-hero__eyebrow-accent span {
@@ -303,7 +323,9 @@
 }
 
 .yp-template-card__price {
+	font-family: var(--wp--preset--font-family--mono);
 	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
 	color: var(--wp--preset--color--charcoal);
 }
 

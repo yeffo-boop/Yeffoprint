@@ -186,6 +186,14 @@
 	border-top: 1px solid var(--wp--preset--color--light-gray) !important;
 }
 
+/* Every rendered price (line items, subtotal, shipping, total) —
+   decorative only, same as the rest of this file: WooCommerce Blocks
+   wraps each amount in this one class regardless of which totals row
+   it's in, so a single rule covers cart and checkout consistently. */
+.wc-block-components-formatted-money-amount {
+	font-family: var(--wp--preset--font-family--mono) !important;
+}
+
 /* Coupon code / any other collapsible panel */
 .wc-block-components-panel {
 	border-top: 1px solid var(--wp--preset--color--light-gray) !important;

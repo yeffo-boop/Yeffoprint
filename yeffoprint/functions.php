@@ -55,11 +55,31 @@ function yeffoprint_asset_version( string $relative_path ) {
 	return $hash ? substr( $hash, 0, 12 ) : (string) filemtime( $path );
 }
 
+add_filter( 'wp_resource_hints', function ( $urls, $relation_type ) {
+	if ( 'preconnect' === $relation_type ) {
+		$urls[] = [ 'href' => 'https://fonts.gstatic.com', 'crossorigin' ];
+	}
+	return $urls;
+}, 10, 2 );
+
 add_action( 'wp_enqueue_scripts', function () {
+	// theme.json declares Geist/Inter/IBM Plex Mono as the brand's font
+	// stack, but nothing actually loaded those files — every page was
+	// silently falling back to each visitor's OS default sans-serif.
+	// Google Fonts serves all three; the system-font fallback chain
+	// already on each theme.json family stays in place for the brief
+	// window before this loads (or if the CDN is unreachable).
+	wp_enqueue_style(
+		'yeffoprint-fonts',
+		'https://fonts.googleapis.com/css2?family=Geist:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap',
+		[],
+		null
+	);
+
 	wp_enqueue_style(
 		'yeffoprint-global',
 		get_theme_file_uri( 'assets/css/global.css' ),
-		[],
+		[ 'yeffoprint-fonts' ],
 		yeffoprint_asset_version( 'assets/css/global.css' )
 	);
 

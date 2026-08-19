@@ -370,6 +370,7 @@ svg {
 
 .yp-card__badge {
 	display: inline-block;
+	font-family: var(--wp--preset--font-family--mono);
 	font-size: 0.7rem;
 	font-weight: 600;
 	text-transform: uppercase;
