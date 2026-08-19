@@ -24,6 +24,22 @@ class YeffoPrint_Template_Editor {
 
 		add_filter( 'manage_yp_template_posts_columns', [ $this, 'columns' ] );
 		add_action( 'manage_yp_template_posts_custom_column', [ $this, 'render_column' ], 10, 2 );
+		add_filter( 'admin_post_thumbnail_html', [ $this, 'featured_image_hint' ], 10, 2 );
+	}
+
+	/**
+	 * The featured image is Label View's artwork and the gallery card's
+	 * primary image (Architecture §9: real label ratio is 15:7, the
+	 * card CSS enforces it) — WordPress's native "Set featured image"
+	 * box has no built-in way to hint the expected size, so this adds
+	 * it rather than leaving that undocumented outside this codebase.
+	 */
+	public function featured_image_hint( string $content, int $post_id ): string {
+		if ( 'yp_template' !== get_post_type( $post_id ) ) {
+			return $content;
+		}
+
+		return $content . '<p class="description">' . esc_html__( 'Rectangular, 15:7 — the real label ratio (e.g. 900×420px). Used for Label View and the gallery card.', 'yeffoprint-core' ) . '</p>';
 	}
 
 	public function enqueue_assets( string $hook ): void {
@@ -139,7 +155,7 @@ class YeffoPrint_Template_Editor {
 			<input type="hidden" id="yp-vial-mockup-id" name="yp_vial_mockup_id" value="<?php echo esc_attr( $vial_id ); ?>" />
 			<button type="button" class="button" id="yp-vial-mockup-select"><?php esc_html_e( 'Select image', 'yeffoprint-core' ); ?></button>
 			<button type="button" class="button-link" id="yp-vial-mockup-remove" <?php echo $vial_id ? '' : 'style="display:none;"'; ?>><?php esc_html_e( 'Remove', 'yeffoprint-core' ); ?></button>
-			<span class="description"><?php esc_html_e( 'Shown for Vial View and the gallery card hover-swap.', 'yeffoprint-core' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Square (e.g. 800×800px) for Vial View. Also used as the gallery card hover-swap image, which is the same rectangular 15:7 shape as the featured image — a square mockup will letterbox there, but that only affects the hover-swap, not Vial View itself.', 'yeffoprint-core' ); ?></span>
 		</p>
 		<hr />
 		<p>

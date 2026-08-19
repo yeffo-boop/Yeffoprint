@@ -76,12 +76,22 @@
 }
 
 .yp-configurator__stage {
+	/* Label View (default) is rectangular — 15:7, the same real 45mm x
+	   21mm label ratio as the shop-gallery cards (patterns.css). Vial
+	   View is square. A fixed 1:1 box for both (the old rule) squeezed
+	   the rectangular label artwork down to fit inside a square via
+	   object-fit:contain, leaving visible letterboxing on the sides —
+	   this makes each view's box match what's actually uploaded to it. */
 	position: relative;
-	aspect-ratio: 1;
+	aspect-ratio: 15 / 7;
 	background: var(--wp--preset--color--light-gray);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	overflow: hidden;
+}
+
+.yp-configurator__stage[data-view="vial"] {
+	aspect-ratio: 1;
 }
 
 .yp-stage__background {
