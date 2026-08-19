@@ -120,14 +120,18 @@
 /* ---------- Card grids (Featured Designs, Popular Designs) ---------- */
 
 .yp-card-grid {
-	/* auto-fit (not auto-fill/a fixed repeat count) collapses empty
-	   column tracks instead of leaving them blank — a row with fewer
-	   cards than fit a full row (e.g. one Featured Design on a fresh
-	   site) no longer leaves large empty gaps next to it. This also
-	   handles every viewport width on its own, so the old fixed
-	   2-column/1-column breakpoints are no longer needed. */
+	/* Fixed-width columns (auto-fill, not auto-fit/minmax(...,1fr)) —
+	   the previous 1fr version stretched each item's own grid cell to
+	   fill the row, so with e.g. 2 cards in a 4-column-wide row, card 2
+	   sat at the start of its own (very wide) second cell, landing far
+	   to the right instead of right next to card 1 — the "cards aren't
+	   lined up" bug. Fixed columns mean every card is the same width
+	   and sits immediately next to the last one; any leftover row
+	   space is simply blank at the end, not distributed into cells.
+	   Still fully responsive: auto-fill fits as many 270px columns as
+	   the container allows at any viewport, down to one on mobile. */
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	grid-template-columns: repeat(auto-fill, 270px);
 	gap: var(--wp--preset--spacing--sm);
 }
 
@@ -145,13 +149,10 @@
 /* ---------- Template card (gallery + homepage rails) ---------- */
 
 .yp-template-card {
-	/* max-width, not the grid cell itself, caps how big a card gets —
-	   .yp-card-grid's auto-fit columns are 1fr so a full row of cards
-	   still spans edge-to-edge, but a lone card in a mostly-empty row
-	   (e.g. only one Featured Design published) doesn't stretch to
-	   fill the whole row and look outsized. */
+	/* .yp-card-grid's columns are a fixed width now, so the card just
+	   fills its own column — no separate cap needed. */
 	display: block;
-	max-width: 320px;
+	width: 100%;
 	color: inherit;
 	text-decoration: none;
 }

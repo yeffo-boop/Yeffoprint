@@ -101,16 +101,32 @@ svg {
 
 .yp-header {
 	/* Dark, not the original light glass — the real logo (white
-	   wordmark) needs a dark background to read at all. */
+	   wordmark) needs a dark background to read at all. Layered
+	   radial-gradient glows (not a flat color) give it the same CMYK
+	   color energy as the hero/dark-CTA sections instead of reading as
+	   plain gray/black; a gradient bottom edge instead of a flat line
+	   ties it to the same accent treatment used on cards. */
 	position: sticky;
 	top: 0;
 	z-index: 900;
-	background: rgba(20, 20, 20, 0.88);
+	background:
+		radial-gradient(60rem 14rem at 10% 0%, rgba(0, 174, 239, 0.3), transparent 70%),
+		radial-gradient(50rem 16rem at 90% 100%, rgba(236, 0, 140, 0.26), transparent 70%),
+		rgba(20, 20, 20, 0.92);
 	backdrop-filter: blur(var(--wp--custom--glass--blur));
 	-webkit-backdrop-filter: blur(var(--wp--custom--glass--blur));
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	transition: padding 200ms ease, box-shadow 200ms ease;
 	padding-block: 1.25rem;
+}
+
+.yp-header::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -2px;
+	height: 2px;
+	background: var(--wp--custom--gradient-brand);
 }
 
 .yp-header.is-scrolled {
