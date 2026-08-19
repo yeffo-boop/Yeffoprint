@@ -102,7 +102,33 @@
 	object-fit: contain;
 }
 
+.yp-configurator__stage[data-view="vial"] .yp-stage__background {
+	/* The square box (above) was already correct — the reported gray
+	   bars are `contain` letterboxing whenever an uploaded vial photo's
+	   own proportions aren't exactly square, which real bottle/vial
+	   product photography usually isn't (naturally taller than wide).
+	   `contain` never crops but always leaves bars for any mismatch;
+	   `cover` never leaves bars but crops to fill instead — the right
+	   trade for a product photo (some crop is normal and expected,
+	   visible gray bars read as broken) where `contain` matters for
+	   Label View because that artwork carries text that must never be
+	   cropped off. If this crops a specific photo awkwardly, the fix is
+	   re-cropping that source image close to square before uploading —
+	   not the CSS, since no single object-fit is right for every
+	   possible source aspect ratio without knowing it. */
+	object-fit: cover;
+}
+
 .yp-stage__field {
+	/* transform is set per-field by configurator.js (anchorTransformFor())
+	   based on the field's own alignment — left/right alignment needs a
+	   *different* anchor edge of the box sitting at position.x, not just
+	   text-align inside a box that's always centered on x regardless
+	   (the bug this replaced: "left justified" text still looked
+	   centered because the box itself never stopped being centered on
+	   its position). This translate(-50%,-50%) is only the pre-JS
+	   fallback default (center), immediately overridden inline once
+	   rendered. */
 	position: absolute;
 	transform: translate(-50%, -50%);
 	white-space: nowrap;
@@ -121,15 +147,34 @@
 	outline-offset: 4px;
 }
 
+.yp-stage__field.is-swatch {
+	/* A color-type field's value is a hex string, not text to display —
+	   rendered as a small swatch at the field's position instead. */
+	width: 2rem;
+	height: 2rem;
+	border-radius: 999px;
+	border: 2px solid var(--wp--preset--color--white);
+	box-shadow: 0 0 0 1px rgba(20, 20, 20, 0.15), var(--wp--custom--shadow-elevation--low);
+}
+
 /*
  * Vial View reuses the exact same field DOM/positions as Label View
  * (Architecture §4: one state, two renderers) — only the background
  * image and this visual scale differ, standing in for "the label
  * wrapped smaller onto a bottle" until per-template vial placement
- * data exists. See docs/ARCHITECTURE.md §9.
- */
+ * data exists. See docs/ARCHITECTURE.md §9. The actual scale is now
+ * folded into configurator.js's anchorTransformFor() (alongside the
+ * alignment-aware anchor above) since JS sets `transform` inline per
+ * field, which would otherwise override this rule outright rather
+ * than combining with it — this is only the pre-JS fallback. */
 .yp-configurator__stage[data-view="vial"] .yp-stage__field {
 	transform: translate(-50%, -50%) scale(0.55);
+}
+
+.yp-configurator__description {
+	margin-top: 0.9rem;
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 .yp-configurator__overflow-warning {
@@ -201,6 +246,21 @@
 
 .yp-field {
 	margin-bottom: 1.25rem;
+}
+
+.yp-field__color-input {
+	/* !important: global.css's generic text-input rule
+	   (input:not([type="checkbox"]):not(...):not(...):not(...)) has
+	   higher specificity than a single class here (4 chained :not()
+	   attribute selectors vs. 1 class) despite being the more generic
+	   rule — this is the more specific one that should actually win,
+	   not an unrelated-bug workaround. A native color swatch button
+	   needs none of that padding/width/border treatment, it has its
+	   own compact built-in appearance. */
+	width: 3.5rem !important;
+	height: 2.75rem !important;
+	padding: 0.25rem !important;
+	cursor: pointer;
 }
 
 .yp-field__label-row {

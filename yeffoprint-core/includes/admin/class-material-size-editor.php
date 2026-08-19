@@ -20,12 +20,34 @@ class YeffoPrint_Material_Size_Editor {
 		add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
 		add_action( 'save_post_yp_material', [ $this, 'save' ] );
 		add_action( 'save_post_yp_size', [ $this, 'save' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 
 		add_filter( 'manage_yp_material_posts_columns', [ $this, 'material_columns' ] );
 		add_action( 'manage_yp_material_posts_custom_column', [ $this, 'render_material_column' ], 10, 2 );
 
 		add_filter( 'manage_yp_size_posts_columns', [ $this, 'size_columns' ] );
 		add_action( 'manage_yp_size_posts_custom_column', [ $this, 'render_size_column' ], 10, 2 );
+	}
+
+	public function enqueue_assets( string $hook ): void {
+		if ( ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+			return;
+		}
+
+		$screen = get_current_screen();
+		if ( ! $screen || 'yp_material' !== $screen->post_type ) {
+			return;
+		}
+
+		wp_enqueue_media();
+
+		wp_enqueue_script(
+			'yeffoprint-core-vial-mockup-picker', // Generic wp.media picker script from Phase 4 — reused as-is (see class-proof-editor.php for the same pattern).
+			YEFFOPRINT_CORE_URL . 'assets/admin/vial-mockup-picker.js',
+			[ 'media-editor' ],
+			yeffoprint_core_asset_version( 'assets/admin/vial-mockup-picker.js' ),
+			true
+		);
 	}
 
 	public function add_meta_boxes(): void {
@@ -49,12 +71,27 @@ class YeffoPrint_Material_Size_Editor {
 	public function render_material_box( \WP_Post $post ): void {
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_NAME );
 		$adjustment = get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true );
+		$hover_id   = (int) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true );
+		$hover_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'thumbnail' ) : '';
 		?>
 		<p>
 			<label for="yp-price-adjustment"><?php esc_html_e( 'Price adjustment per label ($)', 'yeffoprint-core' ); ?></label><br />
 			<input type="number" step="0.01" id="yp-price-adjustment" name="yp_price_adjustment" value="<?php echo esc_attr( $adjustment !== '' ? $adjustment : '0' ); ?>" class="widefat" />
 		</p>
-		<p class="description"><?php esc_html_e( 'Added to the base unit price when this material is selected. The swatch image is this post\'s featured image; sort order is set by dragging on the list screen.', 'yeffoprint-core' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Added to the base unit price when this material is selected. The swatch image is this post\'s featured image (Set Featured Image, below); sort order is set by dragging on the list screen.', 'yeffoprint-core' ); ?></p>
+		<hr />
+		<p>
+			<label><?php esc_html_e( 'Hover / on-vial image', 'yeffoprint-core' ); ?></label><br />
+			<span id="yp-vial-mockup-preview">
+				<?php if ( $hover_url ) : ?>
+					<img src="<?php echo esc_url( $hover_url ); ?>" alt="" style="max-width:100%;height:auto;" />
+				<?php endif; ?>
+			</span><br />
+			<input type="hidden" id="yp-vial-mockup-id" name="yp_hover_image_id" value="<?php echo esc_attr( $hover_id ); ?>" />
+			<button type="button" class="button" id="yp-vial-mockup-select"><?php esc_html_e( 'Select image', 'yeffoprint-core' ); ?></button>
+			<button type="button" class="button-link" id="yp-vial-mockup-remove" <?php echo $hover_id ? '' : 'style="display:none;"'; ?>><?php esc_html_e( 'Remove', 'yeffoprint-core' ); ?></button>
+			<span class="description"><?php esc_html_e( 'Shown in place of the featured-image swatch on hover — a photo of this finish actually applied to a vial. Same aspect ratio as the featured image works best.', 'yeffoprint-core' ); ?></span>
+		</p>
 		<?php
 	}
 
@@ -94,6 +131,10 @@ class YeffoPrint_Material_Size_Editor {
 
 		if ( isset( $_POST['yp_price_adjustment'] ) ) {
 			update_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, (float) wp_unslash( $_POST['yp_price_adjustment'] ) );
+		}
+
+		if ( 'yp_material' === get_post_type( $post_id ) && isset( $_POST['yp_hover_image_id'] ) ) {
+			update_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, absint( $_POST['yp_hover_image_id'] ) );
 		}
 
 		if ( isset( $_POST['yp_print_width_mm'] ) ) {

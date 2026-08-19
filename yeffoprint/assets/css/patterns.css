@@ -423,18 +423,43 @@
 }
 
 .yp-material-swatch__chip {
-	/* Every finish previously rendered as the exact same flat light-gray
-	   box — a real "not colorful" gap, not a placeholder-until-real-
-	   photos situation like the customer/proof tiles elsewhere: these
-	   finishes have distinct, describable looks that a solid gray box
-	   actively misrepresents. Each gets its own gradient/texture
-	   standing in for that look until real material photography exists. */
+	/* A real uploaded photo (admin: Materials → Featured Image for the
+	   swatch, "Hover / on-vial image" for the hover-swap — V2, direct
+	   request) always wins; the gradient variants below are the fallback
+	   for a Material that doesn't have a photo uploaded yet, keyed by
+	   the record's own slug (matches the demo-seeded Glossy White/Matte
+	   White/Holographic/Clear/Metallic records) rather than a flat gray
+	   box that actively misrepresents these finishes' distinct looks. */
 	aspect-ratio: 1;
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
+	background: var(--wp--preset--color--light-gray);
 	margin-bottom: 0.75rem;
 	position: relative;
 	overflow: hidden;
+}
+
+.yp-material-swatch__image {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: opacity 250ms ease;
+}
+
+.yp-material-swatch__image--primary {
+	opacity: 1;
+}
+
+.yp-material-swatch__image--hover {
+	opacity: 0;
+}
+
+@media (hover: hover) {
+	.yp-material-swatch:hover .yp-material-swatch__image--hover {
+		opacity: 1;
+	}
 }
 
 .yp-material-swatch__chip--glossy-white {

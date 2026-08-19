@@ -23,6 +23,16 @@ class YeffoPrint_Commerce_Record_Meta {
 	public const PRICE_ADJUSTMENT = '_yp_price_adjustment';
 	public const PRINT_WIDTH_MM   = '_yp_print_width_mm';
 	public const PRINT_HEIGHT_MM  = '_yp_print_height_mm';
+	/**
+	 * Material only — a second photo showing the finish actually applied
+	 * to a vial, swapped in on hover wherever the material's featured-
+	 * image swatch is shown (direct request: "upload what the material
+	 * actually looks like... on hover, switch to a second picture that
+	 * shows what the material looks like on the vial"). Same hover-swap
+	 * pairing pattern as a Template's featured image + Vial mockup
+	 * image, just scoped to Material instead.
+	 */
+	public const HOVER_IMAGE = '_yp_hover_image_id';
 
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
@@ -38,6 +48,14 @@ class YeffoPrint_Commerce_Record_Meta {
 				'auth_callback' => [ $this, 'can_edit' ],
 			] );
 		}
+
+		register_post_meta( 'yp_material', self::HOVER_IMAGE, [
+			'type'          => 'integer',
+			'single'        => true,
+			'default'       => 0,
+			'show_in_rest'  => true,
+			'auth_callback' => [ $this, 'can_edit' ],
+		] );
 
 		register_post_meta( 'yp_size', self::PRINT_WIDTH_MM, [
 			'type'          => 'number',

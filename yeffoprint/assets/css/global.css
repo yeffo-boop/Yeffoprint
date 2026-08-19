@@ -214,9 +214,20 @@ svg {
 	color: var(--wp--preset--color--white) !important;
 }
 
-/* The mobile hamburger overlay (core Navigation block, overlayMenu:
-   "mobile") defaults to a plain white panel with no explicit color set
-   — matches the header's own dark treatment instead of clashing with it. */
+/* Mobile hamburger overlay: the real, authoritative fix is the
+   Navigation block's own overlayBackgroundColor/overlayTextColor
+   attributes (parts/header.html) — those are WordPress's actual
+   mechanism for styling the open mobile overlay specifically (it can
+   legitimately differ from the inline nav bar's own colors), applied
+   by core directly to whatever DOM structure it renders the overlay
+   as, which previous class-guessing here couldn't rely on. Reported
+   live as "white background, white text" despite the rules below
+   already existing — most likely explanation: the open overlay isn't
+   actually a descendant of .yp-header__nav in the DOM WordPress
+   renders (a portaled/modal-style panel), so this scoped selector
+   never matched anything. Kept as a defensive fallback in case some
+   part of the DOM the overlayColor attributes don't reach still needs
+   it, but the attributes are what should actually be doing the work now. */
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open {
 	background: var(--wp--preset--color--near-black);
 }

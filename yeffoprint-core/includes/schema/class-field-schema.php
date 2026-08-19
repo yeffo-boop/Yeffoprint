@@ -12,9 +12,16 @@
  * onward, the configurator's schema-fetch endpoint both go through it
  * rather than re-implementing validation.
  *
- * Deliberately just two field types (text, textarea) for V1 — nothing
- * in PROJECT_SPEC requires more, and the type list is a single
- * constant to extend later without touching the sanitize logic.
+ * V1 shipped with just two field types (text, textarea) — the type
+ * list is a single constant specifically so more could be added later
+ * without touching the sanitize logic. `color` (V2: a customer-facing
+ * color picker, e.g. "pick your cap color") is the first of those —
+ * its value is a hex string rather than free text, sanitized/validated
+ * as one everywhere a field value is read or written (below, and
+ * class-cart-controller.php's shared sanitize_variants()), and
+ * rendered on the configurator stage as a swatch instead of text
+ * (configurator.js) since a hex string as literal text would look
+ * wrong there.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -26,6 +33,7 @@ class YeffoPrint_Field_Schema {
 	public const TYPES = [
 		'text'     => 'Text (single line)',
 		'textarea' => 'Text (multi-line)',
+		'color'    => 'Color picker',
 	];
 
 	public const ALIGNMENTS = [
@@ -132,11 +140,16 @@ class YeffoPrint_Field_Schema {
 				$text_color = self::DEFAULT_FIELD['text_color'];
 			}
 
+			$default = isset( $field['default'] ) ? (string) $field['default'] : '';
+			$default = 'color' === $type
+				? (string) ( sanitize_hex_color( $default ) ?: '' )
+				: sanitize_text_field( $default );
+
 			$clean[] = [
 				'id'                => $unique_id,
 				'label'             => $label,
 				'type'              => $type,
-				'default'           => isset( $field['default'] ) ? sanitize_text_field( $field['default'] ) : '',
+				'default'           => $default,
 				'required'          => ! empty( $field['required'] ),
 				'max_chars'         => $max_chars,
 				'position'          => [ 'x' => $position_x, 'y' => $position_y ],
@@ -207,7 +220,10 @@ class YeffoPrint_Field_Schema {
 			$values = [];
 
 			foreach ( $field_schema as $field ) {
-				$value = isset( $submitted_values[ $field['id'] ] ) ? sanitize_text_field( $submitted_values[ $field['id'] ] ) : '';
+				$raw_value = isset( $submitted_values[ $field['id'] ] ) ? (string) $submitted_values[ $field['id'] ] : '';
+				$value     = 'color' === ( $field['type'] ?? '' )
+					? (string) ( sanitize_hex_color( $raw_value ) ?: '' )
+					: sanitize_text_field( $raw_value );
 
 				if ( $enforce_required && $field['required'] && '' === $value ) {
 					return new \WP_Error(

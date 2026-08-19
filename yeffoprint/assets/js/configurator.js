@@ -42,6 +42,7 @@
 	var layoutEl = root.querySelector( '.yp-configurator__layout' );
 	var stageEl = root.querySelector( '[data-yp-stage]' );
 	var overflowWarningEl = root.querySelector( '[data-yp-overflow-warning]' );
+	var descriptionEl = root.querySelector( '[data-yp-description]' );
 	var titleEl = root.querySelector( '[data-yp-title]' );
 	var sizeOptionsEl = root.querySelector( '[data-yp-size-options]' );
 	var materialOptionsEl = root.querySelector( '[data-yp-material-options]' );
@@ -109,6 +110,11 @@
 
 		titleEl.textContent = schema.title || '';
 		document.title = schema.title ? schema.title + ' — YeffoPrint' : document.title;
+
+		if ( descriptionEl ) {
+			descriptionEl.textContent = schema.description || '';
+			descriptionEl.hidden = ! schema.description;
+		}
 
 		var params = new URLSearchParams( window.location.search );
 		var editKey = params.get( 'edit' );
@@ -284,15 +290,20 @@
 
 	function renderFieldInputStructure() {
 		fieldInputsEl.innerHTML = schema.field_schema.map( function ( field ) {
-			var control = 'textarea' === field.type
-				? '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>'
-				: '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
+			var control;
+			if ( 'color' === field.type ) {
+				control = '<input type="color" data-field-id="' + field.id + '" class="yp-field__color-input" />';
+			} else if ( 'textarea' === field.type ) {
+				control = '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>';
+			} else {
+				control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
+			}
 
 			return (
 				'<div class="yp-field">' +
 					'<div class="yp-field__label-row">' +
 						'<label for="yp-field-' + field.id + '">' + escapeHtml( field.label ) + ( field.required ? ' *' : '' ) + '</label>' +
-						'<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' +
+						( 'color' === field.type ? '' : '<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' ) +
 					'</div>' +
 					control.replace( '<textarea', '<textarea id="yp-field-' + field.id + '"' ).replace( '<input', '<input id="yp-field-' + field.id + '"' ) +
 					( field.admin_description ? '<p class="description">' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
@@ -474,14 +485,26 @@
 
 		schema.field_schema.forEach( function ( field ) {
 			var el = document.createElement( 'div' );
-			el.className = 'yp-stage__field' + ( 'textarea' === field.type ? ' is-multiline' : '' );
 			el.setAttribute( 'data-field-id', field.id );
 			el.style.left = field.position.x + '%';
 			el.style.top = field.position.y + '%';
-			el.style.textAlign = field.alignment;
-			el.style.textTransform = textTransformFor( field.formatting_rule );
-			el.style.color = field.text_color || '#000000';
-			el.textContent = variant.values[ field.id ] || '';
+
+			if ( 'color' === field.type ) {
+				// A hex string as literal text would look wrong on the
+				// label — this field's value is rendered as a small color
+				// swatch instead, still positioned like any other field.
+				el.className = 'yp-stage__field is-swatch';
+				el.style.transform = 'translate(-50%, -50%)' + ( 'vial' === state.view ? ' scale(0.55)' : '' );
+				el.style.background = variant.values[ field.id ] || '#cccccc';
+			} else {
+				el.className = 'yp-stage__field' + ( 'textarea' === field.type ? ' is-multiline' : '' );
+				el.style.textAlign = field.alignment;
+				el.style.transform = anchorTransformFor( field.alignment );
+				el.style.textTransform = textTransformFor( field.formatting_rule );
+				el.style.color = field.text_color || '#000000';
+				el.textContent = variant.values[ field.id ] || '';
+			}
+
 			stageEl.appendChild( el );
 		} );
 
@@ -494,8 +517,8 @@
 
 		schema.field_schema.forEach( function ( field ) {
 			var el = stageEl.querySelector( '[data-field-id="' + field.id + '"]' );
-			if ( ! el ) {
-				return;
+			if ( ! el || 'color' === field.type ) {
+				return; // A swatch has a fixed size — nothing to font-fit.
 			}
 			anyOverflow = fitText( el, field, stageRect.width, stageRect.height ) || anyOverflow;
 		} );
@@ -512,6 +535,11 @@
 		var field = schema.field_schema.filter( function ( f ) { return f.id === fieldId; } )[ 0 ];
 		var el = stageEl.querySelector( '[data-field-id="' + fieldId + '"]' );
 		if ( ! field || ! el ) {
+			return;
+		}
+
+		if ( 'color' === field.type ) {
+			el.style.background = activeVariant().values[ fieldId ] || '#cccccc';
 			return;
 		}
 
@@ -535,6 +563,28 @@
 			case 'capitalize': return 'capitalize';
 			default: return 'none';
 		}
+	}
+
+	/**
+	 * A field's `position.x/y` is the point in the admin's drag-to-
+	 * position picker the field is anchored to — for "left justified"
+	 * to actually mean "the text starts at that point" (rather than
+	 * "that point is the text's centerpoint"), which edge of the box
+	 * sits at x has to change with alignment, not just the text-align
+	 * inside a box that's always centered on x regardless. Vertical
+	 * stays centered on y either way — only PROJECT_SPEC's left/center/
+	 * right alignments exist, no vertical equivalent.
+	 *
+	 * Also carries the Vial View scale-down (previously a separate CSS
+	 * rule, `.yp-configurator__stage[data-view="vial"] .yp-stage__field`)
+	 * — setting `transform` inline here overrides that class-level rule
+	 * entirely regardless of specificity, so it has to be included in
+	 * the same value rather than left to the stylesheet.
+	 */
+	function anchorTransformFor( alignment ) {
+		var anchorX = 'left' === alignment ? '0%' : 'right' === alignment ? '-100%' : '-50%';
+		var scale = 'vial' === state.view ? ' scale(0.55)' : '';
+		return 'translate(' + anchorX + ', -50%)' + scale;
 	}
 
 	function fitText( el, field, stageWidth, stageHeight ) {
