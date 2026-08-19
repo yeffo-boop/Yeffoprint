@@ -316,6 +316,23 @@
 	align-items: stretch;
 }
 
+/* The real cause of "first card taller than the rest": .yp-steps is a
+   Group block with layout:"default" (flow), so WordPress auto-injects
+   its own vertical blockGap spacing as margin-block-start on every
+   child except the first — meant for a normal stacked/flow layout, but
+   this container is a grid instead (our own `gap` above already spaces
+   the 3 columns). With align-items:stretch, each item's box is
+   stretched to fill the shared row height *minus its own margin* — so
+   card 1 (no margin subtracted, nothing bumps it) ends up visibly
+   taller than cards 2/3 (which lose height to that unwanted top
+   margin), even though all three have identical box-sizing otherwise.
+   Zeroing it is safe: spacing between the cards is already fully
+   handled by `gap`, so this margin was doing nothing but causing this. */
+.yp-steps > * {
+	margin-block-start: 0 !important;
+	margin-block-end: 0 !important;
+}
+
 @media (max-width: 781px) {
 	.yp-steps {
 		grid-template-columns: 1fr;
