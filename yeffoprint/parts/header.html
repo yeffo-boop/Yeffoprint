@@ -8,8 +8,19 @@
 
 		<!-- wp:group {"className":"yp-header__logo","layout":{"type":"flex","flexWrap":"nowrap"}} -->
 		<div class="wp-block-group yp-header__logo">
-			<!-- wp:site-logo {"width":180,"shouldSyncIcon":false} /-->
-			<!-- wp:site-title {"level":0} /-->
+			<!-- wp:html -->
+			<a href="/" class="yp-brand-lockup" aria-label="YeffoPrint home">
+				<svg class="yp-brand-lockup__mark" viewBox="0 0 30 34" aria-hidden="true" focusable="false">
+					<clipPath id="ypHeaderBrandMarkClip"><path d="M4 6C4 3.79 5.79 2 8 2h14c2.21 0 4 1.79 4 4v22c0 3.31-2.69 6-6 6h-10c-3.31 0-6-2.69-6-6V6z" /></clipPath>
+					<g clip-path="url(#ypHeaderBrandMarkClip)">
+						<rect x="4" y="2" width="7.3" height="34" fill="var(--wp--preset--color--cyan)" />
+						<rect x="11.3" y="2" width="7.3" height="34" fill="var(--wp--preset--color--magenta)" />
+						<rect x="18.7" y="2" width="7.3" height="34" fill="var(--wp--preset--color--yellow)" />
+					</g>
+				</svg>
+				<span class="yp-brand-lockup__word">YeffoPrint</span>
+			</a>
+			<!-- /wp:html -->
 		</div>
 		<!-- /wp:group -->
 

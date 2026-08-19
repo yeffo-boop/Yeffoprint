@@ -389,6 +389,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
+	font-family: var(--wp--preset--font-family--mono);
 	font-size: var(--wp--preset--font-size--x-large);
 	font-weight: 600;
 }
@@ -462,5 +463,6 @@
 }
 
 .yp-sticky-bar__total {
+	font-family: var(--wp--preset--font-family--mono);
 	font-weight: 600;
 }

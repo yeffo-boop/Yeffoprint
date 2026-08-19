@@ -20,31 +20,35 @@ defined( 'ABSPATH' ) || exit;
 			<div class="wp-block-group yp-hero__eyebrow-accent"><span></span><span></span><span></span></div>
 			<!-- /wp:group -->
 
+			<!-- wp:paragraph {"className":"yp-eyebrow-label"} -->
+			<p class="yp-eyebrow-label">Free digital proof before every print run</p>
+			<!-- /wp:paragraph -->
+
 			<!-- wp:heading {"level":1,"fontSize":"xx-large"} -->
-			<h1 class="wp-block-heading has-xx-large-font-size">Your label, exactly as you imagine it.</h1>
+			<h1 class="wp-block-heading has-xx-large-font-size">Vial labels, designed once, <span class="yp-hero__accent-word">printed</span> to spec.</h1>
 			<!-- /wp:heading -->
 
 			<!-- wp:paragraph {"fontSize":"large"} -->
-			<p class="has-large-font-size">Design custom vial labels live, preview them on the actual bottle, and print with studio-grade precision. No design software required.</p>
+			<p class="has-large-font-size">Yeffoprint designs and prints research and supplement vial labels — waterproof stock, exact color matching, and a proof you approve before anything hits press.</p>
 			<!-- /wp:paragraph -->
 
 			<!-- wp:buttons -->
 			<div class="wp-block-buttons">
 				<!-- wp:button {"className":"is-style-accent"} -->
-				<div class="wp-block-button is-style-accent"><a class="wp-block-button__link wp-element-button" href="/shop-labels/">Browse Designs</a></div>
+				<div class="wp-block-button is-style-accent"><a class="wp-block-button__link wp-element-button" href="/shop-labels/">Browse label templates</a></div>
 				<!-- /wp:button -->
 
 				<!-- wp:button {"className":"is-style-outline"} -->
-				<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/custom-design/">Create a Custom Label</a></div>
+				<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/custom-design/">Start a custom design</a></div>
 				<!-- /wp:button -->
 			</div>
 			<!-- /wp:buttons -->
 
 			<!-- wp:html -->
 			<ul class="yp-hero__stats">
-				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--cyan)"></span>48-hour turnaround</li>
-				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--magenta)"></span>No minimum order</li>
-				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--yellow)"></span>Studio-grade print quality</li>
+				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--cyan)"></span>Waterproof, solvent-resistant stock</li>
+				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--magenta)"></span>Free proof before printing</li>
+				<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--yellow)"></span>Low minimums, from 25 labels</li>
 			</ul>
 			<!-- /wp:html -->
 

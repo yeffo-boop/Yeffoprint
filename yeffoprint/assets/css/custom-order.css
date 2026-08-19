@@ -47,6 +47,7 @@
 	justify-content: space-between;
 	align-items: baseline;
 	padding: 0.85rem 1rem;
+	font-family: var(--wp--preset--font-family--mono);
 	font-size: var(--wp--preset--font-size--small);
 }
 

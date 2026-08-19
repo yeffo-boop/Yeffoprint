@@ -100,33 +100,18 @@ svg {
 /* ---------- Header ---------- */
 
 .yp-header {
-	/* Dark, not the original light glass — the real logo (white
-	   wordmark) needs a dark background to read at all. Layered
-	   radial-gradient glows (not a flat color) give it the same CMYK
-	   color energy as the hero/dark-CTA sections instead of reading as
-	   plain gray/black; a gradient bottom edge instead of a flat line
-	   ties it to the same accent treatment used on cards. */
+	/* Light, matching the approved brand mockup — a flat warm-white bar
+	   with a hairline border reads as considered rather than "just
+	   unstyled," and the new icon+wordmark lockup (near-black text) no
+	   longer needs a dark backdrop to be legible the way the old
+	   text-fallback wordmark did. */
 	position: sticky;
 	top: 0;
 	z-index: 900;
-	background:
-		radial-gradient(60rem 14rem at 10% 0%, rgba(0, 174, 239, 0.3), transparent 70%),
-		radial-gradient(50rem 16rem at 90% 100%, rgba(236, 0, 140, 0.26), transparent 70%),
-		rgba(20, 20, 20, 0.92);
-	backdrop-filter: blur(var(--wp--custom--glass--blur));
-	-webkit-backdrop-filter: blur(var(--wp--custom--glass--blur));
+	background: var(--wp--preset--color--warm-white);
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
 	transition: padding 200ms ease, box-shadow 200ms ease;
 	padding-block: 1.25rem;
-}
-
-.yp-header::after {
-	content: "";
-	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: -2px;
-	height: 2px;
-	background: var(--wp--custom--gradient-brand);
 }
 
 .yp-header.is-scrolled {
@@ -141,41 +126,25 @@ svg {
 	gap: 1.5rem;
 }
 
-.yp-header__logo a {
+.yp-brand-lockup {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.65rem;
 	text-decoration: none;
+}
+
+.yp-brand-lockup__mark {
+	width: 1.6rem;
+	height: 1.8rem;
+	flex-shrink: 0;
+}
+
+.yp-brand-lockup__word {
 	font-family: var(--wp--preset--font-family--heading);
-	font-weight: 700;
-	color: var(--wp--preset--color--warm-white);
-}
-
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-	.yp-header__logo a {
-		/* The bright gradient (not the "-deep" text-safe variant used
-		   elsewhere) — that variant exists for text on a LIGHT
-		   background; against this dark header the bright originals
-		   give the better contrast. Text fallback, until the real logo
-		   image (uploaded via Site Identity) replaces this wordmark. */
-		background: var(--wp--custom--gradient-brand);
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-	}
-}
-
-.yp-header__logo img {
-	/* Was max-height:32px against a width:40 block attribute — the real
-	   uploaded logo (not the text-fallback wordmark) was rendering
-	   thumbnail-tiny. A header logo reads best around 44-52px tall; the
-	   width:180 block attribute (parts/header.html) caps how large the
-	   source file can be requested at, this caps actual render height. */
-	max-height: 48px;
-	width: auto;
-}
-
-@media (max-width: 781px) {
-	.yp-header__logo img {
-		max-height: 38px;
-	}
+	font-weight: 800;
+	font-size: 1.15rem;
+	letter-spacing: -0.02em;
+	color: var(--wp--preset--color--near-black);
 }
 
 .yp-header__nav {
@@ -187,47 +156,33 @@ svg {
 }
 
 .yp-header__nav a.wp-block-navigation-item__content {
-	/* Pill/button treatment, not plain text on dark — a translucent
-	   white background gives every link its own visible boundary
-	   against the dark header regardless of exact text/background
-	   contrast, matching "make them look like buttons."
-	   !important: theme.json's global `styles.elements.link` sets every
-	   plain link to near-black (#141414) — effectively the same color as
-	   this header's own background (rgba(20,20,20,.92)) — and WordPress
-	   compiles that global link color with enough specificity/order to
-	   beat a plain class rule here, so the nav text was rendering
-	   invisible (near-black on near-black) despite this rule existing.
-	   Only overriding that one global rule for this one nav, not
-	   disabling it site-wide. */
+	/* Plain text links on the now-light header — no pill background
+	   needed; near-black on warm-white already clears contrast on its
+	   own, unlike the old dark header where this exact global link
+	   color (theme.json's default near-black) would have gone
+	   invisible against a near-black background. */
 	font-size: var(--wp--preset--font-size--small);
-	font-weight: 600;
-	color: var(--wp--preset--color--warm-white) !important;
+	font-weight: 500;
+	color: var(--wp--preset--color--charcoal) !important;
 	text-decoration: none;
-	padding: 0.55rem 1.1rem;
+	padding: 0.55rem 0.85rem;
 	border-radius: var(--wp--custom--radius--control);
-	background: rgba(255, 255, 255, 0.1);
 	transition: background-color 150ms ease, color 150ms ease;
 }
 
 .yp-header__nav a.wp-block-navigation-item__content:hover {
-	background: rgba(255, 255, 255, 0.2);
-	color: var(--wp--preset--color--white) !important;
+	background: var(--wp--preset--color--light-gray);
+	color: var(--wp--preset--color--near-black) !important;
 }
 
-/* Mobile hamburger overlay: the real, authoritative fix is the
-   Navigation block's own overlayBackgroundColor/overlayTextColor
-   attributes (parts/header.html) — those are WordPress's actual
-   mechanism for styling the open mobile overlay specifically (it can
-   legitimately differ from the inline nav bar's own colors), applied
-   by core directly to whatever DOM structure it renders the overlay
-   as, which previous class-guessing here couldn't rely on. Reported
-   live as "white background, white text" despite the rules below
-   already existing — most likely explanation: the open overlay isn't
-   actually a descendant of .yp-header__nav in the DOM WordPress
-   renders (a portaled/modal-style panel), so this scoped selector
-   never matched anything. Kept as a defensive fallback in case some
-   part of the DOM the overlayColor attributes don't reach still needs
-   it, but the attributes are what should actually be doing the work now. */
+/* Mobile hamburger overlay stays dark regardless of the (now light)
+   header bar — deliberate contrast, not left over from the old dark
+   header. The real, authoritative styling is the Navigation block's
+   own overlayBackgroundColor/overlayTextColor attributes
+   (parts/header.html); the rules below are a defensive fallback in
+   case the open overlay isn't a descendant of .yp-header__nav in the
+   DOM WordPress renders (a portaled/modal-style panel), same
+   reasoning as before this file's header went light. */
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open {
 	background: var(--wp--preset--color--near-black);
 }
@@ -236,8 +191,16 @@ svg {
 	color: var(--wp--preset--color--warm-white) !important;
 }
 
-.yp-header__nav .wp-block-navigation__responsive-container-close,
+/* The hamburger toggle itself sits in the light header bar (not
+   inside the dark overlay it opens), so it needs the dark-header-era
+   warm-white forced color flipped back to near-black; the X "close"
+   control only exists inside the open (dark) overlay and keeps the
+   light-on-dark color the rule above already sets for that state. */
 .yp-header__nav .wp-block-navigation__responsive-container-open {
+	color: var(--wp--preset--color--near-black) !important;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-close {
 	color: var(--wp--preset--color--warm-white) !important;
 }
 
@@ -252,23 +215,24 @@ svg {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 2.5rem;
-	height: 2.5rem;
-	border-radius: var(--wp--custom--radius--control);
-	background: transparent;
-	border: none;
-	/* !important for the same reason as .yp-header__nav a above — this
-	   class is also used as the WooCommerce customer-account block's
-	   iconClass, rendering as a plain <a>, which is exactly what
-	   theme.json's global link color targets. */
-	color: var(--wp--preset--color--warm-white) !important;
+	width: 2.375rem;
+	height: 2.375rem;
+	border-radius: 50%;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	/* !important for the same reason it was needed on the old dark
+	   header: this class also renders as the WooCommerce
+	   customer-account block's iconClass, a plain <a>, which
+	   theme.json's global link color (already near-black) would
+	   otherwise be free to override via its own specificity. */
+	color: var(--wp--preset--color--near-black) !important;
 	cursor: pointer;
 	position: relative;
-	transition: background-color 150ms ease;
+	transition: background-color 150ms ease, box-shadow 150ms ease;
 }
 
 .yp-icon-button:hover {
-	background: rgba(255, 255, 255, 0.12);
+	background: var(--wp--preset--color--light-gray);
 }
 
 .yp-icon-button__count {

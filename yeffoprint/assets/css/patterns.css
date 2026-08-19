@@ -144,6 +144,26 @@
 .yp-hero__eyebrow-accent span:nth-child(2) { background: var(--wp--preset--color--magenta); box-shadow: 0 0 14px rgba(236, 0, 140, 0.55); }
 .yp-hero__eyebrow-accent span:nth-child(3) { background: var(--wp--preset--color--yellow); box-shadow: 0 0 14px rgba(255, 242, 0, 0.55); }
 
+.yp-eyebrow-label {
+	display: inline-flex;
+	align-items: center;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--charcoal);
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 999px;
+	padding: 0.4rem 0.9rem;
+	margin: 0 0 1.1rem;
+}
+
+.yp-hero__accent-word {
+	color: var(--wp--preset--color--magenta-deep);
+}
+
 .yp-hero__stats {
 	list-style: none;
 	display: flex;
@@ -795,9 +815,16 @@
 	border-radius: var(--wp--custom--radius--control);
 	border: 1px solid var(--wp--preset--color--light-gray);
 	background: var(--wp--preset--color--white);
-	font-size: var(--wp--preset--font-size--small);
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.78rem;
+	font-weight: 600;
 	color: var(--wp--preset--color--charcoal);
 	text-decoration: none;
+	transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.yp-filter-pill:hover {
+	border-color: var(--wp--preset--color--charcoal);
 }
 
 .yp-filter-pill.is-active {
