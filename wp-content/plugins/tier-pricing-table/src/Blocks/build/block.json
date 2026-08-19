@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "tiered-pricing-table/tiered-pricing-block",
+  "version": "1.0.0",
+  "title": "Tiered Pricing",
+  "category": "woocommerce",
+  "icon": "tag",
+  "description": "Tiered pricing widget. Must be used on the product page template. Find more options to customize in the plugin settings.",
+  "example": {},
+  "supports": {
+    "html": false,
+    "className": false,
+    "customClassName": false,
+    "reusable": false
+  },
+  "attributes": {
+    "displayType": {
+      "type": "string",
+      "default": "table"
+    },
+    "title": {
+      "type": "string",
+      "default": "Buy more, save more!"
+    },
+    "activeTierColor": {
+      "type": "string",
+      "default": "#96598A"
+    },
+    "showDiscountColumn": {
+      "type": "boolean",
+      "default": true
+    },
+    "quantityColumnTitle": {
+      "type": "string",
+      "default": "Quantity"
+    },
+    "discountColumnTitle": {
+      "type": "string",
+      "default": "Discount"
+    },
+    "priceColumnTitle": {
+      "type": "string",
+      "default": "Price"
+    }
+  },
+  "textdomain": "tier-pricing-table",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css"
+}

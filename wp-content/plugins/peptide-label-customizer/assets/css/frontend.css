@@ -1,0 +1,92 @@
+.plc-customizer {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 28px;
+	margin: 20px 0 28px;
+	padding: 20px;
+	background: #f8f8f8;
+	border-radius: 8px;
+}
+
+.plc-preview-col {
+	flex: 1 1 380px;
+	min-width: 280px;
+}
+
+#plc-canvas {
+	width: 100%;
+	max-width: 900px;
+	height: auto;
+	aspect-ratio: 2 / 1;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	display: block;
+}
+
+.plc-preview-note {
+	font-size: 12px;
+	color: #777;
+	margin-top: 6px;
+}
+
+.plc-fields-col {
+	flex: 1 1 320px;
+	min-width: 260px;
+}
+
+.plc-fields-col .form-row {
+	margin-bottom: 14px;
+}
+
+.plc-fields-col label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.plc-fields-col .required {
+	color: #d63638;
+}
+
+.plc-fields-col .optional {
+	font-weight: 400;
+	color: #777;
+	font-size: 12px;
+}
+
+.plc-fields-col input[type="text"],
+.plc-fields-col select,
+.plc-fields-col textarea {
+	width: 100%;
+	max-width: 100%;
+	padding: 8px 10px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
+
+.plc-confirm-row label {
+	font-weight: 400;
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.plc-confirm-row input[type="checkbox"] {
+	margin-top: 3px;
+}
+
+.plc-error-message {
+	background: #fcebea;
+	color: #d63638;
+	border: 1px solid #f5c2c0;
+	padding: 10px 12px;
+	border-radius: 4px;
+	margin-bottom: 14px;
+}
+
+.plc-price-addon-note {
+	font-size: 13px;
+	color: #555;
+	margin-top: 2px;
+}

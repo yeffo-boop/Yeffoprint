@@ -1,0 +1,26 @@
+== Changelog ==
+
+= 1.2.0 - 2024-10-11
+* Tweak - Add support for item quantity -- performances improvement for DVDoug packer.
+
+= 1.1.0 - 2024-09-26
+* Tweak - Allow to import box-packer as composer dependency.
+
+= 1.0.4 - 2022-07-25
+* Fix - Added composer.lock file to keep the library versions exact.
+
+= 1.0.3 - 2022-04-28
+* Tweak - Added DVDoug box packer library and allowed extensions to select which packer library to use.
+* Fix   - Fatal Error on PHP 8.0.15 due to `sizeof()` function only accept parameter with Countable or array value.
+
+= 1.0.2 - 2018-09-20
+* Update - `WC_Boxpack::add_box` Add `$max_weight` and `$type` optional parameters.
+* Update - `WC_Boxpack::__construct` Add 'prefer_packets' option.
+
+= 1.0.1 - 2017-06-08 =
+* Update - Added type of box when packing.
+* Update - Add set_type method.
+
+= 1.0.0 - ?-?-? =
+
+* Untracked Changes

@@ -1,0 +1,15 @@
+{
+  "name": "woocommerce-box-packer",
+  "title": "WooCommerce Box Packer",
+  "version": "1.2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/woocommerce/box-packer.git"
+  },
+  "scripts": {
+    "prebuild": "rm -rf ./vendor",
+    "build": "composer install -o --no-dev",
+    "build:dev": "composer install -o",
+    "tests": "npm run build:dev && ./vendor/bin/phpunit -v"
+  }
+}

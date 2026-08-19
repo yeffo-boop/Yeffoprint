@@ -1,0 +1,356 @@
+/*
+ * Live Label Configurator (PROJECT_SPEC §10). Desktop: ~58% preview /
+ * 42% controls, side by side. Mobile: preview, then controls, then a
+ * sticky price/CTA bar. Enqueued only on singular yp_template pages —
+ * see functions.php.
+ */
+
+.yp-configurator__status {
+	text-align: center;
+	padding: var(--wp--preset--spacing--xl) 0;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-configurator__status[data-state="error"] {
+	color: var(--wp--preset--color--magenta);
+}
+
+.yp-configurator__noscript {
+	text-align: center;
+	padding: var(--wp--preset--spacing--xl) 0;
+}
+
+.yp-configurator__layout {
+	display: grid;
+	grid-template-columns: 58fr 42fr;
+	gap: var(--wp--preset--spacing--lg);
+	align-items: start;
+	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
+}
+
+@media (max-width: 960px) {
+	.yp-configurator__layout {
+		grid-template-columns: 1fr;
+	}
+}
+
+.yp-configurator__preview {
+	position: sticky;
+	top: 96px;
+}
+
+@media (max-width: 960px) {
+	.yp-configurator__preview {
+		position: static;
+	}
+}
+
+.yp-configurator__view-toggle {
+	display: inline-flex;
+	gap: 0.4rem;
+	margin-bottom: 1rem;
+	padding: 0.3rem;
+	background: var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-view-tab {
+	padding: 0.5rem 1.1rem;
+	border-radius: calc(var(--wp--custom--radius--control) - 2px);
+	border: none;
+	background: transparent;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+	cursor: pointer;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-view-tab.is-active {
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-configurator__stage {
+	position: relative;
+	aspect-ratio: 1;
+	background: var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	overflow: hidden;
+}
+
+.yp-stage__background {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.yp-stage__field {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	white-space: nowrap;
+	line-height: 1.15;
+	color: var(--wp--preset--color--near-black);
+	max-width: 88%;
+}
+
+.yp-stage__field.is-multiline {
+	white-space: pre-wrap;
+	text-align: center;
+}
+
+.yp-stage__field.is-overflowing {
+	outline: 2px dashed var(--wp--preset--color--magenta);
+	outline-offset: 4px;
+}
+
+/*
+ * Vial View reuses the exact same field DOM/positions as Label View
+ * (Architecture §4: one state, two renderers) — only the background
+ * image and this visual scale differ, standing in for "the label
+ * wrapped smaller onto a bottle" until per-template vial placement
+ * data exists. See docs/ARCHITECTURE.md §9.
+ */
+.yp-configurator__stage[data-view="vial"] .yp-stage__field {
+	transform: translate(-50%, -50%) scale(0.55);
+}
+
+.yp-configurator__overflow-warning {
+	margin-top: 0.75rem;
+	padding: 0.75rem 1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: rgba(236, 0, 140, 0.08);
+	border: 1px solid var(--wp--preset--color--magenta);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-configurator__title {
+	margin-top: 0;
+}
+
+.yp-configurator__section {
+	margin-bottom: var(--wp--preset--spacing--md);
+}
+
+.yp-configurator__section h2 {
+	font-size: var(--wp--preset--font-size--large);
+	margin-bottom: 0.75rem;
+}
+
+.yp-option-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+}
+
+.yp-option-pill {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.15rem;
+	padding: 0.6rem 1rem;
+	border-radius: var(--wp--custom--radius--control);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	background: var(--wp--preset--color--white);
+	cursor: pointer;
+	text-align: left;
+}
+
+.yp-option-pill.is-selected {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-option-pill__name {
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-option-pill__meta {
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-swatch-chip {
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 999px;
+	background: var(--wp--preset--color--light-gray);
+	background-size: cover;
+	background-position: center;
+	margin-bottom: 0.3rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-field {
+	margin-bottom: 1.25rem;
+}
+
+.yp-field__label-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 0.4rem;
+}
+
+.yp-field__counter {
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-field__counter.is-over {
+	color: var(--wp--preset--color--magenta);
+	font-weight: 600;
+}
+
+.yp-quantity-control {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.yp-quantity-preset {
+	padding: 0.5rem 0.9rem;
+	border-radius: var(--wp--custom--radius--control);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	background: var(--wp--preset--color--white);
+	font-size: var(--wp--preset--font-size--small);
+	cursor: pointer;
+}
+
+.yp-quantity-preset.is-active {
+	background: var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
+}
+
+.yp-quantity-input {
+	width: 6rem;
+}
+
+.yp-variants-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.yp-variant-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.yp-variant-card {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-variant-card.is-active {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.yp-variant-card__summary {
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-variant-card__summary strong {
+	display: block;
+}
+
+.yp-variant-card__actions {
+	display: flex;
+	gap: 0.4rem;
+	flex-shrink: 0;
+}
+
+.yp-configurator__summary {
+	margin-top: var(--wp--preset--spacing--md);
+	padding-top: var(--wp--preset--spacing--sm);
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-configurator__summary-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	font-size: var(--wp--preset--font-size--x-large);
+	font-weight: 600;
+}
+
+.yp-configurator__summary-lines {
+	list-style: none;
+	margin: 0.6rem 0 0;
+	padding: 0;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-configurator__summary-lines li {
+	padding: 0.15rem 0;
+}
+
+.yp-configurator__summary-note {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+	margin-top: 0.5rem;
+}
+
+.yp-configurator__desktop-cta {
+	margin-top: 1rem;
+}
+
+@media (max-width: 960px) {
+	.yp-configurator__desktop-cta {
+		display: none;
+	}
+}
+
+.yp-configurator__cart-status {
+	margin-top: 0.75rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-configurator__cart-status.is-error {
+	color: var(--wp--preset--color--magenta);
+	font-weight: 600;
+}
+
+.yp-sticky-bar {
+	position: sticky;
+	bottom: 0;
+	z-index: 800;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	background: var(--wp--custom--glass--background);
+	backdrop-filter: blur(var(--wp--custom--glass--blur));
+	-webkit-backdrop-filter: blur(var(--wp--custom--glass--blur));
+	border-top: 1px solid var(--wp--custom--glass--border);
+	box-shadow: var(--wp--custom--shadow-elevation--high);
+}
+
+.yp-sticky-bar:not([hidden]) {
+	display: flex;
+}
+
+@media (min-width: 961px) {
+	.yp-sticky-bar {
+		display: none !important;
+	}
+}
+
+.yp-sticky-bar__total {
+	font-weight: 600;
+}

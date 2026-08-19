@@ -1,0 +1,48 @@
+#plc-image-stage {
+	position: relative;
+	display: inline-block;
+	max-width: 100%;
+	border: 1px solid #ccd0d4;
+	margin-bottom: 16px;
+}
+
+#plc-template-image {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+
+.plc-zone-marker {
+	position: absolute;
+	top: 10%;
+	left: 10%;
+	background: rgba(37, 99, 235, 0.9);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 4px 8px;
+	border-radius: 4px;
+	cursor: move;
+	white-space: nowrap;
+	z-index: 10;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.plc-zone-marker.plc-dragging {
+	opacity: 0.75;
+}
+
+.plc-zone-table th,
+.plc-zone-table td {
+	padding: 8px;
+	vertical-align: middle;
+}
+
+.plc-option-table {
+	margin-bottom: 8px;
+}
+
+.plc-option-table th,
+.plc-option-table td {
+	padding: 6px 8px;
+}

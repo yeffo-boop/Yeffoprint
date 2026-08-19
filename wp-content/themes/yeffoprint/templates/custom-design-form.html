@@ -1,0 +1,76 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-custom-order" class="yp-custom-order yp-section">
+
+		<p class="yp-eyebrow">Fully Custom</p>
+		<h1>Create a Custom Label</h1>
+		<p>Tell us about your brand and we'll build a one-off label from scratch. A designer reviews every request and sends a proof before anything prints.</p>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<form id="yp-custom-order-form" hidden>
+
+			<div class="yp-field">
+				<label for="yp-co-size">Size</label>
+				<select id="yp-co-size" name="size_id" required></select>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-co-material">Material</label>
+				<select id="yp-co-material" name="material_id" required></select>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-co-quantity">Quantity</label>
+				<div class="yp-quantity-control" data-yp-co-quantity></div>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-co-brand">Brand name</label>
+				<input type="text" id="yp-co-brand" name="brand_name" maxlength="80" required class="widefat" />
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-co-compound">Compound / strength <span class="description">(optional)</span></label>
+				<input type="text" id="yp-co-compound" name="compound_strength" maxlength="120" class="widefat" />
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-co-style">Style / colors <span class="description">(optional)</span></label>
+				<textarea id="yp-co-style" name="style_notes" rows="3" maxlength="500" class="widefat"></textarea>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-co-instructions">Instructions <span class="description">(optional)</span></label>
+				<textarea id="yp-co-instructions" name="instructions" rows="4" maxlength="1000" class="widefat"></textarea>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-co-files">Inspiration files <span class="description">(optional — PDF, SVG, PNG, or JPG, up to 5 files)</span></label>
+				<input type="file" id="yp-co-files" name="files" multiple accept=".pdf,.svg,.png,.jpg,.jpeg,application/pdf,image/svg+xml,image/png,image/jpeg" />
+				<ul class="yp-custom-order__file-list" data-yp-co-file-list></ul>
+			</div>
+
+			<div class="yp-custom-order__fee">
+				<span>Custom design fee</span>
+				<strong data-yp-co-fee>&mdash;</strong>
+			</div>
+			<p class="description">Charged now to begin your design. Your printed order is priced and placed separately once your proof is approved.</p>
+
+			<p>
+				<button type="submit" class="wp-block-button__link is-style-accent" data-yp-co-submit>Continue to Payment</button>
+			</p>
+
+		</form>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

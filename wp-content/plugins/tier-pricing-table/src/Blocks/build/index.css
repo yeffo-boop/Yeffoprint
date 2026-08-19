@@ -1,0 +1,160 @@
+/*!****************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/editor.scss ***!
+  \****************************************************************************************************************************************************************************************************************************************/
+.wp-block-create-block-tiered-pricing-block table {
+  border-collapse: collapse;
+}
+
+/**
+ * Tiered Pricing Options
+ */
+.tiered-pricing-options {
+  margin: 20px 0;
+}
+
+.tiered-pricing-option {
+  transition: all 0.3s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #E5E5E5;
+  border-radius: 3px;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tiered-pricing-option__pricing {
+  text-align: right;
+  margin-left: auto;
+  font-weight: bold;
+}
+
+.tiered-pricing-option-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  position: relative;
+  box-sizing: border-box;
+  border: 1px solid #E5E5E5;
+}
+
+.tiered-pricing--active .tiered-pricing-option-checkbox::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  border-radius: 50%;
+  left: 2px;
+  top: 2px;
+}
+
+.tiered-pricing-option-price {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: right;
+}
+
+.tiered-pricing-option-price__original {
+  font-size: 0.9em;
+  font-weight: normal;
+}
+
+.tiered-pricing-option-total {
+  font-size: 0.8em;
+  display: none;
+  justify-content: right;
+  align-items: center;
+  gap: 5px;
+}
+
+.tiered-pricing-option-total__original_total {
+  font-weight: normal;
+  font-size: 0.9em;
+}
+
+/**
+ * END Tiered Pricing Options styles
+ */
+/**
+* Tiered pricing select
+ */
+.tiered-pricing-dropdown {
+  margin: 20px 0;
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+}
+
+.tiered-pricing-dropdown__list {
+  box-sizing: border-box;
+  position: absolute;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid;
+  border-top: none;
+  width: 100%;
+  background: white;
+  display: none;
+  z-index: 999;
+}
+.tiered-pricing-dropdown__list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tiered-pricing-dropdown__select-box {
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid;
+  padding: 5px;
+  align-items: center;
+  display: flex;
+  background: #fff;
+}
+
+.tiered-pricing-dropdown__select-box--active {
+  border-radius: 3px 3px 0 0;
+}
+
+.tiered-pricing-dropdown__select-box-arrow {
+  width: 25px;
+  margin-left: auto;
+  height: 25px;
+  display: flex;
+  transition: all 0.2s;
+}
+
+.tiered-pricing-dropdown__select-box--active .tiered-pricing-dropdown__select-box-arrow {
+  transform: rotate(180deg);
+}
+
+.tiered-pricing-dropdown-option__pricing {
+  margin-left: auto;
+  font-weight: bold;
+}
+
+.tiered-pricing-option-price {
+  margin-left: auto;
+}
+
+.tiered-pricing-dropdown-option {
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 10px;
+  display: flex;
+  width: 100%;
+}
+
+.tiered-pricing-dropdown-option-price__original {
+  font-weight: normal;
+}
+
+/**
+End tiered pricing select styles
+ */
+
+/*# sourceMappingURL=index.css.map*/

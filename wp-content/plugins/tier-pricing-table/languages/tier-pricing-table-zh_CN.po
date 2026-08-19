@@ -1,0 +1,5424 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WooCommerce Tiered Price Table 6.2.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/tiered-pricing-table\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-06-17T15:54:31+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Language: zh_CN\n"
+"X-Domain: tier-pricing-table\n"
+"X-Generator: WP-CLI 2.12.0\n"
+
+#. Plugin Name of the plugin
+#: tier-pricing-table.php
+msgid "WooCommerce Tiered Price Table"
+msgstr "WooCommerce 分层价格表"
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: tier-pricing-table.php
+msgid "https://tiered-pricing.com/"
+msgstr "https://tiered-pricing.com/"
+
+#. Description of the plugin
+#: tier-pricing-table.php
+msgid "Quantity-based discounts with nice-looking reflection on the product page."
+msgstr "基于数量的折扣，在产品页面上有漂亮的反映。"
+
+#. Author of the plugin
+#: tier-pricing-table.php
+msgid "U2Code"
+msgstr "U2代码"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsAddon.php:14
+msgid "Advanced product quantity options"
+msgstr "高级产品数量选项"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsAddon.php:18
+msgid "Set maximum, and step quantities for products."
+msgstr "设置产品的最大数量和步骤数量。"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsForm.php:111
+msgid "Additional quantity options"
+msgstr "额外数量选项"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsForm.php:131
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsForm.php:147
+#: views/admin/components/minimum-order-quantity-form.php:17
+msgid "Leave blank for no restrictions"
+msgstr "留空表示没有限制"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsForm.php:133
+msgid "Maximum order quantity"
+msgstr "最大订购量"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsForm.php:134
+msgid "The maximum quantity of the product a customer can order in a single transaction."
+msgstr "客户在单笔交易中可以订购的产品的最大数量。"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsForm.php:146
+#: src/Addons/AdvancedQuantityOptions/ProductEditor/QuantityStepBlock.php:30
+msgid "Quantity step"
+msgstr "数量步长"
+
+#: src/Addons/AdvancedQuantityOptions/AdvancedQuantityOptionsForm.php:149
+msgid "Requires the product to be purchased in multiples of X."
+msgstr "要求以 X 的倍数购买产品。"
+
+#: src/Addons/AdvancedQuantityOptions/GlobalPricingOptions.php:88
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedQuantityRules.php:13
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsColumn.php:12
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:350
+msgid "N/A"
+msgstr "不适用"
+
+#: src/Addons/AdvancedQuantityOptions/GlobalPricingOptions.php:95
+msgid "Maximum:"
+msgstr "最大限度："
+
+#: src/Addons/AdvancedQuantityOptions/GlobalPricingOptions.php:101
+msgid "Quantity step:"
+msgstr "数量步骤："
+
+#: src/Addons/AdvancedQuantityOptions/ProductEditor/MaximumOrderQuantityBlock.php:30
+msgid "Maximum Order Quantity"
+msgstr "最大订购量"
+
+#: src/Addons/AdvancedQuantityOptions/ProductEditor/ProductEditor.php:26
+msgid "Advanced Quantity Options"
+msgstr "高级数量选项"
+
+#. translators: %1$s: item name, %2$s: minimum quantity
+#: src/Addons/AdvancedQuantityOptions/QuantityManager.php:50
+#, php-format
+msgid "Maximum quantity for the %1$s is %2$d"
+msgstr "%1$s 的最大数量为 %2$d"
+
+#. translators: %s: quantity step
+#: src/Addons/AdvancedQuantityOptions/QuantityManager.php:59
+#: src/Addons/AdvancedQuantityOptions/QuantityManager.php:131
+#: src/Addons/AdvancedQuantityOptions/QuantityManager.php:210
+#, php-format
+msgid "Order quantity must be multiple of %s"
+msgstr "订单数量必须是%s的倍数"
+
+#. translators: %s: maximum quantity
+#: src/Addons/AdvancedQuantityOptions/QuantityManager.php:120
+#: src/Addons/AdvancedQuantityOptions/QuantityManager.php:198
+#, php-format
+msgid "Maximum order quantity for the product is %s"
+msgstr "产品的最大订购数量为 %s"
+
+#: src/Addons/CategoryTiers/CategoryTierAddon.php:13
+msgid "Category level tiered pricing (deprecated)"
+msgstr "类别级别分层定价（已弃用）"
+
+#: src/Addons/CategoryTiers/CategoryTierAddon.php:43
+msgid "Skip category rules"
+msgstr "跳过类别规则"
+
+#: src/Addons/CategoryTiers/CategoryTierAddon.php:44
+msgid "Don't take into account tiered pricing rules from categories. "
+msgstr "不要考虑类别的分级定价规则。"
+
+#: src/Addons/CategoryTiers/CategoryTierAddon.php:233
+msgid "Set tiered pricing at the product category level (Deprecated)."
+msgstr "在产品类别级别设置分层定价（已弃用）。"
+
+#: src/Addons/Coupons/CouponsAddon.php:9
+#: views/admin/welcome-page/welcome-page.php:1077
+msgid "Coupons management"
+msgstr "优惠券管理"
+
+#: src/Addons/Coupons/CouponsAddon.php:69
+msgid "Check this option to don't  apply tiered pricing in the cart when users have applied this coupon."
+msgstr "选中此选项可在用户应用此优惠券后不在购物车中应用分层定价。"
+
+#: src/Addons/Coupons/CouponsAddon.php:76
+msgid "Disable tiered pricing for specific coupons."
+msgstr "禁用特定优惠券的分层定价。"
+
+#: src/Addons/CustomColumns/Columns/CustomDataColumn.php:168
+msgid "(first row)"
+msgstr "（第一行）"
+
+#: src/Addons/CustomColumns/Columns/CustomDataColumn.php:179
+msgid "Custom columns are available only in the premium version."
+msgstr "自定义列仅在高级版本中可用。"
+
+#: src/Addons/CustomColumns/Columns/CustomDataColumn.php:182
+msgid "Upgrade you plan"
+msgstr "升级你的计划"
+
+#: src/Addons/CustomColumns/CustomColumnsAddon.php:17
+msgid "Custom table columns"
+msgstr "自定义表格列"
+
+#: src/Addons/CustomColumns/CustomColumnsAddon.php:21
+msgid "Add custom columns to your pricing table."
+msgstr "将自定义列添加到您的定价表中。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:62
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:186
+msgid "Actions"
+msgstr "行动"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:122
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:208
+msgid "Delete"
+msgstr "删除"
+
+#: src/Addons/CustomColumns/Schema.php:13
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:53
+msgid "Custom column"
+msgstr "定制栏目"
+
+#: src/Addons/CustomColumns/Schema.php:14
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:54
+msgid "Price excluding taxes"
+msgstr "不含税价格"
+
+#: src/Addons/CustomColumns/Schema.php:15
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:55
+msgid "Price including taxes"
+msgstr "含税价格"
+
+#: src/Addons/CustomColumns/Schema.php:16
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:56
+msgid "Total row price"
+msgstr "总行价"
+
+#: src/Addons/CustomColumns/Schema.php:23
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:83
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:234
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:392
+#: src/PricingTable.php:253
+#: src/Settings/CustomOptions/TPTTextTemplate.php:205
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:205
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:207
+#: views/admin/components/tiered-pricing-rules-form.php:55
+#: views/admin/welcome-page/welcome-page.php:647
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:69
+#: src/Addons/CustomColumns/js-source/index.js:284
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Fixed/Row.js:40
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Fixed/Row.js:41
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:80
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:430
+msgid "Price"
+msgstr "价格"
+
+#: src/Addons/CustomColumns/Schema.php:24
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:70
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:64
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:455
+msgid "Number"
+msgstr "数字"
+
+#: src/Addons/CustomColumns/Schema.php:25
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:71
+msgid "Text"
+msgstr "文本"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/UpgradeTip.php:97
+msgid "Upgrade your plan"
+msgstr "升级您的计划"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/DuplicateAction.php:26
+msgid "Duplicate this rule"
+msgstr "复制此规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/DuplicateAction.php:35
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:115
+msgid "Duplicate"
+msgstr "复制"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/DuplicateAction.php:51
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:172
+msgid "(Copy)"
+msgstr "（复制）"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/DuplicateAction.php:81
+msgid "The rule was duplicated successfully."
+msgstr "规则已成功复制。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/DuplicateAction.php:84
+msgid "Failed to duplicate rule."
+msgstr "无法复制规则。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/ReactivateAction.php:36
+msgid "Reactivate"
+msgstr "重新激活"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/SuspendAction.php:37
+msgid "Suspend"
+msgstr "暂停"
+
+#: src/Addons/GlobalTieredPricing/CPT/Actions/SuspendAction.php:54
+msgid "The rule suspended successfully."
+msgstr "规则成功暂停。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedCustomers.php:11
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:15
+msgid "Users & Roles"
+msgstr "用户和角色"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedCustomers.php:24
+msgid "Applied to every user"
+msgstr "适用于每个用户"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedCustomers.php:50
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:63
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:112
+msgid "Customers"
+msgstr "顾客"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedCustomers.php:50
+msgid "Excluded Customers"
+msgstr "排除客户"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedCustomers.php:78
+msgid "Roles"
+msgstr "角色"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedCustomers.php:78
+msgid "Excluded Roles"
+msgstr "排除的角色"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:11
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:52
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:14
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:94
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:193
+msgid "Products"
+msgstr "产品"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:16
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:32
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:131
+msgid "Categories"
+msgstr "类别"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:17
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:52
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:151
+msgid "Tags"
+msgstr "标签"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:18
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:73
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:172
+msgid "Brands"
+msgstr "品牌"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:27
+msgid "Applied to every product"
+msgstr "应用于每一个产品"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:36
+msgid "Excluded Categories"
+msgstr "排除类别"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:37
+msgid "Excluded Tags"
+msgstr "排除的标签"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:38
+msgid "Excluded Brands"
+msgstr "排除品牌"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedProducts.php:52
+msgid "Excluded Products"
+msgstr "排除产品"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedQuantityRules.php:8
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:14
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:108
+msgid "Quantity limits"
+msgstr "数量限制"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/AppliedQuantityRules.php:21
+msgid "Minimum:"
+msgstr "最低限度："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:13
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:15
+msgid "Pricing"
+msgstr "定价"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:24
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:63
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:130
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:122
+#: src/Integrations/Plugins/WPAllImport.php:160
+#: views/admin/components/regular-pricing-form.php:119
+#: views/admin/components/regular-pricing-form.php:129
+msgid "Regular price"
+msgstr "正常价格"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:39
+msgid "(Individual)"
+msgstr "（个人）"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:39
+msgid "(Mix and match)"
+msgstr "（混合搭配）"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:46
+msgid "Base Pricing:"
+msgstr "基本定价："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:51
+msgid "Regular:"
+msgstr "常规的："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:56
+msgid "Sale:"
+msgstr "销售："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:62
+msgid "Discount:"
+msgstr "折扣："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:63
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:132
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:124
+#: src/Integrations/Plugins/WPAllImport.php:169
+#: views/admin/components/regular-pricing-form.php:106
+#: views/admin/components/regular-pricing-form.php:148
+msgid "Sale price"
+msgstr "销售价格"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:74
+msgid "Tiered Rules:"
+msgstr "分级规则："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:82
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:220
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:388
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:109
+#: src/PricingTable.php:251
+#: src/Settings/CustomOptions/TPTTextTemplate.php:141
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:195
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:197
+#: views/addons/category-tiers/add-free.php:24
+#: views/addons/category-tiers/add.php:51
+#: views/addons/category-tiers/edit-free.php:34
+#: views/addons/category-tiers/edit.php:59
+#: views/addons/category-tiers/edit.php:82
+#: views/admin/components/tiered-pricing-rules-form.php:65
+#: views/admin/welcome-page/welcome-page.php:645
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:283
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Fixed/Row.js:27
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Fixed/Row.js:32
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Percentage/Row.js:16
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Percentage/Row.js:21
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:145
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:78
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:428
+msgid "Quantity"
+msgstr "数量"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Pricing.php:83
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:227
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:390
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:200
+#: views/admin/welcome-page/welcome-page.php:646
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Percentage/Row.js:34
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:79
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:429
+msgid "Discount"
+msgstr "折扣"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:9
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:13
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:22
+msgid "Priority Settings"
+msgstr "优先级设置"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:23
+msgid "Global"
+msgstr "全球的"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:24
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:25
+msgid "Prefer Product"
+msgstr "首选产品"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:26
+msgid "Override"
+msgstr "覆盖"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:27
+msgid "Flexible"
+msgstr "灵活的"
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:46
+msgid "Regular prices:"
+msgstr "常规价格："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:49
+msgid "Tiered pricing:"
+msgstr "分级定价："
+
+#: src/Addons/GlobalTieredPricing/CPT/Columns/Settings.php:52
+msgid "Quantity limits:"
+msgstr "数量限制："
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:312
+msgid "The pricing rule does not affect either prices or product quantity limits. The rule will be skipped."
+msgstr "定价规则不会影响价格或产品数量限制。该规则将被跳过。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:515
+msgid "Dismiss"
+msgstr "解雇"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:521
+msgid "How global pricing rules work"
+msgstr "全球定价规则如何运作"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:526
+msgid "Global rules enable you to bulk-apply dynamic pricing and quantity limits to selected groups of products and users simultaneously."
+msgstr "全局规则使您能够同时向选定的产品和用户组批量应用动态定价和数量限制。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:532
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:56
+msgid "Note:"
+msgstr "笔记："
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:533
+msgid "Depending on your priority settings, global rules may override product-level pricing configurations."
+msgstr "根据您的优先级设置，全局规则可能会覆盖产品级定价配置。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/FormTab.php:141
+msgid "Premium feature"
+msgstr "高级功能"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/FormTab.php:148
+msgid "Upgrade plan"
+msgstr "升级计划"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:19
+msgid "Configure regular and tiered pricing rules"
+msgstr "配置常规定价和分级定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:26
+msgid "Base Pricing"
+msgstr "基本定价"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:27
+msgid "Override the default regular product prices."
+msgstr "覆盖默认的常规产品价格。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:39
+#: src/Addons/ImportExport/WoocommerceImportService.php:24
+#: src/Addons/ReactProductEditorAddon/Sections/MainSection.php:38
+#: src/Addons/ReactProductEditorAddon/TieredPricingGroup.php:21
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:118
+#: src/Admin/ProductPage/TieredPricingTab.php:35
+#: src/Integrations/Plugins/WPAllImport.php:335
+#: src/Settings/Settings.php:218
+msgid "Tiered Pricing"
+msgstr "分级定价"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:41
+msgid ""
+"<b>Mix & Match:</b> Combines the quantities of different products to reach tiered pricing thresholds, allowing discounts when products are purchased together. <br /><br />\n"
+"<b>Individually:</b> Treats each product’s quantity separately in pricing calculations, ensuring that each product follows its own pricing tier independently without being combined with others."
+msgstr ""
+"<b>混合搭配：</b>组合不同产品的数量以达到分级定价阈值，从而在一起购买产品时可以享受折扣。 <br/><br/>\n"
+"<b>单独：</b>在定价计算中单独处理每种产品的数量，确保每种产品独立遵循自己的定价等级，而不与其他产品组合。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:47
+msgid "Calculation type"
+msgstr "计算类型"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:49
+msgid "Individual"
+msgstr "个人"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Pricing.php:50
+msgid "Mix and Match"
+msgstr "混合搭配"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:18
+msgid "Select products, categories, tags, or brands this rule applies to"
+msgstr "选择此规则适用的产品、类别、标签或品牌"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:23
+msgid "Applies to products"
+msgstr "适用于产品"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:26
+msgid "If no products, categories, tags, or brands are selected, this rule will apply to all products in your store, except those listed in the Exclusions section."
+msgstr "如果未选择任何产品、类别、标签或品牌，则此规则将适用于您商店中的所有产品，“排除”部分中列出的产品除外。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:46
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:145
+msgid "Search categories&hellip;"
+msgstr "搜索类别..."
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:66
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:165
+msgid "Search tags&hellip;"
+msgstr "搜索标签..."
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:87
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:186
+msgid "Search brands&hellip;"
+msgstr "搜索品牌…"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:112
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:213
+msgid "Search products&hellip;"
+msgstr "搜索产品..."
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/ProductAndCategories.php:123
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:87
+msgid "Exclusions"
+msgstr "排除情况"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:18
+msgid "Set minimum, maximum, and quantity step limits"
+msgstr "设置最小、最大和数量步骤限制"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:506
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:23
+msgid "Quantity Limits"
+msgstr "数量限制"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:17
+msgid "Manage how this rule interacts with product-level settings"
+msgstr "管理此规则如何与产品级设置交互"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:24
+msgid "Determine which rules take precedence when a product has both global and individual settings."
+msgstr "确定当产品同时具有全局设置和单独设置时哪些规则优先。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:29
+msgid "Rule priority"
+msgstr "规则优先级"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:31
+msgid "Use global settings"
+msgstr "使用全局设置"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:32
+msgid "Prefer product-level rules"
+msgstr "更喜欢产品级规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:34
+msgid "Override product-level rules"
+msgstr "覆盖产品级规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:36
+msgid "Custom component priorities"
+msgstr "自定义组件优先级"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:46
+msgid "Base Prices Priority"
+msgstr "基本价格优先"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:52
+msgid "Base prices"
+msgstr "基本价格"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:54
+msgid "Prefer product-level role prices"
+msgstr "更喜欢产品级角色价格"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:56
+msgid "Override all product-level prices"
+msgstr "覆盖所有产品级价格"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:62
+msgid "Prioritize product-specific role pricing over this global rule."
+msgstr "优先考虑特定于产品的角色定价，而不是此全局规则。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:68
+msgid "Tiered Prices Priority"
+msgstr "分级价格优先"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:75
+msgid "Tiered prices"
+msgstr "阶梯价格"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:77
+msgid "Prefer product-level tiers"
+msgstr "更喜欢产品级别"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:79
+msgid "Prefer product-level role tiers"
+msgstr "更喜欢产品级角色级别"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:81
+msgid "Override all product-level tiers"
+msgstr "覆盖所有产品级别"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:88
+msgid "Mix & Match"
+msgstr "混合搭配"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:91
+msgid "Enable Mix & Match for product-level tiers"
+msgstr "为产品级别启用混合和匹配"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:95
+msgid "Prioritize product-specific tiered pricing over this global rule, and optionally enable Mix & Match for those inherited tiers."
+msgstr "优先考虑特定于产品的分层定价而不是此全局规则，并可以选择为这些继承的层级启用混合和匹配。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:101
+msgid "Quantity Limits Priority"
+msgstr "数量限制优先"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:110
+msgid "Prefer product-level limits"
+msgstr "更喜欢产品级别限制"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:112
+msgid "Prefer product-level role limits"
+msgstr "更喜欢产品级角色限制"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:114
+msgid "Override all product-level limits"
+msgstr "覆盖所有产品级别限制"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Settings.php:120
+msgid "Prioritize product-specific quantity limits over this global rule."
+msgstr "优先考虑特定于产品的数量限制，而不是此全局规则。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:19
+msgid "Select the users or roles this rule applies to"
+msgstr "选择此规则适用的用户或角色"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:24
+msgid "Applies to users"
+msgstr "适用于用户"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:27
+msgid "The rule will apply to all users if you do not specify user roles or specific customers (excluding those selected in the exclusions section)."
+msgstr "如果您未指定用户角色或特定客户（不包括在排除部分中选择的客户），则该规则将应用于所有用户。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:33
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:95
+msgid "User roles"
+msgstr "用户角色"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:40
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:105
+msgid "Select for a user role"
+msgstr "选择用户角色"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:55
+#: views/admin/welcome-page/welcome-page.php:975
+msgid "Manage user roles"
+msgstr "管理用户角色"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:77
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/UsersAndRoles.php:126
+msgid "Select for a customer"
+msgstr "为客户选择"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/UpgradeTip.php:73
+msgid "You have got a discount!"
+msgstr "您有折扣！"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/UpgradeTip.php:78
+msgid "You've been using the free version for a while now, and we'd like to offer you an exclusive discount on the premium version!"
+msgstr "您已经使用免费版本有一段时间了，我们想为您提供高级版本的独家折扣！"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/UpgradeTip.php:85
+msgid "Use the coupon code below for a <b>20%</b> discount on upgrading your plan."
+msgstr "使用下面的优惠券代码升级您的套餐可享受 <b>20%</b> 折扣。"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:109
+msgid "Suspended"
+msgstr "暂停"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:111
+msgid "Active"
+msgstr "积极的"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:299
+msgid "Create Your First Global Pricing Rule"
+msgstr "创建您的第一个全球定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:304
+msgid "Global rules allow you to bulk-apply custom pricing, tiered discounts, and quantity limits to multiple products or categories simultaneously."
+msgstr "全局规则允许您同时将自定义定价、分级折扣和数量限制批量应用到多个产品或类别。"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:312
+msgid "Create Rule"
+msgstr "创建规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:405
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:406
+msgid "Pricing rule"
+msgstr "定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:407
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:408
+msgid "Add Pricing Rule"
+msgstr "添加定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:409
+msgid "Edit Pricing Rule"
+msgstr "编辑定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:410
+msgid "New Pricing Rule"
+msgstr "新定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:411
+msgid "View Pricing Rule"
+msgstr "查看定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:412
+msgid "Find Pricing Rule"
+msgstr "查找定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:413
+msgid "No pricing rules ware found"
+msgstr "未找到定价规则软件"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:414
+msgid "No pricing rule in trash"
+msgstr "垃圾没有定价规则"
+
+#: src/Addons/GlobalTieredPricing/CPT/GlobalTieredPricingCPT.php:416
+msgid "Pricing rules"
+msgstr "定价规则"
+
+#: src/Addons/GlobalTieredPricing/GlobalPricingRule.php:403
+msgid "The pricing rule does not affect either prices or product quantity. The rule will be skipped."
+msgstr "定价规则不会影响价格或产品数量。该规则将被跳过。"
+
+#: src/Addons/GlobalTieredPricing/GlobalTieredPricingAddon.php:9
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:116
+msgid "Global pricing rules"
+msgstr "全球定价规则"
+
+#: src/Addons/GlobalTieredPricing/GlobalTieredPricingAddon.php:39
+msgid "Create reusable pricing rules and apply them globally."
+msgstr "创建可重复使用的定价规则并在全球范围内应用它们。"
+
+#: src/Addons/ManualOrders/ManualOrdersAddon.php:15
+msgid "Tiered pricing for manual orders"
+msgstr "手动订单的分级定价"
+
+#: src/Addons/ManualOrders/ManualOrdersAddon.php:19
+msgid "Apply tiered pricing to orders created manually in the admin area."
+msgstr "将分级定价应用于在管理区域中手动创建的订单。"
+
+#. translators: %1$s: item name, %2$s: original price, %3$s: new price
+#: src/Addons/ManualOrders/ManualOrdersAddon.php:148
+#, php-format
+msgid "Tiered pricing recalculations for %1$s: %2$s → %3$s"
+msgstr "%1$s 的分级定价重新计算：%2$s → %3$s"
+
+#: src/Addons/ManualOrders/ManualOrdersAddon.php:193
+msgid "Re-calculate with tiered pricing"
+msgstr "重新计算阶梯定价"
+
+#: src/Addons/MinQuantity/MinQuantity.php:12
+msgid "Minimum order quantity validation"
+msgstr "最小订购量验证"
+
+#. translators: %1$s: item name, %2$s: minimum quantity
+#: src/Addons/MinQuantity/MinQuantity.php:40
+#, php-format
+msgid "Minimum quantity for the %1$s is %2$d"
+msgstr "%1$s 的最低数量为 %2$d"
+
+#. translators: %s: minimum quantity
+#: src/Addons/MinQuantity/MinQuantity.php:83
+#: src/Addons/MinQuantity/MinQuantity.php:102
+#: src/Addons/MinQuantity/MinQuantity.php:129
+#, php-format
+msgid "Minimum quantity for the product is %s"
+msgstr "产品的最小数量为 %s"
+
+#: src/Addons/MinQuantity/MinQuantity.php:270
+msgid "Enforce minimum order quantities for products based on tiered pricing rules."
+msgstr "根据分级定价规则强制执行产品的最低订购数量。"
+
+#: src/Addons/PluginsRecommendations/BulkPriceEditorPlugin.php:44
+#: src/Addons/PluginsRecommendations/CancellationSurveysPlugin.php:39
+#: src/Admin/Tips/Tips/DefaultVariationTip.php:38
+#: src/Admin/Tips/Tips/RoleCustomerPricingTabTip.php:39
+#: src/Admin/Tips/Tips/VariationsPricingCalculationTip.php:42
+msgid "Tip"
+msgstr "提示"
+
+#: src/Addons/PluginsRecommendations/BulkPriceEditorPlugin.php:66
+msgid "Check plugin"
+msgstr "检查插件"
+
+#: src/Addons/PluginsRecommendations/BulkPriceEditorPlugin.php:71
+msgid "View video"
+msgstr "观看视频"
+
+#: src/Addons/PluginsRecommendations/BulkPriceEditorPlugin.php:93
+#: src/Addons/PluginsRecommendations/CancellationSurveysPlugin.php:76
+#: src/Admin/Tips/Tips/DefaultVariationTip.php:59
+#: src/Admin/Tips/Tips/RoleCustomerPricingTabTip.php:62
+#: src/Admin/Tips/Tips/VariationsPricingCalculationTip.php:82
+msgid "Hide this tip"
+msgstr "隐藏此提示"
+
+#: src/Addons/PluginsRecommendations/CancellationSurveysPlugin.php:54
+msgid "Learn more"
+msgstr "了解更多"
+
+#: src/Addons/PluginsRecommendations/ConditionalLogicForProductAddons.php:44
+msgid "Conditional logic"
+msgstr "条件逻辑"
+
+#: src/Addons/PluginsRecommendations/ConditionalLogicForProductAddons.php:51
+msgid "Looking to provide condition logic for your add-ons?"
+msgstr "希望为您的附加组件提供条件逻辑？"
+
+#: src/Addons/PluginsRecommendations/ConditionalLogicForProductAddons.php:55
+msgid "Check out this page."
+msgstr "查看此页面。"
+
+#: src/Addons/PluginsRecommendations/PluginsRecommendationsAddon.php:8
+msgid "Plugins recommendations"
+msgstr "插件推荐"
+
+#: src/Addons/PluginsRecommendations/PluginsRecommendationsAddon.php:12
+msgid "Show recommendations for related plugins and addons."
+msgstr "显示相关插件和附加组件的推荐。"
+
+#: src/Addons/ProductCatalogLoop/ProductCatalogLoop.php:14
+msgid "Display tiered pricing tables on the shop and category pages."
+msgstr "在商店和类别页面上显示分层定价表。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:37
+msgid "Control how tiered pricing appears on shop and category pages."
+msgstr "控制分层定价在商店和类别页面上的显示方式。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:57
+msgid "Depending on your theme, you may need minor CSS adjustments for optimal display."
+msgstr "根据您的主题，您可能需要对 CSS 进行细微调整才能获得最佳显示效果。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:62
+msgid "Display tiered pricing tables on shop and category pages."
+msgstr "在商店和类别页面上显示分层定价表。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:72
+msgid "Above add-to-cart button"
+msgstr "添加到购物车按钮上方"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:73
+msgid "Below add-to-cart button"
+msgstr "添加到购物车按钮下方"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:55
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:74
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:114
+msgid "Above product title"
+msgstr "以上产品标题"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:75
+msgid "Below product title"
+msgstr "以下为产品标题"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:77
+msgid "Choose where the tiered pricing table appears relative to the product image and details."
+msgstr "选择分层定价表相对于产品图像和详细信息的显示位置。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:97
+msgid "Only enable this if your theme doesn't already provide quantity selectors on the shop page."
+msgstr "仅当您的主题尚未在商店页面上提供数量选择器时才启用此功能。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:108
+msgid "Dynamic total price"
+msgstr "动态总价"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:117
+msgid "Automatically update the displayed price when a customer changes the quantity from the catalog."
+msgstr "当客户更改目录中的数量时，自动更新显示的价格。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:127
+msgid "Compact layout"
+msgstr "布局紧凑"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:131
+msgid "Apply minimal styling to pricing tables to better fit the constrained space of catalog grids."
+msgstr "对定价表应用最小的样式，以更好地适应目录网格的有限空间。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:140
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:15
+msgid "Pricing Layout Settings"
+msgstr "定价布局设置"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:141
+msgid "Customize the appearance and behavior of tiered pricing on catalog pages."
+msgstr "自定义目录页面上分级定价的外观和行为。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:148
+msgid "Layout source"
+msgstr "布局源码"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:152
+msgid "Same as product page"
+msgstr "与产品页面相同"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:153
+msgid "Custom"
+msgstr "风俗"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:155
+msgid "Choose whether to inherit the layout from the product page or use a custom layout for catalogs."
+msgstr "选择是继承产品页面的布局还是使用目录的自定义布局。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:161
+msgid "Catalog layout"
+msgstr "目录布局"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:165
+msgid "Select the specific visual template for the catalog page."
+msgstr "选择目录页面的特定视觉模板。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:170
+msgid "Pricing title"
+msgstr "定价标题"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:174
+msgid "Text displayed above the tiered pricing block."
+msgstr "分层定价块上方显示的文本。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:178
+msgid "Quantity display type"
+msgstr "数量显示类型"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:182
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:129
+msgid "Range"
+msgstr "范围"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:183
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:130
+msgid "Static values"
+msgstr "静态值"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:185
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:132
+msgid "\"Range\" displays the quantity range a tier applies to. \"Static\" displays only the minimum quantity required."
+msgstr "“范围”显示层适用的数量范围。 “静态”仅显示所需的最小数量。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:190
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:138
+msgid "Active pricing tier color"
+msgstr "主动定价层颜色"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:197
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:208
+#: src/Admin/ProductPage/TieredPricingTab.php:126
+#: src/Settings/CustomOptions/TPTTextTemplate.php:210
+msgid "Unit label"
+msgstr "单位标签"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:204
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:215
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:176
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:187
+msgid "For example: pieces, boxes, bottles, packs, etc. This will be shown next to quantity values. Leave blank to skip adding a unit label."
+msgstr "例如：件、盒、瓶、包等。这将显示在数量值旁边。留空可跳过添加单位标签。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:212
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:213
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:380
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:381
+#: src/PricingTable.php:303
+#: src/PricingTable.php:304
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:184
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:185
+msgid "piece"
+msgid_plural "pieces"
+msgstr[0] "片"
+msgstr[1] ""
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:219
+#: src/Blocks/build/index.js:698
+#: src/Blocks/src/panels/ColumnsPanel/ColumnsPanel.js:16
+#: src/Blocks/build/index.js:442
+msgid "Quantity column title"
+msgstr "数量列标题"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:222
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:229
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:236
+msgid "Leave empty to not show this column."
+msgstr "留空则不显示此列。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:226
+#: src/Blocks/build/index.js:703
+#: src/Blocks/src/panels/ColumnsPanel/ColumnsPanel.js:25
+#: src/Blocks/build/index.js:451
+msgid "Discount column title"
+msgstr "折扣栏标题"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:233
+#: src/Blocks/build/index.js:708
+#: src/Blocks/src/panels/ColumnsPanel/ColumnsPanel.js:34
+#: src/Blocks/build/index.js:460
+msgid "Price column title"
+msgstr "价格栏标题"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:240
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:214
+#: src/Blocks/build/index.js:713
+#: src/Blocks/src/panels/ColumnsPanel/ColumnsPanel.js:45
+#: src/Blocks/build/index.js:471
+msgid "Show percentage discount"
+msgstr "显示折扣百分比"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:246
+msgid "Show regular product price"
+msgstr "显示常规产品价格"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:250
+msgid "Show the crossed out regular price in options."
+msgstr "显示选项中划掉的正常价格。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:253
+msgid "Show total pricing in option"
+msgstr "在选项中显示总定价"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:257
+msgid "Show the total price in an active option."
+msgstr "显示活动选项中的总价。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:261
+msgid "Option template"
+msgstr "选项模板"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:263
+#: src/Settings/Sections/GeneralSection/GeneralSection.php:90
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:241
+msgid "<strong>Buy {tp_quantity} pieces and save {tp_rounded_discount}%</strong>"
+msgstr "<strong>购买 {tp_quantity} 件可节省 {tp_rounded_discount}%</strong>"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:273
+msgid "Show the \"no discount\" option"
+msgstr "显示“无折扣”选项"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:277
+msgid "Show the option with a regular product price."
+msgstr "显示具有常规产品价格的选项。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:280
+msgid "\"No discount\" option template"
+msgstr "“无折扣”选项模板"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:282
+#: src/Settings/Sections/GeneralSection/GeneralSection.php:114
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:264
+msgid "<strong>Buy {tp_quantity} pieces</strong>"
+msgstr "<strong>购买 {tp_quantity} 件</strong>"
+
+#: src/Addons/CartUpsells/UpsellsSubsection.php:34
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:289
+msgid "Template"
+msgstr "模板"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:291
+#: src/Settings/Sections/GeneralSection/GeneralSection.php:97
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:276
+msgid "<strong>Buy {tp_quantity} pieces for {tp_price} each and save {tp_rounded_discount}%</strong>"
+msgstr "<strong>以每件 {tp_price} 的价格购买 {tp_quantity} 件，可节省 {tp_rounded_discount}%</strong>"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:303
+msgid "Show the \"no discount\" tier"
+msgstr "显示“无折扣”等级"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:307
+msgid "Show the tier with a regular product price."
+msgstr "显示具有常规产品价格的层级。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:311
+msgid "\"No discount\" template"
+msgstr "“无折扣”模板"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:313
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:301
+msgid "<strong>Buy {tp_quantity} pieces for {tp_price} each</strong>"
+msgstr "<strong>以每件 {tp_price} 的价格购买 {tp_quantity} 件</strong>"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:322
+msgid "Clickable tiered pricing"
+msgstr "可点击的分级定价"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:326
+msgid "Makes tiered pricing (table rows, blocks, options, etc) clickable."
+msgstr "使分层定价（表行、块、选项等）可点击。"
+
+#: src/Addons/ReactProductEditorAddon/Blocks/MinQuantity.php:30
+msgid "Minimum Order Quantity"
+msgstr "最小订购量"
+
+#: src/Addons/ReactProductEditorAddon/ReactProductEditorAddon.php:8
+msgid "WooCommerce Product Editor integration"
+msgstr "WooCommerce 产品编辑器集成"
+
+#: src/Addons/ReactProductEditorAddon/ReactProductEditorAddon.php:12
+msgid "Enable support for WooCommerce's React-based product editor."
+msgstr "启用对 WooCommerce 基于 React 的产品编辑器的支持。"
+
+#: src/Addons/ReactProductEditorAddon/Sections/AdvanceProductOptionSection.php:38
+msgid "Advanced Options"
+msgstr "高级选项"
+
+#: src/Addons/ReactProductEditorAddon/Sections/AdvanceProductOptionSection.php:39
+msgid "Override global settings such as pricing layout for this product."
+msgstr "覆盖全局设置，例如该产品的定价布局。"
+
+#: src/Addons/ReactProductEditorAddon/Sections/MainSection.php:39
+msgid "Specify tiered pricing and quantity limits."
+msgstr "指定分级定价和数量限制。"
+
+#: src/Addons/ReactProductEditorAddon/Sections/RoleBasedPricingSection.php:38
+msgid "Role-Based Pricing"
+msgstr "基于角色的定价"
+
+#: src/Addons/ReactProductEditorAddon/Sections/RoleBasedPricingSection.php:39
+msgid "Set up custom pricing for specific user roles."
+msgstr "为特定用户角色设置自定义定价。"
+
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:128
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:120
+msgid "Regular pricing type"
+msgstr "常规定价类型"
+
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:134
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:126
+#: src/Settings/CustomOptions/TPTTextTemplate.php:148
+#: src/Settings/CustomOptions/TPTTextTemplate.php:201
+#: views/addons/category-tiers/add-free.php:28
+#: views/addons/category-tiers/add.php:57
+#: views/addons/category-tiers/edit-free.php:37
+#: views/addons/category-tiers/edit.php:67
+#: views/addons/category-tiers/edit.php:88
+#: views/admin/components/regular-pricing-form.php:38
+#: views/admin/components/regular-pricing-form.php:65
+#: views/admin/components/tiered-pricing-rules-form.php:55
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/Forms/Percentage/Row.js:29
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+msgid "Percentage discount"
+msgstr "折扣百分比"
+
+#: src/Addons/ImportExport/WoocommerceExportService.php:39
+#: src/Addons/ImportExport/WoocommerceImportService.php:27
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:136
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:132
+msgid "Fixed pricing rules"
+msgstr "固定定价规则"
+
+#: src/Addons/ImportExport/WoocommerceExportService.php:42
+#: src/Addons/ImportExport/WoocommerceImportService.php:28
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:138
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:134
+msgid "Percentage pricing rules"
+msgstr "百分比定价规则"
+
+#: src/Addons/ImportExport/WoocommerceExportService.php:44
+#: src/Addons/ImportExport/WoocommerceImportService.php:26
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:140
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:128
+#: src/Integrations/Plugins/WPAllImport.php:116
+#: src/Integrations/Plugins/WPAllImport.php:222
+#: views/admin/components/tiered-pricing-rules-form.php:98
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/TieredPricingType.js:9
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+msgid "Tiered pricing type"
+msgstr "阶梯定价类型"
+
+#: src/Addons/ImportExport/WoocommerceExportService.php:46
+#: src/Addons/ImportExport/WoocommerceImportService.php:29
+#: src/Addons/RoleBasedPricing/Export/RoleBasedPricingExport.php:142
+#: src/Addons/RoleBasedPricing/Import/RoleBasedPricingImport.php:130
+#: views/admin/components/minimum-order-quantity-form.php:23
+msgid "Minimum order quantity"
+msgstr "最小订购量"
+
+#: src/Addons/RoleBasedPricing/ProductManager.php:174
+msgid "Invalid role"
+msgstr "角色无效"
+
+#: src/Addons/RoleBasedPricing/ProductManager.php:180
+#: src/Addons/UserBasedPricing/ProductManager.php:185
+msgid "Invalid nonce"
+msgstr "无效随机数"
+
+#: src/Addons/RoleBasedPricing/RoleBasedPricingAddon.php:12
+msgid "Role-based pricing rules on individual products"
+msgstr "针对单个产品的基于角色的定价规则"
+
+#: src/Addons/RoleBasedPricing/RoleBasedPricingAddon.php:20
+msgid "Enable role-based pricing rules on individual products."
+msgstr "对单个产品启用基于角色的定价规则。"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsColumn.php:8
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:25
+msgid "Tax settings"
+msgstr "税务设置"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:177
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsColumn.php:21
+msgid "Status:"
+msgstr "地位："
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsColumn.php:24
+msgid "Class:"
+msgstr "班级："
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:13
+msgid "Tax"
+msgstr "税"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:17
+msgid "Set tax status and class"
+msgstr "设置纳税身份和类别"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:26
+msgid "Override the default tax status and class for products matching this rule."
+msgstr "覆盖匹配此规则的产品的默认税务状态和类别。"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:32
+#: src/Addons/TaxSettings/RoleBasedRulesIntegration/RoleBasedRulesIntegration.php:49
+msgid "Tax status"
+msgstr "税务状况"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:34
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:45
+#: src/Addons/TaxSettings/RoleBasedRulesIntegration/RoleBasedRulesIntegration.php:27
+#: src/Addons/TaxSettings/RoleBasedRulesIntegration/RoleBasedRulesIntegration.php:34
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:52
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:66
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:80
+msgid "Default"
+msgstr "默认"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:35
+msgid "Taxable"
+msgstr "应纳税"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:36
+msgid "Shipping only"
+msgstr "仅限运送"
+
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:213
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:37
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:101
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:141
+msgid "None"
+msgstr "没有任何"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:46
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:270
+msgid "Standard"
+msgstr "标准"
+
+#: src/Addons/TaxSettings/GlobalRulesIntegration/TaxSettingsTab.php:56
+#: src/Addons/TaxSettings/RoleBasedRulesIntegration/RoleBasedRulesIntegration.php:63
+msgid "Tax class"
+msgstr "税级"
+
+#: src/Addons/TaxSettings/TaxSettingsAddon.php:13
+msgid "Tax Options"
+msgstr "税务选择"
+
+#: src/Addons/TaxSettings/TaxSettingsAddon.php:17
+msgid "Manage tax overrides and display options for user roles and global pricing rules."
+msgstr "管理税收优惠并显示用户角色和全局定价规则的选项。"
+
+#: src/Addons/TierLabels/Admin/TierLabelsAdmin.php:72
+#: src/Addons/TierLabels/Admin/TierLabelsAdmin.php:97
+msgid "No label"
+msgstr "无标签"
+
+#: src/Addons/TierLabels/Admin/TierLabelsAdmin.php:104
+msgid "Tier label (regular price)"
+msgstr "等级标签（正常价格）"
+
+#: src/Addons/TierLabels/Settings/LabelsSettingsSection.php:8
+#: src/Addons/TierLabels/TierLabelsAddon.php:12
+msgid "Badges & Labels"
+msgstr "徽章和标签"
+
+#: src/Addons/TierLabels/TierLabelsAddon.php:16
+msgid "Add custom labels like \"Best Value\" to specific pricing tiers."
+msgstr "将“最佳价值”等自定义标签添加到特定定价层。"
+
+#: src/Addons/Tools/Settings/ToolsSettingsSection.php:8
+#: src/Addons/Tools/ToolsAddon.php:10
+msgid "Tools"
+msgstr "工具"
+
+#: src/Addons/Tools/ToolsAddon.php:14
+msgid "Access utilities for managing and cleaning up tiered pricing data."
+msgstr "访问用于管理和清理分层定价数据的实用程序。"
+
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:40
+msgid "Default variation"
+msgstr "默认变化"
+
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:50
+msgid "Search variations&hellip;"
+msgstr "搜索变体&hellip;"
+
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:69
+msgid "Display this variation's pricing before attributes are selected. The variation itself won't be pre-selected."
+msgstr "在选择属性之前显示此变体的定价。变体本身不会被预先选择。"
+
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:78
+msgid "Variations share pricing"
+msgstr "股票定价的变化"
+
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:79
+msgid "Use the default variation's pricing for all variations to prevent reloading the pricing table."
+msgstr "对所有变体使用默认变体的定价，以防止重新加载定价表。"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:98
+msgid "Additional Options"
+msgstr "附加选项"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:116
+msgid "Pricing layout"
+msgstr "定价布局"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:117
+msgid "Override the global layout for this specific product."
+msgstr "覆盖此特定产品的全局布局。"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:133
+msgid "Singular (e.g. piece)"
+msgstr "单数（例如，一块）"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:139
+msgid "Plural (e.g. pieces)"
+msgstr "复数（例如，pieces）"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:150
+msgid "Displayed next to quantities. Leave empty to inherit global settings."
+msgstr "显示在数量旁边。留空以继承全局设置。"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:172
+msgid "Upgrade your plan to unlock all great features."
+msgstr "升级您的计划以解锁所有出色的功能。"
+
+#: src/Admin/ProductPage/TieredPricingTab.php:181
+#: views/addons/category-tiers/add-free.php:43
+#: views/addons/category-tiers/edit-free.php:59
+msgid "Upgrade"
+msgstr "升级"
+
+#: src/Admin/Tips/Tips/DefaultVariationTip.php:42
+msgid "You can show tiered pricing even if a variation is not selected."
+msgstr "即使未选择变体，您也可以显示分级定价。"
+
+#: src/Admin/Tips/Tips/DefaultVariationTip.php:48
+msgid "Tiered pricing is related to each variation, so a variation must be selected to show the pricing table. However, you can show the tiered pricing before users choose a variation by enabling the <strong>default variation</strong> option in the <strong>Additional Options</strong> section below."
+msgstr "分级定价与每个变体相关，因此必须选择一个变体才能显示定价表。不过，您可以通过启用下面<strong>其他选项</strong>部分中的<strong>默认变体</strong>选项，在用户选择变体之前显示分级定价。"
+
+#: src/Admin/Tips/Tips/VariationsPricingCalculationTip.php:46
+msgid "You can make tiered pricing calculations by considering all variations as one product."
+msgstr "您可以通过将所有变体视为一种产品来进行分层定价计算。"
+
+#: src/Admin/Tips/Tips/VariationsPricingCalculationTip.php:52
+msgid "For example, if you have a variable product with <strong>3 variations</strong>, the price will be calculated for <strong>a combination of those variations</strong> in the cart, not individually."
+msgstr "例如，如果您的可变产品具有<strong>3 个变体</strong>，则系统将针对购物车中的<strong>这些变体的组合</strong>计算价格，而不是单独计算。"
+
+#: src/Admin/Tips/Tips/VariationsPricingCalculationTip.php:60
+msgid "Find more in the settings"
+msgstr "在设置中找到更多"
+
+#: src/Admin/WelcomePage/WelcomePage.php:14
+msgid "Welcome to Tiered Pricing for WooCommerce!"
+msgstr "欢迎使用 WooCommerce 分级定价！"
+
+#: src/Admin/WelcomePage/WelcomePage.php:15
+msgid "Hidden Admin Page"
+msgstr "隐藏管理页面"
+
+#: src/Core/Cache.php:53
+msgid "Cache has been purged successfully"
+msgstr "缓存已成功清除"
+
+#: src/Integrations/Plugins/AddifyRequestAQuote.php:37
+msgid "Apply tiered pricing discounts when users request a quote through the Addify Request a Quote form."
+msgstr "当用户通过 Addify 请求报价表单请求报价时，应用分级定价折扣。"
+
+#: src/Integrations/Plugins/AeliaMulticurrency.php:46
+msgid "Convert and display tiered pricing correctly when using the Aelia Currency Switcher."
+msgstr "使用 Aelia 货币切换器时正确转换和显示分层定价。"
+
+#: src/Integrations/Plugins/Curcy.php:79
+msgid "Convert and display tiered pricing correctly when using the CURCY multicurrency plugin."
+msgstr "使用 CURCY 多货币插件时正确转换和显示分层定价。"
+
+#: src/Integrations/Plugins/DiscountRulesForWooCommerce.php:37
+msgid "Discount Rules for WooCommerce"
+msgstr "WooCommerce 折扣规则"
+
+#: src/Integrations/Plugins/DiscountRulesForWooCommerce.php:41
+msgid "Prevent price recalculations for free promotional items added to the cart by Discount Rules for WooCommerce."
+msgstr "防止根据 WooCommerce 折扣规则添加到购物车的免费促销商品的价格重新计算。"
+
+#: src/Integrations/Plugins/Elementor/ElementorIntegration.php:13
+msgid "Add a dedicated Elementor widget to display the tiered pricing table with customizable design options."
+msgstr "添加专用的 Elementor 小部件以显示具有可自定义设计选项的分层定价表。"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:15
+#: src/Services/SystemStatusReportService.php:28
+#: views/admin/banners/premium-thanking-banner.php:18
+#: views/admin/notifications/activation-notification.php:26
+#: views/admin/welcome-page/welcome-page.php:575
+msgid "Tiered Pricing Table"
+msgstr "分级定价表"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:37
+msgid "Main"
+msgstr "主要的"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:42
+msgid "Product ID"
+msgstr "产品编号"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:45
+msgid "Leave empty to use the current product."
+msgstr "留空以使用当前产品。"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:49
+#: src/Blocks/build/index.js:768
+#: src/Blocks/src/panels/MainOptionsPanel/DisplayTypePanel.js:35
+#: src/Blocks/build/index.js:513
+msgid "Display type"
+msgstr "显示类型"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:53
+#: src/TierPricingTablePlugin.php:263
+#: src/Blocks/build/index.js:751
+#: src/Blocks/src/panels/MainOptionsPanel/DisplayTypePanel.js:11
+#: src/Blocks/build/index.js:489
+msgid "Table"
+msgstr "桌子"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:54
+#: src/TierPricingTablePlugin.php:264
+#: src/Blocks/build/index.js:754
+#: src/Blocks/src/panels/MainOptionsPanel/DisplayTypePanel.js:15
+#: src/Blocks/build/index.js:493
+msgid "Blocks"
+msgstr "积木"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:55
+#: src/TierPricingTablePlugin.php:265
+#: src/Blocks/build/index.js:757
+#: src/Blocks/src/panels/MainOptionsPanel/DisplayTypePanel.js:19
+#: src/Blocks/build/index.js:497
+msgid "Options"
+msgstr "选项"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:56
+#: src/TierPricingTablePlugin.php:266
+#: views/admin/welcome-page/welcome-page.php:869
+#: src/Blocks/build/index.js:760
+#: src/Blocks/src/panels/MainOptionsPanel/DisplayTypePanel.js:23
+#: src/Blocks/build/index.js:501
+msgid "Dropdown"
+msgstr "下拉菜单"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:57
+msgid "Horizontal-table"
+msgstr "卧式工作台"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:63
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:307
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:116
+#: src/Blocks/build/index.js:781
+#: src/Blocks/src/panels/MainOptionsPanel/DisplayTypePanel.js:51
+#: src/Blocks/build/index.js:529
+msgid "Title"
+msgstr "标题"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:66
+msgid "Tiered pricing title. Leave empty to use default title."
+msgstr "分级定价标题。留空以使用默认标题。"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:71
+msgid "Show total"
+msgstr "显示总计"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:75
+msgid "Show total for each option when an option is active."
+msgstr "当选项处于活动状态时，显示每个选项的总计。"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:81
+msgid "Show prices without a discount"
+msgstr "显示无折扣的价格"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:85
+msgid "Show price with no discount in the option."
+msgstr "显示选项中没有折扣的价格。"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:89
+msgid "Show the default option"
+msgstr "显示默认选项"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:93
+msgid "Show the option without a discount (option with a regular product price)"
+msgstr "显示无折扣的选项（具有常规产品价格的选项）"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:99
+msgid "Active tier color"
+msgstr "活动层颜色"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:102
+msgid "Leave empty to use the default color."
+msgstr "留空以使用默认颜色。"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:106
+msgid "Quantity column text"
+msgstr "数量栏文字"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:109
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:117
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:125
+msgid "Leave empty to use default title."
+msgstr "留空以使用默认标题。"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:114
+msgid "Discount column text"
+msgstr "折扣栏文字"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:122
+msgid "Price column text"
+msgstr "价格栏文字"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:136
+msgid "Unit label (singular)"
+msgstr "单位标签（单数）"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:139
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:147
+msgid "Leave empty to use default"
+msgstr "留空以使用默认值"
+
+#: src/Integrations/Plugins/Elementor/ElementorWidget.php:144
+msgid "Unit label (plural)"
+msgstr "单位标签（复数）"
+
+#: src/Integrations/Plugins/MixMatch.php:30
+msgid "Apply tiered pricing rules correctly to Mix and Match products."
+msgstr "正确地将分层定价规则应用于混合搭配产品。"
+
+#: src/Integrations/Plugins/ProductBundles.php:108
+msgid "Apply tiered pricing discounts correctly to WooCommerce Product Bundles."
+msgstr "将分级定价折扣正确应用于 WooCommerce 产品包。"
+
+#: src/Integrations/Plugins/RankMath/RankMath.php:19
+msgid "Add tiered pricing data to the product schema and introduce <b>%lowest_price%</b> and <b>%price_range%</b> variables for SEO."
+msgstr "将分层定价数据添加到产品架构中，并引入用于 SEO 的 <b>%lowest_price%</b> 和 <b>%price_range%</b> 变量。"
+
+#: src/Integrations/Plugins/RankMath/Settings.php:21
+msgid "Configure the integration with Rank Math SEO plugin to use tiered pricing variables in your SEO metadata."
+msgstr "配置与 Rank Math SEO 插件的集成，以在 SEO 元数据中使用分层定价变量。"
+
+#: src/Integrations/Plugins/RankMath/Settings.php:26
+#: src/Integrations/Plugins/SEOPress/Settings.php:26
+#: src/Integrations/Plugins/Yoast/Settings.php:26
+msgid "Enable custom variables"
+msgstr "启用自定义变量"
+
+#: src/Integrations/Plugins/RankMath/Settings.php:30
+msgid "Enable you to use the %lowest_price% and %price_range% variables to display the lowest price and price range of products with tiered pricing in Rank Math SEO metadata."
+msgstr "使您能够使用 %lowest_price% 和 %price_range% 变量在 Rank Math SEO 元数据中显示具有分级定价的产品的最低价格和价格范围。"
+
+#: src/Integrations/Plugins/RankMath/Settings.php:34
+#: src/Integrations/Plugins/SEOPress/Settings.php:34
+#: src/Integrations/Plugins/Yoast/Settings.php:34
+msgid "Enhance product schema with tiered pricing offers"
+msgstr "通过分级定价优惠增强产品架构"
+
+#: src/Integrations/Plugins/RankMath/Settings.php:38
+#: src/Integrations/Plugins/SEOPress/Settings.php:38
+#: src/Integrations/Plugins/Yoast/Settings.php:39
+msgid "Enhance the product schema with tiered pricing offers. Adds an offer for each tier and the lowest price as the main offer."
+msgstr "通过分级定价优惠增强产品架构。为每个级别添加报价，并将最低价格作为主要报价。"
+
+#: src/Integrations/Plugins/SEOPress/SEOPress.php:18
+msgid "Add tiered pricing data to SEOPress and introduce <b>%%lowest_price%%</b> and <b>%%price_range%%</b> variables for SEO."
+msgstr "将分层定价数据添加到 SEOPress 并引入 <b>%%lowest_price%%</b> 和 <b>%%price_range%%</b> SEO 变量。"
+
+#: src/Integrations/Plugins/SEOPress/SEOPressLowestPriceTag.php:12
+msgid "Displays the lowest price of the product"
+msgstr "显示产品的最低价格"
+
+#: src/Integrations/Plugins/SEOPress/SEOPressPriceRangeTag.php:12
+msgid "Product price range"
+msgstr "产品价格范围"
+
+#: src/Integrations/Plugins/SEOPress/Settings.php:21
+msgid "Configure the integration with SEOPress plugin to use tiered pricing variables in your SEO metadata."
+msgstr "配置与 SEOPress 插件的集成，以在 SEO 元数据中使用分层定价变量。"
+
+#: src/Integrations/Plugins/SEOPress/Settings.php:30
+msgid "Enable you to use the %%lowest_price%% and %%price_range%% variables to display the lowest price and price range of products with tiered pricing in SEOPress metadata."
+msgstr "使您能够使用 %%lowest_price%% 和 %%price_range%% 变量在 SEOPress 元数据中显示具有分级定价的产品的最低价格和价格范围。"
+
+#: src/Integrations/Plugins/WCCS.php:50
+msgid "Convert and display tiered pricing correctly when using the WooCommerce Currency Switcher by WP Experts."
+msgstr "使用 WP Experts 的 WooCommerce 货币切换器时，正确转换和显示分层定价。"
+
+#: src/Integrations/Plugins/WCPA.php:19
+msgid "Calculate tiered pricing accurately when custom product add-ons are selected."
+msgstr "选择自定义产品附加组件时，准确计算分层定价。"
+
+#: src/Integrations/Plugins/WCPProductBundles.php:34
+msgid "Apply tiered pricing discounts correctly to WPC Product Bundles."
+msgstr "将分级定价折扣正确应用于 WPC 产品捆绑包。"
+
+#: src/Integrations/Plugins/WombatProductAddons.php:46
+msgid "Calculate tiered pricing accurately when using StudioWombat Advanced Product Fields."
+msgstr "使用 StudioWombat 高级产品字段时准确计算分层定价。"
+
+#: src/Integrations/Plugins/WooCommerceDeposits.php:10
+msgid "Calculate deposit amounts and remaining balances correctly based on tiered pricing rules."
+msgstr "根据阶梯定价规则，正确计算存款金额和剩余余额。"
+
+#: src/Integrations/Plugins/WooCommerceProductAddons.php:65
+msgid "Calculate tiered pricing accurately when WooCommerce Product Add-ons are selected."
+msgstr "选择 WooCommerce 产品附加组件时，准确计算分层定价。"
+
+#: src/Integrations/Plugins/WOOCS.php:65
+msgid "Convert and display tiered pricing correctly when using the FOX WooCommerce Currency Switcher."
+msgstr "使用 FOX WooCommerce 货币切换器时正确转换和显示分层定价。"
+
+#: src/Integrations/Plugins/WPAllImport.php:102
+#: src/Integrations/Plugins/WPAllImport.php:202
+msgid "Fixed Tiered prices"
+msgstr "固定阶梯价格"
+
+#: src/Integrations/Plugins/WPAllImport.php:105
+#: src/Integrations/Plugins/WPAllImport.php:207
+msgid "The format for the rules must be the following: quantity:price,quantity:price. For example: \"10:5,20:15\" where 10 and 20 are quantities and 5 and 15 are prices for those quantities."
+msgstr "规则的格式必须如下：数量：价格，数量：价格。例如：“10:5,20:15”，其中 10 和 20 是数量，5 和 15 是这些数量的价格。"
+
+#: src/Integrations/Plugins/WPAllImport.php:109
+#: src/Integrations/Plugins/WPAllImport.php:212
+msgid "Percentage Tiered prices"
+msgstr "百分比分级价格"
+
+#: src/Integrations/Plugins/WPAllImport.php:112
+#: src/Integrations/Plugins/WPAllImport.php:217
+msgid "Format for the rules must be the following: quantity:percent_discount,quantity:percent_discount. For example: \"10:5,20:15\" where 10 and 20 are quantities and 5 and 15 are amounts of discount."
+msgstr "规则的格式必须如下：数量：百分比折扣，数量：百分比折扣。例如：“10:5,20:15”，其中 10 和 20 是数量，5 和 15 是折扣金额。"
+
+#: src/Integrations/Plugins/WPAllImport.php:125
+#: src/Integrations/Plugins/WPAllImport.php:233
+msgid "The field must be either \"fixed\" or \"percentage\"."
+msgstr "该字段必须是“固定”或“百分比”。"
+
+#: src/Integrations/Plugins/WPAllImport.php:128
+#: src/Integrations/Plugins/WPAllImport.php:237
+msgid "Minimum product quantity"
+msgstr "最小产品数量"
+
+#: src/Integrations/Plugins/WPAllImport.php:133
+#: src/Integrations/Plugins/WPAllImport.php:244
+msgid "The field must contain an integer value."
+msgstr "该字段必须包含整数值。"
+
+#: src/Integrations/Plugins/WPAllImport.php:148
+#: views/admin/components/regular-pricing-form.php:28
+msgid "Pricing type"
+msgstr "定价类型"
+
+#: src/Integrations/Plugins/WPAllImport.php:155
+msgid "The field must be either \"fixed\" or \"percentage\". This affect what fields will be used to grant a discount: sale and regular prices or percentage discount."
+msgstr "该字段必须是“固定”或“百分比”。这会影响哪些字段将用于授予折扣：销售价格和常规价格或百分比折扣。"
+
+#: src/Integrations/Plugins/WPAllImport.php:165
+msgid "Regular price for the role"
+msgstr "角色的正常价格"
+
+#: src/Integrations/Plugins/WPAllImport.php:174
+msgid "Sale price for the role"
+msgstr "角色售价"
+
+#: src/Integrations/Plugins/WPAllImport.php:178
+#: src/PricingTable.php:255
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:202
+#: views/admin/components/regular-pricing-form.php:75
+msgid "Discount (%)"
+msgstr "折扣 （％）"
+
+#: src/Integrations/Plugins/WPAllImport.php:197
+msgid "Percentage discount for the role."
+msgstr "角色的百分比折扣。"
+
+#: src/Integrations/Plugins/WPAllImport.php:566
+msgid "Role-based import"
+msgstr "基于角色的导入"
+
+#: src/Integrations/Plugins/WPAllImport.php:888
+msgid "Import and update tiered pricing rules using WP All Import."
+msgstr "使用 WP All Import 导入和更新分层定价规则。"
+
+#: src/Integrations/Plugins/WPMLMulticurrency.php:81
+msgid "Convert and display tiered pricing correctly when using WPML Multicurrency."
+msgstr "使用 WPML 多货币时正确转换和显示分层定价。"
+
+#: src/Integrations/Plugins/YithRequestAQuote.php:85
+msgid "Apply tiered pricing discounts when users request a quote through YITH Request a Quote."
+msgstr "当用户通过 YITH 请求报价请求报价时，应用分级定价折扣。"
+
+#: src/Integrations/Plugins/Yoast/Settings.php:21
+msgid "Configure the integration with Yoast SEO plugin to use tiered pricing variables in your SEO metadata."
+msgstr "配置与 Yoast SEO 插件的集成，以在 SEO 元数据中使用分层定价变量。"
+
+#: src/Integrations/Plugins/Yoast/Settings.php:30
+msgid "Enable you to use the %%lowest_price%% and %%price_range%% variables to display the lowest price and price range of products with tiered pricing in Yoast SEO metadata."
+msgstr "使您能够使用 %%lowest_price%% 和 %%price_range%% 变量在 Yoast SEO 元数据中显示具有分级定价的产品的最低价格和价格范围。"
+
+#: src/Integrations/Plugins/Yoast/Yoast.php:18
+msgid "Add tiered pricing data to the Yoast product schema and introduce <b>%%lowest_price%%</b> and <b>%%price_range%%</b> variables for SEO."
+msgstr "将分层定价数据添加到 Yoast 产品架构中，并引入用于 SEO 的 <b>%%lowest_price%%</b> 和 <b>%%price_range%%</b> 变量。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:75
+#: src/Managers/FormatPriceManager.php:292
+msgid "From"
+msgstr "从"
+
+#: src/Addons/CartUpsells/CartUpsellsService.php:202
+#: src/Addons/CartUpsells/UpsellsSubsection.php:43
+msgid "Buy <b>{tp_required_quantity}</b> more to get <b>{tp_next_price}</b> each"
+msgstr "多购买 <b>{tp_required_quantity}</b> 即可获得 <b>{tp_next_price}</b> 个"
+
+#. translators: %s: account page link
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersService.php:72
+#, php-format
+msgid "Please enter %s to make a purchase"
+msgstr "请输入 %s 进行购买"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersService.php:74
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:52
+msgid "your account"
+msgstr "你的帐户"
+
+#. translators: %s: login page url
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersService.php:85
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:70
+#, php-format
+msgid "%s see prices"
+msgstr "%s 查看价格"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersService.php:87
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:72
+msgid "Login"
+msgstr "登录"
+
+#: src/Services/SystemStatusReportService.php:35
+msgid "Activation date"
+msgstr "激活日期"
+
+#: src/Services/SystemStatusReportService.php:54
+msgid "Seen notifications"
+msgstr "已查看通知"
+
+#: src/Services/SystemStatusReportService.php:67
+msgid "Tips hidden"
+msgstr "隐藏提示"
+
+#: src/Settings/CustomOptions/TPTQuantityMeasurementField.php:62
+msgid "Singular"
+msgstr "单数"
+
+#: src/Settings/CustomOptions/TPTQuantityMeasurementField.php:69
+msgid "e.g., piece"
+msgstr "例如，一块"
+
+#: src/Settings/CustomOptions/TPTQuantityMeasurementField.php:74
+msgid "Plural"
+msgstr "复数"
+
+#: src/Settings/CustomOptions/TPTQuantityMeasurementField.php:81
+msgid "e.g., pieces"
+msgstr "例如，碎片"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:142
+msgid "{tp_quantity} - range or a static quantity of the current pricing tier."
+msgstr "{tp_quantity} - 当前定价层的范围或静态数量。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:149
+msgid "{tp_discount} - current tier`s percentage discount."
+msgstr "{tp_discount} - 当前级别的折扣百分比。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:155
+msgid "Rounded percentage discount"
+msgstr "四舍五入百分比折扣"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:156
+msgid "{tp_rounded_discount} - current tier`s rounded percentage discount."
+msgstr "{tp_rounded_discount} - 当前层级的四舍五入百分比折扣。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:162
+msgid "Required quantity"
+msgstr "所需数量"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:163
+msgid "{tp_required_quantity} - required quantity to add a next tiered pricing."
+msgstr "{tp_required_quantity} - 添加下一个分级定价所需的数量。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:169
+msgid "Next price"
+msgstr "下一个价格"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:170
+msgid "{tp_next_price} - next tiered pricing price user can get if they add required quantity."
+msgstr "{tp_next_price} - 用户添加所需数量后可以获得的下一个分级定价价格。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:176
+msgid "Next discount"
+msgstr "下次折扣"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:177
+msgid "{tp_next_discount} - next discount if they add required quantity."
+msgstr "{tp_next_discount} - 如果他们添加所需数量，则下一个折扣。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:183
+msgid "Next actual discount"
+msgstr "下次实际折扣"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:184
+msgid "{tp_actual_discount} - discount based on the original product price."
+msgstr "{tp_actual_discount} - 基于原始产品价格的折扣。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:189
+msgid "Save price"
+msgstr "节省价格"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:190
+msgid "{tp_ys_price} - difference between regular and current price."
+msgstr "{tp_ys_price} - 常规价格和当前价格之间的差异。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:195
+msgid "Total save price"
+msgstr "总节省价格"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:196
+msgid "{tp_ys_total_price} - difference between regular and current price multiplied by quantity."
+msgstr "{tp_ys_total_price} - 常规价格与当前价格之间的差额乘以数量。"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:206
+msgid "{tp_price} - Tier price for one piece"
+msgstr "{tp_price} - 一件的分级价格"
+
+#: src/Settings/CustomOptions/TPTTextTemplate.php:211
+msgid "It will use Unit label from products if you set it."
+msgstr "如果您设置它，它将使用产品的单位标签。"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:18
+msgid "You can disable or enable specific plugin features."
+msgstr "您可以禁用或启用特定的插件功能。"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:66
+msgid "Cache"
+msgstr "缓存"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:67
+msgid "Cache improves performance making the plugin not calculate data on each request. Disable to debug issues."
+msgstr "缓存提高了性能，使插件不再计算每个请求的数据。禁用调试问题。"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:72
+#: src/Settings/Sections/Advanced/AdvancedSection.php:99
+msgid "Enabled"
+msgstr "启用"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:78
+msgid "Purge"
+msgstr "清除"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:79
+msgid "Purge cache"
+msgstr "清除缓存"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:93
+msgid "Debug"
+msgstr "调试"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:94
+msgid "Debug mode is useful when you need to track what pricing rule is applying for a cart item."
+msgstr "当您需要跟踪购物车商品应用的定价规则时，调试模式非常有用。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:110
+msgid "Calculations"
+msgstr "计算"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:24
+msgid "Combine variations for quantity calculation"
+msgstr "组合变量进行数量计算"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:29
+msgid "Treat all variations of a variable product as the same item when calculating the total cart quantity for tiered pricing rules."
+msgstr "在计算分级定价规则的购物车总数量时，将可变产品的所有变体视为同一商品。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:52
+msgid "Calculate percentage discounts from regular price"
+msgstr "计算正常价格的折扣百分比"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:60
+msgid "Round calculated prices"
+msgstr "舍入计算价格"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:64
+msgid "Round calculated percentage discounts to prevent minor display discrepancies with standard WooCommerce pricing."
+msgstr "对计算的百分比折扣进行四舍五入，以防止显示与标准 WooCommerce 定价出现细微差异。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:80
+msgid "Calculate percentage discounts using the product's regular price, ignoring any active sale prices."
+msgstr "使用产品的正常价格计算折扣百分比，忽略任何有效的销售价格。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:86
+msgid "Example: Regular price is $100.00, sale price is $90.00. Rule: 20% off."
+msgstr "示例：正常价格为 100.00 美元，促销价为 90.00 美元。规则：20% 折扣。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:91
+msgid "Disabled (Default): Discount applies to the sale price ($90.00 - 20% = $72.00)."
+msgstr "禁用（默认）：折扣适用于销售价格 ($90.00 - 20% = $72.00)。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:96
+msgid "Enabled: Discount applies to the regular price ($100.00 - 20% = $80.00)."
+msgstr "启用：折扣适用于正常价格 ($100.00 - 20% = $80.00)。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:117
+msgid "How global pricing rules behave."
+msgstr "全球定价规则如何运作。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:121
+msgid "Prioritize global pricing rules"
+msgstr "优先考虑全球定价规则"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:123
+msgid "Apply global pricing rules before product-level rules. If disabled, individual product rules take precedence over global rules."
+msgstr "在产品级规则之前应用全局定价规则。如果禁用，单个产品规则优先于全局规则。"
+
+#: src/Settings/Sections/GeneralSection/GeneralSection.php:86
+msgid "General"
+msgstr "一般的"
+
+#: src/Settings/Sections/GeneralSection/GeneralSection.php:104
+msgid "<strong>Buy {tp_quantity} pieces for {tp_price}</strong>"
+msgstr "<strong>以 {tp_price} 购买 {tp_quantity} 件</strong>"
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:14
+#: src/Addons/TieredPricingCart/TieredPricingCartAddon.php:12
+msgid "Manage how tiered pricing and discounts appear on the cart page."
+msgstr "管理分级定价和折扣在购物车页面上的显示方式。"
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:26
+msgid "Show a crossed-out regular price next to the discounted tiered price in the cart. For example: "
+msgstr "在购物车中的折扣分级价格旁边显示划掉的正常价格。例如："
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:34
+msgid "Show a crossed-out regular subtotal next to the discounted subtotal in the cart."
+msgstr "在购物车中的折扣小计旁边显示划掉的常规小计。"
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:42
+msgid "When crossing out a price, always display the regular price rather than a sale price."
+msgstr "划掉价格时，请始终显示正常价格而不是促销价。"
+
+#: src/Addons/CatalogPrices/CatalogPricesAddon.php:12
+msgid "Manage how tiered pricing appears in catalogs, loops, and widgets."
+msgstr "管理分层定价在目录、循环和小部件中的显示方式。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:51
+msgid "Show lowest price"
+msgstr "显示最低价格"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:52
+msgid "Show range (lowest to highest)"
+msgstr "显示范围（最低到最高）"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:76
+msgid "Text displayed before the lowest price (e.g., <b>From $10.00</b>)."
+msgstr "最低价格之前显示的文本（例如，<b>起价 10.00 美元</b>）。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:19
+msgid "Customize the appearance and behavior of your tiered pricing tables."
+msgstr "自定义分层定价表的外观和行为。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:42
+msgid "Choose the default visual layout. You can also customize this individually per product."
+msgstr "选择默认的视觉布局。您还可以针对每个产品单独进行自定义。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:53
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:67
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:81
+msgid "Style #1"
+msgstr "风格#1"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:54
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:68
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:82
+msgid "Style #2"
+msgstr "风格#2"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:55
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:69
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:83
+msgid "Style #3"
+msgstr "风格#3"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:56
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:70
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:84
+msgid "Style #4"
+msgstr "风格#4"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:110
+msgid "Above add to cart button"
+msgstr "上方添加到购物车按钮"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:111
+msgid "Below add to cart button"
+msgstr "下面添加到购物车按钮"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:53
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:112
+msgid "Above add to cart form"
+msgstr "以上添加到购物车表格"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:54
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:113
+msgid "Below add to cart form"
+msgstr "下面添加到购物车表格"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:56
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:115
+msgid "Before product summary"
+msgstr "之前的产品总结"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:57
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:116
+msgid "After product summary"
+msgstr "产品总结后"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:117
+msgid "I display tiered pricing via shortcode/gutenberg/elementor"
+msgstr "我通过简码/gutenberg/elementor 显示分层定价"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:120
+msgid "Choose where you what tiered pricing be displayed on the product page."
+msgstr "选择在产品页面上显示的分级定价。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:145
+msgid "Tooltip icon color"
+msgstr "工具提示图标颜色"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:150
+msgid "Color of the icon."
+msgstr "图标的颜色。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:154
+msgid "Tooltip icon size (px)"
+msgstr "工具提示图标大小（像素）"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:159
+msgid "Size of the icon."
+msgstr "图标的大小。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:163
+msgid "Tooltip border"
+msgstr "工具提示边框"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:218
+msgid "Show the percentage discount in pricing blocks that offer a discount."
+msgstr "显示提供折扣的定价块中的百分比折扣。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:250
+msgid "Use the variables above to build the template for the pricing option."
+msgstr "使用上面的变量构建定价选项的模板。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:309
+msgid "Set up the first pricing tier template where a discount is not offered."
+msgstr "设置不提供折扣的第一个定价层模板。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:274
+msgid "Pricing string template"
+msgstr "定价字符串模板"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:286
+msgid "Use the variables above to build the template for the pricing string."
+msgstr "使用上面的变量构建定价字符串的模板。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:290
+msgid "Show first tier pricing string"
+msgstr "显示第一层定价字符串"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:294
+msgid "Show the tier with a regular product price. This is the first pricing tier where no discount is offered."
+msgstr "显示具有常规产品价格的层级。这是不提供折扣的第一个定价层。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:299
+msgid "First tier pricing string template"
+msgstr "第一层定价字符串模板"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:11
+msgid "Guest Users"
+msgstr "访客用户"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:15
+msgid "Manage pricing visibility and purchasing rules for guest (non-logged-in) users."
+msgstr "管理访客（未登录）用户的定价可见性和购买规则。"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:26
+msgid "Require login to purchase"
+msgstr "需要登录才能购买"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:34
+msgid "Guest add-to-cart label"
+msgstr "访客添加到购物车标签"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:38
+msgid "Change the default \"Add to cart\" button text for guest users."
+msgstr "更改访客用户的默认“添加到购物车”按钮文本。"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:40
+msgid "Leave empty to keep default"
+msgstr "留空以保留默认值"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:45
+msgid "Guest purchase error message"
+msgstr "访客购买错误消息"
+
+#. translators: %s: login page url
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:50
+#, php-format
+msgid "Please enter %s to make a purchase."
+msgstr "请输入 %s 进行购买。"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:56
+msgid "Hide prices for guests"
+msgstr "为客人隐藏价格"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:63
+msgid "Guest price message"
+msgstr "客人价格留言"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersSubsection.php:66
+msgid "This message will be displayed instead of the price for non-logged-in users."
+msgstr "对于未登录的用户，将显示此消息而不是价格。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:16
+msgid "Manage how tiered prices are displayed and behave on single product pages."
+msgstr "管理分层价格在单个产品页面上的显示方式和行为方式。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:27
+msgid "Price display format"
+msgstr "价格显示格式"
+
+#: src/Addons/PricingSummary/PricingSummaryAddon.php:8
+#: src/Addons/PricingSummary/SummarySubsection.php:11
+msgid "Pricing Summary"
+msgstr "定价摘要"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:15
+msgid "Show a summary block with total cost and unit price details."
+msgstr "显示包含总成本和单价详细信息的摘要块。"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:42
+msgid "The name is displaying above the summary block."
+msgstr "名称显示在摘要块上方。"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:51
+msgid "Above buy button"
+msgstr "上方购买按钮"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:52
+msgid "Below buy button"
+msgstr "下方购买按钮"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:60
+msgid "Where to display the summary block."
+msgstr "在哪里显示摘要块。"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:68
+msgid "Detailed"
+msgstr "详细的"
+
+#: views/admin/welcome-page/welcome-page.php:982
+msgid "Labels"
+msgstr "标签"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:75
+msgid "\"Total\" label"
+msgstr "“总计”标签"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:78
+#: views/frontend/tiered-pricing-options-style-1.php:161
+#: views/frontend/tiered-pricing-options-style-1.php:271
+#: views/frontend/tiered-pricing-options-style-2.php:161
+#: views/frontend/tiered-pricing-options-style-2.php:271
+#: views/frontend/tiered-pricing-options-style-3.php:161
+#: views/frontend/tiered-pricing-options-style-3.php:290
+#: views/frontend/tiered-pricing-options.php:161
+#: views/frontend/tiered-pricing-options.php:271
+msgid "Total:"
+msgstr "全部的："
+
+#: src/Addons/PricingSummary/SummarySubsection.php:82
+msgid "\"Each\" label"
+msgstr "“每个”标签"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:85
+msgid "Each: "
+msgstr "每个："
+
+#: src/Addons/CartUpsells/UpsellsSubsection.php:11
+msgid "Cart Upsell Messages"
+msgstr "购物车追加销售消息"
+
+#: src/Addons/CartUpsells/UpsellsSubsection.php:15
+msgid "Display targeted messages in the cart to encourage customers to reach the next discount tier."
+msgstr "在购物车中显示有针对性的消息，以鼓励客户达到下一个折扣级别。"
+
+#: src/Addons/CartUpsells/UpsellsSubsection.php:26
+msgid "Enable cart upsells"
+msgstr "启用购物车追加销售"
+
+#: src/Addons/CartUpsells/UpsellsSubsection.php:55
+msgid "Note: This feature is not compatible with the Gutenberg Cart/Checkout blocks."
+msgstr "注意：此功能与古腾堡购物车/结帐块不兼容。"
+
+#: src/Addons/CartUpsells/UpsellsSubsection.php:49
+msgid "Upsell text color"
+msgstr "加售文字颜色"
+
+#: src/Addons/YouSave/YouSaveAddon.php:8
+#: src/Addons/YouSave/YouSaveSubsection.php:11
+msgid "\"You Save\" Badge"
+msgstr "“你拯救了”徽章"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:15
+msgid "Show customers exactly how much they save when tiered discounts are applied."
+msgstr "向客户准确显示应用分级折扣后他们节省了多少钱。"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:30
+msgid "Show the difference between the regular price and a discounted price. You can also show it via the [tiered_price_you_save] shortcode."
+msgstr "显示正常价格和折扣价格之间的差异。您还可以通过 [tiered_price_you_save] 短代码显示它。"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:52
+msgid "You save {tp_ys_total_price} ({tp_ys_percentage_discount}%)"
+msgstr "您节省 {tp_ys_total_price} ({tp_ys_percentage_discount}%)"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:17
+msgid "General integrations"
+msgstr "一般集成"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:22
+msgid "Multicurrency integrations"
+msgstr "多币种集成"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:23
+msgid "Integrations with multicurrency plugins."
+msgstr "与多货币插件集成。"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:26
+msgid "Product Addons"
+msgstr "产品插件"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:27
+msgid "Integrations with product add-ons (custom fields) plugins."
+msgstr "与产品附加组件（自定义字段）插件集成。"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:31
+msgid "SEO"
+msgstr "搜索引擎优化"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:32
+msgid "Integrations with SEO plugins."
+msgstr "与 SEO 插件集成。"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:35
+msgid "Custom Product Types"
+msgstr "定制产品类型"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:36
+msgid "Integrations plugins that provides custom product types."
+msgstr "提供自定义产品类型的集成插件。"
+
+#: src/Settings/Sections/Integrations/IntegrationSection.php:92
+msgid "Integrations"
+msgstr "集成"
+
+#. translators: %s: required plugin
+#: src/TierPricingTablePlugin.php:82
+#, php-format
+msgid "<b>Tiered Pricing Table</b> plugin requires %s to be installed and activated."
+msgstr "<b>分层定价表</b>插件需要安装并激活%s。"
+
+#: src/TierPricingTablePlugin.php:136
+#: views/admin/notifications/activation-notification.php:56
+#: views/admin/welcome-page/welcome-page.php:595
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:267
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:34
+msgid "Settings"
+msgstr "设置"
+
+#: src/TierPricingTablePlugin.php:140
+msgid "Go Premium"
+msgstr "升级至高级版"
+
+#: src/TierPricingTablePlugin.php:153
+#: views/admin/banners/premium-thanking-banner.php:44
+#: views/admin/banners/upgrade-banner.php:59
+#: views/admin/notifications/activation-notification.php:60
+#: views/admin/welcome-page/welcome-page.php:601
+msgid "Documentation"
+msgstr "文档"
+
+#: src/TierPricingTablePlugin.php:156
+#: views/admin/welcome-page/welcome-page.php:609
+msgid "Contact Us"
+msgstr "联系我们"
+
+#: src/TierPricingTablePlugin.php:267
+#: views/admin/welcome-page/welcome-page.php:859
+msgid "Horizontal table"
+msgstr "卧式工作台"
+
+#: src/TierPricingTablePlugin.php:268
+#: views/admin/welcome-page/welcome-page.php:864
+msgid "Plain text"
+msgstr "纯文本"
+
+#: src/TierPricingTablePlugin.php:269
+msgid "Tooltip"
+msgstr "工具提示"
+
+#: views/addons/category-tiers/add-free.php:37
+msgid "Available only in the premium version (You can disable this block in the settings)"
+msgstr "仅在高级版本中可用（您可以在设置中禁用此块）"
+
+#: views/addons/category-tiers/add.php:69
+#: views/addons/category-tiers/edit-free.php:46
+#: views/addons/category-tiers/edit.php:100
+#: views/admin/components/tiered-pricing-rules-form.php:141
+msgid "New tier"
+msgstr "新等级"
+
+#: views/addons/category-tiers/add.php:76
+msgid ""
+"Assign percentage discounts for products that have this category. Rules can be overridden\n"
+"                in product."
+msgstr ""
+"为具有此类别的产品指定百分比折扣。规则可以被覆盖\n"
+"                在产品中。"
+
+#: views/addons/category-tiers/edit.php:135
+msgid "Assign percentage discounts for products that have this category. Rules can be overridden in product."
+msgstr "为具有此类别的产品指定百分比折扣。规则可以在产品中被覆盖。"
+
+#: views/addons/global-rules/tiered-pricing-tab.php:56
+msgid "Looking to set pricing rules for product categories or custom sets of products?"
+msgstr "希望为产品类别或自定义产品集设置定价规则？"
+
+#: views/addons/global-rules/tiered-pricing-tab.php:67
+msgid "Create a global pricing rule"
+msgstr "创建全球定价规则"
+
+#: views/addons/role-based-pricing/role-based-block.php:33
+msgid "Role-based pricing"
+msgstr "基于角色的定价"
+
+#: views/addons/role-based-pricing/role-based-block.php:64
+msgid "Set up specific pricing and rules for different user roles."
+msgstr "为不同的用户角色设置特定的定价和规则。"
+
+#: views/addons/role-based-pricing/role-based-block.php:75
+#: views/addons/user-based-pricing/user-based-block.php:89
+msgid "settings"
+msgstr "设置"
+
+#. translators: %s: settings link
+#: views/addons/role-based-pricing/role-based-block.php:77
+#, php-format
+msgid "You can disable this feature in the %s if you don't need role-based pricing."
+msgstr "如果您不需要基于角色的定价，您可以在 %s 中禁用此功能。"
+
+#: src/Addons/Tools/AdminUserHooks.php:15
+msgid "Manage Roles"
+msgstr "管理角色"
+
+#: views/addons/role-based-pricing/role-pricing-form.php:30
+#: views/addons/user-based-pricing/user-pricing-form.php:32
+msgid "Premium feature."
+msgstr "高级功能。"
+
+#: views/admin/banners/free-version-used-premium-available.php:16
+#: views/admin/banners/upgrade-banner.php:19
+msgid "Free Version"
+msgstr "免费版"
+
+#: views/admin/banners/free-version-used-premium-available.php:19
+msgid "Premium License Available"
+msgstr "可用高级许可证"
+
+#: views/admin/banners/free-version-used-premium-available.php:26
+msgid "You are currently running the free version. Download the Pro version from your <a href=\""
+msgstr "您当前运行的是免费版本。从您的 <a href=\" 下载专业版"
+
+#: src/Admin/ProductPage/RoleCustomerPricingTab.php:77
+#: views/admin/banners/premium-thanking-banner.php:20
+msgid "Premium"
+msgstr "优质的"
+
+#: views/admin/banners/premium-thanking-banner.php:25
+msgid "License is invalid or expired. Please check your account."
+msgstr "许可证无效或已过期。请检查您的帐户。"
+
+#: src/TierPricingTablePlugin.php:160
+#: views/admin/banners/premium-thanking-banner.php:36
+#: views/admin/banners/upgrade-banner.php:71
+msgid "My Account"
+msgstr "我的账户"
+
+#: views/admin/banners/premium-thanking-banner.php:40
+#: views/admin/banners/upgrade-banner.php:54
+msgid "Contact Support"
+msgstr "联系支持人员"
+
+#: views/admin/banners/upgrade-banner.php:21
+msgid "Unlock advanced features with Premium 🚀"
+msgstr "使用 Premium 解锁高级功能 🚀"
+
+#: views/admin/banners/upgrade-banner.php:28
+msgid "finish plugin activation"
+msgstr "完成插件激活"
+
+#. translators: %s: activation link
+#: views/admin/banners/upgrade-banner.php:35
+#, php-format
+msgid "Please %s to upgrade."
+msgstr "请%s升级。"
+
+#: src/Addons/RequestAQuote/views/frontend/quote-modal.php:37
+#: views/admin/banners/upgrade-banner.php:49
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:234
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:122
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:238
+msgid "Upgrade to Premium"
+msgstr "升级至高级版"
+
+#: views/admin/banners/upgrade-banner.php:65
+msgid "Opt-in"
+msgstr "选择加入"
+
+#: views/admin/components/minimum-order-quantity-form.php:27
+msgid "A minimum amount of a product a customer must order to fulfill the order."
+msgstr "客户为履行订单必须订购的产品的最低数量。"
+
+#: views/admin/components/regular-pricing-form.php:35
+#: views/admin/components/regular-pricing-form.php:52
+msgid "Flat prices"
+msgstr "统一价格"
+
+#: views/admin/components/regular-pricing-form.php:84
+msgid "Leave blank to not apply any"
+msgstr "留空不应用任何"
+
+#: views/admin/components/regular-pricing-form.php:94
+msgid "Set discounted price as"
+msgstr "将折扣价格设置为"
+
+#: views/admin/components/regular-pricing-form.php:137
+#: views/admin/components/regular-pricing-form.php:155
+msgid "Leave blank to keep unchanged"
+msgstr "留空保持不变"
+
+#: views/admin/components/tiered-pricing-rules-form.php:105
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/TieredPricingType.js:16
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+msgid "Fixed prices"
+msgstr "固定价格"
+
+#: views/admin/components/tiered-pricing-rules-form.php:110
+msgid "Percentage discounts"
+msgstr "折扣百分比"
+
+#: views/admin/components/tiered-pricing-rules-form.php:111
+msgid "Percentage discounts (only in premium version)"
+msgstr "百分比折扣（仅限高级版）"
+
+#: views/admin/components/tiered-pricing-rules-form.php:125
+msgid "Tiered price"
+msgstr "阶梯价格"
+
+#: views/admin/notifications/activation-notification.php:25
+msgid "Thanks for installing the"
+msgstr "感谢您安装"
+
+#: views/admin/notifications/activation-notification.php:41
+msgid "products"
+msgstr "产品"
+
+#: views/admin/notifications/activation-notification.php:44
+msgid "a global pricing rule"
+msgstr "全球定价规则"
+
+#. translators: %1$s: product links, %2$s: categories
+#: views/admin/notifications/activation-notification.php:47
+#, php-format
+msgid "Add quantity-based pricing rules directly in the %1$s or create %2$s that will work for product categories and user roles."
+msgstr "直接在 %1$s 中添加基于数量的定价规则或创建适用于产品类别和用户角色的 %2$s。"
+
+#: views/admin/welcome-page/welcome-page.php:581
+msgid "Tiered Pricing Table is a powerful tool that allows you to create quantity-based pricing for your WooCommerce products."
+msgstr "分层定价表是一个功能强大的工具，可让您为 WooCommerce 产品创建基于数量的定价。"
+
+#: views/admin/welcome-page/welcome-page.php:587
+msgid "With intuitive templates, flexible pricing rules, and advanced features, this plugin is a perfect fit for any type of store."
+msgstr "该插件具有直观的模板、灵活的定价规则和高级功能，非常适合任何类型的商店。"
+
+#: views/admin/welcome-page/welcome-page.php:803
+msgid "Prices automatically displayed on the product page:"
+msgstr "价格自动显示在产品页面上："
+
+#: views/admin/welcome-page/welcome-page.php:825
+msgid "Pricing Table"
+msgstr "定价表"
+
+#: views/admin/welcome-page/welcome-page.php:828
+msgid "Ability to add custom columns."
+msgstr "能够添加自定义列。"
+
+#: views/admin/welcome-page/welcome-page.php:838
+msgid "Pricing Blocks"
+msgstr "定价块"
+
+#: views/admin/welcome-page/welcome-page.php:843
+msgid "Pricing Blocks #2"
+msgstr "定价块#2"
+
+#: views/admin/welcome-page/welcome-page.php:848
+msgid "Pricing Options"
+msgstr "定价选项"
+
+#: views/admin/welcome-page/welcome-page.php:910
+msgid "Apply custom prices to any user role"
+msgstr "将自定义价格应用于任何用户角色"
+
+#: views/admin/welcome-page/welcome-page.php:935
+msgid "Apply custom prices in bulk for selected categories and users:"
+msgstr "为选定的类别和用户批量应用自定义价格："
+
+#: views/admin/welcome-page/welcome-page.php:990
+msgid "Cart"
+msgstr "大车"
+
+#: views/admin/welcome-page/welcome-page.php:999
+msgid "Catalog prices"
+msgstr "目录价格"
+
+#: views/admin/welcome-page/welcome-page.php:1009
+msgid "Product catalog (Category page)"
+msgstr "产品目录（分类页）"
+
+#: views/admin/welcome-page/welcome-page.php:1053
+msgid "Tier Labels & Badges"
+msgstr "等级标签和徽章"
+
+#: views/admin/welcome-page/welcome-page.php:1057
+msgid "Data Cleanup & Role Management Tools"
+msgstr "数据清理和角色管理工具"
+
+#: views/admin/welcome-page/welcome-page.php:1061
+msgid "Import \\ Export"
+msgstr "导入\\导出"
+
+#: views/admin/welcome-page/welcome-page.php:1065
+msgid "REST API"
+msgstr "休息API"
+
+#: views/admin/welcome-page/welcome-page.php:1069
+msgid "Admin-made orders supported"
+msgstr "支持管理员下单"
+
+#: views/admin/welcome-page/welcome-page.php:1073
+msgid "Built-in cache"
+msgstr "内置缓存"
+
+#: views/admin/welcome-page/welcome-page.php:1081
+msgid "Shortcode \\ Gutenberg \\ Elementor"
+msgstr "简码\\古腾堡\\Elementor"
+
+#: views/admin/welcome-page/welcome-page.php:1085
+msgid "Hide prices for logged-out users"
+msgstr "隐藏注销用户的价格"
+
+#: views/admin/welcome-page/welcome-page.php:1089
+msgid "Works with any theme"
+msgstr "适用于任何主题"
+
+#: views/admin/welcome-page/welcome-page.php:1093
+msgid "Debug mode"
+msgstr "调试模式"
+
+#. translators: %d: discount amount
+#: views/frontend/tiered-pricing-blocks-style-1.php:126
+#: views/frontend/tiered-pricing-blocks-style-1.php:208
+#: views/frontend/tiered-pricing-blocks-style-2.php:124
+#: views/frontend/tiered-pricing-blocks-style-2.php:205
+#: views/frontend/tiered-pricing-blocks-style-4.php:108
+#: views/frontend/tiered-pricing-blocks-style-4.php:205
+#: views/frontend/tiered-pricing-blocks-style-5.php:108
+#: views/frontend/tiered-pricing-blocks-style-5.php:205
+#: views/frontend/tiered-pricing-blocks-style-6.php:108
+#: views/frontend/tiered-pricing-blocks-style-6.php:205
+#: views/frontend/tiered-pricing-blocks.php:110
+#: views/frontend/tiered-pricing-blocks.php:206
+#, php-format
+msgid "(%d%% off)"
+msgstr "（%d%% 折扣）"
+
+#. translators: %d: discount amount
+#: views/frontend/tiered-pricing-blocks-style-3.php:98
+#: views/frontend/tiered-pricing-blocks-style-3.php:198
+#: views/frontend/tiered-pricing-options-style-3.php:243
+#, php-format
+msgid "%d%% off"
+msgstr "%d%% 折扣"
+
+#: src/Addons/CartUpsells/CartUpsellsAddon.php:8
+msgid "Cart Upsells"
+msgstr "购物车追加销售"
+
+#: src/Addons/CartUpsells/CartUpsellsAddon.php:12
+msgid "Display an upsell message in the cart indicating how many items are needed to reach the next pricing tier."
+msgstr "在购物车中显示追加销售消息，指示需要多少商品才能达到下一个定价层。"
+
+#: src/Addons/CustomColumns/Admin/CustomColumnsAdmin.php:24
+msgid "Add Custom Columns"
+msgstr "添加自定义列"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:489
+msgid "Set Custom Pricing"
+msgstr "设置自定义定价"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:490
+msgid "Set custom regular and tiered pricing for matching products."
+msgstr "为匹配产品设置自定义常规定价和分级定价。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:495
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:306
+msgid "Select Products"
+msgstr "选择产品"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:496
+msgid "Target specific products, categories, tags, or brands. Leave empty to apply store-wide."
+msgstr "定位特定产品、类别、标签或品牌。留空以适用于全店范围。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:501
+msgid "Filter Users"
+msgstr "过滤用户"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Form.php:507
+msgid "Enforce minimum, maximum, and step increments for purchasing."
+msgstr "强制执行采购的最小、最大和步骤增量。"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersAddon.php:8
+msgid "Non-Logged-In Users"
+msgstr "未登录用户"
+
+#: src/Addons/NonLoggedInUsers/NonLoggedInUsersAddon.php:12
+msgid "Hide prices or prevent purchasing for users who are not logged in."
+msgstr "隐藏价格或阻止未登录的用户购买。"
+
+#: src/Addons/PricingSummary/PricingSummaryAddon.php:12
+msgid "Display a dynamic pricing summary showing the total cost of the selected quantity."
+msgstr "显示动态定价摘要，显示所选数量的总成本。"
+
+#: src/Addons/TieredPricingCart/TieredPricingCartAddon.php:8
+msgid "Cart Display Options"
+msgstr "购物车显示选项"
+
+#: src/Addons/YouSave/YouSaveAddon.php:12
+msgid "Display a badge showing customers how much they save when tiered pricing is applied."
+msgstr "显示一个徽章，向客户显示应用分级定价后可以节省多少费用。"
+
+#: src/PricingTable.php:414
+msgid "Pricing Conflict Detected: Your Minimum Order Quantity is equal to or greater than your first pricing tier."
+msgstr "检测到定价冲突：您的最低订购数量等于或大于您的第一定价层。"
+
+#: src/PricingTable.php:422
+msgid "To fix this, please ensure your first tiered pricing rule starts at a higher quantity than your Minimum Order Quantity."
+msgstr "要解决此问题，请确保您的第一级定价规则的起始数量高于您的最低订购数量。"
+
+#: src/PricingTable.php:426
+msgid "Why?"
+msgstr "为什么？"
+
+#: src/PricingTable.php:427
+msgid "The plugin automatically creates a base tier using your standard WooCommerce product price. This base tier covers any quantities ordered between the Minimum Order Quantity and your first discounted tier."
+msgstr "该插件使用您的标准 WooCommerce 产品价格自动创建基础层。此基本层涵盖最低订购数量和第一个折扣层之间的任何订购数量。"
+
+#: src/PricingTable.php:431
+msgid "This notice is only visible to store administrators."
+msgstr "此通知仅对商店管理员可见。"
+
+#: src/Settings/Sections/Advanced/AdvancedSection.php:17
+#: src/Settings/Sections/Advanced/AdvancedSection.php:43
+msgid "Modules"
+msgstr "模块"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:85
+msgid "Style #5"
+msgstr "风格#5"
+
+#: views/addons/role-based-pricing/role-pricing-form.php:32
+#: views/addons/user-based-pricing/user-pricing-form.php:34
+msgid "Upgrade to premium"
+msgstr "升级至高级版"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:40
+msgid "Column Title"
+msgstr "栏目标题"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:43
+msgid "e.g., Discounted Price"
+msgstr "例如，折扣价"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:49
+msgid "Column Data Type"
+msgstr "列数据类型"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:52
+msgid "Select column type..."
+msgstr "选择列类型..."
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:66
+msgid "Format"
+msgstr "格式"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:81
+msgid "Remove column"
+msgstr "删除列"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:230
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:119
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:234
+msgid "Premium Feature"
+msgstr "高级功能"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:230
+msgid "Upgrading to premium to unlock custom columns."
+msgstr "升级到高级版以解锁自定义列。"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:256
+msgid "No Custom Columns"
+msgstr "无自定义列"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:259
+msgid "Add custom columns to display extra information alongside your pricing tiers."
+msgstr "添加自定义列以在定价等级旁边显示额外信息。"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:262
+msgid "Add your first column"
+msgstr "添加您的第一列"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:165
+msgid "Columns saved successfully!"
+msgstr "列保存成功！"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:148
+msgid "Please upgrade to the Premium version to save custom columns."
+msgstr "请升级到高级版本以保存自定义列。"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:337
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:138
+#: src/Addons/RequestAQuote/js-source/src/components/GlobalSettings.js:44
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:482
+msgid "Saving..."
+msgstr "保存..."
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:337
+msgid "Save Columns"
+msgstr "保存列"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:340
+msgid "+ Add Column"
+msgstr "+ 添加栏目"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/role-based-pricing/Components/PremiumUpgradeNotice.js:7
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+msgid "Role-based pricing is a premium feature."
+msgstr "基于角色的定价是一项高级功能。"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/role-based-pricing/Components/PremiumUpgradeNotice.js:9
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+msgid "Upgrade to unlock"
+msgstr "升级解锁"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/TieredPricingForm.js:43
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+msgid "Add tier"
+msgstr "添加等级"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/TieredPricingType.js:13
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+msgid "Percentage"
+msgstr "百分比"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/Components/TieredPricingForm/TieredPricingType.js:13
+#: src/Addons/ReactProductEditorAddon/js/role-based-pricing/index.js:1
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/index.js:1
+msgid "Percentage (premium feature)"
+msgstr "百分比（高级功能）"
+
+#: src/Admin/ProductPage/RoleCustomerPricingTab.php:85
+#: src/Addons/ReactProductEditorAddon/js-source/src/upgrade-notice/edit.js:36
+#: src/Addons/ReactProductEditorAddon/js/upgrade-notice/index.js:1
+msgid "Upgrade Now"
+msgstr "立即升级"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:142
+msgid "Role-Based Tax Options"
+msgstr "基于角色的税收选项"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:144
+msgid "Override default tax options for specific user roles."
+msgstr "覆盖特定用户角色的默认税收选项。"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:174
+msgid "No Custom Tax Configurations"
+msgstr "无自定义税收配置"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:177
+msgid "Configure custom tax rules for specific user roles."
+msgstr "为特定用户角色配置自定义税务规则。"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:187
+msgid "Select a role below to create your first configuration."
+msgstr "选择下面的角色来创建您的第一个配置。"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:193
+#: src/Addons/TaxSettings/js-source/App.js:383
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:248
+msgid "Select a role..."
+msgstr "选择角色..."
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:201
+msgid "Create Configuration"
+msgstr "创建配置"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:216
+msgid "Custom Tax Configuration"
+msgstr "自定义税收配置"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:234
+msgid "Upgrading to premium to unlock role-based tax options."
+msgstr "升级到高级版以解锁基于角色的税收选项。"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:253
+msgid "Tax Exempt"
+msgstr "免税"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:254
+msgid "Disable tax calculation entirely for this role."
+msgstr "完全禁用此角色的税收计算。"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:262
+msgid "Tax Class"
+msgstr "税级"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:266
+#: src/Addons/TaxSettings/js-source/App.js:290
+#: src/Addons/TaxSettings/js-source/App.js:310
+#: src/Addons/TaxSettings/js-source/App.js:330
+msgid "Default (Inherit)"
+msgstr "默认（继承）"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:274
+msgid "Reduced Rate"
+msgstr "降低费率"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:278
+msgid "Zero Rate"
+msgstr "零利率"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:286
+msgid "Prices Entered With Tax"
+msgstr "输入含税价格"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:294
+msgid "Yes, I will enter prices inclusive of tax"
+msgstr "是的，我将输入含税价格"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:298
+msgid "No, I will enter prices exclusive of tax"
+msgstr "不，我将输入不含税的价格"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:306
+msgid "Display Prices in Shop"
+msgstr "商店显示价格"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:314
+#: src/Addons/TaxSettings/js-source/App.js:334
+msgid "Including Tax"
+msgstr "含税"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:318
+#: src/Addons/TaxSettings/js-source/App.js:338
+msgid "Excluding Tax"
+msgstr "不含税"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:326
+msgid "Display Prices in Cart/Checkout"
+msgstr "在购物车/结帐中显示价格"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:346
+msgid "Price Display Suffix"
+msgstr "价格显示后缀"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:347
+msgid "Leave blank to inherit default settings."
+msgstr "留空以继承默认设置。"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:367
+msgid "Remove Configuration"
+msgstr "删除配置"
+
+#: src/Addons/TaxSettings/build/index.js:1
+#: src/Addons/TaxSettings/js-source/App.js:391
+msgid "Add Configuration"
+msgstr "添加配置"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:119
+msgid "Enter title"
+msgstr "输入标题"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:124
+msgid "Style Preset"
+msgstr "风格预设"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:127
+msgid "Square"
+msgstr "正方形"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:128
+msgid "Rounded"
+msgstr "圆形"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:129
+msgid "Pill"
+msgstr "丸"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:130
+msgid "Outline"
+msgstr "大纲"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:131
+msgid "Dashed"
+msgstr "虚线"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:138
+msgid "Icon"
+msgstr "图标"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:142
+msgid "Star"
+msgstr "星星"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:143
+msgid "Fire"
+msgstr "火"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:144
+msgid "Lightning"
+msgstr "闪电"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:145
+msgid "Tag"
+msgstr "标签"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:146
+msgid "Crown"
+msgstr "王冠"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:147
+msgid "Percent"
+msgstr "百分比"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:148
+msgid "Award"
+msgstr "奖"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:157
+msgid "Bg Color"
+msgstr "背景颜色"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:168
+msgid "Text Color"
+msgstr "文字颜色"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:179
+msgid "Border"
+msgstr "边界"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:193
+msgid "Clear border color"
+msgstr "清晰的边框颜色"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:208
+msgid "Hide Advanced Settings"
+msgstr "隐藏高级设置"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:208
+msgid "Show Advanced Settings"
+msgstr "显示高级设置"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:215
+msgid "Font Size (px)"
+msgstr "字体大小（像素）"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:224
+msgid "Border Width (px)"
+msgstr "边框宽度（像素）"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:233
+msgid "Padding Horizontal (px)"
+msgstr "水平内边距 (px)"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:242
+msgid "Padding Vertical (px)"
+msgstr "垂直内边距 (px)"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:251
+msgid "Border Radius (px)"
+msgstr "边框半径（像素）"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:260
+msgid "Extra CSS Class"
+msgstr "额外的 CSS 类"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:263
+msgid "e.g., my-custom-class"
+msgstr "例如，我的自定义类"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:284
+msgid "Preview"
+msgstr "预览"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:290
+msgid "Remove label"
+msgstr "去除标签"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:319
+msgid "New Label"
+msgstr "新标签"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:410
+msgid "No Labels Created"
+msgstr "未创建标签"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:413
+msgid "Create your first custom tier label to highlight special pricing offers."
+msgstr "创建您的第一个自定义层标签以突出显示特殊定价优惠。"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:416
+msgid "Once created, you can assign your labels to specific pricing tiers when editing a product."
+msgstr "创建后，您可以在编辑产品时将标签分配给特定的定价层。"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:419
+msgid "Add your first label"
+msgstr "添加您的第一个标签"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:343
+msgid "Labels saved successfully!"
+msgstr "标签保存成功！"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:482
+msgid "Save Labels"
+msgstr "保存标签"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:485
+msgid "+ Add Label"
+msgstr "+ 添加标签"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:86
+msgid "Item added"
+msgstr "添加项目"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:87
+msgid "Item removed"
+msgstr "项目已移除"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:88
+msgid "Remove item"
+msgstr "删除项目"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:233
+msgid "Clean Up & Reset Options"
+msgstr "清理和重置选项"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:245
+msgid "Warning:"
+msgstr "警告："
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:245
+msgid "The actions below will permanently delete data from your database. Please make a backup before proceeding."
+msgstr "以下操作将从您的数据库中永久删除数据。请先进行备份，然后再继续。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:249
+msgid "1. Product Level Data"
+msgstr "1. 产品级别数据"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:251
+msgid "Remove tiered pricing rules directly attached to individual products."
+msgstr "删除直接附加到单个产品的分级定价规则。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:255
+msgid "Clean Standard Tiered Pricing Data"
+msgstr "清洁标准分级定价数据"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:267
+msgid "Role Based Data"
+msgstr "基于角色的数据"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:295
+msgid "Filters (Optional)"
+msgstr "过滤器（可选）"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:297
+msgid "Leave blank to apply the cleanup to all products. Otherwise, select specific categories or products."
+msgstr "留空以将清理应用于所有产品。否则，请选择特定类别或产品。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:300
+msgid "Select Categories"
+msgstr "选择类别"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:317
+msgid "2. Global Pricing Rules"
+msgstr "2. 全球定价规则"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:319
+msgid "Global pricing rules apply to multiple products at once."
+msgstr "全球定价规则同时适用于多种产品。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:322
+msgid "Delete all Global Pricing Rules"
+msgstr "删除所有全局定价规则"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:330
+msgid "3. Plugin Settings"
+msgstr "3. 插件设置"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:332
+msgid "Reset general settings, labels, and table column configurations."
+msgstr "重置常规设置、标签和表列配置。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:335
+msgid "Reset all plugin settings to defaults"
+msgstr "将所有插件设置重置为默认值"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:132
+msgid "Are you sure you want to delete the selected data? This action cannot be undone."
+msgstr "您确定要删除所选数据吗？此操作无法撤消。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:159
+msgid "Product data cleaned up."
+msgstr "产品数据已清理。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:172
+msgid "Global rules deleted."
+msgstr "全局规则已删除。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:185
+msgid "Settings reset to default."
+msgstr "设置重置为默认值。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:214
+msgid "An unexpected error occurred."
+msgstr "发生意外错误。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:352
+msgid "Processing..."
+msgstr "加工..."
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:352
+msgid "Execute Cleanup"
+msgstr "执行清理"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:356
+msgid "Select at least one option above to proceed."
+msgstr "至少选择上面的一个选项才能继续。"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:173
+msgid "Roles and Capabilities"
+msgstr "角色和能力"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:175
+msgid "Add New Role"
+msgstr "添加新角色"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:183
+#: src/Addons/Tools/js-source/components/RolesManagement.js:230
+msgid "Role Name"
+msgstr "角色名称"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:184
+msgid "Role Key"
+msgstr "角色关键"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:185
+msgid "Capabilities Count"
+msgstr "能力很重要"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:202
+msgid "Edit"
+msgstr "编辑"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:224
+msgid "Edit Role Capabilities"
+msgstr "编辑角色能力"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:224
+msgid "Create New Role"
+msgstr "创建新角色"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:236
+msgid "Role Key (e.g., custom_role)"
+msgstr "角色键（例如，custom_role）"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:245
+msgid "Copy capabilities from existing role"
+msgstr "从现有角色复制能力"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:259
+msgid "Capabilities"
+msgstr "能力"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:265
+msgid "Search capabilities..."
+msgstr "搜索功能..."
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/GlobalSettings.js:36
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:283
+msgid "Cancel"
+msgstr "取消"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/RolesManagement.js:286
+msgid "Save Role"
+msgstr "保存角色"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/App.js:26
+msgid "Roles Management"
+msgstr "角色管理"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/App.js:31
+msgid "Data Clean Up"
+msgstr "数据清理"
+
+#: src/Blocks/build/index.js:49
+#: src/Blocks/build/index.js:132
+#: src/Blocks/build/index.js:195
+#: src/Blocks/src/blocks/blocks/TieredPricingBlock.js:23
+#: src/Blocks/src/blocks/dropdown/TieredPricingDropdown.js:13
+#: src/Blocks/src/blocks/options/TieredPricingOption.js:23
+#: src/Blocks/build/index.js:23
+#: src/Blocks/build/index.js:63
+#: src/Blocks/build/index.js:108
+msgid "pieces"
+msgstr "件"
+
+#: src/Blocks/build/index.js:692
+#: src/Blocks/src/panels/ColumnsPanel/ColumnsPanel.js:10
+#: src/Blocks/build/index.js:436
+msgid "Columns"
+msgstr "专栏"
+
+#: src/Blocks/build/index.js:712
+#: src/Blocks/src/panels/ColumnsPanel/ColumnsPanel.js:43
+#: src/Blocks/build/index.js:469
+msgid "Discount column is showing."
+msgstr "显示折扣栏。"
+
+#: src/Blocks/build/index.js:712
+#: src/Blocks/src/panels/ColumnsPanel/ColumnsPanel.js:44
+#: src/Blocks/build/index.js:470
+msgid "Discount column is not showing."
+msgstr "折扣栏未显示。"
+
+#: src/Blocks/build/index.js:765
+#: src/Blocks/src/panels/MainOptionsPanel/DisplayTypePanel.js:32
+#: src/Blocks/build/index.js:510
+msgid "Main settings"
+msgstr "主要设置"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/premium-wrapper/block.json
+#: src/Addons/ReactProductEditorAddon/js/premium-wrapper/block.json
+msgctxt "block title"
+msgid "Woo blocks-based product editor: Premium Wrapper"
+msgstr "基于 Woo 块的产品编辑器：Premium Wrapper"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/premium-wrapper/block.json
+#: src/Addons/ReactProductEditorAddon/js-source/src/upgrade-notice/block.json
+#: src/Addons/ReactProductEditorAddon/js/premium-wrapper/block.json
+#: src/Addons/ReactProductEditorAddon/js/upgrade-notice/block.json
+msgctxt "block keyword"
+msgid "products"
+msgstr "产品"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/block.json
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/block.json
+msgctxt "block title"
+msgid "Woo blocks-based product editor: Tiered Pricing"
+msgstr "基于Woo block的产品编辑器：分层定价"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/tiered-pricing/block.json
+#: src/Addons/ReactProductEditorAddon/js/tiered-pricing/block.json
+msgctxt "block description"
+msgid "A block to allow users to input tiered pricing"
+msgstr "允许用户输入分级定价的块"
+
+#: src/Addons/ReactProductEditorAddon/js-source/src/upgrade-notice/block.json
+#: src/Addons/ReactProductEditorAddon/js/upgrade-notice/block.json
+msgctxt "block title"
+msgid "Woo blocks-based product editor: Upgrade Notice"
+msgstr "乌积木产品编辑器：升级通知"
+
+#: src/Blocks/build/block.json
+#: src/Blocks/src/block.json
+msgctxt "block title"
+msgid "Tiered Pricing"
+msgstr "分级定价"
+
+#: src/Blocks/build/block.json
+#: src/Blocks/src/block.json
+msgctxt "block description"
+msgid "Tiered pricing widget. Must be used on the product page template. Find more options to customize in the plugin settings."
+msgstr "分层定价小部件。必须在产品页面模板上使用。在插件设置中找到更多自定义选项。"
+
+#: src/Addons/CustomColumns/Admin/CustomColumnsAdmin.php:19
+msgid "Show More Info Next to Prices?"
+msgstr "在价格旁边显示更多信息？"
+
+#: src/Addons/CustomColumns/Admin/CustomColumnsAdmin.php:20
+msgid "Create additional columns to show exactly how much your customers save, total prices, or per-unit costs alongside each tier."
+msgstr "创建额外的列，以准确显示客户节省的金额、总价格或每层的单位成本。"
+
+#: src/Addons/CustomColumns/Schema.php:17
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:57
+msgid "Saving per item"
+msgstr "每件商品节省"
+
+#: src/Addons/ImportExport/ImportExportAddon.php:8
+msgid "WooCommerce Import/Export"
+msgstr "WooCommerce 导入/导出"
+
+#: src/Addons/ImportExport/ImportExportAddon.php:12
+msgid "Adds compatibility with the built-in WooCommerce product importer and exporter."
+msgstr "添加了与内置 WooCommerce 产品导入器和导出器的兼容性。"
+
+#: views/admin/welcome-page/welcome-page.php:566
+msgid "Thanks for installing the plugin! Below you will find a quick overview of the main features."
+msgstr "感谢您安装插件！您将在下面找到主要功能的快速概述。"
+
+#: views/admin/welcome-page/welcome-page.php:574
+msgid "Welcome to"
+msgstr "欢迎来到"
+
+#: views/admin/welcome-page/welcome-page.php:606
+msgid "Questions? We're here to help."
+msgstr "问题？我们随时为您提供帮助。"
+
+#: views/admin/welcome-page/welcome-page.php:635
+msgid "This is a product example."
+msgstr "这是一个产品示例。"
+
+#: views/admin/welcome-page/welcome-page.php:680
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:114
+msgid "Add to cart"
+msgstr "添加到购物车"
+
+#: views/admin/welcome-page/welcome-page.php:735
+msgid "You save"
+msgstr "您保存"
+
+#: views/admin/welcome-page/welcome-page.php:772
+msgid "Easy Setup"
+msgstr "轻松设置"
+
+#: views/admin/welcome-page/welcome-page.php:780
+msgid "Add tiered pricing to products"
+msgstr "为产品添加分级定价"
+
+#: views/admin/welcome-page/welcome-page.php:789
+msgid "Add unlimited quantity-based prices."
+msgstr "添加无限数量的价格。"
+
+#: views/admin/welcome-page/welcome-page.php:791
+msgid "Fixed prices or percentage discounts."
+msgstr "固定价格或百分比折扣。"
+
+#: views/admin/welcome-page/welcome-page.php:793
+#: views/admin/welcome-page/welcome-page.php:924
+msgid "Works great with variable products."
+msgstr "适用于可变产品。"
+
+#: views/admin/welcome-page/welcome-page.php:819
+msgid "Various Pricing Templates"
+msgstr "各种定价模板"
+
+#: views/admin/welcome-page/welcome-page.php:833
+msgid "Pricing Blocks #3"
+msgstr "定价块#3"
+
+#: views/admin/welcome-page/welcome-page.php:853
+msgid "Pricing Options #2"
+msgstr "定价选项#2"
+
+#: views/admin/welcome-page/welcome-page.php:903
+msgid "Flexible Pricing"
+msgstr "灵活的定价"
+
+#: views/admin/welcome-page/welcome-page.php:918
+msgid "Add unlimited role-based pricing."
+msgstr "添加无限制的基于角色的定价。"
+
+#: views/admin/welcome-page/welcome-page.php:920
+msgid "Control regular & sale price or provide a percentage discount."
+msgstr "控制常规价格和销售价格或提供百分比折扣。"
+
+#: views/admin/welcome-page/welcome-page.php:922
+msgid "Control minimum, maximum and quantity step."
+msgstr "控制最小、最大和数量步骤。"
+
+#: views/admin/welcome-page/welcome-page.php:945
+msgid "Control regular prices, tiered pricing and quantity limits in one place."
+msgstr "在一处控制常规价格、分级定价和数量限制。"
+
+#: views/admin/welcome-page/welcome-page.php:947
+msgid "Apply tiered pricing across multiple products."
+msgstr "对多种产品应用分级定价。"
+
+#: views/admin/welcome-page/welcome-page.php:949
+msgid "Select products or product categories that the rule applies to."
+msgstr "选择规则适用的产品或产品类别。"
+
+#: views/admin/welcome-page/welcome-page.php:951
+msgid "Select users or user roles that the rule applies to."
+msgstr "选择规则适用的用户或用户角色。"
+
+#: views/admin/welcome-page/welcome-page.php:960
+msgid "Advanced Features"
+msgstr "高级功能"
+
+#: views/admin/welcome-page/welcome-page.php:978
+msgid "Create and update user roles"
+msgstr "创建和更新用户角色"
+
+#: views/admin/welcome-page/welcome-page.php:985
+msgid "Create customizable labels and attach them to a pricing tier"
+msgstr "创建可自定义的标签并将其附加到定价层"
+
+#: views/admin/welcome-page/welcome-page.php:993
+msgid "Cart upsells to motivate customers to purchase more."
+msgstr "购物车追加销售以激励顾客购买更多产品。"
+
+#: views/admin/welcome-page/welcome-page.php:994
+msgid "Customize cart upsells template."
+msgstr "自定义购物车追加销售模板。"
+
+#: views/admin/welcome-page/welcome-page.php:995
+msgid "Tiered price in the cart appears as a discount."
+msgstr "购物车中的分级价格显示为折扣。"
+
+#: views/admin/welcome-page/welcome-page.php:1002
+msgid "Show the lowest price."
+msgstr "显示最低价格。"
+
+#: views/admin/welcome-page/welcome-page.php:1003
+msgid "Customize the lowest price prefix: “from $10.00”, “as low as $10.00” or whatever you want."
+msgstr "自定义最低价格前缀：“10.00 美元起”、“低至 10.00 美元”或任何您想要的。"
+
+#: views/admin/welcome-page/welcome-page.php:1005
+msgid "Show the price range based on tiered pricing."
+msgstr "显示基于分级定价的价格范围。"
+
+#: views/admin/welcome-page/welcome-page.php:1012
+msgid "Customize template (can be different from product page)."
+msgstr "自定义模板（可以与产品页面不同）。"
+
+#: views/admin/welcome-page/welcome-page.php:1014
+msgid "Show quantity field."
+msgstr "显示数量字段。"
+
+#: views/admin/welcome-page/welcome-page.php:1047
+msgid "Other Features That Make The Plugin Unique"
+msgstr "使该插件独一无二的其他功能"
+
+#: views/admin/welcome-page/welcome-page.php:1110
+msgid "Integrations with 3rd party plugins"
+msgstr "与第 3 方插件集成"
+
+#: views/admin/welcome-page/welcome-page.php:1295
+msgid "Have a question?"
+msgstr "有问题吗？"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:108
+msgid "Your Saving"
+msgstr "您的储蓄"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:112
+msgid "Price per piece"
+msgstr "每件价格"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:117
+msgid "Price incl tax"
+msgstr "含税价格"
+
+#: src/Addons/CustomColumns/build/index.js:1
+#: src/Addons/CustomColumns/js-source/index.js:154
+msgid "Please enter a title for all custom columns before saving."
+msgstr "保存前请输入所有自定义列的标题。"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:443
+msgid "Most Popular"
+msgstr "最受欢迎"
+
+#: src/Addons/TierLabels/build/index.js:1
+#: src/Addons/TierLabels/js-source/index.js:458
+msgid "Best Value"
+msgstr "最超值"
+
+#: src/Addons/CatalogPrices/CatalogPricesService.php:41
+#: src/Addons/CatalogPrices/CatalogPricesService.php:46
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:63
+#: src/Managers/FormatPriceManager.php:253
+msgid "From {tp_lowest_price} instead of {tp_original_price}"
+msgstr "从 {tp_lowest_price} 起，原价 {tp_original_price}"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:53
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:60
+msgid "Custom template"
+msgstr "自定义模板"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:56
+msgid "Choose whether to show only the lowest available price, the full price range, or a custom template."
+msgstr "选择是否仅显示最低可用价格、完整价格范围或自定义模板。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:64
+msgid "Create a custom template for catalog prices. Use the available variables below to dynamically insert the lowest price, price range, or original product price."
+msgstr "创建目录价格的自定义模板。使用下面的可用变量动态插入最低价格、价格范围或原始产品价格。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:84
+msgid "Lowest price"
+msgstr "最低价格"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:85
+msgid "{tp_lowest_price} - lowest available tier price."
+msgstr "{tp_lowest_price} - 最低可用等级价格。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:89
+msgid "Prices range"
+msgstr "价格范围"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:90
+msgid "{tp_prices_range} - price range from lowest tier to original price."
+msgstr "{tp_prices_range} - 从最低层到原始价格的价格范围。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:94
+msgid "Original price"
+msgstr "原价"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:95
+msgid "{tp_original_price} - product's original price without discounts."
+msgstr "{tp_original_price} - 产品的原价，无折扣。"
+
+#: src/Addons/UserBasedPricing/ProductManager.php:179
+msgid "Invalid user"
+msgstr "无效用户"
+
+#: src/Addons/UserBasedPricing/UserBasedPricingAddon.php:10
+msgid "User-based pricing rules on individual products"
+msgstr "针对个别产品的基于用户的定价规则"
+
+#: src/Addons/UserBasedPricing/UserBasedPricingAddon.php:18
+msgid "Enable customer-based pricing rules on individual products."
+msgstr "对个别产品启用基于客户的定价规则。"
+
+#: views/addons/role-based-pricing/role-based-block.php:98
+msgid "Add role pricing"
+msgstr "添加角色定价"
+
+#: views/addons/user-based-pricing/user-based-block.php:33
+msgid "Customer-Specific Pricing"
+msgstr "客户特定定价"
+
+#: views/addons/user-based-pricing/user-based-block.php:78
+msgid "Set up specific pricing and rules for individual customers."
+msgstr "为个人客户制定具体的定价和规则。"
+
+#. translators: %s: settings link
+#: views/addons/user-based-pricing/user-based-block.php:91
+#, php-format
+msgid "You can disable this feature in the %s if you don't need customer-based pricing."
+msgstr "如果您不需要基于客户的定价，您可以在 %s 中禁用此功能。"
+
+#: views/addons/user-based-pricing/user-based-block.php:105
+msgid "Add Customer"
+msgstr "添加客户"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:260
+msgid "Customer Based Data"
+msgstr "基于客户的数据"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:262
+msgid "Clean All Customer Based Pricing Data"
+msgstr "清除所有基于客户的定价数据"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:271
+msgid "Do not clean role based data"
+msgstr "不清理基于角色的数据"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:272
+msgid "Clean all roles"
+msgstr "清除所有角色"
+
+#: src/Addons/Tools/build/index.js:1
+#: src/Addons/Tools/js-source/components/CleanupTool.js:273
+msgid "Select specific roles to clean"
+msgstr "选择要清除的特定角色"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:36
+msgid "Customer Request"
+msgstr "客户要求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:39
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:108
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:387
+#: src/Addons/RequestAQuote/views/emails/admin-quote-request.php:32
+#: src/Addons/RequestAQuote/views/emails/customer-quote-request.php:32
+#: src/Addons/RequestAQuote/views/emails/plain/admin-quote-request.php:25
+#: src/Addons/RequestAQuote/views/emails/plain/customer-quote-request.php:25
+msgid "Product"
+msgstr "产品"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:42
+msgid "User"
+msgstr "用户"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:45
+msgid "Quote Actions"
+msgstr "报价动作"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:100
+msgid "Product not found."
+msgstr "未找到产品。"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:110
+msgid "Unit Price"
+msgstr "单价"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:111
+msgid "Total"
+msgstr "全部的"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:125
+msgid "SKU:"
+msgstr "货号："
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:156
+msgid "Converted to Order:"
+msgstr "转换为订单："
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:163
+msgid "Convert to Order"
+msgstr "转换为订单"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:181
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:430
+msgid "Unread"
+msgstr "未读"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:182
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:431
+msgid "Read"
+msgstr "读"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:185
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:432
+msgid "Converted"
+msgstr "已转换"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:187
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:433
+msgid "Rejected"
+msgstr "被拒绝"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:198
+msgid "Submitted via Form:"
+msgstr "通过表格提交："
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:204
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:172
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:133
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:77
+msgid "Unnamed Form"
+msgstr "未命名表格"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:222
+msgid "Save Quote"
+msgstr "保存报价"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:256
+msgid "Guest"
+msgstr "客人"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:289
+msgid "View Profile"
+msgstr "查看资料"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:295
+msgid "Guest User"
+msgstr "访客用户"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:385
+msgid "Quote"
+msgstr "引用"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:386
+msgid "Customer"
+msgstr "顾客"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:388
+msgid "Status"
+msgstr "地位"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:389
+msgid "Date"
+msgstr "日期"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:419
+msgid "Qty:"
+msgstr "数量："
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:455
+msgid "Filter by product"
+msgstr "按产品过滤"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:457
+msgid "Show all products"
+msgstr "显示所有产品"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:494
+msgid "Mark as Unread"
+msgstr "标记为未读"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:495
+msgid "Mark as Read"
+msgstr "标记为已读"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:496
+msgid "Mark as Rejected"
+msgstr "标记为已拒绝"
+
+#. translators: %s: number of quotes.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:533
+#, php-format
+msgid "%s quote marked as unread."
+msgid_plural "%s quotes marked as unread."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of quotes.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:537
+#, php-format
+msgid "%s quote marked as read."
+msgid_plural "%s quotes marked as read."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of quotes.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestAdmin.php:541
+#, php-format
+msgid "%s quote marked as rejected."
+msgid_plural "%s quotes marked as rejected."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:37
+msgctxt "post type general name"
+msgid "Quote Requests"
+msgstr "报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:38
+msgctxt "post type singular name"
+msgid "Quote Request"
+msgstr "报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:39
+msgctxt "admin menu"
+msgid "Quote Requests"
+msgstr "报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:40
+msgctxt "add new on admin bar"
+msgid "Quote Request"
+msgstr "报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:41
+msgctxt "quote request"
+msgid "Add New"
+msgstr "添加新内容"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:42
+msgid "Add New Quote Request"
+msgstr "添加新的报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:43
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:63
+msgid "New Quote Request"
+msgstr "新报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:44
+msgid "Edit Quote Request"
+msgstr "编辑报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:45
+msgid "View Quote Request"
+msgstr "查看报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:46
+msgid "All Quote Requests"
+msgstr "所有报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:47
+msgid "Search Quote Requests"
+msgstr "搜索报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:48
+msgid "No quote requests found."
+msgstr "未找到报价请求。"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:49
+msgid "No quote requests found in Trash."
+msgstr "垃圾箱中未找到报价请求。"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:54
+msgid "Quote Requests."
+msgstr "报价请求。"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:77
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:130
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:139
+msgid "Quote Requests"
+msgstr "报价请求"
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:87
+msgctxt "quote request status"
+msgid "Unread"
+msgstr "未读"
+
+#. translators: %s: number of requests.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:93
+#, php-format
+msgid "Unread <span class=\"count\">(%s)</span>"
+msgid_plural "Unread <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:97
+msgctxt "quote request status"
+msgid "Read"
+msgstr "读"
+
+#. translators: %s: number of requests.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:103
+#, php-format
+msgid "Read <span class=\"count\">(%s)</span>"
+msgid_plural "Read <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:107
+msgctxt "quote request status"
+msgid "Converted"
+msgstr "已转换"
+
+#. translators: %s: number of requests.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:113
+#, php-format
+msgid "Converted <span class=\"count\">(%s)</span>"
+msgid_plural "Converted <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:117
+msgctxt "quote request status"
+msgid "Rejected"
+msgstr "被拒绝"
+
+#. translators: %s: number of requests.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:123
+#, php-format
+msgid "Rejected <span class=\"count\">(%s)</span>"
+msgid_plural "Rejected <span class=\"count\">(%s)</span>"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of unread requests.
+#: src/Addons/RequestAQuote/CPT/QuoteRequestCPT.php:134
+#, php-format
+msgid "%s unread request"
+msgid_plural "%s unread requests"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:14
+msgid "Quote Request (Admin)"
+msgstr "报价请求（管理员）"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:15
+msgid "This email is sent to the administrator when a customer requests a quote."
+msgstr "当客户请求报价时，此电子邮件会发送给管理员。"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:48
+msgid "Unknown Product"
+msgstr "未知产品"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:59
+msgid "[{site_title}] New Quote Request for {product_name}"
+msgstr "[{site_title}] {product_name} 的新报价请求"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:89
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:130
+msgid "Enable/Disable"
+msgstr "启用/禁用"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:91
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:132
+msgid "Enable this email notification"
+msgstr "启用此电子邮件通知"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:95
+msgid "Recipient(s)"
+msgstr "收件人"
+
+#. translators: %s: Admin email.
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:98
+#, php-format
+msgid "Enter recipients (comma separated) for this email. Defaults to %s."
+msgstr "输入此电子邮件的收件人（以逗号分隔）。默认为 %s。"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:105
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:136
+msgid "Subject"
+msgstr "主题"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:108
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:139
+msgid "This controls the email subject line. Leave blank to use the default subject: "
+msgstr "这控制电子邮件主题行。留空以使用默认主题："
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:114
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:145
+msgid "Email heading"
+msgstr "电子邮件标题"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:117
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:148
+msgid "This controls the main heading contained within the email notification. Leave blank to use the default heading: "
+msgstr "这控制电子邮件通知中包含的主标题。留空以使用默认标题："
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:123
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:154
+msgid "Email type"
+msgstr "电子邮件类型"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:125
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:156
+msgid "Choose which format of email to send."
+msgstr "选择要发送的电子邮件格式。"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:135
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:166
+msgid "Sample Product"
+msgstr "样品产品"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:153
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:184
+msgid "Sample Name"
+msgstr "样品名称"
+
+#: src/Addons/RequestAQuote/Emails/AdminQuoteEmail.php:154
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:185
+msgid "Sample Email"
+msgstr "示例电子邮件"
+
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:14
+msgid "Quote Request (Customer)"
+msgstr "报价请求（客户）"
+
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:15
+msgid "This email is sent to the customer to acknowledge their quote request."
+msgstr "此电子邮件将发送给客户以确认他们的报价请求。"
+
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:100
+msgid "[{site_title}] Thank you for your Quote Request for {product_name}"
+msgstr "[{site_title}] 感谢您对 {product_name} 的报价请求"
+
+#: src/Addons/RequestAQuote/Emails/CustomerQuoteEmail.php:104
+msgid "Quote Request Received"
+msgstr "收到报价请求"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:35
+msgid "Form ID or Product ID is missing."
+msgstr "缺少表单 ID 或产品 ID。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:45
+msgid "This form is not available for the selected product."
+msgstr "此表格不适用于所选产品。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:57
+msgid "Anti-Spam verification failed. Please try again."
+msgstr "反垃圾邮件验证失败。请再试一次。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:71
+msgid "Could not verify reCAPTCHA."
+msgstr "无法验证 reCAPTCHA。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:79
+msgid "Anti-Spam verification failed. Token invalid."
+msgstr "反垃圾邮件验证失败。令牌无效。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:86
+msgid "Anti-Spam verification failed. Score too low."
+msgstr "反垃圾邮件验证失败。分数太低了。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:188
+msgid "Could not save the quote request."
+msgstr "无法保存报价请求。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:197
+#: src/Addons/RequestAQuote/Frontend/QuoteFormDisplay.php:35
+msgid "Your quote request has been submitted successfully!"
+msgstr "您的报价请求已成功提交！"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:255
+msgid "File upload failed."
+msgstr "文件上传失败。"
+
+#: src/Addons/RequestAQuote/Frontend/QuoteFormDisplay.php:252
+#: src/Addons/RequestAQuote/Models/RequestQuoteForm.php:47
+#: src/Addons/RequestAQuote/RequestAQuoteAddon.php:8
+#: src/Addons/RequestAQuote/Settings/RequestAQuoteSettingsSection.php:8
+#: src/Addons/RequestAQuote/views/frontend/quote-modal.php:28
+#: views/admin/welcome-page/welcome-page.php:967
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:531
+msgid "Request a Quote"
+msgstr "索取报价"
+
+#: src/Addons/RequestAQuote/Frontend/QuoteFormDisplay.php:253
+#: src/Addons/RequestAQuote/Models/RequestQuoteForm.php:76
+#: src/Addons/RequestAQuote/views/frontend/quote-modal.php:72
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:151
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:539
+msgid "Submit Request"
+msgstr "提交请求"
+
+#: src/Addons/RequestAQuote/Frontend/QuoteFormDisplay.php:254
+msgid "Submitting..."
+msgstr "正在提交..."
+
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:244
+msgid "Request a Quote Form"
+msgstr "索取报价表"
+
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:260
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:272
+msgid "Leave blank to use the form default"
+msgstr "留空以使用表单默认值"
+
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:261
+msgid "Quantity Label"
+msgstr "数量标签"
+
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:262
+msgid "Override the quantity label."
+msgstr "覆盖数量标签。"
+
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:274
+msgid "Quantity Trigger"
+msgstr "数量触发"
+
+#: src/Addons/RequestAQuote/Integration/PricingRulesIntegration.php:275
+msgid "Override the global auto-open trigger. Automatically open the quote form if a customer selects this quantity or higher."
+msgstr "覆盖全局自动打开触发器。如果客户选择此数量或更高数量，则会自动打开报价单。"
+
+#: src/Addons/RequestAQuote/Models/QuoteRequest.php:115
+msgid "Quote Request"
+msgstr "报价请求"
+
+#: src/Addons/RequestAQuote/Models/RequestQuoteForm.php:29
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:141
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:133
+msgid "Request a quote"
+msgstr "索取报价"
+
+#: src/Addons/RequestAQuote/Models/RequestQuoteForm.php:38
+msgid "Thank you for your request. We will contact you soon."
+msgstr "感谢您的请求。我们会尽快与您联系。"
+
+#: src/Addons/RequestAQuote/Models/RequestQuoteForm.php:61
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:523
+msgid "Custom Quantity"
+msgstr "定制数量"
+
+#: src/Addons/RequestAQuote/RequestAQuoteAddon.php:12
+msgid "Allow customers to request a custom quote."
+msgstr "允许客户请求定制报价。"
+
+#: src/Addons/RequestAQuote/views/emails/admin-quote-request.php:24
+#: src/Addons/RequestAQuote/views/emails/plain/admin-quote-request.php:21
+msgid "A new quote request has been submitted on your store."
+msgstr "您的商店已提交新的报价请求。"
+
+#: src/Addons/RequestAQuote/views/emails/admin-quote-request.php:26
+#: src/Addons/RequestAQuote/views/emails/customer-quote-request.php:26
+msgid "Quote Request Details"
+msgstr "报价请求详情"
+
+#: src/Addons/RequestAQuote/views/emails/admin-quote-request.php:33
+#: src/Addons/RequestAQuote/views/emails/customer-quote-request.php:33
+#: src/Addons/RequestAQuote/views/emails/plain/admin-quote-request.php:25
+#: src/Addons/RequestAQuote/views/emails/plain/customer-quote-request.php:25
+msgid "Unknown"
+msgstr "未知"
+
+#: src/Addons/RequestAQuote/views/emails/admin-quote-request.php:53
+#: src/Addons/RequestAQuote/views/emails/admin-quote-request.php:57
+#: src/Addons/RequestAQuote/views/emails/plain/admin-quote-request.php:37
+#: src/Addons/RequestAQuote/views/emails/plain/admin-quote-request.php:39
+msgid "View Request in Dashboard"
+msgstr "在仪表板中查看请求"
+
+#: src/Addons/RequestAQuote/views/emails/customer-quote-request.php:24
+#: src/Addons/RequestAQuote/views/emails/plain/customer-quote-request.php:21
+msgid "Thank you for your quote request. We have received it and will process it shortly. Here are the details of your request:"
+msgstr "感谢您的报价请求。我们已收到并会尽快处理。以下是您的请求的详细信息："
+
+#: src/Addons/RequestAQuote/views/emails/customer-quote-request.php:50
+#: src/Addons/RequestAQuote/views/emails/plain/customer-quote-request.php:36
+msgid "We will be in touch soon!"
+msgstr "我们会尽快与您联系！"
+
+#: src/Addons/RequestAQuote/views/frontend/quote-modal.php:36
+msgid "Preview Mode"
+msgstr "预览模式"
+
+#: src/Addons/RequestAQuote/views/frontend/quote-modal.php:36
+msgid "Request a Quote on the frontend is a premium feature. This popup is only visible to administrators."
+msgstr "在前端请求报价是一项高级功能。此弹出窗口仅对管理员可见。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:86
+msgid "Style #6"
+msgstr "风格#6"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:35
+msgid "No Forms Created"
+msgstr "没有创建任何表格"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:38
+msgid "Create your first quote request form to allow customers to ask for a custom price."
+msgstr "创建您的第一个报价请求表，以允许客户询问自定义价格。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:41
+msgid "Once created, you can assign your forms to specific pricing tiers when editing a product or in global rules."
+msgstr "创建后，您可以在编辑产品或全局规则时将表单分配给特定定价层。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:44
+msgid "Add your first form"
+msgstr "添加您的第一个表单"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:68
+msgid "Awesome T-Shirt"
+msgstr "超棒 T 恤"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:107
+msgid "Looking for a personal deal? Request a quote."
+msgstr "正在寻找个人优惠？ Request a quote."
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:136
+msgid "Name *"
+msgstr "姓名 *"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:140
+msgid "Email *"
+msgstr "电子邮件 *"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:144
+msgid "Quantity *"
+msgstr "数量 *"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:146
+#: src/Addons/RequestAQuote/js-source/src/components/EmptyState.js:148
+msgid "Comment"
+msgstr "评论"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:21
+msgid "Preview Mode:"
+msgstr "预览模式："
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:21
+msgid "You are currently using the free version of Tiered Pricing Table. The Request a Quote feature is available for creation and previewing purposes, but it will not be active on the frontend for your customers."
+msgstr "您当前正在使用免费版本的分层定价表。请求报价功能可用于创建和预览目的，但不会在您的客户的前端上激活。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:23
+msgid "Upgrade to Premium to unlock this feature &rarr;"
+msgstr "升级到高级版以解锁此功能 →"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:32
+msgid "Request a Quote Forms"
+msgstr "索取报价表格"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:40
+msgid "Add New Form"
+msgstr "添加新表格"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:50
+msgid "Form Name"
+msgstr "表格名称"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:53
+msgid "Position"
+msgstr "位置"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:56
+msgid "Auto-Open Qty"
+msgstr "自动开启数量"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:59
+msgid "Fields"
+msgstr "领域"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:96
+msgid "Below Pricing Layout"
+msgstr "以下定价布局"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormsList.js:96
+msgid "Integrated"
+msgstr "融合的"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:61
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:452
+msgid "Short Text"
+msgstr "短文本"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:62
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:453
+msgid "Long Text"
+msgstr "长文本"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:144
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:63
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:454
+msgid "Email"
+msgstr "电子邮件"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:65
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:456
+msgid "Select Dropdown"
+msgstr "选择下拉菜单"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:66
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:457
+msgid "Radio Buttons"
+msgstr "单选按钮"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:67
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:458
+msgid "Checkboxes"
+msgstr "复选框"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:68
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:461
+msgid "Heading"
+msgstr "标题"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:69
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:462
+msgid "Paragraph"
+msgstr "段落"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:70
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:459
+msgid "File Upload"
+msgstr "文件上传"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:72
+msgid "Field"
+msgstr "场地"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:119
+msgid "Request a Quote on the frontend is a premium feature. You can preview it as an administrator, but upgrading is required for your customers to use it."
+msgstr "在前端请求报价是一项高级功能。您可以以管理员身份预览它，但您的客户需要升级才能使用它。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:130
+msgid "Back"
+msgstr "后退"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:133
+msgid "Edit Form:"
+msgstr "编辑表格："
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:138
+msgid "Save Form"
+msgstr "保存表格"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:150
+msgid "Add form title"
+msgstr "添加表单标题"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:166
+msgid "Form Fields"
+msgstr "表单字段"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:180
+msgid "Expand All"
+msgstr "全部展开"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:190
+msgid "Collapse All"
+msgstr "全部折叠"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:197
+msgid "No fields added yet. Select a field type below to add one."
+msgstr "尚未添加字段。选择下面的字段类型以添加​​一个。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:247
+msgid "Drag to reorder"
+msgstr "拖动以重新排序"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:282
+msgid "Remove"
+msgstr "消除"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:293
+msgid "Paragraph Content"
+msgstr "段落内容"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:307
+msgid "Heading Text"
+msgstr "标题文本"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:314
+msgid "Title format"
+msgstr "标题格式"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:317
+msgid "Label"
+msgstr "标签"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:318
+msgid "Hidden"
+msgstr "隐"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:331
+msgid "Options (One per line)"
+msgstr "选项（每行一个）"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:339
+msgid ""
+"Option 1\n"
+"Option 2\n"
+"Option 3"
+msgstr ""
+"选项1\n"
+"选项2\n"
+"选项3"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:346
+msgid "Require input"
+msgstr "需要输入"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:355
+msgid "Sync with product quantity"
+msgstr "与产品数量同步"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:364
+msgid "Add description"
+msgstr "添加描述"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:386
+msgid "Add placeholder"
+msgstr "添加占位符"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:407
+msgid "Max File Size (MB)"
+msgstr "最大文件大小 (MB)"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:411
+msgid "Leave blank or set to 0 for unlimited size (up to server limit)."
+msgstr "留空或设置为 0 以获得无限大小（最多服务器限制）。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:416
+msgid "Allowed Extensions"
+msgstr "允许的扩展"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:419
+msgid "Comma separated, e.g. pdf, doc, png. Leave blank for any."
+msgstr "逗号分隔，例如pdf、doc、png。任何都留空。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:451
+msgid "Add field..."
+msgstr "添加字段..."
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:475
+msgid "Appearance & Content"
+msgstr "外观与内容"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:478
+msgid "Prompt Text"
+msgstr "提示文字"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:479
+msgid "The text displayed below the pricing table to open this form."
+msgstr "定价表下方显示的文本可用于打开此表单。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:486
+msgid "Display Position"
+msgstr "显示位置"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:489
+msgid "Below the pricing layout"
+msgstr "定价布局下方"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:490
+msgid "Integrated into the pricing layout (Default)"
+msgstr "集成到定价布局中（默认）"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:494
+msgid "Choose how the quote link is positioned relative to the pricing rules."
+msgstr "选择报价链接相对于定价规则的定位方式。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:520
+msgid "Integrated Quantity Label"
+msgstr "综合数量标签"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:524
+msgid "Customize the label shown for the quantity column when the form is integrated into pricing blocks."
+msgstr "当表单集成到定价块中时，自定义数量列显示的标签。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:530
+msgid "Modal Title"
+msgstr "模态标题"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:538
+msgid "Submit Button Text"
+msgstr "提交按钮文本"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:548
+msgid "Auto-Open Quantity Trigger"
+msgstr "自动开仓数量触发"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:549
+msgid "Automatically open the quote form if a customer selects this quantity or higher. Leave blank to disable."
+msgstr "如果客户选择此数量或更高数量，则会自动打开报价单。留空以禁用。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:555
+msgid "Email Notifications"
+msgstr "电子邮件通知"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:558
+msgid "Enable Admin Email"
+msgstr "启用管理员电子邮件"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:561
+msgid "Send an email to the store admin when this form is submitted."
+msgstr "提交此表单后，请向商店管理员发送电子邮件。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:566
+msgid "Enable Customer Email"
+msgstr "启用客户电子邮件"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:569
+msgid "Send an acknowledgment email to the customer."
+msgstr "向客户发送确认电子邮件。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:574
+msgid "Manage Email Templates ↗"
+msgstr "管理电子邮件模板 ↗"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:578
+msgid "Success Actions"
+msgstr "成功行动"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:581
+msgid "After Submission"
+msgstr "提交后"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:584
+msgid "Show Message"
+msgstr "显示留言"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:585
+msgid "Redirect to URL"
+msgstr "重定向到网址"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:594
+msgid "Success Message"
+msgstr "成功留言"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:600
+msgid "Thank you, our sales team will contact you shortly."
+msgstr "谢谢您，我们的销售团队将尽快与您联系。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:605
+msgid "Message shown after successful submission."
+msgstr "提交成功后显示的消息。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:613
+msgid "Redirect URL"
+msgstr "重定向网址"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:617
+msgid "Enter the full URL (e.g., https://example.com/thank-you)"
+msgstr "输入完整的 URL（例如 https://example.com/thank-you）"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/GlobalSettings.js:10
+msgid "Anti-Spam (reCAPTCHA v3)"
+msgstr "反垃圾邮件 (reCAPTCHA v3)"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/GlobalSettings.js:12
+msgid "Configure Google reCAPTCHA v3 to protect all quote forms from spam. Leave blank to disable."
+msgstr "配置 Google reCAPTCHA v3 以保护所有报价表单免受垃圾邮件的侵害。留空以禁用。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/GlobalSettings.js:16
+msgid "Site Key"
+msgstr "站点密钥"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/GlobalSettings.js:23
+msgid "Secret Key"
+msgstr "秘密钥匙"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/GlobalSettings.js:44
+msgid "Save Settings"
+msgstr "保存设置"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:104
+msgid "Settings saved successfully."
+msgstr "设置保存成功。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:110
+msgid "Error saving settings."
+msgstr "保存设置时出错。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:140
+msgid "New Form"
+msgstr "新形式"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:143
+msgid "Name"
+msgstr "姓名"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:143
+msgid "Enter your full name"
+msgstr "输入您的全名"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:144
+msgid "Enter your email address"
+msgstr "输入您的电子邮件地址"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:145
+msgid "Specify the quantity you need"
+msgstr "指定您需要的数量"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:146
+msgid "Add any specific requirements or questions here..."
+msgstr "在此添加任何具体要求或问题..."
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:205
+msgid "Loading..."
+msgstr "加载中..."
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:214
+msgid "Congratulations! 🎉"
+msgstr "恭喜！ 🎉"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:220
+msgid "You have successfully created your first quote request form."
+msgstr "您已成功创建第一个报价请求表。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:224
+msgid "Next Step: Assign Your Form"
+msgstr "下一步：分配您的表单"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:227
+msgid "You can now select this quote form in the Product settings, Role-based rules, or Global pricing rules."
+msgstr "您现在可以在产品设置、基于角色的规则或全局定价规则中选择此报价表单。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:233
+msgid "Awesome, Got it!"
+msgstr "太棒了，明白了！"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:156
+msgid "Are you sure you want to delete this form?"
+msgstr "您确定要删除此表单吗？"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:126
+msgid "Global settings saved successfully."
+msgstr "全局设置已成功保存。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/App.js:132
+msgid "Error saving global settings."
+msgstr "保存全局设置时出错。"
+
+#: src/Addons/CatalogPrices/CatalogPricesAddon.php:8
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:13
+msgid "Shop & Categories Price Format"
+msgstr "商店和类别价格格式"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:18
+msgid "Manage how the main product price string is formatted in shop pages, categories, and widgets."
+msgstr "管理主要产品价格字符串在商店页面、类别和小部件中的格式。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:29
+msgid "Override default price display"
+msgstr "覆盖默认价格显示"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:33
+msgid "Replace the standard WooCommerce price with a custom lowest price or price range."
+msgstr "将标准 WooCommerce 价格替换为自定义最低价格或价格范围。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:38
+msgid "Apply to variable products"
+msgstr "适用于可变产品"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:42
+msgid "Calculate the lowest and highest prices across all variations and display them using your chosen format."
+msgstr "计算所有变体的最低和最高价格，并使用您选择的格式显示它们。"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:47
+msgid "Format style"
+msgstr "格式样式"
+
+#: src/Addons/CatalogPrices/CatalogPricesSubsection.php:72
+msgid "Prefix for lowest price"
+msgstr "最低价格前缀"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:25
+msgid "Applies to each product individually. If mix & match is enabled, the minimum quantity requirement will be shared across variations of a variable product."
+msgstr "单独适用于每个产品。如果启用混合匹配，最低数量要求将在可变产品的变体之间共享。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:34
+msgid "Variable Product Minimum Quantity"
+msgstr "可变产品最小数量"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:35
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:100
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:38
+msgid "Determine whether the minimum quantity requirement applies to each variation separately, or to the combined total of all variations in the cart."
+msgstr "确定最低数量要求是单独适用于每个变体，还是购物车中所有变体的总和。"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:45
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:87
+msgid "Global Settings"
+msgstr "全局设置"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:46
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:88
+msgid "Individual variation"
+msgstr "个体差异"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:47
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:89
+msgid "Variable product total (Mix & match)"
+msgstr "可变产品总数（混合搭配）"
+
+#: src/Addons/GlobalTieredPricing/CPT/Form/Tabs/Quantity.php:49
+#: src/Admin/ProductPage/AdvanceOptionsForVariableProduct.php:91
+msgid "Calculate minimum quantity by"
+msgstr "计算最小数量"
+
+#. translators: 1: Product name, 2: Minimum quantity.
+#: src/Addons/MinQuantity/MinQuantity.php:170
+#: src/Addons/MinQuantity/StoreApiValidation.php:27
+#, php-format
+msgid "Minimum quantity for %1$s is %2$s."
+msgstr "%1$s 的最低数量为 %2$s。"
+
+#. translators: 1: Minimum quantity, 2: Product name.
+#: src/Addons/MinQuantity/MinQuantity.php:190
+#: src/Addons/MinQuantity/StoreApiValidation.php:49
+#, php-format
+msgid "You need to order at least %1$s items of %2$s to meet the minimum order quantity."
+msgstr "您需要至少订购 %2$s 件 %1$s 件商品才能满足最低订购数量。"
+
+#. translators: 1: Missing quantity, 2: Product name, 3: Minimum quantity.
+#: src/Addons/MinQuantity/MinQuantity.php:209
+#, php-format
+msgid "You need %1$s more items of %2$s to meet the minimum order quantity of %3$s."
+msgstr "您还需要 %1$s %2$s 件商品才能满足 %3$s 的最低订购数量。"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:25
+msgid "Show pricing summary block"
+msgstr "显示定价摘要块"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:32
+msgid "Show for standard products (non-tiered)"
+msgstr "显示标准产品（非分层）"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:36
+msgid "Display the pricing summary block for regular WooCommerce products even if they don't have tiered pricing rules."
+msgstr "显示常规 WooCommerce 产品的定价摘要块，即使它们没有分层定价规则。"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:39
+msgid "Summary block title"
+msgstr "摘要块标题"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:47
+msgid "Block position"
+msgstr "块位置"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:64
+msgid "Summary layout"
+msgstr "概要布局"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:69
+msgid "Compact"
+msgstr "袖珍的"
+
+#: src/Addons/PricingSummary/SummarySubsection.php:70
+msgid "Inline labels"
+msgstr "内联标签"
+
+#: src/Addons/ProductCatalogLoop/ProductCatalogLoop.php:10
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:22
+msgid "Shop & Categories"
+msgstr "商店及类别"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:36
+msgid "Tiered Pricing on Shop & Category Pages"
+msgstr "商店和类别页面的分级定价"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:42
+msgid "Enable on Shop & Categories"
+msgstr "在商店和类别上启用"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:51
+msgid "Turn this on to display tiered pricing directly within your shop and category pages."
+msgstr "启用此功能可直接在您的商店和类别页面中显示分层定价。"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:67
+msgid "Position on product grid item"
+msgstr "在产品网格项目上的位置"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:82
+msgid "Add quantity selector to grids"
+msgstr "将数量选择器添加到网格"
+
+#: src/Addons/ProductCatalogLoop/Settings/ProductCatalogLoopSettingsSection.php:91
+msgid "Add a quantity input field directly to items on the shop and category pages."
+msgstr "直接向商店和类别页面上的商品添加数量输入字段。"
+
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:100
+msgid "Security check failed. Please refresh the page and try again."
+msgstr "安全检查失败。请刷新页面并重试。"
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:10
+msgid "Cart Page Pricing"
+msgstr "购物车页面定价"
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:24
+msgid "Show original item price crossed out"
+msgstr "显示已划掉的原始商品价格"
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:32
+msgid "Show original subtotal crossed out"
+msgstr "显示已划掉的原始小计"
+
+#: src/Addons/TieredPricingCart/CartOptionsSubsection.php:40
+msgid "Cross out regular price instead of sale price"
+msgstr "划掉正常价格而不是销售价格"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:26
+msgid "Show savings badge on product page"
+msgstr "在产品页面上显示节省徽章"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:34
+msgid "Include WooCommerce sale discount in total savings"
+msgstr "将 WooCommerce 销售折扣纳入总节省中"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:38
+msgid "If a product is already on sale, add that existing discount to the tiered pricing savings so the customer sees one large total saved."
+msgstr "如果产品已经在促销，请将现有折扣添加到分级定价节省中，以便客户看到一大笔节省。"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:42
+msgid "Show badge for standard products (non-tiered)"
+msgstr "显示标准产品的徽章（非分层）"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:46
+msgid "Display the savings badge for regular WooCommerce sale products even if they don't have tiered pricing rules."
+msgstr "显示常规 WooCommerce 销售产品的节省徽章，即使它们没有分层定价规则。"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:50
+msgid "Badge text template"
+msgstr "徽章文本模板"
+
+#: src/Addons/YouSave/YouSaveSubsection.php:62
+msgid "Badge text color"
+msgstr "徽章文字颜色"
+
+#: src/Admin/ProductPage/RoleCustomerPricingTab.php:21
+msgid "Role & Customer Prices"
+msgstr "角色和客户价格"
+
+#: src/Admin/ProductPage/RoleCustomerPricingTab.php:80
+msgid "Unlock Role & Customer pricing rules by upgrading to Premium."
+msgstr "通过升级到高级版来解锁角色和客户定价规则。"
+
+#: src/Admin/Tips/Tips/RoleCustomerPricingTabTip.php:43
+msgid "Need to add or modify user roles?"
+msgstr "需要添加或修改用户角色？"
+
+#. translators: %s: URL to the Role Manager.
+#: src/Admin/Tips/Tips/RoleCustomerPricingTabTip.php:50
+#, php-format
+msgid "You can create, edit, or manage user roles directly from the <a href=\"%s\" target=\"_blank\">Role Manager</a>."
+msgstr "您可以直接从<a href=\"%s\" target=\"_blank\">角色管理器</a>创建、编辑或管理用户角色。"
+
+#: src/Integrations/Plugins/WooPaymentsMulticurrency.php:43
+msgid "Convert and display tiered pricing correctly when using WooPayments Multicurrency."
+msgstr "使用 WooPayments 多货币时正确转换和显示分层定价。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:18
+msgid "Variable products logic"
+msgstr "可变产品逻辑"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:19
+msgid "Control how tiered pricing handles variable products."
+msgstr "控制分级定价如何处理可变产品。"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:34
+msgid "Combine variations for minimum quantity"
+msgstr "组合不同的最小数量"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:46
+msgid "General calculations"
+msgstr "一般计算"
+
+#: src/Settings/Sections/CalculationLogic/CalculationLogic.php:47
+msgid "Control general calculation behavior for tiered pricing."
+msgstr "控制分级定价的一般计算行为。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:29
+msgid "Show tiered pricing automatically"
+msgstr "自动显示分级定价"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:33
+msgid "Automatically insert the pricing layout on the product page. If disabled, pricing remains dynamic but you must insert the layout manually via shortcode, block, or widget."
+msgstr "自动在产品页面上插入定价布局。如果禁用，定价将保持动态，但您必须通过短代码、块或小部件手动插入布局。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:38
+msgid "Default visual layout"
+msgstr "默认视觉布局"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:48
+msgid "Options design style"
+msgstr "选项设计风格"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:62
+msgid "Table design style"
+msgstr "餐桌设计风格"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:76
+msgid "Blocks design style"
+msgstr "积木设计风格"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:92
+msgid "Enable compact layout"
+msgstr "启用紧凑布局"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:96
+msgid "Apply a space-saving compact design for the selected layout."
+msgstr "对所选布局应用节省空间的紧凑设计。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:99
+msgid "Layout title"
+msgstr "布局标题"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:106
+msgid "Layout position"
+msgstr "布局位置"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:125
+msgid "Quantity format"
+msgstr "数量格式"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:169
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:180
+msgid "Quantity unit label"
+msgstr "数量单位标签"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:191
+msgid "Table column headers"
+msgstr "表格列标题"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:210
+msgid "Leave a column title empty to hide that column entirely."
+msgstr "将列标题留空以完全隐藏该列。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:222
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:46
+msgid "Show original price crossed out"
+msgstr "显示已划掉的原价"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:226
+msgid "Pricing options will show a crossed-out regular price next to the discounted tier price."
+msgstr "定价选项将在折扣等级价格旁边显示划掉的正常价格。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:231
+msgid "Show total calculated price for selected option"
+msgstr "显示所选选项的总计算价格"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:235
+msgid "The selected pricing option will dynamically display the total calculated cost."
+msgstr "所选定价选项将动态显示计算出的总成本。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:239
+msgid "Pricing option text template"
+msgstr "定价选项文本模板"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:254
+msgid "Show base price (no discount) option"
+msgstr "显示基本价格（无折扣）选项"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:258
+msgid "Display an option for the regular product price (e.g. 1 item) where no tier discount is applied."
+msgstr "显示不应用等级折扣的常规产品价格（例如 1 件商品）的选项。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:262
+msgid "Base price option template"
+msgstr "基本价格选项模板"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:270
+msgid "Customize the template for the base price option."
+msgstr "自定义基本价格选项的模板。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:313
+msgid "Make pricing tiers clickable"
+msgstr "使定价等级可点击"
+
+#: src/Settings/Sections/GeneralSection/Subsections/LayoutSubsection.php:317
+msgid "Allow customers to click on a pricing tier (table row, block, or option) to automatically select that quantity."
+msgstr "允许客户单击定价层（表行、块或选项）以自动选择该数量。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:12
+msgid "Single Product Page Pricing"
+msgstr "单一产品页面定价"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:31
+msgid "Match Shop & Categories display (price range or lowest price)"
+msgstr "火柴店和类别显示（价格范围或最低价格）"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:32
+msgid "Actual price for selected quantity"
+msgstr "所选数量的实际价格"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:38
+msgid "Update price on quantity change"
+msgstr "根据数量变化更新价格"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:42
+msgid "Automatically update the main product price whenever a customer changes the quantity input."
+msgstr "每当客户更改输入数量时，自动更新主要产品价格。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:50
+msgid "Cross out the regular price and show the discounted tiered price next to it when a higher quantity is selected."
+msgstr "当选择更多数量时，划掉正常价格并在旁边显示折扣分级价格。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:54
+msgid "Show total price (Price × Quantity)"
+msgstr "显示总价（价格×数量）"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:58
+msgid "Multiply the main product price by the selected quantity instead of showing the per-item price."
+msgstr "将主要产品价格乘以所选数量，而不是显示每件商品的价格。"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:63
+msgid "Show total price for non-tiered products"
+msgstr "显示非分级产品的总价"
+
+#: src/Settings/Sections/GeneralSection/Subsections/ProductPagePriceSubsection.php:67
+msgid "Multiply the price by quantity even if the product has no tiered pricing rules."
+msgstr "即使产品没有分级定价规则，也将价格乘以数量。"
+
+#: views/admin/components/minimum-order-quantity-form.php:18
+msgid "Available in premium version"
+msgstr "提供高级版本"
+
+#: views/admin/welcome-page/welcome-page.php:970
+msgid "Allow customers to request custom quotes via a sleek customizable popup."
+msgstr "允许客户通过时尚的可定制弹出窗口请求自定义报价。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:71
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:460
+msgid "Date Picker"
+msgstr "日期选择器"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:428
+msgid "Disable past dates"
+msgstr "禁用过去的日期"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:431
+msgid "Prevent customers from selecting dates in the past."
+msgstr "防止客户选择过去的日期。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:491
+msgid "Next to Add to Cart button"
+msgstr "添加到购物车按钮旁边"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:500
+msgid "Hide Add to Cart button"
+msgstr "隐藏“添加到购物车”按钮"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:503
+msgid "Visually hides the WooCommerce Add to Cart button, leaving only the Quote button."
+msgstr "在视觉上隐藏 WooCommerce“添加到购物车”按钮，只留下“报价”按钮。"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:510
+msgid "Show for non-purchasable products"
+msgstr "显示不可购买的产品"
+
+#: src/Addons/RequestAQuote/build/index.js:1
+#: src/Addons/RequestAQuote/js-source/src/components/FormEdit.js:513
+msgid "Display the Quote button even if the product does not have a price or is out of stock."
+msgstr "即使产品没有价格或缺货，也会显示报价按钮。"
+
+#. translators: 1: Product name, 2: Date.
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:109
+#, php-format
+msgid "%1$s - %2$s"
+msgstr ""
+
+#. translators: 1: File name, 2: Max file size in MB.
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:231
+#, php-format
+msgid "File %1$s exceeds the maximum allowed size of %2$s MB."
+msgstr "文件 %1$s 超出了允许的最大大小 %2$s MB。"
+
+#. translators: 1: File extension, 2: Allowed extensions.
+#: src/Addons/RequestAQuote/Frontend/API/SubmitQuoteEndpoint.php:241
+#, php-format
+msgid "File type .%1$s is not allowed. Allowed: %2$s"
+msgstr "不允许使用文件类型 .%1$s。允许：%2$s"

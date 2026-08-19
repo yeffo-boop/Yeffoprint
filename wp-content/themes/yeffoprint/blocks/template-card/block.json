@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/template-card",
+	"title": "Template Card",
+	"category": "theme",
+	"description": "Shop Labels gallery card for a Template: artwork, hover-swap vial mockup, badge, name, and starting price. Reads its post from Query Loop context.",
+	"usesContext": [ "postId", "postType" ],
+	"supports": {
+		"html": false,
+		"align": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}
