@@ -8,11 +8,31 @@
 defined( 'ABSPATH' ) || exit;
 
 $materials = [
-	__( 'Glossy White', 'yeffoprint' ),
-	__( 'Matte White', 'yeffoprint' ),
-	__( 'Holographic', 'yeffoprint' ),
-	__( 'Clear', 'yeffoprint' ),
-	__( 'Metallic', 'yeffoprint' ),
+	[
+		'slug'  => 'glossy-white',
+		'name'  => __( 'Glossy White', 'yeffoprint' ),
+		'blurb' => __( 'Bright, reflective finish that makes color pop.', 'yeffoprint' ),
+	],
+	[
+		'slug'  => 'matte-white',
+		'name'  => __( 'Matte White', 'yeffoprint' ),
+		'blurb' => __( 'Soft, no-glare finish for a premium, understated look.', 'yeffoprint' ),
+	],
+	[
+		'slug'  => 'holographic',
+		'name'  => __( 'Holographic', 'yeffoprint' ),
+		'blurb' => __( 'Rainbow shimmer that shifts with the light.', 'yeffoprint' ),
+	],
+	[
+		'slug'  => 'clear',
+		'name'  => __( 'Clear', 'yeffoprint' ),
+		'blurb' => __( 'No-label look — print shows straight through.', 'yeffoprint' ),
+	],
+	[
+		'slug'  => 'metallic',
+		'name'  => __( 'Metallic', 'yeffoprint' ),
+		'blurb' => __( 'Brushed-silver shine for a bold, industrial finish.', 'yeffoprint' ),
+	],
 ];
 ?>
 <!-- wp:group {"tagName":"section","className":"yp-section yp-section--tint","layout":{"type":"constrained","contentSize":"1200px"}} -->
@@ -30,8 +50,9 @@ $materials = [
 	<div class="yp-materials-grid">
 		<?php foreach ( $materials as $material ) : ?>
 			<div class="yp-material-swatch">
-				<div class="yp-material-swatch__chip"></div>
-				<p><?php echo esc_html( $material ); ?></p>
+				<div class="yp-material-swatch__chip yp-material-swatch__chip--<?php echo esc_attr( $material['slug'] ); ?>"></div>
+				<p class="yp-material-swatch__name"><?php echo esc_html( $material['name'] ); ?></p>
+				<p class="yp-material-swatch__blurb"><?php echo esc_html( $material['blurb'] ); ?></p>
 			</div>
 		<?php endforeach; ?>
 	</div>

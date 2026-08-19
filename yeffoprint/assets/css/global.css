@@ -163,8 +163,19 @@ svg {
 }
 
 .yp-header__logo img {
-	max-height: 32px;
+	/* Was max-height:32px against a width:40 block attribute — the real
+	   uploaded logo (not the text-fallback wordmark) was rendering
+	   thumbnail-tiny. A header logo reads best around 44-52px tall; the
+	   width:180 block attribute (parts/header.html) caps how large the
+	   source file can be requested at, this caps actual render height. */
+	max-height: 48px;
 	width: auto;
+}
+
+@media (max-width: 781px) {
+	.yp-header__logo img {
+		max-height: 38px;
+	}
 }
 
 .yp-header__nav {

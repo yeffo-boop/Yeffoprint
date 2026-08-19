@@ -34,5 +34,13 @@ defined( 'ABSPATH' ) || exit;
 	</div>
 	<!-- /wp:buttons -->
 
+	<!-- wp:html -->
+	<ul class="yp-hero__stats">
+		<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--cyan)"></span>48-hour turnaround</li>
+		<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--magenta)"></span>No minimum order</li>
+		<li><span class="yp-hero__stats-dot" style="background:var(--wp--preset--color--yellow)"></span>Studio-grade print quality</li>
+	</ul>
+	<!-- /wp:html -->
+
 </section>
 <!-- /wp:group -->

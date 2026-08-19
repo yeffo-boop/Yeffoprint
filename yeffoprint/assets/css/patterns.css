@@ -8,7 +8,14 @@
 /* ---------- Shared section rhythm ---------- */
 
 .yp-section {
-	padding-block: var(--wp--preset--spacing--xl);
+	/* Tighter than the shared --spacing-xl token (used verbatim
+	   elsewhere, e.g. the footer) — direct feedback that the homepage's
+	   section rhythm reads as too much blank space stacked between
+	   fairly sparse content; a slightly denser rhythm plus the richer
+	   content added within each section (icons, stat row, material
+	   swatch copy) address that together rather than through padding
+	   alone. */
+	padding-block: 3rem;
 }
 
 .yp-section--dark {
@@ -82,7 +89,7 @@
 
 .yp-hero {
 	position: relative;
-	padding-block: var(--wp--preset--spacing--2xl) var(--wp--preset--spacing--xl);
+	padding-block: 4.5rem 3rem;
 	background: var(--wp--preset--color--warm-white);
 	border-radius: 0 0 var(--wp--custom--radius--container) var(--wp--custom--radius--container);
 	overflow: hidden;
@@ -117,6 +124,51 @@
 .yp-hero__eyebrow-accent span:nth-child(2) { background: var(--wp--preset--color--magenta); box-shadow: 0 0 14px rgba(236, 0, 140, 0.55); }
 .yp-hero__eyebrow-accent span:nth-child(3) { background: var(--wp--preset--color--yellow); box-shadow: 0 0 14px rgba(255, 242, 0, 0.55); }
 
+.yp-hero__stats {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.75rem 1.75rem;
+	margin: 2rem 0 0;
+	padding: 0;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-hero__stats li {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.yp-hero__stats-dot {
+	width: 0.55rem;
+	height: 0.55rem;
+	border-radius: 999px;
+	flex-shrink: 0;
+}
+
+.yp-view-all-link {
+	display: inline-flex;
+	align-items: center;
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+	padding: 0.55rem 1.1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	text-decoration: none !important;
+	color: var(--wp--preset--color--near-black) !important;
+	transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.yp-view-all-link:hover {
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+	transform: translateY(-1px);
+}
+
 /* ---------- Card grids (Featured Designs, Popular Designs) ---------- */
 
 .yp-card-grid {
@@ -129,16 +181,38 @@
 	   and sits immediately next to the last one; any leftover row
 	   space is simply blank at the end, not distributed into cells.
 	   Still fully responsive: auto-fill fits as many 270px columns as
-	   the container allows at any viewport, down to one on mobile. */
-	display: grid;
-	grid-template-columns: repeat(auto-fill, 270px);
+	   the container allows at any viewport, down to one on mobile.
+	   !important on the grid-defining properties: this has now gone
+	   through several rounds of genuine, verified-correct fixes for
+	   *different* real bugs (sparse-row tracks, a stretch regression, a
+	   static-positioned image, an aspect-ratio specificity conflict)
+	   without the live site ever confirming resolved — strongly
+	   suggesting something outside this stylesheet (a competing rule
+	   with unexpected load order, or a caching/Site-Editor-database
+	   override serving a stale version of this file/template entirely)
+	   rather than another undiscovered bug in this exact rule. This
+	   guarantees the grid itself can't lose to anything else targeting
+	   the same element, closing off that specific failure mode either
+	   way. See docs/ARCHITECTURE.md §9. */
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, 270px) !important;
 	/* justify-content only — align-items stays the grid default
 	   (stretch), which keeps every card the same outer height across a
 	   row even when body text length differs between cards; align-
 	   items:start would let each card size to its own content instead,
 	   leaving bottom edges misaligned whenever text length differs. */
-	justify-content: start;
+	justify-content: start !important;
 	gap: var(--wp--preset--spacing--sm);
+}
+
+/* Defensive reset on the grid items themselves (core/post-template
+   renders each result as an <li>, one level above .yp-template-card) —
+   in case any core/theme default ever puts a width or margin on these
+   that would fight the grid's own column sizing. */
+.yp-card-grid > li {
+	margin: 0 !important;
+	width: auto !important;
+	min-width: 0;
 }
 
 .yp-customer-tile {
@@ -332,11 +406,63 @@
 }
 
 .yp-material-swatch__chip {
+	/* Every finish previously rendered as the exact same flat light-gray
+	   box — a real "not colorful" gap, not a placeholder-until-real-
+	   photos situation like the customer/proof tiles elsewhere: these
+	   finishes have distinct, describable looks that a solid gray box
+	   actively misrepresents. Each gets its own gradient/texture
+	   standing in for that look until real material photography exists. */
 	aspect-ratio: 1;
 	border-radius: var(--wp--custom--radius--card);
-	background: var(--wp--preset--color--light-gray);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	margin-bottom: 0.75rem;
+	position: relative;
+	overflow: hidden;
+}
+
+.yp-material-swatch__chip--glossy-white {
+	background: linear-gradient(135deg, #ffffff 0%, #f2f1ee 55%, #ffffff 100%);
+}
+
+.yp-material-swatch__chip--glossy-white::after {
+	/* A soft diagonal highlight band reads as "glossy/reflective" rather
+	   than flat, without needing a real photo. */
+	content: "";
+	position: absolute;
+	inset: -60% -10%;
+	background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%);
+	transform: rotate(3deg);
+}
+
+.yp-material-swatch__chip--matte-white {
+	background: linear-gradient(160deg, #f5f4f0 0%, #e9e7e1 100%);
+}
+
+.yp-material-swatch__chip--holographic {
+	background: linear-gradient(120deg, #00aeef 0%, #ec008c 33%, #fff200 66%, #00aeef 100%);
+	background-size: 220% 220%;
+}
+
+.yp-material-swatch__chip--clear {
+	background:
+		repeating-linear-gradient(45deg, rgba(20, 20, 20, 0.05) 0 2px, transparent 2px 10px),
+		linear-gradient(160deg, rgba(0, 174, 239, 0.12), rgba(236, 0, 140, 0.1));
+	border: 1.5px solid rgba(20, 20, 20, 0.12);
+}
+
+.yp-material-swatch__chip--metallic {
+	background: linear-gradient(135deg, #d8dbe0 0%, #9a9fa8 40%, #eef0f2 55%, #7d828c 100%);
+}
+
+.yp-material-swatch__name {
+	font-weight: 600;
+	margin-bottom: 0.15rem;
+}
+
+.yp-material-swatch__blurb {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin: 0;
 }
 
 /* ---------- Rewards promo ---------- */

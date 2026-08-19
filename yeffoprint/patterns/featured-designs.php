@@ -24,7 +24,7 @@ defined( 'ABSPATH' ) || exit;
 		<!-- /wp:group -->
 
 		<!-- wp:paragraph -->
-		<p><a href="/shop-labels/">View all designs &rarr;</a></p>
+		<p><a class="yp-view-all-link" href="/shop-labels/">View all designs &rarr;</a></p>
 		<!-- /wp:paragraph -->
 	</div>
 	<!-- /wp:group -->
