@@ -75,6 +75,8 @@
 	}
 
 	function init() {
+		var reorderId = new URLSearchParams( window.location.search ).get( 'reorder' );
+
 		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders/options' )
 			.then( function ( response ) {
 				return response.ok ? response.json() : Promise.reject( new Error( 'options-failed' ) );
@@ -90,11 +92,61 @@
 
 				statusEl.hidden = true;
 				form.hidden = false;
+
+				if ( reorderId ) {
+					loadReorderData( reorderId );
+				}
 			} )
 			.catch( function () {
 				statusEl.textContent = "This form couldn't be loaded. Please refresh, or contact us directly.";
 				statusEl.setAttribute( 'data-state', 'error' );
 			} );
+	}
+
+	/**
+	 * Pre-fills a fresh request from a past Custom Order's own details
+	 * (class-custom-order-controller.php, ownership-checked there) —
+	 * "reorder" for a one-off custom design means resubmitting with the
+	 * same brief, not restoring into a configurator that doesn't exist
+	 * for this flow. Previously-uploaded reference files carry over as
+	 * already-uploaded (same attachment, no re-upload needed) unless
+	 * the customer removes them.
+	 */
+	function loadReorderData( reorderId ) {
+		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders/' + encodeURIComponent( reorderId ), {
+			headers: { 'X-WP-Nonce': yeffoprintCustomOrder.nonce }
+		} )
+			.then( function ( response ) {
+				return response.ok ? response.json() : null;
+			} )
+			.then( function ( data ) {
+				if ( ! data ) {
+					return;
+				}
+
+				if ( data.size_id ) {
+					sizeSelect.value = data.size_id;
+				}
+				if ( data.material_id ) {
+					materialSelect.value = data.material_id;
+				}
+				if ( data.quantity ) {
+					setQuantity( data.quantity );
+				}
+
+				document.getElementById( 'yp-co-brand' ).value = data.brand_name || '';
+				document.getElementById( 'yp-co-compound' ).value = data.compound_strength || '';
+				document.getElementById( 'yp-co-style' ).value = data.style_notes || '';
+				document.getElementById( 'yp-co-instructions' ).value = data.instructions || '';
+
+				if ( data.uploads && data.uploads.length ) {
+					uploadedFiles = data.uploads.map( function ( file ) {
+						return { name: file.name, id: file.id, error: null };
+					} );
+					renderFileList();
+				}
+			} )
+			.catch( function () {} );
 	}
 
 	/* ---------- File uploads ---------- */

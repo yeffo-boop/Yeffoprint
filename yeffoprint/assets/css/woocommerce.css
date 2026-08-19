@@ -167,10 +167,32 @@
 }
 
 .yp-proof-card {
+	display: flex;
+	gap: 1rem;
 	padding: 1.25rem;
 	border-radius: var(--wp--custom--radius--card);
 	background: var(--wp--preset--color--white);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-proof-card__thumb {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 5rem;
+	height: 5rem;
+	flex-shrink: 0;
+	border-radius: var(--wp--custom--radius--control);
+	/* No real artwork exists for a one-off Custom Order yet — same
+	   "coming soon," not-broken placeholder language as the Customer
+	   Inspiration tiles, until real AI-generated previews replace it. */
+	background: linear-gradient(135deg, rgba(0, 174, 239, 0.14), rgba(236, 0, 140, 0.14));
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-proof-card__body {
+	flex: 1;
+	min-width: 0;
 }
 
 .yp-proof-card__header {

@@ -209,28 +209,44 @@ class YeffoPrint_Account_Endpoints {
 		$status      = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
 		$brand       = get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
 		$proof_ids   = YeffoPrint_Proof_Meta::get_for_custom_order( $custom_order_id );
+		// A Custom Order has no premade artwork to show a real thumbnail
+		// of — this generic vial glyph fills that slot honestly (matches
+		// the same "coming soon"-style placeholder treatment used for
+		// Customer Inspiration tiles) until real AI-generated preview
+		// images are wired up as a follow-up.
+		$reorder_url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
 		?>
 		<div class="yp-proof-card">
-			<div class="yp-proof-card__header">
-				<strong><?php echo esc_html( $brand ?: get_the_title( $custom_order_id ) ); ?></strong>
-				<span class="yp-proof-card__status"><?php echo esc_html( YeffoPrint_Custom_Order_Meta::get_status_label( $status ) ?: __( 'Submitted', 'yeffoprint-core' ) ); ?></span>
+			<div class="yp-proof-card__thumb" aria-hidden="true">
+				<svg width="26" height="26" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+					<rect x="6" y="2" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.5" />
+					<line x1="8" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					<line x1="8" y1="9.5" x2="12" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
 			</div>
-			<p class="yp-proof-card__date"><?php echo esc_html( get_the_date( '', $custom_order_id ) ); ?></p>
-			<?php if ( $proof_ids ) : ?>
-				<ul class="yp-proof-card__files">
-					<?php foreach ( $proof_ids as $proof_id ) :
-						$file_id = (int) get_post_meta( $proof_id, YeffoPrint_Proof_Meta::FILE_ID, true );
-						$url     = $file_id ? wp_get_attachment_url( $file_id ) : '';
-						if ( ! $url ) {
-							continue;
-						}
-						?>
-						<li><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View proof', 'yeffoprint-core' ); ?> — <?php echo esc_html( get_the_date( '', $proof_id ) ); ?></a></li>
-					<?php endforeach; ?>
-				</ul>
-			<?php else : ?>
-				<p class="description"><?php esc_html_e( 'No proof uploaded yet.', 'yeffoprint-core' ); ?></p>
-			<?php endif; ?>
+			<div class="yp-proof-card__body">
+				<div class="yp-proof-card__header">
+					<strong><?php echo esc_html( $brand ?: get_the_title( $custom_order_id ) ); ?></strong>
+					<span class="yp-proof-card__status"><?php echo esc_html( YeffoPrint_Custom_Order_Meta::get_status_label( $status ) ?: __( 'Submitted', 'yeffoprint-core' ) ); ?></span>
+				</div>
+				<p class="yp-proof-card__date"><?php echo esc_html( get_the_date( '', $custom_order_id ) ); ?></p>
+				<?php if ( $proof_ids ) : ?>
+					<ul class="yp-proof-card__files">
+						<?php foreach ( $proof_ids as $proof_id ) :
+							$file_id = (int) get_post_meta( $proof_id, YeffoPrint_Proof_Meta::FILE_ID, true );
+							$url     = $file_id ? wp_get_attachment_url( $file_id ) : '';
+							if ( ! $url ) {
+								continue;
+							}
+							?>
+							<li><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View proof', 'yeffoprint-core' ); ?> — <?php echo esc_html( get_the_date( '', $proof_id ) ); ?></a></li>
+						<?php endforeach; ?>
+					</ul>
+				<?php else : ?>
+					<p class="description"><?php esc_html_e( 'No proof uploaded yet.', 'yeffoprint-core' ); ?></p>
+				<?php endif; ?>
+				<p class="yp-reorder-link"><a href="<?php echo esc_url( $reorder_url ); ?>"><?php esc_html_e( 'Reorder this custom design', 'yeffoprint-core' ); ?></a></p>
+			</div>
 		</div>
 		<?php
 	}

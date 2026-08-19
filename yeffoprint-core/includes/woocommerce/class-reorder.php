@@ -31,17 +31,34 @@ class YeffoPrint_Reorder {
 		$snapshot    = json_decode( (string) $item->get_meta( '_yp_template_snapshot' ), true );
 		$template_id = (int) ( $snapshot['id'] ?? 0 );
 
-		if ( ! $template_id ) {
+		if ( $template_id ) {
+			$url = add_query_arg( 'reorder', $order->get_id() . ':' . $item_id, get_permalink( $template_id ) );
+
+			printf(
+				'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
+				esc_url( $url ),
+				esc_html__( 'Reorder this design', 'yeffoprint-core' )
+			);
 			return;
 		}
 
-		$url = add_query_arg( 'reorder', $order->get_id() . ':' . $item_id, get_permalink( $template_id ) );
+		// Custom Design line items reorder differently: there's no
+		// configurator to restore into (Architecture §2 — a CustomOrder
+		// is a one-off request, not a premade Template), so this pre-
+		// fills a fresh Custom Design form from the past request's own
+		// details instead (class-custom-order-controller.php's
+		// GET /custom-orders/{id}, ownership-checked there).
+		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
 
-		printf(
-			'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
-			esc_url( $url ),
-			esc_html__( 'Reorder this design', 'yeffoprint-core' )
-		);
+		if ( $custom_order_id ) {
+			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
+
+			printf(
+				'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
+				esc_url( $url ),
+				esc_html__( 'Reorder this custom design', 'yeffoprint-core' )
+			);
+		}
 	}
 
 	public function hide_native_order_again( array $actions, \WC_Order $order ): array {

@@ -47,6 +47,58 @@ class YeffoPrint_Custom_Order_Controller {
 			'callback'            => [ $this, 'options' ],
 			'permission_callback' => '__return_true',
 		] );
+
+		// Reorder (V2): pre-fills a fresh Custom Design form from a past
+		// request's own details. Unlike Template Reorder (which restores
+		// into the configurator via a public-ish, session-scoped cart/
+		// order lookup), a CustomOrder is always private customer data —
+		// there's no guest path here, only the request's own customer.
+		register_rest_route( self::NAMESPACE, '/custom-orders/(?P<id>\d+)', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'get_custom_order' ],
+			'permission_callback' => [ $this, 'check_ownership' ],
+		] );
+	}
+
+	public function check_ownership( \WP_REST_Request $request ) {
+		if ( ! is_user_logged_in() ) {
+			return false;
+		}
+
+		$post = get_post( absint( $request->get_param( 'id' ) ) );
+		if ( ! $post || 'yp_custom_order' !== $post->post_type ) {
+			return new \WP_Error( 'yeffoprint_custom_order_not_found', __( 'That custom design request was not found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		$customer_id = (int) get_post_meta( $post->ID, YeffoPrint_Custom_Order_Meta::CUSTOMER_ID, true );
+		return $customer_id && $customer_id === get_current_user_id();
+	}
+
+	public function get_custom_order( \WP_REST_Request $request ) {
+		$id = absint( $request->get_param( 'id' ) );
+
+		$uploads = array_map( 'absint', (array) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, true ) );
+		$upload_data = [];
+		foreach ( $uploads as $attachment_id ) {
+			$url = wp_get_attachment_url( $attachment_id );
+			if ( $url ) {
+				$upload_data[] = [
+					'id'   => $attachment_id,
+					'name' => get_the_title( $attachment_id ) ?: basename( $url ),
+				];
+			}
+		}
+
+		return rest_ensure_response( [
+			'size_id'           => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::SIZE_ID, true ),
+			'material_id'       => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, true ),
+			'quantity'          => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::QUANTITY, true ),
+			'compound_strength' => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH, true ),
+			'brand_name'        => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true ),
+			'style_notes'       => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::STYLE_NOTES, true ),
+			'instructions'      => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, true ),
+			'uploads'           => $upload_data,
+		] );
 	}
 
 	public function upload( \WP_REST_Request $request ) {
