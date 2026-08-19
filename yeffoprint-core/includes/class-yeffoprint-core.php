@@ -43,6 +43,12 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-item-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-cart-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-design-fee-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/uploads/class-secure-upload.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-payment.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-custom-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 
 		new YeffoPrint_Post_Type_Registry();
@@ -57,6 +63,9 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Cart_Pricing();
 		new YeffoPrint_Order_Item_Meta();
 		new YeffoPrint_Cart_Controller();
+		new YeffoPrint_Custom_Order_Meta();
+		new YeffoPrint_Custom_Order_Payment();
+		new YeffoPrint_Custom_Order_Controller();
 
 		if ( is_admin() ) {
 			new YeffoPrint_Admin_Menu();
@@ -64,17 +73,23 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-template-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-material-size-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-pricing-rule-editor.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-custom-order-editor.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-proof-editor.php';
 
 			new YeffoPrint_Template_Editor();
 			new YeffoPrint_Material_Size_Editor();
 			new YeffoPrint_Pricing_Rule_Editor();
+			new YeffoPrint_Custom_Order_Editor();
+			new YeffoPrint_Proof_Editor();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-seed-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-shipping-setup-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-pages-setup-command.php';
 			( new YeffoPrint_Seed_Command() )->register();
 			( new YeffoPrint_Shipping_Setup_Command() )->register();
+			( new YeffoPrint_Pages_Setup_Command() )->register();
 		}
 	}
 }
