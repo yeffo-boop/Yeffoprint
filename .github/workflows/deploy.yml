@@ -1,0 +1,33 @@
+name: Deploy to server
+
+# Auto-deploys on every push to main. See docs/deploy-setup.md for the
+# one-time server-side setup this depends on (an SSH deploy key and a
+# git clone of this repo on the server) and for what each secret below
+# needs to contain. Inert until those secrets exist in this repo's
+# Settings -> Secrets and variables -> Actions — adding this file alone
+# does nothing.
+#
+# workflow_dispatch lets you trigger a redeploy manually from the
+# Actions tab (e.g. after fixing a server-side issue) without needing
+# a new commit.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull latest on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch origin main
+            git reset --hard origin/main
