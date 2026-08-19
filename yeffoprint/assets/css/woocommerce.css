@@ -90,14 +90,22 @@
 .woocommerce-checkout #order_review,
 .wc-block-checkout__sidebar,
 .wc-block-cart__sidebar {
-	background: var(--wp--preset--color--warm-white);
-	border-radius: var(--wp--custom--radius--card);
-	padding: var(--wp--preset--spacing--md);
-	box-shadow: var(--wp--custom--shadow-elevation--low);
+	background: var(--wp--preset--color--warm-white) !important;
+	border-radius: var(--wp--custom--radius--card) !important;
+	padding: var(--wp--preset--spacing--md) !important;
+	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
 	align-self: start;
 }
 
-/* ---------- Cart & Checkout blocks (Store API) ---------- */
+/* ---------- Cart & Checkout blocks (Store API) ----------
+   !important throughout this section: live testing (the Venmo/Zelle
+   payment-method text overlapping its radio circle, and this section's
+   styling not visibly landing at all) confirms the same pattern hit
+   repeatedly elsewhere on this site — WooCommerce's own block CSS
+   loads with enough specificity/order to beat a plain single-class
+   rule here. Padding is the one property in this section that's
+   deliberately NOT a blanket override — see the radio-option comment
+   below for why. */
 
 .wp-block-woocommerce-checkout,
 .wp-block-woocommerce-cart {
@@ -108,43 +116,52 @@
    "Payment options," …) as a clearly separated section rather than
    WC Blocks' own unstyled default flow. */
 .wc-block-components-checkout-step {
-	padding-bottom: var(--wp--preset--spacing--md);
-	margin-bottom: var(--wp--preset--spacing--md);
-	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+	padding-bottom: var(--wp--preset--spacing--md) !important;
+	margin-bottom: var(--wp--preset--spacing--md) !important;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray) !important;
 }
 
 .wc-block-components-checkout-step:last-child {
-	border-bottom: none;
-	margin-bottom: 0;
-	padding-bottom: 0;
+	border-bottom: none !important;
+	margin-bottom: 0 !important;
+	padding-bottom: 0 !important;
 }
 
 .wc-block-components-checkout-step__title {
-	font-family: var(--wp--preset--font-family--heading);
-	font-size: var(--wp--preset--font-size--large);
-	font-weight: 700;
+	font-family: var(--wp--preset--font-family--heading) !important;
+	font-size: var(--wp--preset--font-size--large) !important;
+	font-weight: 700 !important;
 }
 
 .wc-block-components-checkout-step__description {
-	color: var(--wp--preset--color--charcoal);
-	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal) !important;
+	font-size: var(--wp--preset--font-size--small) !important;
 }
 
 /* Radio options — shipping method AND payment method (Venmo/Zelle
    included) both use this same component. [aria-checked] rather than
    guessing an exact BEM "is-selected" modifier class name, since the
-   component is built on an accessible role="radio" pattern. */
+   component is built on an accessible role="radio" pattern.
+   Real bug fixed here: this previously used the `padding` SHORTHAND,
+   which resets all four sides — that silently collapsed WC Blocks' own
+   larger padding-left (reserved for the absolutely-positioned radio
+   circle) down to 1rem, not enough room, so the circle overlapped the
+   first few characters of every label ("USPS Ground Advantage" read
+   as "PS Ground Advantage", "Venmo" as "nmo," etc.). Only the sides
+   this section actually needs to change are set now; padding-left is
+   deliberately left alone. */
 .wc-block-components-radio-control__option {
-	border: 1.5px solid var(--wp--preset--color--light-gray);
-	border-radius: var(--wp--custom--radius--control);
-	padding: 0.85rem 1rem;
-	margin-bottom: 0.6rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray) !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+	padding-block: 0.85rem !important;
+	padding-right: 1rem !important;
+	margin-bottom: 0.6rem !important;
 	transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .wc-block-components-radio-control__option[aria-checked="true"] {
-	border-color: var(--wp--preset--color--near-black);
-	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black) !important;
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black) !important;
 }
 
 .yp-blocks-payment-description {
@@ -155,42 +172,42 @@
 
 /* Order summary (right column): line items + totals */
 .wc-block-components-order-summary-item {
-	padding-block: 0.6rem;
+	padding-block: 0.6rem !important;
 }
 
 .wc-block-components-totals-item {
-	font-size: var(--wp--preset--font-size--small);
+	font-size: var(--wp--preset--font-size--small) !important;
 }
 
 .wc-block-components-totals-footer-item {
-	font-size: var(--wp--preset--font-size--large);
-	font-weight: 700;
-	padding-top: 0.75rem;
-	border-top: 1px solid var(--wp--preset--color--light-gray);
+	font-size: var(--wp--preset--font-size--large) !important;
+	font-weight: 700 !important;
+	padding-top: 0.75rem !important;
+	border-top: 1px solid var(--wp--preset--color--light-gray) !important;
 }
 
 /* Coupon code / any other collapsible panel */
 .wc-block-components-panel {
-	border-top: 1px solid var(--wp--preset--color--light-gray);
-	padding-top: 1rem;
-	margin-top: 1rem;
-	font-size: var(--wp--preset--font-size--small);
+	border-top: 1px solid var(--wp--preset--color--light-gray) !important;
+	padding-top: 1rem !important;
+	margin-top: 1rem !important;
+	font-size: var(--wp--preset--font-size--small) !important;
 }
 
 /* Notices (errors, "your session expired," etc.) */
 .wc-block-components-notice-banner {
-	border-radius: var(--wp--custom--radius--control);
+	border-radius: var(--wp--custom--radius--control) !important;
 }
 
 /* Cart line items */
 .wc-block-cart-items {
-	border-radius: var(--wp--custom--radius--card);
+	border-radius: var(--wp--custom--radius--card) !important;
 	overflow: hidden;
-	box-shadow: var(--wp--custom--shadow-elevation--low);
+	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
 }
 
 .wc-block-cart-item__image img {
-	border-radius: var(--wp--custom--radius--control);
+	border-radius: var(--wp--custom--radius--control) !important;
 }
 
 /* Account page */
