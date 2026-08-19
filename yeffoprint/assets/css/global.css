@@ -179,10 +179,18 @@ svg {
 	/* Pill/button treatment, not plain text on dark — a translucent
 	   white background gives every link its own visible boundary
 	   against the dark header regardless of exact text/background
-	   contrast, matching "make them look like buttons." */
+	   contrast, matching "make them look like buttons."
+	   !important: theme.json's global `styles.elements.link` sets every
+	   plain link to near-black (#141414) — effectively the same color as
+	   this header's own background (rgba(20,20,20,.92)) — and WordPress
+	   compiles that global link color with enough specificity/order to
+	   beat a plain class rule here, so the nav text was rendering
+	   invisible (near-black on near-black) despite this rule existing.
+	   Only overriding that one global rule for this one nav, not
+	   disabling it site-wide. */
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
-	color: var(--wp--preset--color--warm-white);
+	color: var(--wp--preset--color--warm-white) !important;
 	text-decoration: none;
 	padding: 0.55rem 1.1rem;
 	border-radius: var(--wp--custom--radius--control);
@@ -192,7 +200,7 @@ svg {
 
 .yp-header__nav a.wp-block-navigation-item__content:hover {
 	background: rgba(255, 255, 255, 0.2);
-	color: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--white) !important;
 }
 
 /* The mobile hamburger overlay (core Navigation block, overlayMenu:
@@ -203,12 +211,12 @@ svg {
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open a.wp-block-navigation-item__content {
-	color: var(--wp--preset--color--warm-white);
+	color: var(--wp--preset--color--warm-white) !important;
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container-close,
 .yp-header__nav .wp-block-navigation__responsive-container-open {
-	color: var(--wp--preset--color--warm-white);
+	color: var(--wp--preset--color--warm-white) !important;
 }
 
 .yp-header__actions {
@@ -227,7 +235,11 @@ svg {
 	border-radius: var(--wp--custom--radius--control);
 	background: transparent;
 	border: none;
-	color: var(--wp--preset--color--warm-white);
+	/* !important for the same reason as .yp-header__nav a above — this
+	   class is also used as the WooCommerce customer-account block's
+	   iconClass, rendering as a plain <a>, which is exactly what
+	   theme.json's global link color targets. */
+	color: var(--wp--preset--color--warm-white) !important;
 	cursor: pointer;
 	position: relative;
 	transition: background-color 150ms ease;

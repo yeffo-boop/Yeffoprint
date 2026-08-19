@@ -177,6 +177,39 @@ add_action( 'wp_enqueue_scripts', function () {
 			'nonce'   => wp_create_nonce( 'wp_rest' ),
 		] );
 	}
+
+	if ( is_page() && in_array( get_page_template_slug(), [ 'proof-approval', 'proof-approval.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-proof-approval',
+			get_theme_file_uri( 'assets/css/proof-approval.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/proof-approval.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-proof-approval',
+			get_theme_file_uri( 'assets/js/proof-approval.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/proof-approval.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		wp_localize_script( 'yeffoprint-proof-approval', 'yeffoprintProofApproval', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			// Only meaningful for a logged-in customer/staff viewing
+			// their own request — a guest is authenticated by the
+			// `token` query param instead (class-proof-approval-
+			// controller.php's check_access()), which needs no nonce.
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+		] );
+	}
 } );
 
 /**

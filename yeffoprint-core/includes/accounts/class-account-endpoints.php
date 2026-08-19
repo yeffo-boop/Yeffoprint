@@ -245,6 +245,9 @@ class YeffoPrint_Account_Endpoints {
 				<?php else : ?>
 					<p class="description"><?php esc_html_e( 'No proof uploaded yet.', 'yeffoprint-core' ); ?></p>
 				<?php endif; ?>
+				<?php if ( 'awaiting_approval' === $status ) : ?>
+					<p class="yp-reorder-link"><a href="<?php echo esc_url( add_query_arg( 'custom_order', $custom_order_id, home_url( '/proof-approval/' ) ) ); ?>"><?php esc_html_e( 'Review & approve this proof', 'yeffoprint-core' ); ?></a></p>
+				<?php endif; ?>
 				<p class="yp-reorder-link"><a href="<?php echo esc_url( $reorder_url ); ?>"><?php esc_html_e( 'Reorder this custom design', 'yeffoprint-core' ); ?></a></p>
 			</div>
 		</div>

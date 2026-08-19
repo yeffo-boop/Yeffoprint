@@ -73,6 +73,9 @@ class YeffoPrint_Custom_Order_Editor {
 				<tr><th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ) ); ?></td></tr>
 				<tr><th><?php esc_html_e( 'Style / Colors', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::STYLE_NOTES ) ?: '—' ) ); ?></td></tr>
 				<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
+				<?php if ( $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES ) ) : ?>
+					<tr><th><?php esc_html_e( 'Customer Requested Changes', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES ) ) ); ?></td></tr>
+				<?php endif; ?>
 				<tr><th><?php esc_html_e( 'Inspiration Files', 'yeffoprint-core' ); ?></th><td>
 					<?php if ( $uploads ) : ?>
 						<ul>
@@ -148,6 +151,19 @@ class YeffoPrint_Custom_Order_Editor {
 			esc_url( admin_url( 'post-new.php?post_type=yp_proof&custom_order=' . $post->ID ) ),
 			esc_html__( 'Add Proof', 'yeffoprint-core' )
 		);
+
+		if ( $proof_ids && 'publish' === $post->post_status ) {
+			$approval_url = yeffoprint_core_proof_approval_url( $post->ID );
+			if ( $approval_url ) {
+				?>
+				<p>
+					<label for="yp-proof-approval-link"><strong><?php esc_html_e( 'Customer approval link', 'yeffoprint-core' ); ?></strong></label><br />
+					<input type="text" id="yp-proof-approval-link" class="widefat" readonly onclick="this.select();" value="<?php echo esc_attr( $approval_url ); ?>" />
+					<span class="description"><?php esc_html_e( 'No account needed — emailed automatically when a proof advances the order to "Awaiting Proof Approval," and copyable here any time to resend (e.g. by text) for a guest order.', 'yeffoprint-core' ); ?></span>
+				</p>
+				<?php
+			}
+		}
 	}
 
 	public function save( int $post_id ): void {

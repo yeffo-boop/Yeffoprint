@@ -29,6 +29,16 @@ class YeffoPrint_Pages_Setup_Command {
 			'custom-design-form.html'
 		);
 
+		// Reached via the customer's own one-time link (email or the
+		// admin Proofs box), never linked from site nav — no account
+		// required (class-proof-approval-controller.php's token check).
+		$this->create_page(
+			'proof-approval',
+			__( 'Review Your Proof', 'yeffoprint-core' ),
+			'',
+			'proof-approval.html'
+		);
+
 		// Custom Stickers is header/footer nav (PROJECT_SPEC §7) for a
 		// Phase 2 product line that's an explicit V1 non-goal (§19) —
 		// without this page the nav link 404s. Plain default template

@@ -259,6 +259,12 @@ class YeffoPrint_Custom_Order_Controller {
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $instructions );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, $uploads );
 
+		// Generated up front, not lazily when a proof first exists — a
+		// guest customer has no account to log back into, so the same
+		// link (grabbed from the admin screen and sent to them) has to
+		// keep working for this request's entire lifetime.
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ACCESS_TOKEN, wp_generate_password( 40, false ) );
+
 		$fee_product_id = YeffoPrint_Custom_Design_Fee_Product::get_product_id();
 		if ( ! $fee_product_id ) {
 			return new \WP_Error( 'yeffoprint_no_fee_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );

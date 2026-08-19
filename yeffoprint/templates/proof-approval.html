@@ -1,0 +1,47 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-proof-approval" class="yp-proof-approval yp-section">
+
+		<p class="yp-eyebrow">Custom Design</p>
+		<h1>Review Your Proof</h1>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<div data-yp-pa-content hidden>
+
+			<div class="yp-proof-approval__header">
+				<strong data-yp-pa-brand></strong>
+				<span class="yp-proof-approval__status-pill" data-yp-pa-status-pill></span>
+			</div>
+
+			<div class="yp-proof-approval__files" data-yp-pa-proofs></div>
+
+			<div class="yp-proof-approval__actions" data-yp-pa-actions hidden>
+				<button type="button" class="wp-block-button__link is-style-accent" data-yp-pa-approve>Approve this proof</button>
+				<button type="button" class="button-link" data-yp-pa-show-changes>Request changes instead</button>
+			</div>
+
+			<div class="yp-proof-approval__changes-form" data-yp-pa-changes-form hidden>
+				<label for="yp-pa-notes">What would you like changed?</label>
+				<textarea id="yp-pa-notes" rows="4" class="widefat"></textarea>
+				<div class="yp-proof-approval__changes-actions">
+					<button type="button" class="wp-block-button__link is-style-accent" data-yp-pa-submit-changes>Submit changes</button>
+					<button type="button" class="button-link" data-yp-pa-cancel-changes>Cancel</button>
+				</div>
+			</div>
+
+			<p class="yp-configurator__cart-status" data-yp-pa-message hidden></p>
+
+		</div>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

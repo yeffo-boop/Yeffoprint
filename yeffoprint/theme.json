@@ -146,6 +146,11 @@
 			"name": "custom-design-form",
 			"title": "Custom Design Form",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "proof-approval",
+			"title": "Proof Approval",
+			"postTypes": [ "page" ]
 		}
 	]
 }

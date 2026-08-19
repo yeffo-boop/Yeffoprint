@@ -32,12 +32,24 @@ class YeffoPrint_Custom_Order_Meta {
 	public const CUSTOMER_NAME       = '_yp_customer_name';
 	/** 0 for a guest order — set from $order->get_customer_id() at payment time. Lets the My Account "Proofs" tab (class-account-endpoints.php) query directly by meta instead of cross-referencing every order. */
 	public const CUSTOMER_ID         = '_yp_customer_id';
+	/**
+	 * A long random secret, generated once at submission (class-custom-
+	 * order-controller.php) and never rotated — the sole guest-access
+	 * credential for the public proof-approval page (V2: "not everyone
+	 * has an account... accessible with a link"). Anyone holding the
+	 * exact link can view/respond to that one request's proofs, same
+	 * trust model as an unguessable share link generally; it never
+	 * grants access to anything else the customer has.
+	 */
+	public const ACCESS_TOKEN         = '_yp_access_token';
+	/** The customer's own free-text feedback from the last "Request changes" response — staff-visible on the CustomOrder admin screen. */
+	public const CHANGE_REQUEST_NOTES = '_yp_change_request_notes';
 
 	/** In pipeline order — PROJECT_SPEC §13. */
 	public const STATUSES = [
 		'design_in_progress' => 'Design in progress',
 		'proof_ready'        => 'Proof ready',
-		'awaiting_approval'  => 'Awaiting approval',
+		'awaiting_approval'  => 'Awaiting Proof Approval',
 		'approved'           => 'Approved',
 		'printing'           => 'Printing',
 		'shipped'            => 'Shipped',

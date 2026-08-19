@@ -52,6 +52,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-payment.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-custom-order-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-proof-approval-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-endpoints.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-item-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-saved-design-controller.php';
@@ -73,6 +74,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Custom_Order_Meta();
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
+		new YeffoPrint_Proof_Approval_Controller();
 		new YeffoPrint_Account_Endpoints();
 		new YeffoPrint_Order_Item_Controller();
 		new YeffoPrint_Saved_Design_Controller();
