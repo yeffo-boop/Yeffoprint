@@ -508,23 +508,6 @@ fieldset {
 	flex: 1;
 }
 
-.yp-newsletter-form {
-	display: flex;
-	gap: 0.5rem;
-	flex-wrap: wrap;
-}
-
-.yp-newsletter-form input {
-	flex: 1;
-	min-width: 10rem;
-}
-
-.yp-newsletter-form__status {
-	margin-top: 0.5rem;
-	font-size: var(--wp--preset--font-size--small);
-	color: var(--wp--preset--color--charcoal);
-}
-
 .yp-search-form input {
 	font-size: var(--wp--preset--font-size--large);
 	border: none;

@@ -240,38 +240,10 @@
 		} );
 	}
 
-	/* ---------- Newsletter form ---------- */
-
-	// No email service is connected yet — submitting silently reloaded
-	// the page with no feedback either way, which fails PROJECT_SPEC
-	// §18's "non-silent error handling" bar. Same stub pattern as the
-	// Phase 5 Add to Cart button before Phase 7 wired it up for real:
-	// a clear, honest status message instead of a broken-looking no-op.
-	function initNewsletterForm() {
-		var form = document.querySelector( '.yp-newsletter-form' );
-		if ( ! form ) {
-			return;
-		}
-
-		form.addEventListener( 'submit', function ( event ) {
-			event.preventDefault();
-
-			var status = form.querySelector( '.yp-newsletter-form__status' );
-			if ( ! status ) {
-				status = document.createElement( 'p' );
-				status.className = 'yp-newsletter-form__status';
-				status.setAttribute( 'role', 'status' );
-				form.insertAdjacentElement( 'afterend', status );
-			}
-			status.textContent = "Newsletter signups aren't open yet — check back soon.";
-		} );
-	}
-
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initHeaderScroll();
 		initDrawers();
 		initGalleryToolbar();
 		initCartDrawer();
-		initNewsletterForm();
 	} );
 } )();
