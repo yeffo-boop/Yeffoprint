@@ -36,11 +36,23 @@
 	color: var(--wp--preset--color--warm-white);
 }
 
+/* A faint brand-tinted wash — not flat gray — applied to alternating
+   homepage sections so the page isn't wall-to-wall white/warm-white. */
+.yp-section--tint {
+	background: linear-gradient(180deg, rgba(0, 174, 239, 0.06), rgba(236, 0, 140, 0.06));
+}
+
 .yp-eyebrow {
-	display: inline-block;
+	/* Block, not inline-block: has-text-align-center (the WP core class
+	   already on Materials/Trending/Inspiration/Fully Custom's eyebrow
+	   paragraphs) centers a block's full-width content, but has no
+	   visible effect on an inline-block box that's already shrunk to
+	   fit its own text — which was rendering those four off to the
+	   left instead of centered under their heading. */
+	display: block;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	font-size: 0.75rem;
+	font-size: 0.8125rem;
 	font-weight: 700;
 	color: var(--wp--preset--color--magenta-deep);
 	margin-bottom: 0.5rem;
@@ -119,6 +131,17 @@
 	gap: var(--wp--preset--spacing--sm);
 }
 
+.yp-customer-tile {
+	/* Real customer photos aren't in yet — a soft brand-gradient wash
+	   with a photo icon reads as "coming soon," not as a broken/missing
+	   image the way a flat gray box (the .yp-card__media default) did. */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, rgba(0, 174, 239, 0.14), rgba(236, 0, 140, 0.14));
+	color: var(--wp--preset--color--magenta-deep);
+}
+
 /* ---------- Template card (gallery + homepage rails) ---------- */
 
 .yp-template-card {
@@ -195,6 +218,7 @@
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: var(--wp--preset--spacing--md);
+	align-items: stretch;
 }
 
 @media (max-width: 781px) {
@@ -204,6 +228,12 @@
 }
 
 .yp-step {
+	/* flex column, not just relying on implicit grid stretch — the
+	   three cards' description text differs slightly in length, and
+	   this guarantees identical card heights regardless of that rather
+	   than leaving it to each browser's own stretch/sizing behavior. */
+	display: flex;
+	flex-direction: column;
 	background: var(--wp--preset--color--white);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);

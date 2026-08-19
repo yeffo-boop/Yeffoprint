@@ -15,8 +15,8 @@ $materials = [
 	__( 'Metallic', 'yeffoprint' ),
 ];
 ?>
-<!-- wp:group {"tagName":"section","className":"yp-section","layout":{"type":"constrained","contentSize":"1200px"}} -->
-<section class="wp-block-group yp-section">
+<!-- wp:group {"tagName":"section","className":"yp-section yp-section--tint","layout":{"type":"constrained","contentSize":"1200px"}} -->
+<section class="wp-block-group yp-section yp-section--tint">
 
 	<!-- wp:paragraph {"align":"center","className":"yp-eyebrow"} -->
 	<p class="has-text-align-center yp-eyebrow">Materials</p>
