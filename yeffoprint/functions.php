@@ -176,7 +176,16 @@ add_action( 'init', function () {
  * is a second, independently-updating cart UI rather than a fallback —
  * strip it instead of letting both render. See docs/ARCHITECTURE.md §9.
  */
-add_filter( 'hooked_block_types', function ( array $hooked_block_types, string $relative_position, string $anchor_block_type, $context ) {
+add_filter( 'hooked_block_types', function ( $hooked_block_types, $relative_position, $anchor_block_type, $context ) {
+	// No type hints: WordPress core controls what it passes here, and
+	// a strict scalar hint (e.g. string $anchor_block_type) throws a
+	// fatal TypeError the moment core passes something that doesn't
+	// match exactly — not worth risking on a value this filter doesn't
+	// even use.
+	if ( ! is_array( $hooked_block_types ) ) {
+		return $hooked_block_types;
+	}
+
 	return array_values( array_diff( $hooked_block_types, [ 'woocommerce/mini-cart' ] ) );
 }, 20, 4 );
 
