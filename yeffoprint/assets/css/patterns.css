@@ -182,7 +182,16 @@
 }
 
 .yp-template-card__image--primary {
-	position: static;
+	/* Absolute, not static (inherits position:absolute from the base
+	   .yp-template-card__image rule above) — with .yp-template-card__media
+	   now a fixed aspect-ratio:15/7 box, a static image relying on
+	   height:100% doesn't reliably resolve against an aspect-ratio-
+	   derived height and falls back to its own intrinsic ratio instead,
+	   so the card's height ends up depending on whatever ratio that
+	   specific uploaded image happens to have rather than the fixed
+	   box. Both primary and hover images need to be absolutely
+	   positioned + object-fit:cover to actually fill the same box
+	   uniformly regardless of each source image's own dimensions. */
 	opacity: 1;
 }
 
