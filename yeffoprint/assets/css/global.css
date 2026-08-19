@@ -126,8 +126,17 @@ svg {
 .yp-header__logo a {
 	text-decoration: none;
 	font-family: var(--wp--preset--font-family--heading);
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--wp--preset--color--near-black);
+}
+
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+	.yp-header__logo a {
+		background: var(--wp--custom--gradient-brand);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
 }
 
 .yp-header__nav {
@@ -212,13 +221,18 @@ svg {
 }
 
 .wp-block-button.is-style-accent .wp-block-button__link {
-	background: var(--wp--preset--color--near-black);
-	color: var(--wp--preset--color--warm-white);
-	box-shadow: 0 0 0 0 transparent;
+	background: var(--wp--custom--gradient-brand);
+	background-size: 160% 160%;
+	background-position: 0% 50%;
+	color: var(--wp--preset--color--white);
+	box-shadow: 0 8px 22px rgba(236, 0, 140, 0.28);
+	transition: background-position 300ms ease, box-shadow 200ms ease, transform 150ms ease;
 }
 
 .wp-block-button.is-style-accent .wp-block-button__link:hover {
-	box-shadow: 0 0 0 3px var(--wp--preset--color--cyan);
+	background-position: 100% 50%;
+	box-shadow: 0 10px 28px rgba(0, 174, 239, 0.35);
+	transform: translateY(-1px);
 }
 
 /* ---------- Cards ---------- */
@@ -232,8 +246,8 @@ svg {
 }
 
 .yp-card:hover {
-	box-shadow: var(--wp--custom--shadow-elevation--medium);
-	transform: translateY(-2px);
+	box-shadow: 0 16px 36px rgba(0, 174, 239, 0.16), var(--wp--custom--shadow-elevation--medium);
+	transform: translateY(-4px);
 }
 
 .yp-card__media {
@@ -258,11 +272,12 @@ svg {
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
-	padding: 0.25rem 0.6rem;
+	padding: 0.25rem 0.65rem;
 	border-radius: var(--wp--custom--radius--control);
-	background: var(--wp--preset--color--warm-white);
-	border: 1px solid var(--wp--preset--color--light-gray);
-	color: var(--wp--preset--color--charcoal);
+	background: var(--wp--custom--gradient-brand);
+	border: none;
+	color: var(--wp--preset--color--white);
+	box-shadow: 0 4px 12px rgba(236, 0, 140, 0.25);
 }
 
 /* ---------- Forms ---------- */

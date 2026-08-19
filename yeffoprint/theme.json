@@ -47,7 +47,8 @@
 				"border": "rgba(255, 255, 255, 0.5)",
 				"blur": "16px"
 			},
-			"focus-ring": "var(--wp--preset--color--cyan)"
+			"focus-ring": "var(--wp--preset--color--cyan)",
+			"gradient-brand": "linear-gradient(135deg, var(--wp--preset--color--magenta) 0%, var(--wp--preset--color--cyan) 100%)"
 		},
 		"typography": {
 			"fontFamilies": [

@@ -12,8 +12,22 @@
 }
 
 .yp-section--dark {
+	position: relative;
 	background: var(--wp--preset--color--near-black);
 	color: var(--wp--preset--color--warm-white);
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.yp-section--dark::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(32rem 22rem at 15% 0%, rgba(0, 174, 239, 0.35), transparent 65%),
+		radial-gradient(30rem 24rem at 90% 100%, rgba(236, 0, 140, 0.32), transparent 65%);
+	z-index: -1;
+	pointer-events: none;
 }
 
 .yp-section--dark h1,
@@ -27,8 +41,8 @@
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 	font-size: 0.75rem;
-	font-weight: 600;
-	color: var(--wp--preset--color--charcoal);
+	font-weight: 700;
+	color: var(--wp--preset--color--magenta);
 	margin-bottom: 0.5rem;
 }
 
@@ -57,26 +71,39 @@
 .yp-hero {
 	position: relative;
 	padding-block: var(--wp--preset--spacing--2xl) var(--wp--preset--spacing--xl);
-	background: linear-gradient(180deg, var(--wp--preset--color--white) 0%, var(--wp--preset--color--warm-white) 100%);
+	background: var(--wp--preset--color--warm-white);
 	border-radius: 0 0 var(--wp--custom--radius--container) var(--wp--custom--radius--container);
 	overflow: hidden;
+	isolation: isolate;
+}
+
+.yp-hero::before {
+	content: "";
+	position: absolute;
+	inset: -20%;
+	background:
+		radial-gradient(38rem 24rem at 12% 15%, rgba(0, 174, 239, 0.24), transparent 60%),
+		radial-gradient(34rem 26rem at 88% 10%, rgba(236, 0, 140, 0.2), transparent 60%),
+		radial-gradient(30rem 22rem at 50% 105%, rgba(255, 242, 0, 0.18), transparent 60%);
+	z-index: -1;
+	pointer-events: none;
 }
 
 .yp-hero__eyebrow-accent {
 	display: inline-flex;
-	gap: 0.35rem;
+	gap: 0.4rem;
 	margin-bottom: 1rem;
 }
 
 .yp-hero__eyebrow-accent span {
-	width: 0.5rem;
-	height: 0.5rem;
+	width: 0.6rem;
+	height: 0.6rem;
 	border-radius: 999px;
 }
 
-.yp-hero__eyebrow-accent span:nth-child(1) { background: var(--wp--preset--color--cyan); }
-.yp-hero__eyebrow-accent span:nth-child(2) { background: var(--wp--preset--color--magenta); }
-.yp-hero__eyebrow-accent span:nth-child(3) { background: var(--wp--preset--color--yellow); }
+.yp-hero__eyebrow-accent span:nth-child(1) { background: var(--wp--preset--color--cyan); box-shadow: 0 0 14px rgba(0, 174, 239, 0.55); }
+.yp-hero__eyebrow-accent span:nth-child(2) { background: var(--wp--preset--color--magenta); box-shadow: 0 0 14px rgba(236, 0, 140, 0.55); }
+.yp-hero__eyebrow-accent span:nth-child(3) { background: var(--wp--preset--color--yellow); box-shadow: 0 0 14px rgba(255, 242, 0, 0.55); }
 
 /* ---------- Card grids (Featured Designs, Popular Designs) ---------- */
 
@@ -182,13 +209,31 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 2.25rem;
-	height: 2.25rem;
+	width: 2.5rem;
+	height: 2.5rem;
 	border-radius: 999px;
 	background: var(--wp--preset--color--near-black);
 	color: var(--wp--preset--color--warm-white);
-	font-weight: 600;
+	font-weight: 700;
 	margin-bottom: 1rem;
+}
+
+.yp-step:nth-child(1) .yp-step__index {
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--near-black);
+	box-shadow: 0 6px 16px rgba(0, 174, 239, 0.35);
+}
+
+.yp-step:nth-child(2) .yp-step__index {
+	background: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--white);
+	box-shadow: 0 6px 16px rgba(236, 0, 140, 0.35);
+}
+
+.yp-step:nth-child(3) .yp-step__index {
+	background: var(--wp--preset--color--yellow);
+	color: var(--wp--preset--color--near-black);
+	box-shadow: 0 6px 16px rgba(255, 242, 0, 0.4);
 }
 
 /* ---------- Materials ---------- */
@@ -227,18 +272,20 @@
 
 .yp-rewards-promo {
 	background: var(--wp--preset--color--warm-white);
-	border: 1px solid var(--wp--preset--color--light-gray);
+	border: 1.5px solid rgba(236, 0, 140, 0.22);
 	border-radius: var(--wp--custom--radius--container);
 	padding: var(--wp--preset--spacing--lg);
 	position: relative;
 	overflow: hidden;
+	isolation: isolate;
 }
 
 .yp-rewards-promo::before {
 	content: "";
 	position: absolute;
 	inset: 0;
-	background: linear-gradient(120deg, rgba(0, 174, 239, 0.08), rgba(236, 0, 140, 0.08), rgba(255, 242, 0, 0.08));
+	background: linear-gradient(120deg, rgba(0, 174, 239, 0.18), rgba(236, 0, 140, 0.18), rgba(255, 242, 0, 0.18));
+	z-index: -1;
 	pointer-events: none;
 }
 
