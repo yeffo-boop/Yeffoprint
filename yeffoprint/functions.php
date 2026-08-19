@@ -27,14 +27,27 @@ add_action( 'after_setup_theme', function () {
  * Global presentation assets: component styles + header/drawer behavior.
  * Business logic never lives here — see docs/ARCHITECTURE.md §1.
  */
-add_action( 'wp_enqueue_scripts', function () {
-	$theme_version = wp_get_theme()->get( 'Version' );
+/**
+ * filemtime() of the asset file itself, not the theme's declared
+ * style.css Version — busts every browser/CDN/host cache automatically
+ * on every deploy that touches the file, rather than depending on
+ * remembering to bump a version string by hand. That manual version
+ * was never once bumped across dozens of CSS/JS-only changes in this
+ * theme's history, meaning every one of them risked being served stale
+ * from cache indefinitely — exactly the "the fix is live but I don't
+ * see it" symptom this replaces.
+ */
+function yeffoprint_asset_version( string $relative_path ) {
+	$path = get_theme_file_path( $relative_path );
+	return file_exists( $path ) ? (string) filemtime( $path ) : wp_get_theme()->get( 'Version' );
+}
 
+add_action( 'wp_enqueue_scripts', function () {
 	wp_enqueue_style(
 		'yeffoprint-global',
 		get_theme_file_uri( 'assets/css/global.css' ),
 		[],
-		$theme_version
+		yeffoprint_asset_version( 'assets/css/global.css' )
 	);
 
 	// Homepage/storefront section styling — kept separate from
@@ -44,14 +57,14 @@ add_action( 'wp_enqueue_scripts', function () {
 		'yeffoprint-patterns',
 		get_theme_file_uri( 'assets/css/patterns.css' ),
 		[ 'yeffoprint-global' ],
-		$theme_version
+		yeffoprint_asset_version( 'assets/css/patterns.css' )
 	);
 
 	wp_enqueue_script(
 		'yeffoprint-site',
 		get_theme_file_uri( 'assets/js/site.js' ),
 		[],
-		$theme_version,
+		yeffoprint_asset_version( 'assets/js/site.js' ),
 		[ 'strategy' => 'defer' ]
 	);
 
@@ -59,7 +72,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		'yeffoprint-search',
 		get_theme_file_uri( 'assets/js/search.js' ),
 		[],
-		$theme_version,
+		yeffoprint_asset_version( 'assets/js/search.js' ),
 		[ 'strategy' => 'defer' ]
 	);
 
@@ -80,14 +93,14 @@ add_action( 'wp_enqueue_scripts', function () {
 			'yeffoprint-configurator',
 			get_theme_file_uri( 'assets/css/configurator.css' ),
 			[ 'yeffoprint-global' ],
-			$theme_version
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
 		);
 
 		wp_enqueue_script(
 			'yeffoprint-configurator',
 			get_theme_file_uri( 'assets/js/configurator.js' ),
 			[],
-			$theme_version,
+			yeffoprint_asset_version( 'assets/js/configurator.js' ),
 			[ 'strategy' => 'defer' ]
 		);
 
@@ -107,7 +120,7 @@ add_action( 'wp_enqueue_scripts', function () {
 			'yeffoprint-woocommerce',
 			get_theme_file_uri( 'assets/css/woocommerce.css' ),
 			[ 'yeffoprint-global' ],
-			$theme_version
+			yeffoprint_asset_version( 'assets/css/woocommerce.css' )
 		);
 	}
 
@@ -119,21 +132,21 @@ add_action( 'wp_enqueue_scripts', function () {
 			'yeffoprint-configurator',
 			get_theme_file_uri( 'assets/css/configurator.css' ),
 			[ 'yeffoprint-global' ],
-			$theme_version
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
 		);
 
 		wp_enqueue_style(
 			'yeffoprint-custom-order',
 			get_theme_file_uri( 'assets/css/custom-order.css' ),
 			[ 'yeffoprint-configurator' ],
-			$theme_version
+			yeffoprint_asset_version( 'assets/css/custom-order.css' )
 		);
 
 		wp_enqueue_script(
 			'yeffoprint-custom-order-form',
 			get_theme_file_uri( 'assets/js/custom-order-form.js' ),
 			[],
-			$theme_version,
+			yeffoprint_asset_version( 'assets/js/custom-order-form.js' ),
 			[ 'strategy' => 'defer' ]
 		);
 
