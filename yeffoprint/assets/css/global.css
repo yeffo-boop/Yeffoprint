@@ -389,6 +389,7 @@ main.wp-block-group {
 	background: var(--wp--preset--color--white);
 	box-shadow: var(--wp--custom--shadow-elevation--high);
 	border-radius: 0 0 var(--wp--custom--radius--container) var(--wp--custom--radius--container);
+	padding-bottom: var(--wp--custom--radius--container);
 	overflow: hidden;
 }
 
