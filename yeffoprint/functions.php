@@ -28,18 +28,31 @@ add_action( 'after_setup_theme', function () {
  * Business logic never lives here — see docs/ARCHITECTURE.md §1.
  */
 /**
- * filemtime() of the asset file itself, not the theme's declared
+ * A content hash of the asset file itself, not the theme's declared
  * style.css Version — busts every browser/CDN/host cache automatically
- * on every deploy that touches the file, rather than depending on
+ * whenever the file's actual bytes change, rather than depending on
  * remembering to bump a version string by hand. That manual version
  * was never once bumped across dozens of CSS/JS-only changes in this
  * theme's history, meaning every one of them risked being served stale
  * from cache indefinitely — exactly the "the fix is live but I don't
  * see it" symptom this replaces.
+ *
+ * A content hash rather than filemtime() on purpose: some git-based
+ * deploy tools don't reliably bump a file's modified-time on checkout
+ * (only truly-changed files, or none, depending on how the sync is
+ * done), which would silently reintroduce the same stale-cache problem
+ * for any deploy path where mtimes aren't trustworthy. Hashing the
+ * actual bytes has no such dependency — it changes if and only if the
+ * file's content did, regardless of how it got onto the server.
  */
 function yeffoprint_asset_version( string $relative_path ) {
 	$path = get_theme_file_path( $relative_path );
-	return file_exists( $path ) ? (string) filemtime( $path ) : wp_get_theme()->get( 'Version' );
+	if ( ! file_exists( $path ) ) {
+		return wp_get_theme()->get( 'Version' );
+	}
+
+	$hash = md5_file( $path );
+	return $hash ? substr( $hash, 0, 12 ) : (string) filemtime( $path );
 }
 
 add_action( 'wp_enqueue_scripts', function () {

@@ -172,18 +172,27 @@ svg {
 }
 
 .yp-header__nav ul.wp-block-navigation__container {
-	gap: 2rem;
+	gap: 0.5rem;
 }
 
 .yp-header__nav a.wp-block-navigation-item__content {
+	/* Pill/button treatment, not plain text on dark — a translucent
+	   white background gives every link its own visible boundary
+	   against the dark header regardless of exact text/background
+	   contrast, matching "make them look like buttons." */
 	font-size: var(--wp--preset--font-size--small);
-	font-weight: 500;
-	color: rgba(255, 255, 255, 0.78);
+	font-weight: 600;
+	color: var(--wp--preset--color--warm-white);
 	text-decoration: none;
+	padding: 0.55rem 1.1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: rgba(255, 255, 255, 0.1);
+	transition: background-color 150ms ease, color 150ms ease;
 }
 
 .yp-header__nav a.wp-block-navigation-item__content:hover {
-	color: var(--wp--preset--color--warm-white);
+	background: rgba(255, 255, 255, 0.2);
+	color: var(--wp--preset--color--white);
 }
 
 /* The mobile hamburger overlay (core Navigation block, overlayMenu:
