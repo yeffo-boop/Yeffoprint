@@ -50,6 +50,7 @@ class YeffoPrint_Custom_Order_Payment {
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::DESIGN_FEE, (float) $item->get_total() );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, $order->get_billing_email() );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, trim( $order->get_formatted_billing_full_name() ) );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_ID, $order->get_customer_id() );
 		}
 	}
 }
