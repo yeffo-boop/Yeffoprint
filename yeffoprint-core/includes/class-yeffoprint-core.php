@@ -49,6 +49,9 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-payment.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-custom-order-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-endpoints.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-item-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 
 		new YeffoPrint_Post_Type_Registry();
@@ -66,6 +69,18 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Custom_Order_Meta();
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
+		new YeffoPrint_Account_Endpoints();
+		new YeffoPrint_Order_Item_Controller();
+		new YeffoPrint_Reorder();
+
+		// Flag set on activation (yeffoprint-core.php) — flush now that
+		// CPT/endpoint rewrite rules have just registered above.
+		add_action( 'init', function () {
+			if ( get_option( 'yeffoprint_core_flush_rewrite_rules' ) ) {
+				flush_rewrite_rules();
+				delete_option( 'yeffoprint_core_flush_rewrite_rules' );
+			}
+		}, 20 );
 
 		if ( is_admin() ) {
 			new YeffoPrint_Admin_Menu();

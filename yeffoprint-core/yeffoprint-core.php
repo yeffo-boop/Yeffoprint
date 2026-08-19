@@ -23,3 +23,14 @@ define( 'YEFFOPRINT_CORE_URL', plugin_dir_url( __FILE__ ) );
 require_once YEFFOPRINT_CORE_PATH . 'includes/class-yeffoprint-core.php';
 
 YeffoPrint_Core::instance();
+
+/**
+ * The Template CPT's archive/rewrite slug (Phase 3) and the My Account
+ * endpoints (Phase 9) both need a rewrite flush to start working.
+ * Activation runs before 'init' has registered them in this request,
+ * so this just flags it — YeffoPrint_Core flushes on the next 'init'
+ * once everything is actually registered. See class-yeffoprint-core.php.
+ */
+register_activation_hook( __FILE__, function () {
+	update_option( 'yeffoprint_core_flush_rewrite_rules', 1 );
+} );

@@ -94,6 +94,10 @@ add_action( 'wp_enqueue_scripts', function () {
 		wp_localize_script( 'yeffoprint-configurator', 'yeffoprintConfigurator', [
 			'restUrl'    => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'templateId' => get_the_ID(),
+			// Only needed for the ?reorder= flow (class-order-item-controller.php
+			// requires a logged-in request); cart add/edit endpoints are guest-
+			// accessible and don't need it.
+			'nonce'      => wp_create_nonce( 'wp_rest' ),
 		] );
 	}
 
@@ -158,3 +162,4 @@ add_action( 'init', function () {
 		'label' => __( 'YeffoPrint', 'yeffoprint' ),
 	] );
 } );
+

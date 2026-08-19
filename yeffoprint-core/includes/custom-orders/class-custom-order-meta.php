@@ -30,6 +30,8 @@ class YeffoPrint_Custom_Order_Meta {
 	public const WC_ORDER_ID         = '_yp_wc_order_id';
 	public const CUSTOMER_EMAIL      = '_yp_customer_email';
 	public const CUSTOMER_NAME       = '_yp_customer_name';
+	/** 0 for a guest order — set from $order->get_customer_id() at payment time. Lets the My Account "Proofs" tab (class-account-endpoints.php) query directly by meta instead of cross-referencing every order. */
+	public const CUSTOMER_ID         = '_yp_customer_id';
 
 	/** In pipeline order — PROJECT_SPEC §13. */
 	public const STATUSES = [

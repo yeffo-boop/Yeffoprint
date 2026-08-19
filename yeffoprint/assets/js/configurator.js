@@ -109,10 +109,34 @@
 		titleEl.textContent = schema.title || '';
 		document.title = schema.title ? schema.title + ' — YeffoPrint' : document.title;
 
-		var editKey = new URLSearchParams( window.location.search ).get( 'edit' );
+		var params = new URLSearchParams( window.location.search );
+		var editKey = params.get( 'edit' );
+		var reorderRef = params.get( 'reorder' ); // "<order_id>:<item_id>"
 
 		if ( editKey ) {
-			loadCartItemForEdit( editKey );
+			// "Edit customization" (PROJECT_SPEC §14): rehydrates from a
+			// live cart item; Add to Cart becomes an in-place update (see
+			// submitAddToCart) rather than adding a second line item.
+			loadExternalBatch(
+				yeffoprintConfigurator.restUrl + 'cart/item/' + encodeURIComponent( editKey ),
+				{},
+				function ( item ) {
+					state.editKey = editKey;
+					hydrateFromBatch( item );
+				}
+			);
+		} else if ( reorderRef && reorderRef.indexOf( ':' ) !== -1 ) {
+			// Reorder (PROJECT_SPEC §16): "restore batch into configurator,
+			// then edit before purchase" — rehydrates from a past order's
+			// frozen line-item snapshot, but always as a fresh Add to Cart,
+			// never a one-click re-cart. Needs a logged-in request (order
+			// data isn't public the way a cart session is).
+			var parts = reorderRef.split( ':' );
+			loadExternalBatch(
+				yeffoprintConfigurator.restUrl + 'orders/' + encodeURIComponent( parts[ 0 ] ) + '/items/' + encodeURIComponent( parts[ 1 ] ),
+				{ headers: { 'X-WP-Nonce': yeffoprintConfigurator.nonce } },
+				hydrateFromBatch
+			);
 		} else {
 			applyDefaultState();
 			finishInit();
@@ -125,30 +149,26 @@
 		state.variants = [ createVariant() ];
 	}
 
-	/**
-	 * "Edit customization" (PROJECT_SPEC §14): a cart drawer/cart-page
-	 * link sends the customer back here with ?edit=<cart_item_key>.
-	 * Rehydrates state from the cart item's stored batch data instead
-	 * of schema defaults; Add to Cart becomes an in-place update (see
-	 * submitAddToCart) rather than adding a second line item.
-	 */
-	function loadCartItemForEdit( key ) {
-		fetch( yeffoprintConfigurator.restUrl + 'cart/item/' + encodeURIComponent( key ) )
+	function hydrateFromBatch( item ) {
+		state.sizeId = item.size_id ? parseInt( item.size_id, 10 ) : null;
+		state.materialId = item.material_id ? parseInt( item.material_id, 10 ) : null;
+		state.variants = item.variants.map( function ( variant ) {
+			return {
+				id: nextVariantId++,
+				quantity: variant.quantity || 1,
+				values: variant.values || {}
+			};
+		} );
+	}
+
+	function loadExternalBatch( url, fetchOptions, onSuccess ) {
+		fetch( url, fetchOptions )
 			.then( function ( response ) {
 				return response.ok ? response.json() : null;
 			} )
 			.then( function ( item ) {
 				if ( item && parseInt( item.template_id, 10 ) === schema.id && Array.isArray( item.variants ) && item.variants.length ) {
-					state.editKey = key;
-					state.sizeId = item.size_id ? parseInt( item.size_id, 10 ) : null;
-					state.materialId = item.material_id ? parseInt( item.material_id, 10 ) : null;
-					state.variants = item.variants.map( function ( variant ) {
-						return {
-							id: nextVariantId++,
-							quantity: variant.quantity || 1,
-							values: variant.values || {}
-						};
-					} );
+					onSuccess( item );
 				} else {
 					applyDefaultState();
 				}
