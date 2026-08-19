@@ -84,6 +84,14 @@ class YeffoPrint_Custom_Order_Meta {
 			case 'yp_status':
 				$status = (string) get_post_meta( $post_id, self::STATUS, true );
 				echo $status ? esc_html( self::get_status_label( $status ) ) : esc_html__( '—', 'yeffoprint-core' );
+
+				// A change request is only "live" for the design_in_progress
+				// cycle it caused — once staff upload a new proof, status
+				// moves on and this note is stale, so it's never shown after
+				// that even though the meta itself isn't cleared.
+				if ( 'design_in_progress' === $status && get_post_meta( $post_id, self::CHANGE_REQUEST_NOTES, true ) ) {
+					echo ' <strong style="color:#b32d2e;">' . esc_html__( '(changes requested)', 'yeffoprint-core' ) . '</strong>';
+				}
 				break;
 
 			case 'yp_customer':

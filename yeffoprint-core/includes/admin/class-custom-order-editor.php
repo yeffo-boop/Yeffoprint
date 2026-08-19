@@ -57,7 +57,14 @@ class YeffoPrint_Custom_Order_Editor {
 		$material_id = (int) $m( YeffoPrint_Custom_Order_Meta::MATERIAL_ID );
 		$uploads     = (array) $m( YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS );
 		$wc_order_id = (int) $m( YeffoPrint_Custom_Order_Meta::WC_ORDER_ID );
+		$change_request = $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES );
 		?>
+		<?php if ( $change_request && 'design_in_progress' === $m( YeffoPrint_Custom_Order_Meta::STATUS ) ) : ?>
+			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
+				<p style="margin: 0 0 4px;"><strong><?php esc_html_e( 'Customer requested changes to the last proof:', 'yeffoprint-core' ); ?></strong></p>
+				<p style="margin: 0;"><?php echo nl2br( esc_html( $change_request ) ); ?></p>
+			</div>
+		<?php endif; ?>
 		<table class="widefat striped">
 			<tbody>
 				<tr><th><?php esc_html_e( 'Customer', 'yeffoprint-core' ); ?></th><td>
@@ -73,9 +80,6 @@ class YeffoPrint_Custom_Order_Editor {
 				<tr><th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ) ); ?></td></tr>
 				<tr><th><?php esc_html_e( 'Style / Colors', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::STYLE_NOTES ) ?: '—' ) ); ?></td></tr>
 				<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
-				<?php if ( $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES ) ) : ?>
-					<tr><th><?php esc_html_e( 'Customer Requested Changes', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES ) ) ); ?></td></tr>
-				<?php endif; ?>
 				<tr><th><?php esc_html_e( 'Inspiration Files', 'yeffoprint-core' ); ?></th><td>
 					<?php if ( $uploads ) : ?>
 						<ul>
