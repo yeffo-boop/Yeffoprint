@@ -137,6 +137,22 @@ add_action( 'wp_enqueue_scripts', function () {
 			[ 'strategy' => 'defer' ]
 		);
 
+		// This page bakes a nonce for the *current visitor's session*
+		// into its HTML (below). If a page cache (host-level cache
+		// plugin, a CDN) ever serves that same cached response back to
+		// a different or later session, every visitor gets that one
+		// stale nonce — REST requests then fail cookie/nonce validation
+		// ("Cookie check failed") for no reason a visitor would
+		// associate with caching. Guests aren't affected (class-rest-
+		// security.php doesn't nonce-check them), so this only needs to
+		// run for a logged-in visitor, and only tells a well-behaved
+		// cache not to store *this* response — it can't override a
+		// cache that already served a stale copy without ever asking
+		// our server this time.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
 		wp_localize_script( 'yeffoprint-configurator', 'yeffoprintConfigurator', [
 			'restUrl'     => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'templateId'  => get_the_ID(),
@@ -189,6 +205,12 @@ add_action( 'wp_enqueue_scripts', function () {
 			[ 'strategy' => 'defer' ]
 		);
 
+		// Same stale-nonce-from-a-cached-page risk as the configurator
+		// above — see that comment.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
 		wp_localize_script( 'yeffoprint-custom-order-form', 'yeffoprintCustomOrder', [
 			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			// Sent on every upload/submit call — guests aren't checked
@@ -220,6 +242,12 @@ add_action( 'wp_enqueue_scripts', function () {
 			yeffoprint_asset_version( 'assets/js/proof-approval.js' ),
 			[ 'strategy' => 'defer' ]
 		);
+
+		// Same stale-nonce-from-a-cached-page risk as the configurator
+		// above — see that comment.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
 
 		wp_localize_script( 'yeffoprint-proof-approval', 'yeffoprintProofApproval', [
 			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),

@@ -868,7 +868,14 @@
 		}
 	}
 
-	function submitAddToCart() {
+	// Both this endpoint's own explicit nonce check (class-rest-
+	// security.php) and WordPress core's own cookie/nonce check (which
+	// runs even earlier, before any endpoint code) reject the same
+	// underlying problem — a stale nonce that no longer matches the
+	// visitor's actual session — under two different error codes.
+	var NONCE_ERROR_CODES = [ 'rest_cookie_invalid_nonce', 'yeffoprint_invalid_nonce' ];
+
+	function submitAddToCart( isRetry ) {
 		clearCartStatus();
 		addToCartButtons.forEach( function ( button ) {
 			button.disabled = true;
@@ -898,6 +905,19 @@
 				} );
 			} )
 			.then( function ( result ) {
+				if ( ! result.ok && ! isRetry && result.data && NONCE_ERROR_CODES.indexOf( result.data.code ) !== -1 ) {
+					// The nonce baked into this page at load time no
+					// longer matches the visitor's session — most often
+					// because the page itself was served from a cache
+					// that predates it (functions.php has the full
+					// reasoning). Fetching a fresh one only needs the
+					// *current*, still-valid session cookie, so this
+					// recovers silently instead of surfacing an error a
+					// visitor would have no way to understand or act on.
+					fetchFreshNonceAndRetry();
+					return;
+				}
+
 				addToCartButtons.forEach( function ( button ) {
 					button.disabled = false;
 				} );
@@ -926,8 +946,32 @@
 			} );
 	}
 
+	function fetchFreshNonceAndRetry() {
+		fetch( yeffoprintConfigurator.restUrl + 'session/nonce' )
+			.then( function ( response ) {
+				return response.ok ? response.json() : Promise.reject( new Error( 'nonce-refresh-failed' ) );
+			} )
+			.then( function ( data ) {
+				yeffoprintConfigurator.nonce = data.nonce;
+				submitAddToCart( /* isRetry */ true );
+			} )
+			.catch( function () {
+				addToCartButtons.forEach( function ( button ) {
+					button.disabled = false;
+				} );
+				showCartStatus( 'Your session has expired — please refresh the page and try again.', true );
+			} );
+	}
+
 	addToCartButtons.forEach( function ( button ) {
-		button.addEventListener( 'click', submitAddToCart );
+		// Not `addEventListener( 'click', submitAddToCart )` directly —
+		// that would pass the click Event itself as submitAddToCart's
+		// first argument (isRetry), which is truthy, making every fresh
+		// click look like a retry and skip the one-time nonce-refresh
+		// path above entirely.
+		button.addEventListener( 'click', function () {
+			submitAddToCart( false );
+		} );
 	} );
 
 	/* ---------- Save this design ---------- */
