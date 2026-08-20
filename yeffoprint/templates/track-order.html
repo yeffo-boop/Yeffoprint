@@ -1,0 +1,31 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-track-order" class="yp-track-order yp-section">
+
+		<p class="yp-eyebrow">Order Tracking</p>
+		<h1>Track Your Order</h1>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<div data-yp-to-content hidden>
+
+			<div class="yp-track-order__header">
+				<strong data-yp-to-order-number></strong>
+				<span class="yp-track-order__status-pill" data-yp-to-status-pill></span>
+			</div>
+
+			<div class="yp-track-order__shipments" data-yp-to-shipments></div>
+
+		</div>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

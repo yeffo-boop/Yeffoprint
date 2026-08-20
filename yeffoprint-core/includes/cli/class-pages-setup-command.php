@@ -39,6 +39,18 @@ class YeffoPrint_Pages_Setup_Command {
 			'proof-approval.html'
 		);
 
+		// Reached via the "Track your order" link in order emails
+		// (class-order-tracking.php), never linked from site nav — same
+		// no-account-required, token-in-the-URL pattern as proof-approval
+		// above, just reusing WooCommerce's own order_key instead of a
+		// new access token.
+		$this->create_page(
+			'track-order',
+			__( 'Track Your Order', 'yeffoprint-core' ),
+			'',
+			'track-order.html'
+		);
+
 		// Custom Stickers is header/footer nav (PROJECT_SPEC §7) for a
 		// Phase 2 product line that's an explicit V1 non-goal (§19) —
 		// without this page the nav link 404s. Plain default template

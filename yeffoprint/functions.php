@@ -281,6 +281,45 @@ add_action( 'wp_enqueue_scripts', function () {
 			'nonce'   => wp_create_nonce( 'wp_rest' ),
 		] );
 	}
+
+	if ( is_page() && in_array( get_page_template_slug(), [ 'track-order', 'track-order.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-track-order',
+			get_theme_file_uri( 'assets/css/track-order.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/track-order.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-track-order',
+			get_theme_file_uri( 'assets/js/track-order.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/track-order.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		// Same stale-nonce-from-a-cached-page risk as the configurator
+		// above — see that comment.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		wp_localize_script( 'yeffoprint-track-order', 'yeffoprintTrackOrder', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			// Only meaningful for a logged-in customer/staff viewing
+			// their own order — a guest is authenticated by the `key`
+			// query param instead (class-order-tracking-controller.php's
+			// check_access()), which needs no nonce.
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+		] );
+	}
 } );
 
 /**

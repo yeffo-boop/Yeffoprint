@@ -335,6 +335,19 @@ p.yp-reorder-link a {
 	color: #0078A4; /* cyan-deep — a second text-safe accent, so it reads distinct from the magenta-deep primary link color. */
 }
 
+/* "Track your order" button (class-order-tracking.php). */
+a.yp-email-button {
+	display: inline-block;
+	background-color: <?php echo esc_attr( $band ); ?>;
+	color: <?php echo esc_attr( $band_text ); ?> !important;
+	font-weight: 600;
+	font-size: 13.5px;
+	text-decoration: none;
+	padding: 12px 22px;
+	border-radius: 6px;
+	letter-spacing: .01em;
+}
+
 /* Payment-instructions callout (class-manual-payment-gateway.php's email_instructions()). */
 table.yp-email-callout {
 	margin: 0 0 22px;

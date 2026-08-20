@@ -34,6 +34,18 @@ class YeffoPrint_Admin_Menu {
 	const REWARDS_POINTS_PER_DOLLAR_DEFAULT = 1;
 	const REWARDS_DOLLARS_PER_POINT_DEFAULT = 0.01;
 
+	/**
+	 * Also read by the tracking-providers/ classes — same reasoning as
+	 * the rewards options above. Empty until an admin actually signs up
+	 * for each carrier's developer program and pastes these in; the
+	 * tracking page works before that too (class-order-tracking.php's
+	 * direct carrier-site links), just without the live in-page timeline.
+	 */
+	const UPS_CLIENT_ID_OPTION      = 'yeffoprint_ups_client_id';
+	const UPS_CLIENT_SECRET_OPTION  = 'yeffoprint_ups_client_secret';
+	const USPS_CONSUMER_KEY_OPTION    = 'yeffoprint_usps_consumer_key';
+	const USPS_CONSUMER_SECRET_OPTION = 'yeffoprint_usps_consumer_secret';
+
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
 		// Runs after WordPress has built every submenu (including the
@@ -122,6 +134,91 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_rewards'
 		);
+
+		register_setting( 'yeffoprint_settings', self::UPS_CLIENT_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ] );
+		register_setting( 'yeffoprint_settings', self::UPS_CLIENT_SECRET_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ] );
+		register_setting( 'yeffoprint_settings', self::USPS_CONSUMER_KEY_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ] );
+		register_setting( 'yeffoprint_settings', self::USPS_CONSUMER_SECRET_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ] );
+
+		add_settings_section(
+			'yeffoprint_tracking',
+			__( 'Shipment Tracking', 'yeffoprint-core' ),
+			[ $this, 'render_tracking_section_intro' ],
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::UPS_CLIENT_ID_OPTION,
+			__( 'UPS Client ID', 'yeffoprint-core' ),
+			[ $this, 'render_ups_client_id_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_tracking'
+		);
+
+		add_settings_field(
+			self::UPS_CLIENT_SECRET_OPTION,
+			__( 'UPS Client Secret', 'yeffoprint-core' ),
+			[ $this, 'render_ups_client_secret_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_tracking'
+		);
+
+		add_settings_field(
+			self::USPS_CONSUMER_KEY_OPTION,
+			__( 'USPS Consumer Key', 'yeffoprint-core' ),
+			[ $this, 'render_usps_consumer_key_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_tracking'
+		);
+
+		add_settings_field(
+			self::USPS_CONSUMER_SECRET_OPTION,
+			__( 'USPS Consumer Secret', 'yeffoprint-core' ),
+			[ $this, 'render_usps_consumer_secret_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_tracking'
+		);
+	}
+
+	public function render_tracking_section_intro(): void {
+		echo '<p>' . wp_kses(
+			sprintf(
+				/* translators: 1: developer.ups.com link, 2: developer.usps.com link */
+				__( 'Powers the live tracking timeline on the order-tracking page (/track-order/) and its link in order emails. Optional — the tracking page and email link work without these, showing a direct link to the carrier\'s own tracking site instead of an in-page timeline. Get credentials from <a href="%1$s" target="_blank" rel="noopener noreferrer">UPS\'s Developer Kit</a> and <a href="%2$s" target="_blank" rel="noopener noreferrer">USPS\'s Developer Portal</a>.', 'yeffoprint-core' ),
+				'https://developer.ups.com/',
+				'https://developer.usps.com/'
+			),
+			[ 'a' => [ 'href' => [], 'target' => [], 'rel' => [] ] ]
+		) . '</p>';
+	}
+
+	public function render_ups_client_id_field(): void {
+		$this->render_secret_field( self::UPS_CLIENT_ID_OPTION );
+	}
+
+	public function render_ups_client_secret_field(): void {
+		$this->render_secret_field( self::UPS_CLIENT_SECRET_OPTION );
+	}
+
+	public function render_usps_consumer_key_field(): void {
+		$this->render_secret_field( self::USPS_CONSUMER_KEY_OPTION );
+	}
+
+	public function render_usps_consumer_secret_field(): void {
+		$this->render_secret_field( self::USPS_CONSUMER_SECRET_OPTION );
+	}
+
+	/** Shared renderer for the four carrier-credential fields above — same field, just a different option name each time. */
+	private function render_secret_field( string $option ): void {
+		?>
+		<input
+			type="password"
+			class="regular-text"
+			autocomplete="off"
+			name="<?php echo esc_attr( $option ); ?>"
+			value="<?php echo esc_attr( get_option( $option ) ); ?>"
+		/>
+		<?php
 	}
 
 	/**
