@@ -1,9 +1,10 @@
 name: Deploy to server
 
-# Auto-deploys on every push to main. See docs/deploy-setup.md for the
-# one-time server-side setup this depends on (an SSH deploy key and a
-# git clone of this repo on the server) and for what each secret below
-# needs to contain. Inert until those secrets exist in this repo's
+# Auto-deploys on every push to Prod (this repo's actual default/
+# production branch — there is no "main" here). See docs/deploy-setup.md
+# for the one-time server-side setup this depends on (an SSH deploy key
+# and a git clone of this repo on the server) and for what each secret
+# below needs to contain. Inert until those secrets exist in this repo's
 # Settings -> Secrets and variables -> Actions — adding this file alone
 # does nothing.
 #
@@ -12,7 +13,7 @@ name: Deploy to server
 # a new commit.
 on:
   push:
-    branches: [main]
+    branches: [Prod]
   workflow_dispatch: {}
 
 jobs:
@@ -29,5 +30,5 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch origin Prod
+            git reset --hard origin/Prod

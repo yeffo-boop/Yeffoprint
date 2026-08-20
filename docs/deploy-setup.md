@@ -1,6 +1,7 @@
 # Auto-deploy setup (self-hosted server)
 
-`.github/workflows/deploy.yml` makes every push to `main` automatically
+`.github/workflows/deploy.yml` makes every push to `Prod` — this repo's
+actual default/production branch; there's no `main` here — automatically
 run `git pull` on your server. It does nothing until you complete the
 one-time setup below — the workflow file alone is inert.
 
@@ -8,9 +9,9 @@ one-time setup below — the workflow file alone is inert.
 theme/plugin folders on the server are a git clone, not a place for
 manual edits or FTP uploads anymore. Any hand-edit made directly on the
 server will be **overwritten** the next time something is pushed to
-`main` (the deploy does `git reset --hard`, which discards anything not
+`Prod` (the deploy does `git reset --hard`, which discards anything not
 committed). Going forward, changes need to go through a commit to
-`main` — which fits how this project already works, since that's where
+`Prod` — which fits how this project already works, since that's where
 finished work gets merged to anyway.
 
 ## Step 1 — Turn the theme/plugin folders into a git clone
@@ -90,17 +91,21 @@ chat with me or anywhere else — only into this GitHub Secrets form):
 | `DEPLOY_PATH` | The full path to the clone from Step 1, e.g. `/path/to/somewhere/outside/wp-content/yeffoprint-deploy` |
 | `DEPLOY_PORT` | Only if SSH runs on a non-standard port — otherwise skip it, the workflow defaults to 22 |
 
-## Step 5 — Make `main` the deploy branch
+## Step 5 — Keep merging into `Prod`
 
-The workflow watches `main`. Session work in this project lands on its
-own branch first (like the one this was built on) — merge that into
-`main` once you're happy with it, and every push to `main` from then on
-deploys automatically. If you'd rather I merge the current branch into
-`main` now to get this started, just say so.
+The workflow watches `Prod` (already this repo's default branch —
+nothing to rename). Session work in this project lands on its own
+branch first (like the one this was built on) — merge that into `Prod`
+once you're happy with it, and every push to `Prod` from then on deploys
+automatically. Merging alone doesn't touch the server, though — the
+first push to `Prod` *after* the secrets above are all in place is what
+actually triggers the workflow; a merge that happened before that won't
+retroactively deploy on its own (use the **Run workflow** button in
+Step 6 to deploy it by hand instead of waiting for the next push).
 
 ## Step 6 — Test it
 
-Push any small commit to `main` (or use the **Run workflow** button
+Push any small commit to `Prod` (or use the **Run workflow** button
 under the Actions tab in GitHub — the workflow also supports being
 triggered manually, no commit needed) and watch it run under the
 **Actions** tab. If it fails, the log will show exactly which step
