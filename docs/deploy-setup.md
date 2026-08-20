@@ -1,18 +1,28 @@
 # Auto-deploy setup (self-hosted server)
 
-`.github/workflows/deploy.yml` makes every push to `Prod` — this repo's
-actual default/production branch; there's no `main` here — automatically
-run `git pull` on your server. It does nothing until you complete the
-one-time setup below — the workflow file alone is inert.
+`deploy/pull-and-deploy.sh` checks GitHub for new commits on `Prod` —
+this repo's actual default/production branch; there's no `main` here —
+and updates the server's clone when there's something new. A cron job
+on the server runs it every few minutes. Nothing pushes to the server;
+the server pulls, on its own schedule.
+
+**Why pull instead of push:** this server is self-hosted at home. A
+push-based setup (GitHub Actions SSHing in) would need port 22 forwarded
+from the router to the internet — and since GitHub's runners come from a
+large, changing range of IPs rather than a fixed one, "open to GitHub"
+in practice means "open to everyone." Pulling needs no inbound port
+opened at all — the server already reaches the internet outbound (that's
+how it serves the site), so checking GitHub and pulling asks nothing new
+of the router or firewall.
 
 **What this changes about your workflow:** once this is live, the
 theme/plugin folders on the server are a git clone, not a place for
 manual edits or FTP uploads anymore. Any hand-edit made directly on the
-server will be **overwritten** the next time something is pushed to
-`Prod` (the deploy does `git reset --hard`, which discards anything not
-committed). Going forward, changes need to go through a commit to
-`Prod` — which fits how this project already works, since that's where
-finished work gets merged to anyway.
+server will be **overwritten** the next time `Prod` moves (the script
+does `git reset --hard`, which discards anything not committed). Going
+forward, changes need to go through a commit to `Prod` — which fits how
+this project already works, since that's where finished work gets
+merged to anyway.
 
 ## Step 1 — Turn the theme/plugin folders into a git clone
 
@@ -24,6 +34,7 @@ SSH into your server with your normal account, then:
 cd /path/to/somewhere/outside/wp-content
 git clone https://github.com/yeffo-boop/Yeffoprint.git yeffoprint-deploy
 cd yeffoprint-deploy
+git checkout Prod
 
 # Back up what's currently there (don't skip this — it's your safety
 # net if anything doesn't line up):
@@ -43,71 +54,64 @@ untouched by any of this, so that's not a concern, but double-check
 anything else you may have hand-edited directly on the server before
 this).
 
-If the deploy user (the one the GitHub Action logs in as) is different
-from whichever user your web server (PHP-FPM/Apache) runs as, you may
-need to adjust ownership so both can read the files:
+If the user your cron job runs as is different from whichever user your
+web server (PHP-FPM/Apache) runs as, you may need to adjust ownership so
+both can read/write the files:
 
 ```bash
 sudo chown -R your-web-server-user:your-web-server-user yeffoprint-deploy
 ```
 
-## Step 2 — Generate a dedicated deploy key
+Every path in Steps 1–2 needs to actually be reachable by your web
+server user — if you hit a permissions wall getting here, `namei -l
+/path/to/wp-content/themes/yeffoprint` (walks every directory in the
+path, showing owner/permissions for each) is the fastest way to spot
+which segment is blocking it. A clone sitting inside a home directory
+(`~`) is the single most common cause — home directories are almost
+always locked down (`700`/`750`), while wherever WordPress itself
+already lives has to be web-server-readable by definition, so keeping
+the clone there (as in the `cd` command above) avoids the problem
+entirely rather than requiring you to loosen home-directory permissions.
 
-On your own machine (not the server):
-
-```bash
-ssh-keygen -t ed25519 -f yeffoprint_deploy_key -N ""
-```
-
-This creates two files: `yeffoprint_deploy_key` (private — this goes
-into GitHub, never anywhere else) and `yeffoprint_deploy_key.pub`
-(public — this goes on the server). Using a dedicated key instead of
-your own personal SSH key means it can be revoked independently later
-without affecting your own access.
-
-## Step 3 — Authorize that key on the server
-
-Still SSH'd into the server:
+## Step 2 — Test the script once, by hand
 
 ```bash
-echo "PASTE_THE_CONTENTS_OF_yeffoprint_deploy_key.pub_HERE" >> ~/.ssh/authorized_keys
+cd /path/to/somewhere/outside/wp-content/yeffoprint-deploy
+./deploy/pull-and-deploy.sh
 ```
 
-(Or append it to the `authorized_keys` file for whichever user account
-you want the deploy to run as — that user needs write access to the
-clone from Step 1.)
+Since the clone from Step 1 is already at `Prod`'s current tip, this
+should print nothing and exit immediately — that's correct (the script
+is deliberately quiet when there's nothing new, so a tight cron interval
+doesn't spam a log file). To actually see it deploy something, either
+wait for the next real change to land on `Prod`, or force a test run:
 
-## Step 4 — Add the secrets in GitHub
+```bash
+git reset --hard HEAD~1   # steps the clone back one commit, just for this test
+./deploy/pull-and-deploy.sh   # should now print a "deploying ..." / "done" pair and fast-forward back
+```
 
-In the repo on GitHub: **Settings → Secrets and variables → Actions →
-New repository secret**. Add each of these (never paste these into a
-chat with me or anywhere else — only into this GitHub Secrets form):
+## Step 3 — Add the cron job
 
-| Secret name | Value |
-|---|---|
-| `DEPLOY_HOST` | Your server's hostname or IP |
-| `DEPLOY_USER` | The SSH username from Step 3 |
-| `DEPLOY_SSH_KEY` | The full contents of the **private** key file (`yeffoprint_deploy_key`) from Step 2 |
-| `DEPLOY_PATH` | The full path to the clone from Step 1, e.g. `/path/to/somewhere/outside/wp-content/yeffoprint-deploy` |
-| `DEPLOY_PORT` | Only if SSH runs on a non-standard port — otherwise skip it, the workflow defaults to 22 |
+```bash
+crontab -e
+```
 
-## Step 5 — Keep merging into `Prod`
+Add a line (adjust the path, and redirect to wherever you want the log
+to live):
 
-The workflow watches `Prod` (already this repo's default branch —
-nothing to rename). Session work in this project lands on its own
-branch first (like the one this was built on) — merge that into `Prod`
-once you're happy with it, and every push to `Prod` from then on deploys
-automatically. Merging alone doesn't touch the server, though — the
-first push to `Prod` *after* the secrets above are all in place is what
-actually triggers the workflow; a merge that happened before that won't
-retroactively deploy on its own (use the **Run workflow** button in
-Step 6 to deploy it by hand instead of waiting for the next push).
+```cron
+*/5 * * * * /path/to/somewhere/outside/wp-content/yeffoprint-deploy/deploy/pull-and-deploy.sh >> /path/to/somewhere/outside/wp-content/yeffoprint-deploy/deploy/pull.log 2>&1
+```
 
-## Step 6 — Test it
+Every 5 minutes is a reasonable default — frequent enough that a merge
+to `Prod` shows up on the live site quickly, infrequent enough not to be
+noisy. The script only writes to the log on an actual deploy, so an
+empty (or slowly-growing) log file is the expected, healthy state.
 
-Push any small commit to `Prod` (or use the **Run workflow** button
-under the Actions tab in GitHub — the workflow also supports being
-triggered manually, no commit needed) and watch it run under the
-**Actions** tab. If it fails, the log will show exactly which step
-didn't work — most first-run issues are either a permissions mismatch
-(Step 1's ownership note) or a typo in one of the secrets.
+## Step 4 — Keep merging into `Prod`
+
+Session work in this project lands on its own branch first (like the
+one this was built on) — merge that into `Prod` once you're happy with
+it, and the cron job picks it up on its next run (within the interval
+set in Step 3).
