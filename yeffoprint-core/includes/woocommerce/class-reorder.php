@@ -23,7 +23,21 @@ class YeffoPrint_Reorder {
 		add_filter( 'woocommerce_my_account_my_orders_actions', [ $this, 'hide_native_order_again' ], 10, 2 );
 	}
 
-	public function render_reorder_link( int $item_id, \WC_Order_Item $item, \WC_Order $order ): void {
+	/**
+	 * `$item_id` deliberately isn't type-hinted `int` — real bug, found
+	 * via a live "Argument #1 ($item_id) must be of type int, string
+	 * given" fatal: WooCommerce's own `emails/email-order-items.php`
+	 * (used by both real order emails and the Settings → Emails "Send a
+	 * test email" preview) fires `woocommerce_order_item_meta_end` with
+	 * the item id as a string there, not an int. An uncaught TypeError
+	 * here aborts the whole email render — for the preview, WooCommerce
+	 * catches that and reports it as "couldn't send the test email"; for
+	 * a real order, it would just as easily prevent the actual
+	 * transactional email from being sent at all. `$item_id` is only
+	 * ever used in string concatenation below, so there was never a
+	 * reason to require it be an int in the first place.
+	 */
+	public function render_reorder_link( $item_id, \WC_Order_Item $item, \WC_Order $order ): void {
 		if ( ! $item instanceof \WC_Order_Item_Product ) {
 			return;
 		}
