@@ -127,7 +127,14 @@ abstract class YeffoPrint_Manual_Payment_Gateway extends \WC_Payment_Gateway {
 		if ( $plain_text ) {
 			echo wp_strip_all_tags( $this->instructions_text( $order ) ) . "\n\n";
 		} else {
+			// Styled by the theme's email-styles.php override (.yp-email-callout)
+			// as a highlighted box — this is the one thing in an on-hold order
+			// email a customer actually needs to act on, so it shouldn't read
+			// as just another paragraph.
+			echo '<table class="yp-email-callout" role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td>';
+			echo '<span class="yp-email-callout-label">' . esc_html__( 'Payment instructions', 'yeffoprint-core' ) . '</span>';
 			echo '<p>' . wp_kses_post( $this->instructions_text( $order ) ) . '</p>';
+			echo '</td></tr></table>';
 		}
 	}
 }
