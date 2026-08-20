@@ -33,6 +33,9 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-saved-design-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-sticker-size-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/schema/class-field-schema.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/lib/class-qr-code-gen.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/qr/class-qr-renderer.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-qr-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/query/class-template-query.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/search/class-template-search.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/pricing/class-pricing-rule.php';
@@ -74,6 +77,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Template_Search();
 		new YeffoPrint_Template_Schema_Controller();
 		new YeffoPrint_Pricing_Controller();
+		new YeffoPrint_Qr_Controller();
 		new YeffoPrint_Linked_Product();
 		new YeffoPrint_Cart_Pricing();
 		new YeffoPrint_Order_Item_Meta();

@@ -157,6 +157,29 @@
 	box-shadow: 0 0 0 1px rgba(20, 20, 20, 0.15), var(--wp--custom--shadow-elevation--low);
 }
 
+.yp-stage__field.is-qr {
+	/* qr_size (% of stage width) drives the actual width via inline
+	   style (configurator.js); height follows automatically from the
+	   image's own 1:1 intrinsic ratio. */
+	display: block;
+	aspect-ratio: 1;
+	box-shadow: 0 0 0 1px rgba(20, 20, 20, 0.1), var(--wp--custom--shadow-elevation--low);
+	background: var(--wp--preset--color--white);
+}
+
+.yp-stage__field.is-qr.is-empty {
+	/* No URL typed yet (or the src request hasn't resolved) — a faint
+	   placeholder box instead of a broken-image icon. */
+	background: repeating-linear-gradient(
+		45deg,
+		var(--wp--preset--color--light-gray),
+		var(--wp--preset--color--light-gray) 6px,
+		transparent 6px,
+		transparent 12px
+	);
+	opacity: 0.6;
+}
+
 .yp-configurator__description {
 	margin-top: 0.9rem;
 	color: var(--wp--preset--color--charcoal);

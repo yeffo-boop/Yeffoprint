@@ -103,6 +103,7 @@
 						labeled( 'Text color', inputHtml( 'color', index, 'text_color', field.text_color || '#000000' ) ) +
 						labeled( 'Horizontal position (%)', inputHtml( 'number', index, 'position.x', field.position && field.position.x, { min: 0, max: 100 } ) ) +
 						labeled( 'Vertical position (%)', inputHtml( 'number', index, 'position.y', field.position && field.position.y, { min: 0, max: 100 } ) ) +
+						labeled( 'QR code size (% of stage width) — only used by the QR code type', inputHtml( 'number', index, 'qr_size', field.qr_size == null ? 20 : field.qr_size, { min: 5, max: 60 } ) ) +
 						labeled( 'Formatting rule', selectHtml( index, 'formatting_rule', config.formattingRules, field.formatting_rule ) ) +
 						labeled( 'Preview behavior', selectHtml( index, 'preview_behavior', config.previewBehaviors, field.preview_behavior ) ) +
 						labeled( 'Tooltip / help text (shown to the customer next to this field)', '<textarea data-index="' + index + '" data-key="admin_description" rows="2" class="widefat">' + escapeHtml( field.admin_description ) + '</textarea>' ) +
@@ -365,7 +366,8 @@
 				text_color: '#000000',
 				formatting_rule: 'none',
 				preview_behavior: 'scale-to-fit',
-				admin_description: ''
+				admin_description: '',
+				qr_size: 20
 			} );
 			render();
 		} );

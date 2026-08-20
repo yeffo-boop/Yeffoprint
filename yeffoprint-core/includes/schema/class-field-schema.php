@@ -22,6 +22,18 @@
  * rendered on the configurator stage as a swatch instead of text
  * (configurator.js) since a hex string as literal text would look
  * wrong there.
+ *
+ * `qr_code` (direct request: let a customer put a URL on their label
+ * as a scannable QR code) is the second — its value is a URL,
+ * sanitized with esc_url_raw() everywhere a value is read or written,
+ * same pattern as `color`'s sanitize_hex_color(). Unlike every other
+ * type it doesn't render as text or a swatch at all: configurator.js
+ * points an <img> at YeffoPrint_Qr_Renderer's REST endpoint
+ * (class-qr-controller.php), sized/positioned via the new `qr_size`
+ * field property below rather than font_size_min/max (which this type
+ * ignores — still present with their defaults for schema-shape
+ * uniformity with every other field, same reasoning as `color` leaving
+ * them unused rather than branching the stored shape per type).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -34,6 +46,7 @@ class YeffoPrint_Field_Schema {
 		'text'     => 'Text (single line)',
 		'textarea' => 'Text (multi-line)',
 		'color'    => 'Color picker',
+		'qr_code'  => 'QR code (URL)',
 	];
 
 	public const ALIGNMENTS = [
@@ -69,6 +82,8 @@ class YeffoPrint_Field_Schema {
 		'formatting_rule'   => 'none',
 		'preview_behavior'  => 'scale-to-fit',
 		'admin_description' => '',
+		/** qr_code only — the rendered QR square's width, as a percentage of the stage width. `position` is its center, same convention as every other field type. */
+		'qr_size'           => 20.0,
 	];
 
 	/**
@@ -141,9 +156,16 @@ class YeffoPrint_Field_Schema {
 			}
 
 			$default = isset( $field['default'] ) ? (string) $field['default'] : '';
-			$default = 'color' === $type
-				? (string) ( sanitize_hex_color( $default ) ?: '' )
-				: sanitize_text_field( $default );
+			if ( 'color' === $type ) {
+				$default = (string) ( sanitize_hex_color( $default ) ?: '' );
+			} elseif ( 'qr_code' === $type ) {
+				$default = '' !== $default ? esc_url_raw( $default ) : '';
+			} else {
+				$default = sanitize_text_field( $default );
+			}
+
+			$qr_size = isset( $field['qr_size'] ) ? (float) $field['qr_size'] : self::DEFAULT_FIELD['qr_size'];
+			$qr_size = min( 60, max( 5, $qr_size ) ); // Sane bounds: unreadably small below 5%, dominates the whole label above 60%.
 
 			$clean[] = [
 				'id'                => $unique_id,
@@ -160,6 +182,7 @@ class YeffoPrint_Field_Schema {
 				'formatting_rule'   => $formatting_rule,
 				'preview_behavior'  => $preview_behavior,
 				'admin_description' => isset( $field['admin_description'] ) ? sanitize_text_field( $field['admin_description'] ) : '',
+				'qr_size'           => $qr_size,
 			];
 		}
 
@@ -249,9 +272,23 @@ class YeffoPrint_Field_Schema {
 
 			foreach ( $field_schema as $field ) {
 				$raw_value = isset( $submitted_values[ $field['id'] ] ) ? (string) $submitted_values[ $field['id'] ] : '';
-				$value     = 'color' === ( $field['type'] ?? '' )
-					? (string) ( sanitize_hex_color( $raw_value ) ?: '' )
-					: sanitize_text_field( $raw_value );
+				$type      = $field['type'] ?? '';
+
+				if ( 'color' === $type ) {
+					$value = (string) ( sanitize_hex_color( $raw_value ) ?: '' );
+				} elseif ( 'qr_code' === $type ) {
+					$value = '' !== trim( $raw_value ) ? esc_url_raw( $raw_value ) : '';
+					if ( '' !== $value && ! wp_http_validate_url( $value ) ) {
+						return new \WP_Error(
+							'yeffoprint_invalid_qr_url',
+							/* translators: %s: field label */
+							sprintf( __( '"%s" needs a valid web address (starting with https://).', 'yeffoprint-core' ), $field['label'] ),
+							[ 'status' => 400 ]
+						);
+					}
+				} else {
+					$value = sanitize_text_field( $raw_value );
+				}
 
 				if ( $enforce_required && $field['required'] && '' === $value ) {
 					return new \WP_Error(

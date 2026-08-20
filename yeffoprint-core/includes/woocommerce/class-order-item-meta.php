@@ -24,6 +24,7 @@ class YeffoPrint_Order_Item_Meta {
 	public function __construct() {
 		add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'snapshot' ], 10, 4 );
 		add_filter( 'woocommerce_hidden_order_itemmeta', [ $this, 'hide_internal_keys' ] );
+		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'add_qr_download_links' ], 10, 2 );
 	}
 
 	public function snapshot( \WC_Order_Item_Product $item, string $cart_item_key, array $values, \WC_Order $order ): void {
@@ -132,6 +133,87 @@ class YeffoPrint_Order_Item_Meta {
 			'name'             => get_the_title( $post_id ),
 			'price_adjustment' => (float) get_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
 		];
+	}
+
+	/**
+	 * Admin-only: appends a "Download PNG / PDF" row per qr_code field
+	 * that has a value on this order item, so staff producing the order
+	 * can pull a print-ready file straight from the order screen
+	 * (direct request: "so I don't need to use a 3rd party site")
+	 * instead of retyping the URL into some other QR generator.
+	 *
+	 * Reuses the same public /qr REST endpoint the configurator's live
+	 * preview already calls (class-qr-controller.php) — QR rendering is
+	 * a pure function of the text, so there's no order-specific
+	 * generation logic to duplicate here, just a link built from data
+	 * already on the item. Reads field types from the order's own
+	 * frozen `_yp_template_snapshot.field_schema`, not the Template's
+	 * current (possibly since-edited) schema — same "what was actually
+	 * purchased" snapshot principle as pricing/size/material above.
+	 */
+	public function add_qr_download_links( array $formatted_meta, \WC_Order_Item $item ): array {
+		if ( ! is_admin() ) {
+			return $formatted_meta;
+		}
+
+		$variants_json = $item->get_meta( '_yp_variants' );
+		$snapshot_json = $item->get_meta( '_yp_template_snapshot' );
+		if ( ! $variants_json || ! $snapshot_json ) {
+			return $formatted_meta;
+		}
+
+		$variants = json_decode( $variants_json, true );
+		$snapshot = json_decode( $snapshot_json, true );
+		$field_schema = is_array( $snapshot['field_schema'] ?? null ) ? $snapshot['field_schema'] : [];
+		$qr_fields    = array_filter( $field_schema, static function ( $field ) {
+			return 'qr_code' === ( $field['type'] ?? '' );
+		} );
+
+		if ( ! $qr_fields || ! is_array( $variants ) ) {
+			return $formatted_meta;
+		}
+
+		$multiple = count( $variants ) > 1;
+		$suffix   = 0;
+
+		foreach ( $variants as $index => $variant ) {
+			foreach ( $qr_fields as $field ) {
+				$url = trim( (string) ( $variant['values'][ $field['id'] ] ?? '' ) );
+				if ( '' === $url ) {
+					continue;
+				}
+
+				$png_url = add_query_arg( [ 'text' => rawurlencode( $url ), 'format' => 'png', 'download' => 1 ], rest_url( 'yeffoprint-core/v1/qr' ) );
+				$pdf_url = add_query_arg( [ 'text' => rawurlencode( $url ), 'format' => 'pdf', 'download' => 1 ], rest_url( 'yeffoprint-core/v1/qr' ) );
+
+				$label = $multiple
+					? sprintf(
+						/* translators: 1: field label, 2: label number within the batch */
+						__( '%1$s (Label %2$d)', 'yeffoprint-core' ),
+						$field['label'],
+						$index + 1
+					)
+					: $field['label'];
+
+				$suffix++;
+				$entry               = new \stdClass();
+				$entry->key          = '_yp_qr_download_' . $suffix;
+				$entry->value        = $url;
+				$entry->display_key  = $label;
+				$entry->display_value = sprintf(
+					'%s &mdash; <a href="%s">%s</a> / <a href="%s">%s</a>',
+					esc_html( $url ),
+					esc_url( $png_url ),
+					esc_html__( 'Download PNG', 'yeffoprint-core' ),
+					esc_url( $pdf_url ),
+					esc_html__( 'Download PDF', 'yeffoprint-core' )
+				);
+
+				$formatted_meta[ 'yp_qr_' . $suffix ] = $entry;
+			}
+		}
+
+		return $formatted_meta;
 	}
 
 	public function hide_internal_keys( array $hidden ): array {

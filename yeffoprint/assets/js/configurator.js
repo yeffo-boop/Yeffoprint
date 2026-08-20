@@ -297,6 +297,8 @@
 			var control;
 			if ( 'color' === field.type ) {
 				control = '<input type="color" data-field-id="' + field.id + '" class="yp-field__color-input" />';
+			} else if ( 'qr_code' === field.type ) {
+				control = '<input type="url" placeholder="https://" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
 			} else if ( 'textarea' === field.type ) {
 				control = '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>';
 			} else {
@@ -512,6 +514,32 @@
 
 	/* ---------- Preview (Label View / Vial View) ---------- */
 
+	// Keyed by field id (a schema can have more than one QR field, in
+	// principle) so typing in one never cancels another's pending
+	// refresh — same one-timer-per-concern shape as pricingDebounceTimer
+	// below, just needing a map instead of a single variable.
+	var qrPreviewDebounceTimers = {};
+
+	/**
+	 * Points a QR field's <img> at the plugin's own rendering endpoint
+	 * (class-qr-controller.php) for the current URL, or clears it back
+	 * to an empty placeholder state if the customer hasn't typed
+	 * anything (or typed something too short/invalid to bother
+	 * rendering yet — the server validates properly at cart/checkout;
+	 * this is just "don't fire a request for an obviously-incomplete
+	 * URL while someone is mid-keystroke").
+	 */
+	function setQrImageSrc( imgEl, url ) {
+		var trimmed = ( url || '' ).trim();
+		if ( trimmed.length < 4 ) {
+			imgEl.removeAttribute( 'src' );
+			imgEl.classList.add( 'is-empty' );
+			return;
+		}
+		imgEl.classList.remove( 'is-empty' );
+		imgEl.src = yeffoprintConfigurator.restUrl + 'qr?format=png&text=' + encodeURIComponent( trimmed );
+	}
+
 	// Rebuilds every field element — view toggle, variant switch, and
 	// initial load, where every field's position/value can change at
 	// once. Typing in one field only needs updateStageField() below.
@@ -538,7 +566,7 @@
 		var variant = activeVariant();
 
 		schema.field_schema.forEach( function ( field ) {
-			var el = document.createElement( 'div' );
+			var el = document.createElement( 'qr_code' === field.type ? 'img' : 'div' );
 			el.setAttribute( 'data-field-id', field.id );
 			el.style.left = field.position.x + '%';
 			el.style.top = field.position.y + '%';
@@ -550,6 +578,17 @@
 				el.className = 'yp-stage__field is-swatch';
 				el.style.transform = 'translate(-50%, -50%)';
 				el.style.background = variant.values[ field.id ] || '#cccccc';
+			} else if ( 'qr_code' === field.type ) {
+				// Renders an actual scannable code, not text — an <img>
+				// pointed at the plugin's own QR-rendering endpoint
+				// (class-qr-controller.php), sized as a square by qr_size
+				// (% of stage width) and centered on position like the
+				// color swatch above. Empty until the customer types a URL.
+				el.className = 'yp-stage__field is-qr';
+				el.alt = '';
+				el.style.transform = 'translate(-50%, -50%)';
+				el.style.width = ( field.qr_size || 20 ) + '%';
+				setQrImageSrc( el, variant.values[ field.id ] || '' );
 			} else {
 				el.className = 'yp-stage__field' + ( 'textarea' === field.type ? ' is-multiline' : '' );
 				el.style.textAlign = field.alignment;
@@ -580,8 +619,8 @@
 
 		schema.field_schema.forEach( function ( field ) {
 			var el = stageEl.querySelector( '[data-field-id="' + field.id + '"]' );
-			if ( ! el || 'color' === field.type ) {
-				return; // A swatch has a fixed size — nothing to font-fit.
+			if ( ! el || 'color' === field.type || 'qr_code' === field.type ) {
+				return; // A swatch/QR image has a fixed size — nothing to font-fit.
 			}
 			anyOverflow = fitText( el, field, stageRect.width, stageRect.height ) || anyOverflow;
 		} );
@@ -603,6 +642,14 @@
 
 		if ( 'color' === field.type ) {
 			el.style.background = activeVariant().values[ fieldId ] || '#cccccc';
+			return;
+		}
+
+		if ( 'qr_code' === field.type ) {
+			window.clearTimeout( qrPreviewDebounceTimers[ fieldId ] );
+			qrPreviewDebounceTimers[ fieldId ] = window.setTimeout( function () {
+				setQrImageSrc( el, activeVariant().values[ fieldId ] || '' );
+			}, 400 );
 			return;
 		}
 
