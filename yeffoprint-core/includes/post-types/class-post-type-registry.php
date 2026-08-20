@@ -52,6 +52,22 @@ class YeffoPrint_Post_Type_Registry {
 			false
 		) );
 
+		// Custom Stickers (PROJECT_SPEC §19 non-goal, now in scope): a
+		// preset size tier (name, width/height in inches, a real fixed
+		// price per sticker — not a small price_adjustment on top of a
+		// shared base like yp_size, since sticker cost scales with size
+		// itself). One special tier is flagged is_custom — the customer
+		// enters exact dimensions and price is computed live from an
+		// admin-set $/sq in rate (YeffoPrint_Sticker_Pricing), so a
+		// genuinely custom size still prices before checkout rather than
+		// needing a manual quote.
+		register_post_type( 'yp_sticker_size', $this->args(
+			__( 'Sticker Sizes', 'yeffoprint-core' ),
+			__( 'Sticker Size', 'yeffoprint-core' ),
+			[ 'title', 'page-attributes', 'custom-fields' ],
+			false
+		) );
+
 		register_post_type( 'yp_pricing_rule', $this->args(
 			__( 'Pricing Rules', 'yeffoprint-core' ),
 			__( 'Pricing Rule', 'yeffoprint-core' ),

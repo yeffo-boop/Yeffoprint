@@ -80,6 +80,20 @@ class YeffoPrint_Material_Size_Editor {
 		</p>
 		<p class="description"><?php esc_html_e( 'Added to the base unit price when this material is selected. The swatch image is this post\'s featured image (Set Featured Image, below); sort order is set by dragging on the list screen.', 'yeffoprint-core' ); ?></p>
 		<hr />
+		<?php
+		$scope = get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::SCOPE, true );
+		$scope = $scope ?: 'label';
+		?>
+		<p>
+			<label for="yp-material-scope"><?php esc_html_e( 'Offered for', 'yeffoprint-core' ); ?></label><br />
+			<select id="yp-material-scope" name="yp_material_scope" class="widefat">
+				<?php foreach ( YeffoPrint_Commerce_Record_Meta::SCOPES as $key => $label ) : ?>
+					<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $scope, $key ); ?>><?php echo esc_html( $label ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<p class="description"><?php esc_html_e( 'Which product line\'s material picker this shows up in.', 'yeffoprint-core' ); ?></p>
+		</p>
+		<hr />
 		<p>
 			<label><?php esc_html_e( 'Hover / on-vial image', 'yeffoprint-core' ); ?></label><br />
 			<span id="yp-vial-mockup-preview">
@@ -137,6 +151,13 @@ class YeffoPrint_Material_Size_Editor {
 			update_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, absint( $_POST['yp_hover_image_id'] ) );
 		}
 
+		if ( 'yp_material' === get_post_type( $post_id ) && isset( $_POST['yp_material_scope'] ) ) {
+			$scope = sanitize_key( wp_unslash( $_POST['yp_material_scope'] ) );
+			if ( array_key_exists( $scope, YeffoPrint_Commerce_Record_Meta::SCOPES ) ) {
+				update_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::SCOPE, $scope );
+			}
+		}
+
 		if ( isset( $_POST['yp_print_width_mm'] ) ) {
 			update_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRINT_WIDTH_MM, (float) wp_unslash( $_POST['yp_print_width_mm'] ) );
 		}
@@ -150,6 +171,7 @@ class YeffoPrint_Material_Size_Editor {
 		return $this->insert_after( $columns, 'title', [
 			'yp_swatch'    => __( 'Swatch', 'yeffoprint-core' ),
 			'yp_price_adj' => __( 'Price Adj.', 'yeffoprint-core' ),
+			'yp_scope'     => __( 'Offered For', 'yeffoprint-core' ),
 		] );
 	}
 
@@ -161,6 +183,11 @@ class YeffoPrint_Material_Size_Editor {
 		if ( 'yp_price_adj' === $column ) {
 			$adjustment = (float) get_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true );
 			echo esc_html( $this->format_price_adjustment( $adjustment ) );
+		}
+
+		if ( 'yp_scope' === $column ) {
+			$scope = get_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::SCOPE, true ) ?: 'label';
+			echo esc_html( YeffoPrint_Commerce_Record_Meta::SCOPES[ $scope ] ?? $scope );
 		}
 	}
 

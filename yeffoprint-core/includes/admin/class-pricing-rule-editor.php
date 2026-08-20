@@ -54,6 +54,32 @@ class YeffoPrint_Pricing_Rule_Editor {
 				'empty'      => __( 'No bulk discount tiers yet — every order prices at the base rate.', 'yeffoprint-core' ),
 			],
 		] );
+
+		// A second, independent repeater for sticker bulk-discount tiers —
+		// its own script file (not a second load of pricing-tiers.js,
+		// which hardcodes one global name and one set of DOM ids and so
+		// can't run twice on the same page) targeting its own DOM ids.
+		// Sticker quantities/thresholds are a different scale than label
+		// ones, so they're never mixed into one tier list
+		// (YeffoPrint_Sticker_Pricing's own docblock explains why the two
+		// formulas are kept separate).
+		wp_enqueue_script(
+			'yeffoprint-core-sticker-pricing-tiers',
+			YEFFOPRINT_CORE_URL . 'assets/admin/sticker-pricing-tiers.js',
+			[],
+			yeffoprint_core_asset_version( 'assets/admin/sticker-pricing-tiers.js' ),
+			true
+		);
+
+		wp_localize_script( 'yeffoprint-core-sticker-pricing-tiers', 'yeffoprintStickerPricingTiers', [
+			'tiers' => YeffoPrint_Sticker_Pricing::get_tiers(),
+			'types' => YeffoPrint_Pricing_Rule::TIER_TYPES,
+			'i18n'  => [
+				'addTier'    => __( 'Add Tier', 'yeffoprint-core' ),
+				'removeTier' => __( 'Remove', 'yeffoprint-core' ),
+				'empty'      => __( 'No sticker bulk discount tiers yet — every order prices at the base rate.', 'yeffoprint-core' ),
+			],
+		] );
 	}
 
 	public function add_meta_boxes(): void {
@@ -69,6 +95,22 @@ class YeffoPrint_Pricing_Rule_Editor {
 			'yp-pricing-rule-tiers',
 			__( 'Bulk Discount Tiers', 'yeffoprint-core' ),
 			[ $this, 'render_tiers_box' ],
+			'yp_pricing_rule',
+			'normal'
+		);
+
+		add_meta_box(
+			'yp-pricing-rule-sticker',
+			__( 'Sticker Pricing', 'yeffoprint-core' ),
+			[ $this, 'render_sticker_box' ],
+			'yp_pricing_rule',
+			'normal'
+		);
+
+		add_meta_box(
+			'yp-pricing-rule-sticker-tiers',
+			__( 'Sticker Bulk Discount Tiers', 'yeffoprint-core' ),
+			[ $this, 'render_sticker_tiers_box' ],
 			'yp_pricing_rule',
 			'normal'
 		);
@@ -106,6 +148,48 @@ class YeffoPrint_Pricing_Rule_Editor {
 		<?php
 	}
 
+	public function render_sticker_box( \WP_Post $post ): void {
+		$rate = get_post_meta( $post->ID, YeffoPrint_Sticker_Pricing::META_CUSTOM_RATE_PER_SQ_IN, true );
+		$type_adjustments  = YeffoPrint_Sticker_Pricing::get_type_adjustments();
+		$shape_adjustments = YeffoPrint_Sticker_Pricing::get_shape_adjustments();
+		?>
+		<p>
+			<label for="yp-sticker-custom-rate"><?php esc_html_e( 'Custom size rate ($ per sq. inch)', 'yeffoprint-core' ); ?></label><br />
+			<input type="number" step="0.01" min="0" id="yp-sticker-custom-rate" name="yp_sticker_custom_rate_per_sq_in" value="<?php echo esc_attr( $rate !== '' ? $rate : '0.75' ); ?>" />
+			<p class="description"><?php esc_html_e( 'Used only for the Sticker Size marked "Custom size" — price = this rate × the width × height the customer enters. Every other size tier uses its own fixed price instead (Sticker Sizes screen).', 'yeffoprint-core' ); ?></p>
+		</p>
+		<hr />
+		<p><strong><?php esc_html_e( 'Sticker type adjustment ($, added to size price)', 'yeffoprint-core' ); ?></strong></p>
+		<?php foreach ( YeffoPrint_Sticker_Pricing::TYPES as $key => $label ) : ?>
+			<p>
+				<label for="yp-sticker-type-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label><br />
+				<input type="number" step="0.01" id="yp-sticker-type-<?php echo esc_attr( $key ); ?>" name="yp_sticker_type_adjustments[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $type_adjustments[ $key ] ); ?>" />
+			</p>
+		<?php endforeach; ?>
+		<hr />
+		<p><strong><?php esc_html_e( 'Shape adjustment ($, added to size price)', 'yeffoprint-core' ); ?></strong></p>
+		<?php foreach ( YeffoPrint_Sticker_Pricing::SHAPES as $key => $label ) : ?>
+			<p>
+				<label for="yp-sticker-shape-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label><br />
+				<input type="number" step="0.01" id="yp-sticker-shape-<?php echo esc_attr( $key ); ?>" name="yp_sticker_shape_adjustments[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $shape_adjustments[ $key ] ); ?>" />
+			</p>
+		<?php endforeach; ?>
+		<?php
+	}
+
+	public function render_sticker_tiers_box(): void {
+		?>
+		<div id="yp-sticker-pricing-tiers-app">
+			<div class="yp-sticker-pricing-tiers-list"></div>
+			<p>
+				<button type="button" class="button button-secondary" id="yp-sticker-pricing-tiers-add"><?php esc_html_e( 'Add Tier', 'yeffoprint-core' ); ?></button>
+			</p>
+			<input type="hidden" name="yp_sticker_bulk_discount_tiers" id="yp-sticker-pricing-tiers-input" />
+			<p class="description"><?php esc_html_e( 'Same rules as the label tiers above, evaluated separately against the customer\'s combined sticker quantity — a sticker order never counts toward the label bulk discount, or vice versa. The discount only ever applies to the sticker size\'s base price; material/type/shape upcharges are always added on top afterward, at full price.', 'yeffoprint-core' ); ?></p>
+		</div>
+		<?php
+	}
+
 	public function save( int $post_id ): void {
 		if ( ! isset( $_POST[ self::NONCE_NAME ] ) || ! wp_verify_nonce( wp_unslash( $_POST[ self::NONCE_NAME ] ), self::NONCE_ACTION ) ) {
 			return;
@@ -129,5 +213,25 @@ class YeffoPrint_Pricing_Rule_Editor {
 		}
 
 		YeffoPrint_Pricing_Rule::save( $post_id, $base_price, $design_fee, $tiers );
+
+		$sticker_rate = isset( $_POST['yp_sticker_custom_rate_per_sq_in'] ) ? (float) wp_unslash( $_POST['yp_sticker_custom_rate_per_sq_in'] ) : 0;
+
+		$type_adjustments = [];
+		if ( isset( $_POST['yp_sticker_type_adjustments'] ) && is_array( $_POST['yp_sticker_type_adjustments'] ) ) {
+			$type_adjustments = array_map( 'floatval', wp_unslash( $_POST['yp_sticker_type_adjustments'] ) );
+		}
+
+		$shape_adjustments = [];
+		if ( isset( $_POST['yp_sticker_shape_adjustments'] ) && is_array( $_POST['yp_sticker_shape_adjustments'] ) ) {
+			$shape_adjustments = array_map( 'floatval', wp_unslash( $_POST['yp_sticker_shape_adjustments'] ) );
+		}
+
+		$sticker_tiers = [];
+		if ( isset( $_POST['yp_sticker_bulk_discount_tiers'] ) ) {
+			$decoded       = json_decode( wp_unslash( $_POST['yp_sticker_bulk_discount_tiers'] ), true );
+			$sticker_tiers = is_array( $decoded ) ? $decoded : [];
+		}
+
+		YeffoPrint_Sticker_Pricing::save( $post_id, $sticker_rate, $type_adjustments, $shape_adjustments, $sticker_tiers );
 	}
 }

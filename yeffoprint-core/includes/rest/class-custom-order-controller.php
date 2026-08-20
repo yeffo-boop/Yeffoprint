@@ -199,7 +199,10 @@ class YeffoPrint_Custom_Order_Controller {
 
 		return rest_ensure_response( [
 			'sizes'            => array_map( $format, $this->published( 'yp_size' ) ),
-			'materials'        => array_map( $format, $this->published( 'yp_material' ) ),
+			// Scoped to 'label' — a Material an admin marks 'sticker'-only
+			// (Custom Stickers) shouldn't leak into this, the label form's
+			// picker. See YeffoPrint_Commerce_Record_Meta::get_materials_for().
+			'materials'        => array_map( $format, YeffoPrint_Commerce_Record_Meta::get_materials_for( 'label' ) ),
 			'design_fee'       => function_exists( 'yeffoprint_core_custom_design_fee_label' ) ? yeffoprint_core_custom_design_fee_label() : '',
 			'quantity_presets' => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
 		] );

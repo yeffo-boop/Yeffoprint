@@ -17,6 +17,26 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Custom_Order_Meta {
 
+	/**
+	 * Which flow created this request — 'label' (Fully Custom Design,
+	 * PROJECT_SPEC §13, the only value that existed before Custom
+	 * Stickers) or 'sticker' (Custom Stickers). Defaults to 'label' via
+	 * get_order_type() below so every pre-existing CustomOrder, which
+	 * has no meta row for this at all, keeps behaving exactly as before
+	 * without a migration. SIZE_ID/MATERIAL_ID/QUANTITY are reused as-is
+	 * for both flows — a size/material/quantity is a size/material/
+	 * quantity regardless of which product it's for; SIZE_ID just
+	 * points at a yp_size post for a label order and a yp_sticker_size
+	 * post for a sticker one, which every reader of this record already
+	 * has to branch on ORDER_TYPE for anyway.
+	 */
+	public const ORDER_TYPE = '_yp_order_type';
+
+	public const ORDER_TYPES = [
+		'label'   => 'Custom Label',
+		'sticker' => 'Custom Sticker',
+	];
+
 	public const SIZE_ID             = '_yp_size_id';
 	public const MATERIAL_ID         = '_yp_material_id';
 	public const QUANTITY            = '_yp_quantity';
@@ -25,6 +45,15 @@ class YeffoPrint_Custom_Order_Meta {
 	public const STYLE_NOTES         = '_yp_style_notes';
 	public const INSTRUCTIONS        = '_yp_instructions';
 	public const INSPIRATION_UPLOADS = '_yp_inspiration_uploads';
+	/** Sticker orders only — the actual print-ready artwork file(s), a distinct field from INSPIRATION_UPLOADS (a label order's visual reference images, never printed as-is). */
+	public const ARTWORK_UPLOADS     = '_yp_artwork_uploads';
+	/** Sticker orders only — 'sheet' or one of YeffoPrint_Sticker_Pricing::TYPES. */
+	public const STICKER_TYPE        = '_yp_sticker_type';
+	/** Sticker orders only — one of YeffoPrint_Sticker_Pricing::SHAPES. 'custom' means contour-cut to the artwork's own outline, not a separately uploaded cut path (direct decision). */
+	public const SHAPE               = '_yp_shape';
+	/** Sticker orders only, and only meaningful when SIZE_ID points at the Sticker Size marked is_custom — the customer's own entered dimensions. */
+	public const CUSTOM_WIDTH_IN     = '_yp_custom_width_in';
+	public const CUSTOM_HEIGHT_IN    = '_yp_custom_height_in';
 	public const DESIGN_FEE          = '_yp_design_fee';
 	public const STATUS              = '_yp_status';
 	public const WC_ORDER_ID         = '_yp_wc_order_id';
@@ -64,15 +93,22 @@ class YeffoPrint_Custom_Order_Meta {
 		return self::STATUSES[ $status ] ?? '';
 	}
 
+	/** Defaults to 'label' — every CustomOrder created before Custom Stickers existed has no ORDER_TYPE meta row at all. */
+	public static function get_order_type( int $post_id ): string {
+		$type = get_post_meta( $post_id, self::ORDER_TYPE, true );
+		return array_key_exists( $type, self::ORDER_TYPES ) ? $type : 'label';
+	}
+
 	public function columns( array $columns ): array {
 		$result = [];
 
 		foreach ( $columns as $key => $label ) {
 			$result[ $key ] = $label;
 			if ( 'title' === $key ) {
-				$result['yp_status']   = __( 'Status', 'yeffoprint-core' );
-				$result['yp_customer'] = __( 'Customer', 'yeffoprint-core' );
-				$result['yp_paid']     = __( 'Paid', 'yeffoprint-core' );
+				$result['yp_order_type'] = __( 'Type', 'yeffoprint-core' );
+				$result['yp_status']     = __( 'Status', 'yeffoprint-core' );
+				$result['yp_customer']   = __( 'Customer', 'yeffoprint-core' );
+				$result['yp_paid']       = __( 'Paid', 'yeffoprint-core' );
 			}
 		}
 
@@ -81,6 +117,10 @@ class YeffoPrint_Custom_Order_Meta {
 
 	public function render_column( string $column, int $post_id ): void {
 		switch ( $column ) {
+			case 'yp_order_type':
+				echo esc_html( self::ORDER_TYPES[ self::get_order_type( $post_id ) ] );
+				break;
+
 			case 'yp_status':
 				$status = (string) get_post_meta( $post_id, self::STATUS, true );
 				echo $status ? esc_html( self::get_status_label( $status ) ) : esc_html__( '—', 'yeffoprint-core' );

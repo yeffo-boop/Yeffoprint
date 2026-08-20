@@ -31,10 +31,12 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-commerce-record-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-saved-design-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-sticker-size-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/schema/class-field-schema.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/query/class-template-query.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/search/class-template-search.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/pricing/class-pricing-rule.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/pricing/class-sticker-pricing.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/configurator/quantity-presets.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/api/template-api.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-template-schema-controller.php';
@@ -67,6 +69,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Template_Taxonomies();
 		new YeffoPrint_Template_Meta();
 		new YeffoPrint_Commerce_Record_Meta();
+		new YeffoPrint_Sticker_Size_Meta();
 		new YeffoPrint_Template_Query();
 		new YeffoPrint_Template_Search();
 		new YeffoPrint_Template_Schema_Controller();
@@ -157,6 +160,7 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-template-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-field-preset-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-material-size-editor.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-sticker-size-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-pricing-rule-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-custom-order-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-proof-editor.php';
@@ -164,6 +168,7 @@ final class YeffoPrint_Core {
 			new YeffoPrint_Template_Editor();
 			new YeffoPrint_Field_Preset_Editor();
 			new YeffoPrint_Material_Size_Editor();
+			new YeffoPrint_Sticker_Size_Editor();
 			new YeffoPrint_Pricing_Rule_Editor();
 			new YeffoPrint_Custom_Order_Editor();
 			new YeffoPrint_Proof_Editor();
