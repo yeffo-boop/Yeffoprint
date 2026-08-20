@@ -175,7 +175,7 @@
 			var markersHtml = state.map( function ( field, index ) {
 				var x = field.position && ! isNaN( parseFloat( field.position.x ) ) ? parseFloat( field.position.x ) : 50;
 				var y = field.position && ! isNaN( parseFloat( field.position.y ) ) ? parseFloat( field.position.y ) : 50;
-				return '<button type="button" class="yp-field-position-marker" data-index="' + index + '" style="left:' + x + '%;top:' + y + '%;">' + escapeHtml( field.label || ( 'Field ' + ( index + 1 ) ) ) + '</button>';
+				return '<button type="button" class="yp-field-position-marker" data-index="' + index + '" style="left:' + x + '%;top:' + y + '%;" title="Drag to reposition, or use arrow keys to nudge (hold Shift for bigger steps)">' + escapeHtml( field.label || ( 'Field ' + ( index + 1 ) ) ) + '</button>';
 			} ).join( '' );
 
 			preview.innerHTML =
@@ -211,15 +211,9 @@
 			return { x: event.clientX, y: event.clientY };
 		}
 
-		function setMarkerPosition( index, clientX, clientY ) {
-			var stage = document.getElementById( 'yp-field-position-stage' );
-			var rect = stage && stage.getBoundingClientRect();
-			if ( ! rect || ! rect.width || ! rect.height ) {
-				return;
-			}
-
-			var x = Math.round( Math.min( 100, Math.max( 0, ( ( clientX - rect.left ) / rect.width ) * 100 ) ) * 10 ) / 10;
-			var y = Math.round( Math.min( 100, Math.max( 0, ( ( clientY - rect.top ) / rect.height ) * 100 ) ) * 10 ) / 10;
+		function applyMarkerPosition( index, x, y ) {
+			x = Math.round( Math.min( 100, Math.max( 0, x ) ) * 10 ) / 10;
+			y = Math.round( Math.min( 100, Math.max( 0, y ) ) * 10 ) / 10;
 
 			setValue( index, 'position.x', x );
 			setValue( index, 'position.y', y );
@@ -235,6 +229,61 @@
 				yInput.value = y;
 			}
 		}
+
+		function setMarkerPosition( index, clientX, clientY ) {
+			var stage = document.getElementById( 'yp-field-position-stage' );
+			var rect = stage && stage.getBoundingClientRect();
+			if ( ! rect || ! rect.width || ! rect.height ) {
+				return;
+			}
+
+			applyMarkerPosition(
+				index,
+				( ( clientX - rect.left ) / rect.width ) * 100,
+				( ( clientY - rect.top ) / rect.height ) * 100
+			);
+		}
+
+		// Keyboard nudging — direct follow-up to a report that fine mouse-
+		// dragging can't reliably land a tight margin near an edge (e.g.
+		// 2-3% in from the side). Focus a marker (it's a real <button>,
+		// already tabbable) and arrow keys move it in small, precise
+		// steps instead of fighting drag precision — 0.5% normally, 2%
+		// with Shift held for covering more distance quickly first.
+		var NUDGE_STEP = 0.5;
+		var NUDGE_STEP_LARGE = 2;
+
+		preview.addEventListener( 'keydown', function ( event ) {
+			var marker = event.target.closest( '.yp-field-position-marker' );
+			if ( ! marker ) {
+				return;
+			}
+
+			var deltas = {
+				ArrowLeft:  [ -1, 0 ],
+				ArrowRight: [ 1, 0 ],
+				ArrowUp:    [ 0, -1 ],
+				ArrowDown:  [ 0, 1 ]
+			};
+			var delta = deltas[ event.key ];
+			if ( ! delta ) {
+				return;
+			}
+
+			event.preventDefault();
+
+			var index = parseInt( marker.getAttribute( 'data-index' ), 10 );
+			var step = event.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
+			var position = state[ index ].position || { x: 50, y: 50 };
+			var currentX = parseFloat( position.x );
+			var currentY = parseFloat( position.y );
+
+			applyMarkerPosition(
+				index,
+				( isNaN( currentX ) ? 50 : currentX ) + delta[ 0 ] * step,
+				( isNaN( currentY ) ? 50 : currentY ) + delta[ 1 ] * step
+			);
+		} );
 
 		preview.addEventListener( 'mousedown', startDrag );
 		preview.addEventListener( 'touchstart', startDrag, { passive: false } );

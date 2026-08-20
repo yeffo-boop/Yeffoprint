@@ -104,7 +104,7 @@ class YeffoPrint_Template_Editor {
 				'moveDown'    => __( 'Move down', 'yeffoprint-core' ),
 				'empty'       => __( 'No customization fields yet. Add one below.', 'yeffoprint-core' ),
 				'noPreview'   => __( 'Set a featured image above to preview and drag-position fields here.', 'yeffoprint-core' ),
-				'dragHint'    => __( 'Drag a label to reposition it on the artwork — or set exact percentages below.', 'yeffoprint-core' ),
+				'dragHint'    => __( 'Drag a label to reposition it on the artwork, or set exact percentages below. Click a label first, then use the arrow keys to nudge it precisely (hold Shift for bigger steps) — easier than dragging for a tight margin near an edge.', 'yeffoprint-core' ),
 				'insertPreset' => __( 'Insert Preset', 'yeffoprint-core' ),
 				'selectPreset' => __( '— Select a preset —', 'yeffoprint-core' ),
 			],
