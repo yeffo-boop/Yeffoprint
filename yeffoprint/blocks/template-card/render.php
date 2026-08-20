@@ -24,30 +24,25 @@ if ( ! $card ) {
 
 /**
  * Vial mockup leads (direct request: show the vial preview, not just
- * the flat label, on the gallery cards), flat artwork is the
- * hover-swap — the reverse of Phase 3's original pairing. Falls back
- * to artwork-only when a Template has no vial mockup uploaded yet
- * (still admin-optional per template-api.php), rather than showing an
- * empty media box.
+ * the flat label, on the gallery cards). Used to hover-swap to the
+ * flat label artwork, but that box is now sized/shaped for the vial
+ * photo (a tall standing bottle), and the label image — a short, wide
+ * 15:7 rectangle — read badly cropped inside it on hover. Direct
+ * follow-up request: drop the hover-swap entirely here; the flat
+ * label artwork is still what the configurator's Label View uses on
+ * the actual template customization page, just not shown on this
+ * card at all anymore. Falls back to artwork-only when a Template has
+ * no vial mockup uploaded yet (still admin-optional per
+ * template-api.php), rather than showing an empty media box.
  */
 $primary_image_url = $card['vial_mockup_url'] ?: $card['artwork_url'];
-$hover_image_url   = $card['vial_mockup_url'] ? $card['artwork_url'] : null;
 ?>
 <a class="yp-card yp-template-card" href="<?php echo esc_url( $card['permalink'] ); ?>">
 	<div class="yp-card__media yp-template-card__media">
 		<?php if ( $primary_image_url ) : ?>
 			<img
-				class="yp-template-card__image yp-template-card__image--primary"
+				class="yp-template-card__image"
 				src="<?php echo esc_url( $primary_image_url ); ?>"
-				alt=""
-				loading="lazy"
-				decoding="async"
-			/>
-		<?php endif; ?>
-		<?php if ( $hover_image_url ) : ?>
-			<img
-				class="yp-template-card__image yp-template-card__image--hover"
-				src="<?php echo esc_url( $hover_image_url ); ?>"
 				alt=""
 				loading="lazy"
 				decoding="async"

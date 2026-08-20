@@ -453,36 +453,20 @@
 }
 
 .yp-template-card__image {
+	/* Absolute, not static — with .yp-template-card__media a fixed
+	   aspect-ratio box, a static image relying on height:100% doesn't
+	   reliably resolve against an aspect-ratio-derived height and falls
+	   back to its own intrinsic ratio instead, so the card's height
+	   would end up depending on whatever ratio the uploaded image
+	   happens to have rather than the fixed box. No hover-swap anymore
+	   (direct request — the second image read badly cropped in this
+	   box's shape) — just the one vial-mockup-or-artwork-fallback image
+	   from render.php, filling the box via object-fit:cover. */
 	position: absolute;
 	inset: 0;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	transition: opacity 250ms ease;
-}
-
-.yp-template-card__image--primary {
-	/* Absolute, not static (inherits position:absolute from the base
-	   .yp-template-card__image rule above) — with .yp-template-card__media
-	   now a fixed aspect-ratio:15/7 box, a static image relying on
-	   height:100% doesn't reliably resolve against an aspect-ratio-
-	   derived height and falls back to its own intrinsic ratio instead,
-	   so the card's height ends up depending on whatever ratio that
-	   specific uploaded image happens to have rather than the fixed
-	   box. Both primary and hover images need to be absolutely
-	   positioned + object-fit:cover to actually fill the same box
-	   uniformly regardless of each source image's own dimensions. */
-	opacity: 1;
-}
-
-.yp-template-card__image--hover {
-	opacity: 0;
-}
-
-@media (hover: hover) {
-	.yp-template-card:hover .yp-template-card__image--hover {
-		opacity: 1;
-	}
 }
 
 .yp-template-card__badge {
