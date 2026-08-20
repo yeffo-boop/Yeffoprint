@@ -152,7 +152,7 @@ class YeffoPrint_Order_Item_Meta {
 	 * purchased" snapshot principle as pricing/size/material above.
 	 */
 	public function add_qr_download_links( array $formatted_meta, \WC_Order_Item $item ): array {
-		if ( ! is_admin() ) {
+		if ( ! $this->is_order_edit_screen() ) {
 			return $formatted_meta;
 		}
 
@@ -214,6 +214,32 @@ class YeffoPrint_Order_Item_Meta {
 		}
 
 		return $formatted_meta;
+	}
+
+	/**
+	 * `is_admin()` alone isn't "staff looking at the order screen" — it's
+	 * also true for admin-post.php/admin-ajax.php requests, which is
+	 * exactly how a manual order-status change (the "Update" button on
+	 * this same Edit Order screen) or the "Resend order emails" bulk
+	 * action actually fire WooCommerce's transactional emails. Gating on
+	 * plain `is_admin()` meant those staff-only download links — meant
+	 * only for the order screen's own meta box — were leaking straight
+	 * into the customer's real order email whenever the email happened
+	 * to be triggered from inside wp-admin, while staying correctly
+	 * hidden for the same status change made from checkout or the
+	 * Venmo/Zelle payment webhook. Scoping to the actual order-edit
+	 * screen id (classic `shop_order`, HPOS `woocommerce_page_wc-orders`)
+	 * closes that gap: the orders *list* screen (where the resend bulk
+	 * action runs) has a different screen id, so it no longer matches.
+	 */
+	private function is_order_edit_screen(): bool {
+		if ( ! is_admin() || ! function_exists( 'get_current_screen' ) ) {
+			return false;
+		}
+
+		$screen = get_current_screen();
+
+		return $screen && in_array( $screen->id, [ 'shop_order', 'woocommerce_page_wc-orders' ], true );
 	}
 
 	public function hide_internal_keys( array $hidden ): array {
