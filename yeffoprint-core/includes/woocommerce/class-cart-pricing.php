@@ -42,10 +42,29 @@ class YeffoPrint_Cart_Pricing {
 		// Computed once per recalculation, not per item — every label
 		// line item shares the same combined total (see
 		// combined_label_quantity() below), so there's no reason to
-		// re-sum the whole cart on every iteration of the loop.
-		$tier_quantity = self::combined_label_quantity( $cart );
+		// re-sum the whole cart on every iteration of the loop. Stickers
+		// get their own separate pool (docs/ARCHITECTURE.md: "a sticker
+		// order never counts toward the label discount threshold or vice
+		// versa").
+		$label_tier_quantity   = self::combined_label_quantity( $cart );
+		$sticker_tier_quantity = self::combined_sticker_quantity( $cart );
 
 		foreach ( $cart->get_cart() as $cart_item ) {
+			// Checked first: a Custom Stickers line item also carries
+			// CUSTOM_ORDER_ID and TOTAL_QTY, same as a Custom Design
+			// labels item, but needs YeffoPrint_Sticker_Pricing's own
+			// formula, not the label one below — STICKER_TYPE only ever
+			// gets set on a sticker item (class-custom-sticker-
+			// controller.php), so its presence is what tells the two
+			// apart.
+			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
+				$breakdown = self::calculate_sticker_for_cart_item( $cart_item, $sticker_tier_quantity );
+				if ( null !== $breakdown ) {
+					$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
+				}
+				continue;
+			}
+
 			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) && empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
 				// The flat $25 design fee line item — no batch/quantity
 				// data, always priced as the fee. A Custom Order's *labels*
@@ -59,7 +78,7 @@ class YeffoPrint_Cart_Pricing {
 			// Both a normal Template batch and a Custom Order's own labels
 			// line item reach here and price identically — the formula
 			// only needs size/material/quantity, never a template_id.
-			$breakdown = self::calculate_for_cart_item( $cart_item, $tier_quantity );
+			$breakdown = self::calculate_for_cart_item( $cart_item, $label_tier_quantity );
 			if ( null !== $breakdown ) {
 				$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
 			}
@@ -103,6 +122,29 @@ class YeffoPrint_Cart_Pricing {
 		return $total;
 	}
 
+	/** Sticker-only counterpart to combined_label_quantity() above — same reasoning, kept as a separate pool per docs/ARCHITECTURE.md. */
+	public static function combined_sticker_quantity( ?\WC_Cart $cart = null, ?string $exclude_cart_item_key = null ): int {
+		$cart = $cart ?? ( function_exists( 'WC' ) ? WC()->cart : null );
+		if ( ! $cart ) {
+			return 0;
+		}
+
+		$total = 0;
+		foreach ( $cart->get_cart() as $key => $cart_item ) {
+			if ( $exclude_cart_item_key && $key === $exclude_cart_item_key ) {
+				continue;
+			}
+
+			if ( empty( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
+				continue;
+			}
+
+			$total += (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ?? 0 );
+		}
+
+		return $total;
+	}
+
 	/**
 	 * Static and stateless on purpose: callers like the order-item
 	 * snapshot (class-order-item-meta.php) need this exact calculation
@@ -128,6 +170,38 @@ class YeffoPrint_Cart_Pricing {
 		return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $quantity, $tier_quantity ?? self::combined_label_quantity() );
 	}
 
+	/**
+	 * Sticker counterpart to calculate_for_cart_item() above — same
+	 * "static, stateless, reusable from the order-item snapshot" reason.
+	 * Returns null rather than propagating YeffoPrint_Sticker_Pricing's
+	 * WP_Error on an invalid size/dimensions: apply_price() runs on
+	 * every cart recalculation, including ones a customer can't see
+	 * (a stale item left mid-edit), so silently leaving WC's existing
+	 * price in place here is safer than surfacing an error from a hook
+	 * that has no request to attach one to — the REST submission
+	 * endpoint (class-custom-sticker-controller.php) is what actually
+	 * validates these same inputs and reports a real error to the
+	 * customer, before anything ever reaches the cart.
+	 */
+	public static function calculate_sticker_for_cart_item( array $cart_item, ?int $tier_quantity = null ): ?array {
+		if ( empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
+			return null;
+		}
+
+		$breakdown = YeffoPrint_Sticker_Pricing::calculate(
+			(int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 ),
+			(float) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] ?? 0 ),
+			(float) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? 0 ),
+			(int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 ),
+			(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ?? '' ),
+			(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SHAPE ] ?? '' ),
+			(int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ],
+			$tier_quantity ?? self::combined_sticker_quantity()
+		);
+
+		return is_wp_error( $breakdown ) ? null : $breakdown;
+	}
+
 	private static function adjustment( string $post_type, int $post_id ): float {
 		if ( ! $post_id ) {
 			return 0.0;
@@ -149,6 +223,10 @@ class YeffoPrint_Cart_Pricing {
 	 * those without an additional Store API schema extension.
 	 */
 	public function display_item_data( array $item_data, array $cart_item ): array {
+		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
+			return $this->sticker_item_data( $item_data, $cart_item );
+		}
+
 		$custom_order_id = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ?? 0 );
 		$is_labels_item  = $custom_order_id && ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] );
 
@@ -224,6 +302,51 @@ class YeffoPrint_Cart_Pricing {
 		return $item_data;
 	}
 
+	/** Cart/checkout display rows for a Custom Stickers line item — same role as the labels-item branch above, just this flow's own fields. */
+	private function sticker_item_data( array $item_data, array $cart_item ): array {
+		$size_id        = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
+		$is_custom_size = $size_id && (bool) get_post_meta( $size_id, YeffoPrint_Sticker_Size_Meta::IS_CUSTOM, true );
+
+		$item_data[] = [
+			'key'   => __( 'Type', 'yeffoprint-core' ),
+			'value' => YeffoPrint_Sticker_Pricing::TYPES[ $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ?? '' ] ?? '—',
+		];
+
+		$item_data[] = [
+			'key'   => __( 'Shape', 'yeffoprint-core' ),
+			'value' => YeffoPrint_Sticker_Pricing::SHAPES[ $cart_item[ YeffoPrint_Cart_Item_Keys::SHAPE ] ?? '' ] ?? '—',
+		];
+
+		if ( $is_custom_size ) {
+			$item_data[] = [
+				'key'   => __( 'Size', 'yeffoprint-core' ),
+				'value' => sprintf(
+					/* translators: 1: width in inches, 2: height in inches */
+					__( 'Custom: %1$s" × %2$s"', 'yeffoprint-core' ),
+					(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] ?? '' ),
+					(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? '' )
+				),
+			];
+		} else {
+			$size = get_post( $size_id );
+			if ( $size ) {
+				$item_data[] = [ 'key' => __( 'Size', 'yeffoprint-core' ), 'value' => $size->post_title ];
+			}
+		}
+
+		$material = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
+		if ( $material ) {
+			$item_data[] = [ 'key' => __( 'Material', 'yeffoprint-core' ), 'value' => $material->post_title ];
+		}
+
+		$item_data[] = [
+			'key'   => __( 'Quantity', 'yeffoprint-core' ),
+			'value' => number_format_i18n( (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ?? 0 ) ),
+		];
+
+		return $item_data;
+	}
+
 	/**
 	 * Defensive net: our own REST controllers (class-cart-controller.php,
 	 * class-custom-order-controller.php) are the only intended entry
@@ -238,7 +361,8 @@ class YeffoPrint_Cart_Pricing {
 	public function require_batch_data( bool $passed, int $product_id, int $quantity ): bool {
 		$is_linked_product = YeffoPrint_Linked_Product::get_template_id( $product_id )
 			|| $product_id === YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id()
-			|| $product_id === YeffoPrint_Custom_Order_Labels_Product::get_existing_product_id();
+			|| $product_id === YeffoPrint_Custom_Order_Labels_Product::get_existing_product_id()
+			|| $product_id === YeffoPrint_Custom_Sticker_Product::get_existing_product_id();
 
 		if ( ! $is_linked_product || self::$bypass_validation ) {
 			return $passed;
