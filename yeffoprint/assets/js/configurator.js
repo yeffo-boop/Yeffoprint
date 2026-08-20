@@ -566,6 +566,18 @@
 		var variant = activeVariant();
 
 		schema.field_schema.forEach( function ( field ) {
+			if ( false === field.show_in_preview ) {
+				// Direct request: some fields (e.g. a color picker
+				// standing in for a cap color, not anything printed on
+				// the label artwork) have nowhere sensible to render on
+				// the visual stage — admin can opt a field out entirely
+				// via the Template editor. The input control in the
+				// controls pane below is unaffected; this only skips
+				// creating a stage element, so the field stays fully
+				// usable for input/pricing/order data.
+				return;
+			}
+
 			var el = document.createElement( 'qr_code' === field.type ? 'img' : 'div' );
 			el.setAttribute( 'data-field-id', field.id );
 			el.style.left = field.position.x + '%';

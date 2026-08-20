@@ -73,6 +73,8 @@ class YeffoPrint_Field_Schema {
 		'type'              => 'text',
 		'default'           => '',
 		'required'          => false,
+		/** Whether this field's value is drawn on the configurator's visual stage at all — direct request: some fields (e.g. a color picker standing in for a cap color, not anything printed on the label artwork) have nowhere sensible to render, so the field stays fully usable (input, pricing, order data) but simply isn't shown on the preview. */
+		'show_in_preview'   => true,
 		'max_chars'         => 40,
 		'position'          => [ 'x' => 50.0, 'y' => 50.0 ],
 		'alignment'         => 'center',
@@ -167,6 +169,15 @@ class YeffoPrint_Field_Schema {
 			$qr_size = isset( $field['qr_size'] ) ? (float) $field['qr_size'] : self::DEFAULT_FIELD['qr_size'];
 			$qr_size = min( 60, max( 5, $qr_size ) ); // Sane bounds: unreadably small below 5%, dominates the whole label above 60%.
 
+			// Defaults to true (not the "!empty() -> false" shorthand used
+			// for `required` below) so a field saved before this option
+			// existed — the key simply absent, not explicitly false —
+			// keeps showing on the preview exactly as it always did.
+			// assets/admin/field-schema.js always sends an explicit
+			// true/false for this key once a field's gone through the
+			// repeater UI at all, same as it already does for `required`.
+			$show_in_preview = isset( $field['show_in_preview'] ) ? (bool) $field['show_in_preview'] : self::DEFAULT_FIELD['show_in_preview'];
+
 			$clean[] = [
 				'id'                => $unique_id,
 				'label'             => $label,
@@ -181,6 +192,7 @@ class YeffoPrint_Field_Schema {
 				'text_color'        => $text_color,
 				'formatting_rule'   => $formatting_rule,
 				'preview_behavior'  => $preview_behavior,
+				'show_in_preview'   => $show_in_preview,
 				'admin_description' => isset( $field['admin_description'] ) ? sanitize_text_field( $field['admin_description'] ) : '',
 				'qr_size'           => $qr_size,
 			];

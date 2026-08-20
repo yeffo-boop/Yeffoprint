@@ -108,6 +108,7 @@
 						labeled( 'Preview behavior', selectHtml( index, 'preview_behavior', config.previewBehaviors, field.preview_behavior ) ) +
 						labeled( 'Tooltip / help text (shown to the customer next to this field)', '<textarea data-index="' + index + '" data-key="admin_description" rows="2" class="widefat">' + escapeHtml( field.admin_description ) + '</textarea>' ) +
 						'<label class="yp-field-schema-checkbox"><input type="checkbox" data-index="' + index + '" data-key="required"' + ( field.required ? ' checked' : '' ) + ' /> Required</label>' +
+						'<label class="yp-field-schema-checkbox"><input type="checkbox" data-index="' + index + '" data-key="show_in_preview"' + ( false !== field.show_in_preview ? ' checked' : '' ) + ' /> Show on live preview</label>' +
 					'</div>' +
 					'<div class="yp-field-schema-row-actions">' +
 						'<button type="button" class="button-link" data-action="move-up" data-index="' + index + '"' + ( index === 0 ? ' disabled' : '' ) + '>' + escapeHtml( config.i18n.moveUp ) + '</button>' +
@@ -367,7 +368,8 @@
 				formatting_rule: 'none',
 				preview_behavior: 'scale-to-fit',
 				admin_description: '',
-				qr_size: 20
+				qr_size: 20,
+				show_in_preview: true
 			} );
 			render();
 		} );
