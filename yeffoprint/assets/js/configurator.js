@@ -3,10 +3,14 @@
  *
  * Vanilla JS, no framework/build step, per the spec's "richer JS is
  * justified [only in] the configurator" stance (this is that one
- * area). Single state object drives two synced preview renderers
- * (Label View / Vial View — same field DOM, just a different
- * background image and a CSS scale on Vial View) plus the controls
- * pane, matching Architecture §4: "never a separate data source."
+ * area). Single state object drives two preview renderers: Label View
+ * is the live, per-keystroke WYSIWYG proof (field DOM built from
+ * field_schema, updated on every input event); Vial View is a plain
+ * reference photo of the vial with no field overlays at all — direct
+ * request that live-as-you-type only ever show up on the label, not
+ * the vial mockup. Both still read from the same state object and the
+ * same controls pane (Architecture §4: "never a separate data
+ * source") — Vial View just renders none of it as on-image text.
  *
  * Rendering strategy: structural panels (size/material options, field
  * inputs, variant cards) render once per data change that actually
@@ -42,6 +46,7 @@
 	var layoutEl = root.querySelector( '.yp-configurator__layout' );
 	var stageEl = root.querySelector( '[data-yp-stage]' );
 	var overflowWarningEl = root.querySelector( '[data-yp-overflow-warning]' );
+	var descriptionEl = root.querySelector( '[data-yp-description]' );
 	var titleEl = root.querySelector( '[data-yp-title]' );
 	var sizeOptionsEl = root.querySelector( '[data-yp-size-options]' );
 	var materialOptionsEl = root.querySelector( '[data-yp-material-options]' );
@@ -53,6 +58,7 @@
 	var stickyBar = document.querySelector( '[data-yp-sticky-bar]' );
 	var stickyTotalEl = stickyBar ? stickyBar.querySelector( '[data-yp-sticky-total]' ) : null;
 	var addToCartButtons = document.querySelectorAll( '[data-yp-add-to-cart]' );
+	var saveDesignButton = root.querySelector( '[data-yp-save-design]' );
 
 	var schema = null;
 	var state = {
@@ -109,9 +115,15 @@
 		titleEl.textContent = schema.title || '';
 		document.title = schema.title ? schema.title + ' — YeffoPrint' : document.title;
 
+		if ( descriptionEl ) {
+			descriptionEl.textContent = schema.description || '';
+			descriptionEl.hidden = ! schema.description;
+		}
+
 		var params = new URLSearchParams( window.location.search );
 		var editKey = params.get( 'edit' );
 		var reorderRef = params.get( 'reorder' ); // "<order_id>:<item_id>"
+		var savedId = params.get( 'saved' );
 
 		if ( editKey ) {
 			// "Edit customization" (PROJECT_SPEC §14): rehydrates from a
@@ -134,6 +146,15 @@
 			var parts = reorderRef.split( ':' );
 			loadExternalBatch(
 				yeffoprintConfigurator.restUrl + 'orders/' + encodeURIComponent( parts[ 0 ] ) + '/items/' + encodeURIComponent( parts[ 1 ] ),
+				{ headers: { 'X-WP-Nonce': yeffoprintConfigurator.nonce } },
+				hydrateFromBatch
+			);
+		} else if ( savedId ) {
+			// Saved Designs: same rehydration path as Edit/Reorder above,
+			// just sourced from a design the customer previously saved to
+			// their account instead of a cart item or order.
+			loadExternalBatch(
+				yeffoprintConfigurator.restUrl + 'saved-designs/' + encodeURIComponent( savedId ),
 				{ headers: { 'X-WP-Nonce': yeffoprintConfigurator.nonce } },
 				hydrateFromBatch
 			);
@@ -253,7 +274,7 @@
 
 	function optionPillHtml( group, id, name, meta, isSelected, leadingHtml ) {
 		return (
-			'<button type="button" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + '" data-option-group="' + group + '" data-option-id="' + id + '">' +
+			'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + '" data-option-group="' + group + '" data-option-id="' + id + '">' +
 				( leadingHtml || '' ) +
 				'<span class="yp-option-pill__name">' + escapeHtml( name ) + '</span>' +
 				'<span class="yp-option-pill__meta">' + escapeHtml( meta ) + '</span>' +
@@ -263,7 +284,9 @@
 
 	function updateSelectedPill( container, selectedId ) {
 		container.querySelectorAll( '[data-option-id]' ).forEach( function ( button ) {
-			button.classList.toggle( 'is-selected', parseInt( button.getAttribute( 'data-option-id' ), 10 ) === selectedId );
+			var isSelected = parseInt( button.getAttribute( 'data-option-id' ), 10 ) === selectedId;
+			button.classList.toggle( 'is-selected', isSelected );
+			button.setAttribute( 'aria-checked', isSelected ? 'true' : 'false' );
 		} );
 	}
 
@@ -271,28 +294,52 @@
 
 	function renderFieldInputStructure() {
 		fieldInputsEl.innerHTML = schema.field_schema.map( function ( field ) {
-			var control = 'textarea' === field.type
-				? '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>'
-				: '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
+			var control;
+			if ( 'color' === field.type ) {
+				control = '<input type="color" data-field-id="' + field.id + '" class="yp-field__color-input" />';
+			} else if ( 'qr_code' === field.type ) {
+				control = '<input type="url" placeholder="https://" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
+			} else if ( 'textarea' === field.type ) {
+				control = '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>';
+			} else {
+				control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
+			}
+
+			var tooltip = field.admin_description
+				? ' <button type="button" class="yp-field__tooltip-trigger" data-tooltip-trigger="' + field.id + '" aria-expanded="false" aria-controls="yp-field-tooltip-' + field.id + '" aria-label="More info about ' + escapeHtml( field.label ) + '">?</button>'
+				: '';
 
 			return (
 				'<div class="yp-field">' +
 					'<div class="yp-field__label-row">' +
-						'<label for="yp-field-' + field.id + '">' + escapeHtml( field.label ) + ( field.required ? ' *' : '' ) + '</label>' +
-						'<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' +
+						'<label for="yp-field-' + field.id + '">' + escapeHtml( field.label ) + ( field.required ? ' *' : '' ) + tooltip + '</label>' +
+						( 'color' === field.type ? '' : '<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' ) +
 					'</div>' +
+					( field.admin_description ? '<p class="yp-field__tooltip" id="yp-field-tooltip-' + field.id + '" hidden>' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
 					control.replace( '<textarea', '<textarea id="yp-field-' + field.id + '"' ).replace( '<input', '<input id="yp-field-' + field.id + '"' ) +
-					( field.admin_description ? '<p class="description">' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
 				'</div>'
 			);
 		} ).join( '' ) || '<p class="description">This design has no customization fields.</p>';
+
+		fieldInputsEl.querySelectorAll( '[data-tooltip-trigger]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var tooltipEl = document.getElementById( 'yp-field-tooltip-' + button.getAttribute( 'data-tooltip-trigger' ) );
+				if ( ! tooltipEl ) {
+					return;
+				}
+				var isOpen = ! tooltipEl.hidden;
+				tooltipEl.hidden = isOpen;
+				button.setAttribute( 'aria-expanded', isOpen ? 'false' : 'true' );
+			} );
+		} );
 
 		fieldInputsEl.querySelectorAll( '[data-field-id]' ).forEach( function ( input ) {
 			input.addEventListener( 'input', function () {
 				var fieldId = input.getAttribute( 'data-field-id' );
 				activeVariant().values[ fieldId ] = input.value;
 				updateCounter( fieldId );
-				renderStage();
+				updateStageField( fieldId );
+				updateActiveVariantCardSummary();
 			} );
 		} );
 
@@ -364,13 +411,34 @@
 
 	/* ---------- Variants (batch) ---------- */
 
+	function variantCardSummaryHtml( variant, index ) {
+		return '<span class="yp-variant-card__index">' + ( index + 1 ) + '</span>' +
+			'<span class="yp-variant-card__text"><strong>Label ' + ( index + 1 ) + '</strong>' + escapeHtml( variantSummaryLabel( variant ) ) + ' &middot; ' + variant.quantity + ' units</span>';
+	}
+
+	// The full rebuild below only runs on switch/add/duplicate/remove/
+	// quantity change — not on every keystroke in a field input, which
+	// would tear down and re-attach every card's click listeners on
+	// each character typed. That left a stale-looking bug: the active
+	// batch's own card kept showing whatever text was on it when one of
+	// those actions last ran, not what's actually been typed since —
+	// invisible with a single batch (nothing to compare it to), obvious
+	// with two or more. Called from the field-input handler alongside
+	// updateStageField() so just this one card's label stays live
+	// without rebuilding the whole list.
+	function updateActiveVariantCardSummary() {
+		var button = variantCardsEl.querySelector( '[data-switch-variant="' + state.activeVariantIndex + '"]' );
+		if ( button ) {
+			button.innerHTML = variantCardSummaryHtml( activeVariant(), state.activeVariantIndex );
+		}
+	}
+
 	function renderVariantCards() {
 		variantCardsEl.innerHTML = state.variants.map( function ( variant, index ) {
-			var label = variantSummaryLabel( variant );
 			return (
 				'<div class="yp-variant-card' + ( index === state.activeVariantIndex ? ' is-active' : '' ) + '">' +
 					'<button type="button" class="yp-variant-card__summary" data-switch-variant="' + index + '">' +
-						'<strong>Label ' + ( index + 1 ) + '</strong>' + escapeHtml( label ) + ' &middot; ' + variant.quantity + ' units' +
+						variantCardSummaryHtml( variant, index ) +
 					'</button>' +
 					'<span class="yp-variant-card__actions">' +
 						'<button type="button" class="button-link" data-duplicate-variant="' + index + '">Duplicate</button>' +
@@ -446,6 +514,35 @@
 
 	/* ---------- Preview (Label View / Vial View) ---------- */
 
+	// Keyed by field id (a schema can have more than one QR field, in
+	// principle) so typing in one never cancels another's pending
+	// refresh — same one-timer-per-concern shape as pricingDebounceTimer
+	// below, just needing a map instead of a single variable.
+	var qrPreviewDebounceTimers = {};
+
+	/**
+	 * Points a QR field's <img> at the plugin's own rendering endpoint
+	 * (class-qr-controller.php) for the current URL, or clears it back
+	 * to an empty placeholder state if the customer hasn't typed
+	 * anything (or typed something too short/invalid to bother
+	 * rendering yet — the server validates properly at cart/checkout;
+	 * this is just "don't fire a request for an obviously-incomplete
+	 * URL while someone is mid-keystroke").
+	 */
+	function setQrImageSrc( imgEl, url ) {
+		var trimmed = ( url || '' ).trim();
+		if ( trimmed.length < 4 ) {
+			imgEl.removeAttribute( 'src' );
+			imgEl.classList.add( 'is-empty' );
+			return;
+		}
+		imgEl.classList.remove( 'is-empty' );
+		imgEl.src = yeffoprintConfigurator.restUrl + 'qr?format=png&text=' + encodeURIComponent( trimmed );
+	}
+
+	// Rebuilds every field element — view toggle, variant switch, and
+	// initial load, where every field's position/value can change at
+	// once. Typing in one field only needs updateStageField() below.
 	function renderStage() {
 		var backgroundUrl = 'vial' === state.view ? schema.vial_mockup_url : schema.artwork_url;
 
@@ -454,24 +551,130 @@
 			: '';
 		stageEl.setAttribute( 'data-view', state.view );
 
-		var stageRect = stageEl.getBoundingClientRect();
+		// Vial View is a plain reference photo of the vial, not a live
+		// proof — direct request: live-as-you-type editing should only
+		// ever show up on Label View. No field elements get appended
+		// here, which also means updateStageField() (the per-keystroke
+		// path below) naturally no-ops while this view is active: it
+		// looks a field up by data-field-id and bails out when nothing
+		// matches.
+		if ( 'vial' === state.view ) {
+			overflowWarningEl.hidden = true;
+			return;
+		}
+
 		var variant = activeVariant();
+
+		schema.field_schema.forEach( function ( field ) {
+			if ( false === field.show_in_preview ) {
+				// Direct request: some fields (e.g. a color picker
+				// standing in for a cap color, not anything printed on
+				// the label artwork) have nowhere sensible to render on
+				// the visual stage — admin can opt a field out entirely
+				// via the Template editor. The input control in the
+				// controls pane below is unaffected; this only skips
+				// creating a stage element, so the field stays fully
+				// usable for input/pricing/order data.
+				return;
+			}
+
+			var el = document.createElement( 'qr_code' === field.type ? 'img' : 'div' );
+			el.setAttribute( 'data-field-id', field.id );
+			el.style.left = field.position.x + '%';
+			el.style.top = field.position.y + '%';
+
+			if ( 'color' === field.type ) {
+				// A hex string as literal text would look wrong on the
+				// label — this field's value is rendered as a small color
+				// swatch instead, still positioned like any other field.
+				el.className = 'yp-stage__field is-swatch';
+				el.style.transform = 'translate(-50%, -50%)';
+				el.style.background = variant.values[ field.id ] || '#cccccc';
+			} else if ( 'qr_code' === field.type ) {
+				// Renders an actual scannable code, not text — an <img>
+				// pointed at the plugin's own QR-rendering endpoint
+				// (class-qr-controller.php), sized as a square by qr_size
+				// (% of stage width) and centered on position like the
+				// color swatch above. Empty until the customer types a URL.
+				el.className = 'yp-stage__field is-qr';
+				el.alt = '';
+				el.style.transform = 'translate(-50%, -50%)';
+				el.style.width = ( field.qr_size || 20 ) + '%';
+				setQrImageSrc( el, variant.values[ field.id ] || '' );
+			} else {
+				el.className = 'yp-stage__field' + ( 'textarea' === field.type ? ' is-multiline' : '' );
+				el.style.textAlign = field.alignment;
+				el.style.transform = anchorTransformFor( field.alignment );
+				el.style.textTransform = textTransformFor( field.formatting_rule );
+				el.style.color = field.text_color || '#000000';
+				// Set per Template from the admin (class-template-editor.php),
+				// loaded on this page via functions.php — direct request, so
+				// the live preview reads as close to the actual printed
+				// label as possible instead of always showing in the site's
+				// own body font. Quoted, since a Google Fonts family name
+				// can contain spaces; empty when unset, which leaves this
+				// inheriting the theme's default rather than setting an
+				// empty font-family.
+				el.style.fontFamily = schema.preview_font ? '"' + schema.preview_font + '", sans-serif' : '';
+				el.textContent = variant.values[ field.id ] || '';
+			}
+
+			stageEl.appendChild( el );
+		} );
+
+		refitStageFields();
+	}
+
+	function refitStageFields() {
+		var stageRect = stageEl.getBoundingClientRect();
 		var anyOverflow = false;
 
 		schema.field_schema.forEach( function ( field ) {
-			var el = document.createElement( 'div' );
-			el.className = 'yp-stage__field' + ( 'textarea' === field.type ? ' is-multiline' : '' );
-			el.style.left = field.position.x + '%';
-			el.style.top = field.position.y + '%';
-			el.style.textAlign = field.alignment;
-			el.style.textTransform = textTransformFor( field.formatting_rule );
-			el.textContent = variant.values[ field.id ] || '';
-			stageEl.appendChild( el );
-
-			var overflowing = fitText( el, field, stageRect.width, stageRect.height );
-			anyOverflow = anyOverflow || overflowing;
+			var el = stageEl.querySelector( '[data-field-id="' + field.id + '"]' );
+			if ( ! el || 'color' === field.type || 'qr_code' === field.type ) {
+				return; // A swatch/QR image has a fixed size — nothing to font-fit.
+			}
+			anyOverflow = fitText( el, field, stageRect.width, stageRect.height ) || anyOverflow;
 		} );
 
+		overflowWarningEl.hidden = ! anyOverflow;
+	}
+
+	// Typing on the hot path: updates and refits only the one field that
+	// changed instead of tearing down and rebuilding every field's DOM
+	// node on each keystroke (that was previously renderStage()'s job
+	// here too, forcing a full layout reflow loop per field per
+	// keystroke rather than one field's).
+	function updateStageField( fieldId ) {
+		var field = schema.field_schema.filter( function ( f ) { return f.id === fieldId; } )[ 0 ];
+		var el = stageEl.querySelector( '[data-field-id="' + fieldId + '"]' );
+		if ( ! field || ! el ) {
+			return;
+		}
+
+		if ( 'color' === field.type ) {
+			el.style.background = activeVariant().values[ fieldId ] || '#cccccc';
+			return;
+		}
+
+		if ( 'qr_code' === field.type ) {
+			window.clearTimeout( qrPreviewDebounceTimers[ fieldId ] );
+			qrPreviewDebounceTimers[ fieldId ] = window.setTimeout( function () {
+				setQrImageSrc( el, activeVariant().values[ fieldId ] || '' );
+			}, 400 );
+			return;
+		}
+
+		var stageRect = stageEl.getBoundingClientRect();
+		el.textContent = activeVariant().values[ fieldId ] || '';
+		var overflowing = fitText( el, field, stageRect.width, stageRect.height );
+
+		var anyOverflow = overflowing || Array.prototype.some.call(
+			stageEl.querySelectorAll( '.yp-stage__field' ),
+			function ( otherEl ) {
+				return otherEl !== el && otherEl.classList.contains( 'is-overflowing' );
+			}
+		);
 		overflowWarningEl.hidden = ! anyOverflow;
 	}
 
@@ -484,45 +687,121 @@
 		}
 	}
 
+	/**
+	 * A field's `position.x/y` is the point in the admin's drag-to-
+	 * position picker the field is anchored to — for "left justified"
+	 * to actually mean "the text starts at that point" (rather than
+	 * "that point is the text's centerpoint"), which edge of the box
+	 * sits at x has to change with alignment, not just the text-align
+	 * inside a box that's always centered on x regardless. Vertical
+	 * stays centered on y either way — only PROJECT_SPEC's left/center/
+	 * right alignments exist, no vertical equivalent.
+	 *
+	 * No Vial View scale-down anymore — this is only ever called from
+	 * renderStage()'s field-building loop, which now never runs while
+	 * Vial View is active.
+	 */
+	function anchorTransformFor( alignment ) {
+		var anchorX = 'left' === alignment ? '0%' : 'right' === alignment ? '-100%' : '-50%';
+		return 'translate(' + anchorX + ', -50%)';
+	}
+
 	function fitText( el, field, stageWidth, stageHeight ) {
 		var maxWidth = stageWidth * FIELD_BOX_WIDTH_RATIO;
 		var maxHeight = stageHeight * FIELD_BOX_HEIGHT_RATIO;
 		var isMultiline = 'textarea' === field.type;
-		var size = field.font_size_max;
 
 		el.style.maxWidth = maxWidth + 'px';
 		if ( isMultiline ) {
 			el.style.maxHeight = maxHeight + 'px';
 		}
 
-		function overflowing() {
+		// Each call sets fontSize and reads scrollWidth/Height, which
+		// forces a synchronous layout — worth minimizing since this runs
+		// on every keystroke. Shrinking a field's font never *increases*
+		// its box (monotonic), so the largest non-overflowing integer
+		// size can be binary-searched instead of walked down 1px at a
+		// time, trading a handful of reflows for what could be dozens
+		// on a wide font-size range.
+		function overflowsAt( size ) {
+			el.style.fontSize = size + 'px';
 			var widthOverflow = el.scrollWidth > maxWidth + 1;
 			var heightOverflow = isMultiline && el.scrollHeight > maxHeight + 1;
 			return widthOverflow || heightOverflow;
 		}
 
-		el.style.fontSize = size + 'px';
-		while ( size > field.font_size_min && overflowing() ) {
-			size -= 1;
-			el.style.fontSize = size + 'px';
+		var min = field.font_size_min;
+		var max = field.font_size_max;
+		var best;
+
+		if ( ! overflowsAt( max ) ) {
+			best = max;
+		} else if ( overflowsAt( min ) ) {
+			best = min;
+		} else {
+			var low = min;
+			var high = max;
+			while ( low < high ) {
+				var mid = Math.ceil( ( low + high ) / 2 );
+				if ( overflowsAt( mid ) ) {
+					high = mid - 1;
+				} else {
+					low = mid;
+				}
+			}
+			best = low;
 		}
 
-		var stillOverflowing = overflowing();
+		var stillOverflowing = overflowsAt( best );
 		el.classList.toggle( 'is-overflowing', stillOverflowing );
 		return stillOverflowing;
 	}
 
-	root.querySelectorAll( '[data-yp-view]' ).forEach( function ( tab ) {
+	var viewTabs = Array.prototype.slice.call( root.querySelectorAll( '[data-yp-view]' ) );
+
+	function activateViewTab( tab, focusTab ) {
+		state.view = tab.getAttribute( 'data-yp-view' );
+
+		viewTabs.forEach( function ( t ) {
+			var isActive = t === tab;
+			t.classList.toggle( 'is-active', isActive );
+			t.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
+			t.setAttribute( 'tabindex', isActive ? '0' : '-1' );
+		} );
+
+		stageEl.setAttribute( 'aria-labelledby', tab.id );
+
+		if ( focusTab ) {
+			tab.focus();
+		}
+
+		renderStage();
+	}
+
+	viewTabs.forEach( function ( tab, index ) {
 		tab.addEventListener( 'click', function () {
-			state.view = tab.getAttribute( 'data-yp-view' );
+			activateViewTab( tab, false );
+		} );
 
-			root.querySelectorAll( '[data-yp-view]' ).forEach( function ( t ) {
-				var isActive = t === tab;
-				t.classList.toggle( 'is-active', isActive );
-				t.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
-			} );
+		// ARIA APG "tabs" pattern: arrow keys move focus between tabs
+		// and activate the newly-focused one (roving tabindex above).
+		tab.addEventListener( 'keydown', function ( event ) {
+			var targetIndex = null;
 
-			renderStage();
+			if ( 'ArrowRight' === event.key || 'ArrowDown' === event.key ) {
+				targetIndex = ( index + 1 ) % viewTabs.length;
+			} else if ( 'ArrowLeft' === event.key || 'ArrowUp' === event.key ) {
+				targetIndex = ( index - 1 + viewTabs.length ) % viewTabs.length;
+			} else if ( 'Home' === event.key ) {
+				targetIndex = 0;
+			} else if ( 'End' === event.key ) {
+				targetIndex = viewTabs.length - 1;
+			}
+
+			if ( null !== targetIndex ) {
+				event.preventDefault();
+				activateViewTab( viewTabs[ targetIndex ], true );
+			}
 		} );
 	} );
 
@@ -578,7 +857,11 @@
 		var requestId = ++pricingRequestId;
 		var url = yeffoprintConfigurator.restUrl + 'pricing/calculate?quantity=' + qty +
 			( state.sizeId ? '&size_id=' + state.sizeId : '' ) +
-			( state.materialId ? '&material_id=' + state.materialId : '' );
+			( state.materialId ? '&material_id=' + state.materialId : '' ) +
+			// Editing a batch already in the cart: exclude its own (pre-edit)
+			// quantity from the bulk-discount count, or it'd double-count
+			// against the new quantity being previewed here.
+			( state.editKey ? '&exclude_cart_item_key=' + encodeURIComponent( state.editKey ) : '' );
 
 		fetch( url )
 			.then( function ( response ) {
@@ -653,7 +936,14 @@
 		}
 	}
 
-	function submitAddToCart() {
+	// Both this endpoint's own explicit nonce check (class-rest-
+	// security.php) and WordPress core's own cookie/nonce check (which
+	// runs even earlier, before any endpoint code) reject the same
+	// underlying problem — a stale nonce that no longer matches the
+	// visitor's actual session — under two different error codes.
+	var NONCE_ERROR_CODES = [ 'rest_cookie_invalid_nonce', 'yeffoprint_invalid_nonce' ];
+
+	function submitAddToCart( isRetry ) {
 		clearCartStatus();
 		addToCartButtons.forEach( function ( button ) {
 			button.disabled = true;
@@ -674,7 +964,7 @@
 
 		fetch( yeffoprintConfigurator.restUrl + 'cart/add', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintConfigurator.nonce },
 			body: JSON.stringify( payload )
 		} )
 			.then( function ( response ) {
@@ -683,6 +973,19 @@
 				} );
 			} )
 			.then( function ( result ) {
+				if ( ! result.ok && ! isRetry && result.data && NONCE_ERROR_CODES.indexOf( result.data.code ) !== -1 ) {
+					// The nonce baked into this page at load time no
+					// longer matches the visitor's session — most often
+					// because the page itself was served from a cache
+					// that predates it (functions.php has the full
+					// reasoning). Fetching a fresh one only needs the
+					// *current*, still-valid session cookie, so this
+					// recovers silently instead of surfacing an error a
+					// visitor would have no way to understand or act on.
+					fetchFreshNonceAndRetry();
+					return;
+				}
+
 				addToCartButtons.forEach( function ( button ) {
 					button.disabled = false;
 				} );
@@ -711,9 +1014,89 @@
 			} );
 	}
 
+	function fetchFreshNonceAndRetry() {
+		fetch( yeffoprintConfigurator.restUrl + 'session/nonce' )
+			.then( function ( response ) {
+				return response.ok ? response.json() : Promise.reject( new Error( 'nonce-refresh-failed' ) );
+			} )
+			.then( function ( data ) {
+				yeffoprintConfigurator.nonce = data.nonce;
+				submitAddToCart( /* isRetry */ true );
+			} )
+			.catch( function () {
+				addToCartButtons.forEach( function ( button ) {
+					button.disabled = false;
+				} );
+				showCartStatus( 'Your session has expired — please refresh the page and try again.', true );
+			} );
+	}
+
 	addToCartButtons.forEach( function ( button ) {
-		button.addEventListener( 'click', submitAddToCart );
+		// Not `addEventListener( 'click', submitAddToCart )` directly —
+		// that would pass the click Event itself as submitAddToCart's
+		// first argument (isRetry), which is truthy, making every fresh
+		// click look like a retry and skip the one-time nonce-refresh
+		// path above entirely.
+		button.addEventListener( 'click', function () {
+			submitAddToCart( false );
+		} );
 	} );
+
+	/* ---------- Save this design ---------- */
+	// Saved Designs needs an account — there's nothing to attach an
+	// anonymous save to. The button stays visible either way (rather
+	// than being omitted server-side, which templates/*.html can't do)
+	// and just relabels/redirects to login instead of no-op'ing.
+
+	if ( saveDesignButton ) {
+		if ( ! yeffoprintConfigurator.isLoggedIn ) {
+			saveDesignButton.textContent = 'Log in to save this design';
+		}
+
+		saveDesignButton.addEventListener( 'click', function () {
+			if ( ! yeffoprintConfigurator.isLoggedIn ) {
+				window.location.href = yeffoprintConfigurator.accountUrl;
+				return;
+			}
+
+			clearCartStatus();
+			saveDesignButton.disabled = true;
+
+			var payload = {
+				template_id: schema.id,
+				size_id: state.sizeId,
+				material_id: state.materialId,
+				variants: state.variants.map( function ( variant ) {
+					return { quantity: variant.quantity, values: variant.values };
+				} )
+			};
+
+			fetch( yeffoprintConfigurator.restUrl + 'saved-designs', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintConfigurator.nonce },
+				body: JSON.stringify( payload )
+			} )
+				.then( function ( response ) {
+					return response.json().then( function ( data ) {
+						return { ok: response.ok, data: data };
+					} );
+				} )
+				.then( function ( result ) {
+					saveDesignButton.disabled = false;
+
+					if ( ! result.ok ) {
+						showCartStatus( ( result.data && result.data.message ) || "Couldn't save this design.", true );
+						return;
+					}
+
+					showCartStatus( 'Design saved — find it under Saved Designs in My Account.', false );
+				} )
+				.catch( function () {
+					saveDesignButton.disabled = false;
+					showCartStatus( "Couldn't reach the server — please try again.", true );
+				} );
+		} );
+	}
 
 	init();
 } )();

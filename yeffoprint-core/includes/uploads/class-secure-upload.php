@@ -59,7 +59,17 @@ class YeffoPrint_Secure_Upload {
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
-		$is_svg = self::looks_like_svg( $file );
+		$declared_ext = strtolower( pathinfo( $file['name'] ?? '', PATHINFO_EXTENSION ) );
+		$is_svg       = self::looks_like_svg( $file );
+
+		// Content sniffed as SVG but not named .svg: a mismatched
+		// extension is exactly how a script-bearing SVG would try to
+		// slip past the mimes override under a trusted-looking
+		// .png/.jpg name — reject outright rather than accept it under
+		// the wrong declared type.
+		if ( $is_svg && 'svg' !== $declared_ext ) {
+			return new \WP_Error( 'yeffoprint_invalid_file', __( "This file's contents don't match its file type.", 'yeffoprint-core' ) );
+		}
 
 		$overrides = [
 			'test_form' => false,
@@ -96,9 +106,28 @@ class YeffoPrint_Secure_Upload {
 		return $attachment_id;
 	}
 
+	/**
+	 * Checked by content, not just the client-supplied filename
+	 * extension — a file renamed to end in .png/.jpg but containing SVG
+	 * markup would otherwise skip sanitize_svg_file() entirely and be
+	 * stored as-is via the ordinary (non-SVG) upload path.
+	 */
 	private static function looks_like_svg( array $file ): bool {
 		$ext = strtolower( pathinfo( $file['name'] ?? '', PATHINFO_EXTENSION ) );
-		return 'svg' === $ext;
+		if ( 'svg' === $ext ) {
+			return true;
+		}
+
+		$tmp_name = $file['tmp_name'] ?? '';
+		if ( '' === $tmp_name || ! is_readable( $tmp_name ) ) {
+			return false;
+		}
+
+		// A leading chunk is enough to catch the <svg tag near the top
+		// of any real SVG (after an optional XML prolog/comments)
+		// without reading the whole file for a check this cheap.
+		$head = file_get_contents( $tmp_name, false, null, 0, 4096 );
+		return false !== $head && (bool) preg_match( '/<svg[\s>]/i', $head );
 	}
 
 	/**

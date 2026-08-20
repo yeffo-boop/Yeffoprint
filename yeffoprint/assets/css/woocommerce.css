@@ -4,6 +4,21 @@
  * own markup rather than replacing it with custom templates — see
  * docs/ARCHITECTURE.md §9 for why, and for the classic-vs-Blocks
  * caveat these selectors work around by targeting both.
+ *
+ * Confirmed live (Venmo/Zelle checkout investigation) that this site's
+ * Cart and Checkout pages use the WooCommerce Cart/Checkout *blocks*
+ * (Store API), not the classic [woocommerce_cart]/[woocommerce_checkout]
+ * shortcodes — most of this file's classic-only selectors (.col2-set,
+ * #order_review, table.shop_table) have therefore never applied on the
+ * live site at all. Kept for the My Account pages, which are still
+ * classic templates regardless (confirmed unaffected), but the block
+ * classes below (wc-block-*) are what actually render Cart/Checkout —
+ * this only adds decorative styling (color/radius/shadow/spacing) on
+ * top of WooCommerce Blocks' own structural layout CSS, not a rebuilt
+ * layout, since that base CSS is already correct and I can't verify a
+ * rebuilt one visually from here. Class names are WooCommerce's
+ * documented, stable Blocks theming API; if anything doesn't land
+ * pixel-perfect, a screenshot beats guessing further blind.
  */
 
 .woocommerce-cart .entry-content,
@@ -73,30 +88,224 @@
 }
 
 .woocommerce-checkout #order_review,
-.wc-block-checkout__sidebar {
-	background: var(--wp--preset--color--warm-white);
-	border-radius: var(--wp--custom--radius--card);
-	padding: var(--wp--preset--spacing--md);
-	box-shadow: var(--wp--custom--shadow-elevation--low);
+.wc-block-checkout__sidebar,
+.wc-block-cart__sidebar {
+	background: var(--wp--preset--color--warm-white) !important;
+	border-radius: var(--wp--custom--radius--card) !important;
+	padding: var(--wp--preset--spacing--md) !important;
+	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
 	align-self: start;
 }
 
+/* ---------- Cart & Checkout blocks (Store API) ----------
+   !important throughout this section: live testing (the Venmo/Zelle
+   payment-method text overlapping its radio circle, and this section's
+   styling not visibly landing at all) confirms the same pattern hit
+   repeatedly elsewhere on this site — WooCommerce's own block CSS
+   loads with enough specificity/order to beat a plain single-class
+   rule here. Padding is the one property in this section that's
+   deliberately NOT a blanket override — see the radio-option comment
+   below for why. */
+
+.wp-block-woocommerce-checkout,
+.wp-block-woocommerce-cart {
+	margin-top: var(--wp--preset--spacing--sm);
+}
+
+/* WooCommerce Blocks' own default stylesheet puts a card treatment
+   (border/background/box-shadow) on the checkout/cart root and on the
+   left "fields" column out of the box — invisible on this site until
+   page-checkout.html/page-cart.html started rendering these blocks
+   wrapped in our own layout for the first time. Stripped here so the
+   only boxes on the page are the ones this file adds on purpose (the
+   sidebar card further down, individual steps/radio options) instead
+   of stacking a second, unstyled one underneath them. Deliberately
+   NOT touching the totals/sidebar column classes — the order-summary
+   rule below relies on styling one of those itself. */
+.wp-block-woocommerce-checkout,
+.wp-block-woocommerce-cart,
+.wp-block-woocommerce-checkout-fields-block,
+.wp-block-woocommerce-cart-items-block {
+	background: none !important;
+	border: none !important;
+	box-shadow: none !important;
+	padding: 0 !important;
+}
+
+/* Each checkout step ("Contact information," "Shipping address,"
+   "Payment options," …) as a clearly separated section rather than
+   WC Blocks' own unstyled default flow. */
+.wc-block-components-checkout-step {
+	padding-bottom: var(--wp--preset--spacing--md) !important;
+	margin-bottom: var(--wp--preset--spacing--md) !important;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray) !important;
+}
+
+.wc-block-components-checkout-step:last-child {
+	border-bottom: none !important;
+	margin-bottom: 0 !important;
+	padding-bottom: 0 !important;
+}
+
+.wc-block-components-checkout-step__title {
+	font-family: var(--wp--preset--font-family--heading) !important;
+	font-size: var(--wp--preset--font-size--large) !important;
+	font-weight: 700 !important;
+}
+
+.wc-block-components-checkout-step__description {
+	color: var(--wp--preset--color--charcoal) !important;
+	font-size: var(--wp--preset--font-size--small) !important;
+}
+
+/* Radio options — shipping method AND payment method (Venmo/Zelle
+   included) both use this same component. [aria-checked] rather than
+   guessing an exact BEM "is-selected" modifier class name, since the
+   component is built on an accessible role="radio" pattern.
+   Real bug fixed here: this previously used the `padding` SHORTHAND,
+   which resets all four sides — that silently collapsed WC Blocks' own
+   larger padding-left (reserved for the absolutely-positioned radio
+   circle) down to 1rem, not enough room, so the circle overlapped the
+   first few characters of every label ("USPS Ground Advantage" read
+   as "PS Ground Advantage", "Venmo" as "nmo," etc.). Only the sides
+   this section actually needs to change are set now; padding-left is
+   deliberately left alone. */
+.wc-block-components-radio-control__option {
+	border: 1.5px solid var(--wp--preset--color--light-gray) !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+	padding-block: 0.85rem !important;
+	padding-right: 1rem !important;
+	margin-bottom: 0.6rem !important;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.wc-block-components-radio-control__option[aria-checked="true"] {
+	border-color: var(--wp--preset--color--near-black) !important;
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black) !important;
+}
+
+.yp-blocks-payment-description {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin-top: 0.35rem;
+}
+
+/* Order summary (right column): line items + totals */
+.wc-block-components-order-summary-item {
+	padding-block: 0.6rem !important;
+}
+
+/* Same navy backdrop as the cart page and Shop Labels gallery cards —
+   this is the checkout sidebar's own copy of the line-item thumbnail. */
+.wc-block-components-order-summary-item__image {
+	/* Explicit square box + object-fit below — without both, a source
+	   photo that's naturally tall and narrow (a standing vial, not a
+	   square product shot) renders at its own intrinsic aspect ratio
+	   inside this flex row: full height, barely any width, cropping
+	   out almost the entire label. */
+	width: 3.5rem !important;
+	height: 3.5rem !important;
+	flex-shrink: 0;
+	background: var(--wp--custom--gradient-navy) !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+	overflow: hidden;
+}
+
+.wc-block-components-order-summary-item__image img {
+	width: 100% !important;
+	height: 100% !important;
+	object-fit: cover !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+}
+
+.wc-block-components-totals-item {
+	font-size: var(--wp--preset--font-size--small) !important;
+}
+
+.wc-block-components-totals-footer-item {
+	font-size: var(--wp--preset--font-size--large) !important;
+	font-weight: 700 !important;
+	padding-top: 0.75rem !important;
+	border-top: 1px solid var(--wp--preset--color--light-gray) !important;
+}
+
+/* Every rendered price (line items, subtotal, shipping, total) —
+   decorative only, same as the rest of this file: WooCommerce Blocks
+   wraps each amount in this one class regardless of which totals row
+   it's in, so a single rule covers cart and checkout consistently. */
+.wc-block-components-formatted-money-amount {
+	font-family: var(--wp--preset--font-family--mono) !important;
+}
+
+/* Coupon code / any other collapsible panel */
+.wc-block-components-panel {
+	border-top: 1px solid var(--wp--preset--color--light-gray) !important;
+	padding-top: 1rem !important;
+	margin-top: 1rem !important;
+	font-size: var(--wp--preset--font-size--small) !important;
+}
+
+/* Notices (errors, "your session expired," etc.) */
+.wc-block-components-notice-banner {
+	border-radius: var(--wp--custom--radius--control) !important;
+}
+
+/* Cart line items */
+.wc-block-cart-items {
+	border-radius: var(--wp--custom--radius--card) !important;
+	overflow: hidden;
+	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
+}
+
+/* Same navy "on a light table" backdrop as the Shop Labels gallery
+   cards (patterns.css) — consistent product-photography treatment
+   from browsing through to checkout. */
+.wc-block-cart-item__image {
+	width: 5.5rem !important;
+	height: 5.5rem !important;
+	flex-shrink: 0;
+	background: var(--wp--custom--gradient-navy) !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+	overflow: hidden;
+}
+
+.wc-block-cart-item__image img {
+	width: 100% !important;
+	height: 100% !important;
+	object-fit: cover !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+}
+
 /* Account page */
+/* Vertical stack, not wrapped horizontal pills — with 9 items now
+   (Dashboard/Orders/Saved Designs/Rewards/Proofs/Downloads/Addresses/
+   Account details/Log out) a flex-wrap row was packing unevenly by
+   available width, reading as disorganized clusters rather than a
+   predictable list. A stack has no such wrapping ambiguity regardless
+   of how many endpoints this ever grows to. */
 .woocommerce-MyAccount-navigation ul {
 	list-style: none;
 	padding: 0;
+	margin: 0;
 	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
+	flex-direction: column;
+	gap: 0.35rem;
 }
 
 .woocommerce-MyAccount-navigation a {
-	display: inline-block;
-	padding: 0.5rem 1rem;
+	display: block;
+	padding: 0.6rem 1rem;
 	border-radius: var(--wp--custom--radius--control);
 	background: var(--wp--preset--color--light-gray);
 	text-decoration: none;
 	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--near-black);
+	transition: background-color 150ms ease, color 150ms ease;
+}
+
+.woocommerce-MyAccount-navigation a:hover {
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
 }
 
 .woocommerce-MyAccount-navigation .is-active a {
@@ -144,6 +353,83 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+/* ---------- Rewards tab ---------- */
+
+.yp-rewards-balance {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 1rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: linear-gradient(120deg, rgba(0, 174, 239, 0.1), rgba(236, 0, 140, 0.1), rgba(255, 242, 0, 0.1));
+	border: 1.5px solid rgba(236, 0, 140, 0.22);
+}
+
+.yp-rewards-balance__points {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--xx-large);
+	font-weight: 700;
+}
+
+.yp-rewards-balance__label {
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rewards-balance__value {
+	width: 100%;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rewards-redeem-form {
+	margin-bottom: 2rem;
+}
+
+.yp-rewards-history {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.yp-rewards-history__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.85rem 1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-rewards-history__date {
+	display: block;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.8rem;
+}
+
+.yp-rewards-history__amounts {
+	display: flex;
+	gap: 0.6rem;
+	font-family: var(--wp--preset--font-family--mono);
+	font-weight: 600;
+	flex-shrink: 0;
+}
+
+.yp-rewards-history__earned {
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-rewards-history__redeemed {
+	color: var(--wp--preset--color--magenta-deep);
+}
+
 /* ---------- Proofs tab ---------- */
 
 .yp-proofs-list {
@@ -153,10 +439,32 @@
 }
 
 .yp-proof-card {
+	display: flex;
+	gap: 1rem;
 	padding: 1.25rem;
 	border-radius: var(--wp--custom--radius--card);
 	background: var(--wp--preset--color--white);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-proof-card__thumb {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 5rem;
+	height: 5rem;
+	flex-shrink: 0;
+	border-radius: var(--wp--custom--radius--control);
+	/* No real artwork exists for a one-off Custom Order yet — same
+	   "coming soon," not-broken placeholder language as the Customer
+	   Inspiration tiles, until real AI-generated previews replace it. */
+	background: linear-gradient(135deg, rgba(0, 174, 239, 0.14), rgba(236, 0, 140, 0.14));
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-proof-card__body {
+	flex: 1;
+	min-width: 0;
 }
 
 .yp-proof-card__header {
@@ -194,4 +502,53 @@
 .yp-reorder-link a {
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
+}
+
+/* ---------- Saved Designs (My Account) ---------- */
+
+.yp-saved-designs-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.yp-saved-design-card {
+	display: flex;
+	gap: 1rem;
+	padding: 1.25rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-saved-design-card__thumb {
+	width: 5rem;
+	height: 5rem;
+	object-fit: cover;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	flex-shrink: 0;
+}
+
+.yp-saved-design-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	flex: 1;
+}
+
+.yp-saved-design-card__body span {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-saved-design-card__actions {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-top: 0.5rem;
+}
+
+.yp-saved-design-card__actions form {
+	margin: 0;
 }

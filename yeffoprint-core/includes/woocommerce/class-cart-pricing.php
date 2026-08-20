@@ -39,17 +39,68 @@ class YeffoPrint_Cart_Pricing {
 			return;
 		}
 
+		// Computed once per recalculation, not per item — every label
+		// line item shares the same combined total (see
+		// combined_label_quantity() below), so there's no reason to
+		// re-sum the whole cart on every iteration of the loop.
+		$tier_quantity = self::combined_label_quantity( $cart );
+
 		foreach ( $cart->get_cart() as $cart_item ) {
-			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
+			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) && empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
+				// The flat $25 design fee line item — no batch/quantity
+				// data, always priced as the fee. A Custom Order's *labels*
+				// line item also carries CUSTOM_ORDER_ID (to link it back
+				// to the same record) but has TOTAL_QTY too, so it falls
+				// through to the normal per-unit calculation below instead.
 				$cart_item['data']->set_price( YeffoPrint_Pricing_Rule::get_custom_design_fee() );
 				continue;
 			}
 
-			$breakdown = self::calculate_for_cart_item( $cart_item );
+			// Both a normal Template batch and a Custom Order's own labels
+			// line item reach here and price identically — the formula
+			// only needs size/material/quantity, never a template_id.
+			$breakdown = self::calculate_for_cart_item( $cart_item, $tier_quantity );
 			if ( null !== $breakdown ) {
 				$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
 			}
 		}
+	}
+
+	/**
+	 * The bulk-discount threshold a customer's whole order is measured
+	 * against — direct request: "they can mix and match to meet that
+	 * minimum to get a discount," so every label-bearing line item
+	 * (a Template batch or a Custom Order's own labels item — both
+	 * share TOTAL_QTY, regardless of which design/size/material each
+	 * one is) counts toward one shared total, not just whichever single
+	 * line happens to be large enough alone. The flat design-fee line
+	 * item has no TOTAL_QTY and is correctly excluded by the same check
+	 * calculate_for_cart_item() already uses.
+	 *
+	 * Takes an explicit `$cart` when the live `woocommerce_before_
+	 * calculate_totals` hook already has one in hand (apply_price());
+	 * falls back to `WC()->cart` for every other caller (the order-item
+	 * snapshot at checkout, the pricing-preview REST endpoint before
+	 * anything's even been added yet) — both are the *same* cart object
+	 * within one request, this just avoids requiring every caller to
+	 * thread it through by hand.
+	 */
+	public static function combined_label_quantity( ?\WC_Cart $cart = null, ?string $exclude_cart_item_key = null ): int {
+		$cart = $cart ?? ( function_exists( 'WC' ) ? WC()->cart : null );
+		if ( ! $cart ) {
+			return 0;
+		}
+
+		$total = 0;
+		foreach ( $cart->get_cart() as $key => $cart_item ) {
+			if ( $exclude_cart_item_key && $key === $exclude_cart_item_key ) {
+				continue; // The item currently being edited — its own (possibly stale) quantity would double-count against the new one a caller is about to preview.
+			}
+
+			$total += (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ?? 0 );
+		}
+
+		return $total;
 	}
 
 	/**
@@ -59,9 +110,13 @@ class YeffoPrint_Cart_Pricing {
 	 * would re-register this class's hooks a second time (duplicating,
 	 * e.g., the cart's displayed Size/Material rows).
 	 *
+	 * @param int|null $tier_quantity Combined cart-wide quantity to resolve
+	 *   the bulk discount against; defaults to a fresh combined_label_quantity()
+	 *   read (correct for a one-off caller like the checkout snapshot — see
+	 *   combined_label_quantity()'s own doc for why that's safe there).
 	 * @return array|null The pricing breakdown, or null if this isn't a YeffoPrint batch item.
 	 */
-	public static function calculate_for_cart_item( array $cart_item ): ?array {
+	public static function calculate_for_cart_item( array $cart_item, ?int $tier_quantity = null ): ?array {
 		if ( empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
 			return null;
 		}
@@ -70,7 +125,7 @@ class YeffoPrint_Cart_Pricing {
 		$size_adjustment     = self::adjustment( 'yp_size', (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 ) );
 		$quantity             = (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
 
-		return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $quantity );
+		return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $quantity, $tier_quantity ?? self::combined_label_quantity() );
 	}
 
 	private static function adjustment( string $post_type, int $post_id ): float {
@@ -94,8 +149,12 @@ class YeffoPrint_Cart_Pricing {
 	 * those without an additional Store API schema extension.
 	 */
 	public function display_item_data( array $item_data, array $cart_item ): array {
-		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) ) {
-			$custom_order = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] );
+		$custom_order_id = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ?? 0 );
+		$is_labels_item  = $custom_order_id && ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] );
+
+		if ( $custom_order_id && ! $is_labels_item ) {
+			// The flat $25 design fee line item.
+			$custom_order = get_post( $custom_order_id );
 			if ( $custom_order ) {
 				$brand = get_post_meta( $custom_order->ID, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
 				$item_data[] = [ 'key' => __( 'Brand', 'yeffoprint-core' ), 'value' => $brand ?: '—' ];
@@ -117,6 +176,17 @@ class YeffoPrint_Cart_Pricing {
 			$item_data[] = [ 'key' => __( 'Material', 'yeffoprint-core' ), 'value' => $material->post_title ];
 		}
 
+		if ( $is_labels_item ) {
+			// A Custom Order's own labels: a single print run, not a
+			// batch of per-variant customizations — there's no
+			// field_schema/variants to render here (Architecture §2).
+			$item_data[] = [
+				'key'   => __( 'Quantity', 'yeffoprint-core' ),
+				'value' => number_format_i18n( (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ),
+			];
+			return $item_data;
+		}
+
 		$variants = $cart_item[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [];
 		$item_data[] = [
 			'key'   => __( 'Batch', 'yeffoprint-core' ),
@@ -127,6 +197,29 @@ class YeffoPrint_Cart_Pricing {
 				(int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ]
 			),
 		];
+
+		// The actual customization (compound, strength, brand name —
+		// whatever the Template's field_schema defines) so the customer
+		// can verify it on the cart/checkout review before paying, not
+		// just after — matches the rows added to the order line item
+		// once it's placed (class-order-item-meta.php).
+		$template_id  = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
+		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+		$multiple     = count( $variants ) > 1;
+
+		foreach ( $variants as $index => $variant ) {
+			$summary = YeffoPrint_Field_Schema::format_variant_summary( $variant, $field_schema );
+			if ( '' === $summary ) {
+				continue;
+			}
+
+			$item_data[] = [
+				'key'   => $multiple
+					? sprintf( /* translators: %d: label number within the batch */ __( 'Label %d', 'yeffoprint-core' ), $index + 1 )
+					: __( 'Customization', 'yeffoprint-core' ),
+				'value' => $summary,
+			];
+		}
 
 		return $item_data;
 	}
@@ -144,7 +237,8 @@ class YeffoPrint_Cart_Pricing {
 	 */
 	public function require_batch_data( bool $passed, int $product_id, int $quantity ): bool {
 		$is_linked_product = YeffoPrint_Linked_Product::get_template_id( $product_id )
-			|| $product_id === YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id();
+			|| $product_id === YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id()
+			|| $product_id === YeffoPrint_Custom_Order_Labels_Product::get_existing_product_id();
 
 		if ( ! $is_linked_product || self::$bypass_validation ) {
 			return $passed;

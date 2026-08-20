@@ -2,11 +2,14 @@
 /**
  * Admin upload for a Proof against a CustomOrder (PROJECT_SPEC §13).
  *
- * V1 is staff-upload only — no customer-facing approve/request-changes
- * UI yet (explicit V1 non-goal, PROJECT_SPEC §19) — but uploading one
- * here does advance the CustomOrder to "Proof ready" automatically
- * (only forward, never overwriting a status staff already moved past),
- * so the production status stays accurate without a second manual step.
+ * V1 was staff-upload only, no customer-facing response (explicit V1
+ * non-goal, PROJECT_SPEC §19). V2 adds that response (the public
+ * proof-approval page, class-proof-approval-controller.php) — so
+ * uploading a proof here now advances the CustomOrder straight to
+ * "Awaiting Proof Approval" (only forward, never overwriting a status
+ * staff already moved past) and emails the customer their one-time
+ * approval link, since that status is now something the customer is
+ * actually meant to act on, not just an internal marker.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -38,7 +41,7 @@ class YeffoPrint_Proof_Editor {
 			'yeffoprint-core-vial-mockup-picker', // Generic wp.media picker script from Phase 4 — reused as-is.
 			YEFFOPRINT_CORE_URL . 'assets/admin/vial-mockup-picker.js',
 			[ 'media-editor' ],
-			YEFFOPRINT_CORE_VERSION,
+			yeffoprint_core_asset_version( 'assets/admin/vial-mockup-picker.js' ),
 			true
 		);
 	}
@@ -117,15 +120,55 @@ class YeffoPrint_Proof_Editor {
 		update_post_meta( $post_id, YeffoPrint_Proof_Meta::FILE_ID, $file_id );
 
 		if ( $custom_order_id && $file_id ) {
-			$this->advance_status_to_proof_ready( $custom_order_id );
+			$this->advance_status_to_awaiting_approval( $custom_order_id );
 		}
 	}
 
-	private function advance_status_to_proof_ready( int $custom_order_id ): void {
+	private function advance_status_to_awaiting_approval( int $custom_order_id ): void {
 		$current = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
 
-		if ( 'design_in_progress' === $current ) {
-			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'proof_ready' );
+		if ( ! in_array( $current, [ 'design_in_progress', 'proof_ready' ], true ) ) {
+			return;
 		}
+
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'awaiting_approval' );
+		$this->notify_customer( $custom_order_id );
+	}
+
+	/**
+	 * Best-effort only — a failed/absent email is never the sole way to
+	 * reach the customer, since the admin screen always shows the same
+	 * link for staff to copy and send directly (guest orders especially
+	 * may have gone through with an email that bounces or was mistyped).
+	 */
+	private function notify_customer( int $custom_order_id ): void {
+		$email = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, true );
+		if ( ! $email || ! is_email( $email ) ) {
+			return;
+		}
+
+		$name = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true );
+		$url  = yeffoprint_core_proof_approval_url( $custom_order_id );
+		if ( ! $url ) {
+			return;
+		}
+
+		$site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+		$subject = sprintf(
+			/* translators: %s: site name */
+			__( 'Your proof is ready to review — %s', 'yeffoprint-core' ),
+			$site_name
+		);
+
+		$body = sprintf(
+			/* translators: 1: customer's first name or "there", 2: proof approval URL, 3: site name */
+			__( "Hi %1\$s,\n\nYour custom label proof is ready to review. Please take a look and let us know if it's good to print:\n\n%2\$s\n\nNo account needed — that link is yours alone, so don't share it.\n\nThanks,\n%3\$s", 'yeffoprint-core' ),
+			$name ? $name : __( 'there', 'yeffoprint-core' ),
+			$url,
+			$site_name
+		);
+
+		wp_mail( $email, $subject, $body );
 	}
 }

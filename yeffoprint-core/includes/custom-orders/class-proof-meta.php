@@ -37,3 +37,28 @@ class YeffoPrint_Proof_Meta {
 		] );
 	}
 }
+
+if ( ! function_exists( 'yeffoprint_core_proof_approval_url' ) ) {
+	/**
+	 * The one link that gets a guest customer (no account required) to
+	 * their proof — shared by the "notify customer" email and the admin
+	 * Proofs box (so staff can also copy/resend it directly). Empty if
+	 * the CustomOrder has no access token yet (shouldn't happen for any
+	 * request created after this feature shipped — class-custom-order-
+	 * controller.php generates one at submission).
+	 */
+	function yeffoprint_core_proof_approval_url( int $custom_order_id ): string {
+		$token = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ACCESS_TOKEN, true );
+		if ( ! $token ) {
+			return '';
+		}
+
+		return add_query_arg(
+			[
+				'custom_order' => $custom_order_id,
+				'token'        => $token,
+			],
+			home_url( '/proof-approval/' )
+		);
+	}
+}

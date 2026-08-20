@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/announcement-bar",
+	"title": "Announcement Bar Text",
+	"category": "theme",
+	"description": "Renders the announcement bar text set from the YeffoPrint admin menu (Dashboard → YeffoPrint).",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}

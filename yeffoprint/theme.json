@@ -16,7 +16,9 @@
 				{ "slug": "near-black", "name": "Near Black", "color": "#141414" },
 				{ "slug": "cyan", "name": "CMYK Cyan", "color": "#00AEEF" },
 				{ "slug": "magenta", "name": "CMYK Magenta", "color": "#EC008C" },
-				{ "slug": "yellow", "name": "CMYK Yellow", "color": "#FFF200" }
+				{ "slug": "yellow", "name": "CMYK Yellow", "color": "#FFF200" },
+				{ "slug": "cyan-deep", "name": "Cyan (text-safe)", "color": "#0078A4" },
+				{ "slug": "magenta-deep", "name": "Magenta (text-safe)", "color": "#C2007A" }
 			],
 			"customDuotone": false,
 			"customGradient": false,
@@ -47,7 +49,10 @@
 				"border": "rgba(255, 255, 255, 0.5)",
 				"blur": "16px"
 			},
-			"focus-ring": "var(--wp--preset--color--cyan)"
+			"focus-ring": "var(--wp--preset--color--cyan)",
+			"gradient-brand": "linear-gradient(135deg, var(--wp--preset--color--magenta) 0%, var(--wp--preset--color--cyan) 100%)",
+			"gradient-brand-deep": "linear-gradient(135deg, var(--wp--preset--color--magenta-deep) 0%, var(--wp--preset--color--cyan-deep) 100%)",
+			"gradient-navy": "linear-gradient(160deg, #1B2352 0%, #0D1130 70%)"
 		},
 		"typography": {
 			"fontFamilies": [
@@ -60,6 +65,11 @@
 					"slug": "body",
 					"name": "Body",
 					"fontFamily": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+				},
+				{
+					"slug": "mono",
+					"name": "Mono",
+					"fontFamily": "'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace"
 				}
 			],
 			"fontSizes": [
@@ -141,6 +151,11 @@
 		{
 			"name": "custom-design-form",
 			"title": "Custom Design Form",
+			"postTypes": [ "page" ]
+		},
+		{
+			"name": "proof-approval",
+			"title": "Proof Approval",
 			"postTypes": [ "page" ]
 		}
 	]

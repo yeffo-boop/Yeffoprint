@@ -6,14 +6,26 @@
 
 		<!-- wp:group {"layout":{"type":"constrained"}} -->
 		<div class="wp-block-group">
-			<!-- wp:site-title {"level":0,"fontFamily":"heading"} /-->
+			<!-- wp:html -->
+			<a href="/" class="yp-brand-lockup" aria-label="YeffoPrint home">
+				<svg class="yp-brand-lockup__mark" viewBox="0 0 30 34" aria-hidden="true" focusable="false">
+					<clipPath id="ypFooterBrandMarkClip"><path d="M4 6C4 3.79 5.79 2 8 2h14c2.21 0 4 1.79 4 4v22c0 3.31-2.69 6-6 6h-10c-3.31 0-6-2.69-6-6V6z" /></clipPath>
+					<g clip-path="url(#ypFooterBrandMarkClip)">
+						<rect x="4" y="2" width="7.3" height="34" fill="var(--wp--preset--color--cyan)" />
+						<rect x="11.3" y="2" width="7.3" height="34" fill="var(--wp--preset--color--magenta)" />
+						<rect x="18.7" y="2" width="7.3" height="34" fill="var(--wp--preset--color--yellow)" />
+					</g>
+				</svg>
+				<span class="yp-brand-lockup__word">YeffoPrint</span>
+			</a>
+			<!-- /wp:html -->
 			<!-- wp:paragraph {"fontSize":"small"} -->
 			<p class="has-small-font-size">Premium custom vial labels and stickers, designed live, printed to order.</p>
 			<!-- /wp:paragraph -->
 			<!-- wp:social-links {"iconColor":"charcoal","size":"has-small-icon-size"} -->
 			<ul class="wp-block-social-links has-small-icon-size has-icon-color">
-				<!-- wp:social-link {"url":"#","service":"instagram"} /-->
-				<!-- wp:social-link {"url":"#","service":"x"} /-->
+				<!-- wp:social-link {"url":"https://t.me/senoryeffo","service":"telegram"} /-->
+				<!-- wp:social-link {"url":"https://wa.me/12538304840","service":"whatsapp"} /-->
 			</ul>
 			<!-- /wp:social-links -->
 		</div>
@@ -42,21 +54,6 @@
 				<!-- wp:navigation-link {"label":"FAQ","url":"/faq/"} /-->
 				<!-- wp:navigation-link {"label":"Contact","url":"/contact/"} /-->
 			<!-- /wp:navigation -->
-		</div>
-		<!-- /wp:group -->
-
-		<!-- wp:group {"layout":{"type":"constrained"}} -->
-		<div class="wp-block-group">
-			<!-- wp:heading {"level":3,"fontSize":"small"} -->
-			<h3 class="has-small-font-size">Stay in the loop</h3>
-			<!-- /wp:heading -->
-			<!-- wp:html -->
-			<form class="yp-newsletter-form" method="post" action="#">
-				<label class="screen-reader-text" for="yp-newsletter-email">Email address</label>
-				<input type="email" id="yp-newsletter-email" name="email" placeholder="you@email.com" required />
-				<button type="submit" class="wp-block-button__link">Subscribe</button>
-			</form>
-			<!-- /wp:html -->
 		</div>
 		<!-- /wp:group -->
 

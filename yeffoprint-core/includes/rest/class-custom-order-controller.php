@@ -18,6 +18,13 @@ class YeffoPrint_Custom_Order_Controller {
 
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
+	// Unauthenticated, multi-file, 10MB-per-file uploads are exactly the
+	// kind of endpoint abuse tries first — this caps how many upload
+	// requests one IP can make in a window, independent of
+	// YeffoPrint_Secure_Upload's per-request file count/size limits.
+	private const UPLOAD_RATE_LIMIT_WINDOW  = 600; // 10 minutes
+	private const UPLOAD_RATE_LIMIT_MAX     = 20;
+
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
 	}
@@ -26,13 +33,13 @@ class YeffoPrint_Custom_Order_Controller {
 		register_rest_route( self::NAMESPACE, '/custom-orders/uploads', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'upload' ],
-			'permission_callback' => '__return_true',
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'guest_or_nonced_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/custom-orders', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'submit' ],
-			'permission_callback' => '__return_true',
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'guest_or_nonced_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/custom-orders/options', [
@@ -40,9 +47,66 @@ class YeffoPrint_Custom_Order_Controller {
 			'callback'            => [ $this, 'options' ],
 			'permission_callback' => '__return_true',
 		] );
+
+		// Reorder (V2): pre-fills a fresh Custom Design form from a past
+		// request's own details. Unlike Template Reorder (which restores
+		// into the configurator via a public-ish, session-scoped cart/
+		// order lookup), a CustomOrder is always private customer data —
+		// there's no guest path here, only the request's own customer.
+		register_rest_route( self::NAMESPACE, '/custom-orders/(?P<id>\d+)', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'get_custom_order' ],
+			'permission_callback' => [ $this, 'check_ownership' ],
+		] );
+	}
+
+	public function check_ownership( \WP_REST_Request $request ) {
+		if ( ! is_user_logged_in() ) {
+			return false;
+		}
+
+		$post = get_post( absint( $request->get_param( 'id' ) ) );
+		if ( ! $post || 'yp_custom_order' !== $post->post_type ) {
+			return new \WP_Error( 'yeffoprint_custom_order_not_found', __( 'That custom design request was not found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		$customer_id = (int) get_post_meta( $post->ID, YeffoPrint_Custom_Order_Meta::CUSTOMER_ID, true );
+		return $customer_id && $customer_id === get_current_user_id();
+	}
+
+	public function get_custom_order( \WP_REST_Request $request ) {
+		$id = absint( $request->get_param( 'id' ) );
+
+		$uploads = array_map( 'absint', (array) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, true ) );
+		$upload_data = [];
+		foreach ( $uploads as $attachment_id ) {
+			$url = wp_get_attachment_url( $attachment_id );
+			if ( $url ) {
+				$upload_data[] = [
+					'id'   => $attachment_id,
+					'name' => get_the_title( $attachment_id ) ?: basename( $url ),
+				];
+			}
+		}
+
+		return rest_ensure_response( [
+			'size_id'           => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::SIZE_ID, true ),
+			'material_id'       => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, true ),
+			'quantity'          => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::QUANTITY, true ),
+			'compound_strength' => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH, true ),
+			'brand_name'        => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true ),
+			'style_notes'       => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::STYLE_NOTES, true ),
+			'instructions'      => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, true ),
+			'uploads'           => $upload_data,
+		] );
 	}
 
 	public function upload( \WP_REST_Request $request ) {
+		$rate_limited = $this->check_upload_rate_limit();
+		if ( is_wp_error( $rate_limited ) ) {
+			return $rate_limited;
+		}
+
 		$files = $request->get_file_params();
 
 		if ( empty( $files ) ) {
@@ -100,6 +164,31 @@ class YeffoPrint_Custom_Order_Controller {
 		return rest_ensure_response( [ 'files' => $results ] );
 	}
 
+	/**
+	 * @return \WP_Error|null Error if this IP has hit the window's cap;
+	 *                        null (and the attempt is now counted) otherwise.
+	 */
+	private function check_upload_rate_limit(): ?\WP_Error {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( '' === $ip ) {
+			return null; // Can't key a limit without an IP — fail open rather than block legitimate requests.
+		}
+
+		$key   = 'yp_upload_rl_' . md5( $ip );
+		$count = (int) get_transient( $key );
+
+		if ( $count >= self::UPLOAD_RATE_LIMIT_MAX ) {
+			return new \WP_Error(
+				'yeffoprint_rate_limited',
+				__( 'Too many upload attempts. Please wait a few minutes and try again.', 'yeffoprint-core' ),
+				[ 'status' => 429 ]
+			);
+		}
+
+		set_transient( $key, $count + 1, self::UPLOAD_RATE_LIMIT_WINDOW );
+		return null;
+	}
+
 	public function options() {
 		$format = static function ( \WP_Post $post ) {
 			return [
@@ -110,7 +199,10 @@ class YeffoPrint_Custom_Order_Controller {
 
 		return rest_ensure_response( [
 			'sizes'            => array_map( $format, $this->published( 'yp_size' ) ),
-			'materials'        => array_map( $format, $this->published( 'yp_material' ) ),
+			// Scoped to 'label' — a Material an admin marks 'sticker'-only
+			// (Custom Stickers) shouldn't leak into this, the label form's
+			// picker. See YeffoPrint_Commerce_Record_Meta::get_materials_for().
+			'materials'        => array_map( $format, YeffoPrint_Commerce_Record_Meta::get_materials_for( 'label' ) ),
 			'design_fee'       => function_exists( 'yeffoprint_core_custom_design_fee_label' ) ? yeffoprint_core_custom_design_fee_label() : '',
 			'quantity_presets' => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
 		] );
@@ -170,9 +262,20 @@ class YeffoPrint_Custom_Order_Controller {
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $instructions );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, $uploads );
 
+		// Generated up front, not lazily when a proof first exists — a
+		// guest customer has no account to log back into, so the same
+		// link (grabbed from the admin screen and sent to them) has to
+		// keep working for this request's entire lifetime.
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ACCESS_TOKEN, wp_generate_password( 40, false ) );
+
 		$fee_product_id = YeffoPrint_Custom_Design_Fee_Product::get_product_id();
 		if ( ! $fee_product_id ) {
 			return new \WP_Error( 'yeffoprint_no_fee_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
+		}
+
+		$labels_product_id = YeffoPrint_Custom_Order_Labels_Product::get_product_id();
+		if ( ! $labels_product_id ) {
+			return new \WP_Error( 'yeffoprint_no_labels_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 
 		YeffoPrint_Cart_Pricing::allow_next_add( true );
@@ -184,6 +287,27 @@ class YeffoPrint_Custom_Order_Controller {
 		if ( ! $cart_item_key ) {
 			wp_delete_post( $custom_order_id, true );
 			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add the design fee to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		// The customer's own print run — priced per-unit from the same
+		// size/material adjustments and bulk tiers as a Template batch
+		// (class-cart-pricing.php's apply_price()), on top of the flat
+		// design fee added above. CUSTOM_ORDER_ID links it back to the
+		// same record; TOTAL_QTY (present here, absent on the fee item)
+		// is what tells apply_price() this item prices per-unit instead.
+		YeffoPrint_Cart_Pricing::allow_next_add( true );
+		$labels_cart_item_key = WC()->cart->add_to_cart( $labels_product_id, $quantity, 0, [], [
+			YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID => $custom_order_id,
+			YeffoPrint_Cart_Item_Keys::SIZE_ID         => $size_id,
+			YeffoPrint_Cart_Item_Keys::MATERIAL_ID     => $material_id,
+			YeffoPrint_Cart_Item_Keys::TOTAL_QTY       => $quantity,
+		] );
+		YeffoPrint_Cart_Pricing::allow_next_add( false );
+
+		if ( ! $labels_cart_item_key ) {
+			WC()->cart->remove_cart_item( $cart_item_key );
+			wp_delete_post( $custom_order_id, true );
+			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add your labels to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
 		return rest_ensure_response( [

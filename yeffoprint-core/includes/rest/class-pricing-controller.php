@@ -14,6 +14,18 @@
  * batch (PROJECT_SPEC §10: a batch shares one template/size/material).
  * That also means Phase 8's Custom Order flow can reuse this endpoint
  * unchanged rather than needing a parallel calculation.
+ *
+ * Bulk discounts factor in the customer's whole cart, not just the
+ * quantity being previewed here (direct request: "mix and match to
+ * meet that minimum") — this endpoint adds whatever's already in
+ * WC()->cart (via YeffoPrint_Cart_Pricing::combined_label_quantity(),
+ * the same helper apply_price() uses for the authoritative charge) on
+ * top of the previewed quantity, so the estimate matches what actually
+ * gets charged once it's added. `exclude_cart_item_key` exists for the
+ * one case that would otherwise double-count: editing a batch that's
+ * already in the cart (configurator.js's `?edit=` flow) previews a new
+ * quantity for an item whose *old* quantity is still sitting in the
+ * cart until the edit is actually saved.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -33,9 +45,10 @@ class YeffoPrint_Pricing_Controller {
 			'callback'            => [ $this, 'calculate' ],
 			'permission_callback' => '__return_true',
 			'args'                => [
-				'quantity'    => [ 'required' => true ],
-				'size_id'     => [ 'required' => false ],
-				'material_id' => [ 'required' => false ],
+				'quantity'              => [ 'required' => true ],
+				'size_id'               => [ 'required' => false ],
+				'material_id'           => [ 'required' => false ],
+				'exclude_cart_item_key' => [ 'required' => false ],
 			],
 		] );
 	}
@@ -49,6 +62,10 @@ class YeffoPrint_Pricing_Controller {
 				__( 'Quantity must be a whole number of at least 1.', 'yeffoprint-core' ),
 				[ 'status' => 400 ]
 			);
+		}
+
+		if ( function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart(); // So combined_label_quantity() below sees this session's actual cart, not an empty/uninitialized one.
 		}
 
 		$material_adjustment = 0.0;
@@ -69,8 +86,11 @@ class YeffoPrint_Pricing_Controller {
 			}
 		}
 
+		$exclude_cart_item_key = (string) $request->get_param( 'exclude_cart_item_key' );
+		$tier_quantity         = (int) $quantity + YeffoPrint_Cart_Pricing::combined_label_quantity( null, $exclude_cart_item_key ?: null );
+
 		return rest_ensure_response(
-			YeffoPrint_Pricing_Rule::calculate( (float) $material_adjustment, (float) $size_adjustment, (int) $quantity )
+			YeffoPrint_Pricing_Rule::calculate( (float) $material_adjustment, (float) $size_adjustment, (int) $quantity, $tier_quantity )
 		);
 	}
 

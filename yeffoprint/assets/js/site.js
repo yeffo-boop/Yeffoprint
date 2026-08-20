@@ -22,8 +22,18 @@
 		var threshold = 24;
 		var ticking = false;
 
+		// Published as a CSS custom property so anything needing to clear
+		// the sticky header (e.g. the configurator's sticky preview panel,
+		// assets/css/configurator.css) can read the real, current height
+		// instead of a guessed pixel value — the header's own height
+		// changes with scroll compaction, nav wrapping, and zoom.
+		function publishHeaderHeight() {
+			document.documentElement.style.setProperty( '--yp-header-height', header.offsetHeight + 'px' );
+		}
+
 		function update() {
 			header.classList.toggle( 'is-scrolled', window.scrollY > threshold );
+			publishHeaderHeight();
 			ticking = false;
 		}
 
@@ -37,6 +47,12 @@
 			},
 			{ passive: true }
 		);
+
+		if ( 'ResizeObserver' in window ) {
+			new ResizeObserver( publishHeaderHeight ).observe( header );
+		} else {
+			window.addEventListener( 'resize', publishHeaderHeight );
+		}
 
 		update();
 	}

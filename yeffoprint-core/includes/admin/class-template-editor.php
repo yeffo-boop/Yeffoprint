@@ -24,6 +24,22 @@ class YeffoPrint_Template_Editor {
 
 		add_filter( 'manage_yp_template_posts_columns', [ $this, 'columns' ] );
 		add_action( 'manage_yp_template_posts_custom_column', [ $this, 'render_column' ], 10, 2 );
+		add_filter( 'admin_post_thumbnail_html', [ $this, 'featured_image_hint' ], 10, 2 );
+	}
+
+	/**
+	 * The featured image is Label View's artwork and the gallery card's
+	 * primary image (Architecture §9: real label ratio is 15:7, the
+	 * card CSS enforces it) — WordPress's native "Set featured image"
+	 * box has no built-in way to hint the expected size, so this adds
+	 * it rather than leaving that undocumented outside this codebase.
+	 */
+	public function featured_image_hint( string $content, int $post_id ): string {
+		if ( 'yp_template' !== get_post_type( $post_id ) ) {
+			return $content;
+		}
+
+		return $content . '<p class="description">' . esc_html__( 'Rectangular, 15:7 — the real label ratio (e.g. 900×420px). Used for Label View and the gallery card.', 'yeffoprint-core' ) . '</p>';
 	}
 
 	public function enqueue_assets( string $hook ): void {
@@ -42,14 +58,14 @@ class YeffoPrint_Template_Editor {
 			'yeffoprint-core-admin',
 			YEFFOPRINT_CORE_URL . 'assets/admin/admin.css',
 			[],
-			YEFFOPRINT_CORE_VERSION
+			yeffoprint_core_asset_version( 'assets/admin/admin.css' )
 		);
 
 		wp_enqueue_script(
 			'yeffoprint-core-field-schema',
 			YEFFOPRINT_CORE_URL . 'assets/admin/field-schema.js',
 			[],
-			YEFFOPRINT_CORE_VERSION,
+			yeffoprint_core_asset_version( 'assets/admin/field-schema.js' ),
 			true
 		);
 
@@ -57,7 +73,7 @@ class YeffoPrint_Template_Editor {
 			'yeffoprint-core-vial-mockup-picker',
 			YEFFOPRINT_CORE_URL . 'assets/admin/vial-mockup-picker.js',
 			[ 'media-editor' ],
-			YEFFOPRINT_CORE_VERSION,
+			yeffoprint_core_asset_version( 'assets/admin/vial-mockup-picker.js' ),
 			true
 		);
 
@@ -69,12 +85,28 @@ class YeffoPrint_Template_Editor {
 			'alignments' => YeffoPrint_Field_Schema::ALIGNMENTS,
 			'formattingRules' => YeffoPrint_Field_Schema::FORMATTING_RULES,
 			'previewBehaviors' => YeffoPrint_Field_Schema::PREVIEW_BEHAVIORS,
+			// The Template's own artwork — lets the position picker show
+			// fields on the actual label instead of leaving x/y as blind
+			// percentage guesses (Architecture §9: deferred from Phase 4
+			// until the preview surface existed; it does now).
+			'previewImageUrl' => $post_id ? ( get_the_post_thumbnail_url( $post_id, 'large' ) ?: '' ) : '',
+			// "Insert from preset" (V2, direct request: recreating the same
+			// fields on every Template "is a lot") — every reusable Field
+			// Preset, so a click can copy its fields into this Template's
+			// own list without a REST round-trip. Position still needs
+			// setting per-Template afterward (drag picker, same as any
+			// other field) since it depends on this Template's own artwork.
+			'presets'   => YeffoPrint_Field_Schema::get_presets(),
 			'i18n'      => [
 				'addField'    => __( 'Add Field', 'yeffoprint-core' ),
 				'removeField' => __( 'Remove', 'yeffoprint-core' ),
 				'moveUp'      => __( 'Move up', 'yeffoprint-core' ),
 				'moveDown'    => __( 'Move down', 'yeffoprint-core' ),
 				'empty'       => __( 'No customization fields yet. Add one below.', 'yeffoprint-core' ),
+				'noPreview'   => __( 'Set a featured image above to preview and drag-position fields here.', 'yeffoprint-core' ),
+				'dragHint'    => __( 'Drag a label to reposition it on the artwork, or set exact percentages below. Click a label first, then use the arrow keys to nudge it precisely (hold Shift for bigger steps) — easier than dragging for a tight margin near an edge.', 'yeffoprint-core' ),
+				'insertPreset' => __( 'Insert Preset', 'yeffoprint-core' ),
+				'selectPreset' => __( '— Select a preset —', 'yeffoprint-core' ),
 			],
 		] );
 	}
@@ -103,6 +135,7 @@ class YeffoPrint_Template_Editor {
 		$featured    = (bool) get_post_meta( $post->ID, YeffoPrint_Template_Meta::FEATURED, true );
 		$badge       = (string) get_post_meta( $post->ID, YeffoPrint_Template_Meta::BADGE, true );
 		$popularity  = (int) get_post_meta( $post->ID, YeffoPrint_Template_Meta::POPULARITY, true );
+		$preview_font = (string) get_post_meta( $post->ID, YeffoPrint_Template_Meta::PREVIEW_FONT, true );
 		$vial_id     = (int) get_post_meta( $post->ID, YeffoPrint_Template_Meta::VIAL_MOCKUP, true );
 		$vial_url    = $vial_id ? wp_get_attachment_image_url( $vial_id, 'thumbnail' ) : '';
 		$compat_sizes = array_map( 'absint', (array) get_post_meta( $post->ID, YeffoPrint_Template_Meta::COMPATIBLE_SIZES, true ) );
@@ -113,6 +146,24 @@ class YeffoPrint_Template_Editor {
 				<input type="checkbox" name="yp_featured" value="1" <?php checked( $featured ); ?> />
 				<?php esc_html_e( 'Featured', 'yeffoprint-core' ); ?>
 			</label>
+		</p>
+		<p>
+			<label for="yp-preview-font"><?php esc_html_e( 'Preview font', 'yeffoprint-core' ); ?></label><br />
+			<input
+				type="text"
+				id="yp-preview-font"
+				name="yp_preview_font"
+				value="<?php echo esc_attr( $preview_font ); ?>"
+				list="yp-preview-font-suggestions"
+				class="widefat"
+				placeholder="<?php esc_attr_e( 'Default (site font)', 'yeffoprint-core' ); ?>"
+			/>
+			<datalist id="yp-preview-font-suggestions">
+				<?php foreach ( YeffoPrint_Template_Meta::PREVIEW_FONT_SUGGESTIONS as $font_name ) : ?>
+					<option value="<?php echo esc_attr( $font_name ); ?>"></option>
+				<?php endforeach; ?>
+			</datalist>
+			<span class="description"><?php esc_html_e( 'Any Google Fonts family name — sets what Label View renders the customer\'s live text in, so the configurator preview matches the actual printed label. Leave blank to use the site\'s default font.', 'yeffoprint-core' ); ?></span>
 		</p>
 		<p>
 			<label for="yp-badge"><?php esc_html_e( 'Badge', 'yeffoprint-core' ); ?></label><br />
@@ -139,7 +190,7 @@ class YeffoPrint_Template_Editor {
 			<input type="hidden" id="yp-vial-mockup-id" name="yp_vial_mockup_id" value="<?php echo esc_attr( $vial_id ); ?>" />
 			<button type="button" class="button" id="yp-vial-mockup-select"><?php esc_html_e( 'Select image', 'yeffoprint-core' ); ?></button>
 			<button type="button" class="button-link" id="yp-vial-mockup-remove" <?php echo $vial_id ? '' : 'style="display:none;"'; ?>><?php esc_html_e( 'Remove', 'yeffoprint-core' ); ?></button>
-			<span class="description"><?php esc_html_e( 'Shown for Vial View and the gallery card hover-swap.', 'yeffoprint-core' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Square (e.g. 800×800px) for Vial View. Also used as the gallery card hover-swap image, which is the same rectangular 15:7 shape as the featured image — a square mockup will letterbox there, but that only affects the hover-swap, not Vial View itself.', 'yeffoprint-core' ); ?></span>
 		</p>
 		<hr />
 		<p>
@@ -172,6 +223,7 @@ class YeffoPrint_Template_Editor {
 	public function render_field_schema_box( \WP_Post $post ): void {
 		?>
 		<div id="yp-field-schema-app">
+			<div id="yp-field-position-preview"></div>
 			<div class="yp-field-schema-list" role="list"></div>
 			<p>
 				<button type="button" class="button button-secondary" id="yp-field-schema-add"><?php esc_html_e( 'Add Field', 'yeffoprint-core' ); ?></button>
@@ -205,6 +257,17 @@ class YeffoPrint_Template_Editor {
 
 		if ( isset( $_POST['yp_popularity'] ) ) {
 			update_post_meta( $post_id, YeffoPrint_Template_Meta::POPULARITY, absint( $_POST['yp_popularity'] ) );
+		}
+
+		if ( isset( $_POST['yp_preview_font'] ) ) {
+			// Free text on purpose (not validated against
+			// PREVIEW_FONT_SUGGESTIONS) — a designer can type any Google
+			// Fonts family name, the datalist is autocomplete, not an
+			// allow-list. sanitize_text_field() is enough protection
+			// since this only ever becomes a Google Fonts URL query
+			// param (functions.php) and a CSS font-family value
+			// (configurator.js), never raw HTML.
+			update_post_meta( $post_id, YeffoPrint_Template_Meta::PREVIEW_FONT, sanitize_text_field( wp_unslash( $_POST['yp_preview_font'] ) ) );
 		}
 
 		if ( isset( $_POST['yp_vial_mockup_id'] ) ) {

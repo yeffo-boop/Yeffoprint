@@ -23,7 +23,21 @@ class YeffoPrint_Reorder {
 		add_filter( 'woocommerce_my_account_my_orders_actions', [ $this, 'hide_native_order_again' ], 10, 2 );
 	}
 
-	public function render_reorder_link( int $item_id, \WC_Order_Item $item, \WC_Order $order ): void {
+	/**
+	 * `$item_id` deliberately isn't type-hinted `int` — real bug, found
+	 * via a live "Argument #1 ($item_id) must be of type int, string
+	 * given" fatal: WooCommerce's own `emails/email-order-items.php`
+	 * (used by both real order emails and the Settings → Emails "Send a
+	 * test email" preview) fires `woocommerce_order_item_meta_end` with
+	 * the item id as a string there, not an int. An uncaught TypeError
+	 * here aborts the whole email render — for the preview, WooCommerce
+	 * catches that and reports it as "couldn't send the test email"; for
+	 * a real order, it would just as easily prevent the actual
+	 * transactional email from being sent at all. `$item_id` is only
+	 * ever used in string concatenation below, so there was never a
+	 * reason to require it be an int in the first place.
+	 */
+	public function render_reorder_link( $item_id, \WC_Order_Item $item, \WC_Order $order ): void {
 		if ( ! $item instanceof \WC_Order_Item_Product ) {
 			return;
 		}
@@ -31,17 +45,38 @@ class YeffoPrint_Reorder {
 		$snapshot    = json_decode( (string) $item->get_meta( '_yp_template_snapshot' ), true );
 		$template_id = (int) ( $snapshot['id'] ?? 0 );
 
-		if ( ! $template_id ) {
+		if ( $template_id ) {
+			$url = add_query_arg( 'reorder', $order->get_id() . ':' . $item_id, get_permalink( $template_id ) );
+
+			printf(
+				'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
+				esc_url( $url ),
+				esc_html__( 'Reorder this design', 'yeffoprint-core' )
+			);
 			return;
 		}
 
-		$url = add_query_arg( 'reorder', $order->get_id() . ':' . $item_id, get_permalink( $template_id ) );
+		// Custom Design line items reorder differently: there's no
+		// configurator to restore into (Architecture §2 — a CustomOrder
+		// is a one-off request, not a premade Template), so this pre-
+		// fills a fresh Custom Design form from the past request's own
+		// details instead (class-custom-order-controller.php's
+		// GET /custom-orders/{id}, ownership-checked there).
+		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
 
-		printf(
-			'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
-			esc_url( $url ),
-			esc_html__( 'Reorder this design', 'yeffoprint-core' )
-		);
+		// A Custom Order's fee and labels line items both carry
+		// _yp_custom_order_id (class-order-item-meta.php) so the price
+		// snapshot has one meaning; only the fee item (no batch
+		// quantity) renders the link, or it would print twice per order.
+		if ( $custom_order_id && ! $item->get_meta( '_yp_batch_quantity' ) ) {
+			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
+
+			printf(
+				'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
+				esc_url( $url ),
+				esc_html__( 'Reorder this custom design', 'yeffoprint-core' )
+			);
+		}
 	}
 
 	public function hide_native_order_again( array $actions, \WC_Order $order ): array {

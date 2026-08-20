@@ -1,0 +1,92 @@
+/*
+ * Public proof-approval page (V2, PROJECT_SPEC: guest-accessible via a
+ * one-time link). Reuses .yp-configurator__status and
+ * .yp-configurator__cart-status from configurator.css (enqueued
+ * alongside this file) for the loading/message states.
+ */
+
+.yp-proof-approval {
+	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
+}
+
+.yp-proof-approval__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-proof-approval__header strong {
+	font-size: var(--wp--preset--font-size--large);
+}
+
+.yp-proof-approval__status-pill {
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	padding: 0.35rem 0.85rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	white-space: nowrap;
+}
+
+.yp-proof-approval__files {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	margin-bottom: 2rem;
+}
+
+.yp-proof-approval__file {
+	border-radius: var(--wp--custom--radius--card);
+	overflow: hidden;
+	background: var(--wp--preset--color--warm-white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-proof-approval__file img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.yp-proof-approval__file a.yp-proof-approval__file-link {
+	display: block;
+	padding: 1.5rem;
+	text-align: center;
+	font-weight: 600;
+}
+
+.yp-proof-approval__file-date {
+	display: block;
+	padding: 0.6rem 1rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-proof-approval__actions {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+	margin-bottom: 1.5rem;
+}
+
+.yp-proof-approval__changes-form label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+.yp-proof-approval__changes-form textarea {
+	border-radius: var(--wp--custom--radius--input);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	margin-bottom: 1rem;
+}
+
+.yp-proof-approval__changes-actions {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+}

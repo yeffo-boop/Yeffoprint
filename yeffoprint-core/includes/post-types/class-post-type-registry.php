@@ -52,6 +52,22 @@ class YeffoPrint_Post_Type_Registry {
 			false
 		) );
 
+		// Custom Stickers (PROJECT_SPEC §19 non-goal, now in scope): a
+		// preset size tier (name, width/height in inches, a real fixed
+		// price per sticker — not a small price_adjustment on top of a
+		// shared base like yp_size, since sticker cost scales with size
+		// itself). One special tier is flagged is_custom — the customer
+		// enters exact dimensions and price is computed live from an
+		// admin-set $/sq in rate (YeffoPrint_Sticker_Pricing), so a
+		// genuinely custom size still prices before checkout rather than
+		// needing a manual quote.
+		register_post_type( 'yp_sticker_size', $this->args(
+			__( 'Sticker Sizes', 'yeffoprint-core' ),
+			__( 'Sticker Size', 'yeffoprint-core' ),
+			[ 'title', 'page-attributes', 'custom-fields' ],
+			false
+		) );
+
 		register_post_type( 'yp_pricing_rule', $this->args(
 			__( 'Pricing Rules', 'yeffoprint-core' ),
 			__( 'Pricing Rule', 'yeffoprint-core' ),
@@ -70,6 +86,35 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Proofs', 'yeffoprint-core' ),
 			__( 'Proof', 'yeffoprint-core' ),
 			[ 'title', 'custom-fields' ],
+			false
+		) );
+
+		// A reusable set of field *definitions* (label, type, max chars,
+		// alignment, font sizing, formatting rule, admin/tooltip text —
+		// everything but position, which is inherently per-template
+		// since it's placed against that template's own artwork) an
+		// admin builds once and inserts into any Template's own field
+		// schema instead of recreating the same fields from scratch each
+		// time (direct request). Stores field data in the identical
+		// shape/meta key as a Template's own field_schema
+		// (YeffoPrint_Field_Schema) — a preset is really just a
+		// field_schema that isn't attached to any one Template yet.
+		register_post_type( 'yp_field_preset', $this->args(
+			__( 'Field Presets', 'yeffoprint-core' ),
+			__( 'Field Preset', 'yeffoprint-core' ),
+			[ 'title', 'custom-fields' ],
+			false
+		) );
+
+		// Customer-owned, not admin-managed content — created/read/
+		// deleted entirely through REST by the customer who owns it
+		// (post_author), same as a cart session but persisted without
+		// purchasing (Architecture §8's "Saved Designs" anticipation).
+		// Still a CPT for consistency with every other record here.
+		register_post_type( 'yp_saved_design', $this->args(
+			__( 'Saved Designs', 'yeffoprint-core' ),
+			__( 'Saved Design', 'yeffoprint-core' ),
+			[ 'title', 'custom-fields', 'author' ],
 			false
 		) );
 	}

@@ -18,9 +18,9 @@ defined( 'ABSPATH' ) || exit;
 	<h2 class="wp-block-heading has-text-align-center">Popular Right Now</h2>
 	<!-- /wp:heading -->
 
-	<!-- wp:query {"queryId":2,"query":{"perPage":4,"postType":"yp_template","order":"desc","orderBy":"meta_value_num","inherit":false,"metaKey":"_yp_popularity"},"className":"yp-card-grid"} -->
-	<div class="wp-block-query yp-card-grid">
-		<!-- wp:post-template -->
+	<!-- wp:query {"queryId":2,"query":{"perPage":4,"postType":"yp_template","order":"desc","orderBy":"meta_value_num","inherit":false,"metaKey":"_yp_popularity"}} -->
+	<div class="wp-block-query">
+		<!-- wp:post-template {"className":"yp-card-grid"} -->
 			<!-- wp:yeffoprint/template-card /-->
 		<!-- /wp:post-template -->
 	</div>

@@ -57,38 +57,66 @@ class YeffoPrint_Custom_Order_Editor {
 		$material_id = (int) $m( YeffoPrint_Custom_Order_Meta::MATERIAL_ID );
 		$uploads     = (array) $m( YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS );
 		$wc_order_id = (int) $m( YeffoPrint_Custom_Order_Meta::WC_ORDER_ID );
+		$change_request = $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES );
+		$order_type  = YeffoPrint_Custom_Order_Meta::get_order_type( $post->ID );
+		$is_sticker  = 'sticker' === $order_type;
 		?>
+		<?php if ( $change_request && 'design_in_progress' === $m( YeffoPrint_Custom_Order_Meta::STATUS ) ) : ?>
+			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
+				<p style="margin: 0 0 4px;"><strong><?php esc_html_e( 'Customer requested changes to the last proof:', 'yeffoprint-core' ); ?></strong></p>
+				<p style="margin: 0;"><?php echo nl2br( esc_html( $change_request ) ); ?></p>
+			</div>
+		<?php endif; ?>
 		<table class="widefat striped">
 			<tbody>
+				<tr><th><?php esc_html_e( 'Type', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ $order_type ] ); ?></td></tr>
 				<tr><th><?php esc_html_e( 'Customer', 'yeffoprint-core' ); ?></th><td>
 					<?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME ) ); ?>
 					<?php if ( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ) ) : ?>
 						&mdash; <a href="mailto:<?php echo esc_attr( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ) ); ?>"><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ) ); ?></a>
 					<?php endif; ?>
 				</td></tr>
-				<tr><th><?php esc_html_e( 'Brand Name', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::BRAND_NAME ) ); ?></td></tr>
-				<tr><th><?php esc_html_e( 'Compound / Strength', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH ) ?: '—' ); ?></td></tr>
-				<tr><th><?php esc_html_e( 'Size', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $size_id ? get_the_title( $size_id ) : '—' ); ?></td></tr>
-				<tr><th><?php esc_html_e( 'Material', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $material_id ? get_the_title( $material_id ) : '—' ); ?></td></tr>
-				<tr><th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ) ); ?></td></tr>
-				<tr><th><?php esc_html_e( 'Style / Colors', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::STYLE_NOTES ) ?: '—' ) ); ?></td></tr>
-				<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
-				<tr><th><?php esc_html_e( 'Inspiration Files', 'yeffoprint-core' ); ?></th><td>
-					<?php if ( $uploads ) : ?>
-						<ul>
-							<?php foreach ( $uploads as $attachment_id ) :
-								$url = wp_get_attachment_url( $attachment_id );
-								if ( ! $url ) {
-									continue;
-								}
-								?>
-								<li><a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( basename( $url ) ); ?></a></li>
-							<?php endforeach; ?>
-						</ul>
-					<?php else : ?>
-						—
-					<?php endif; ?>
-				</td></tr>
+				<?php if ( $is_sticker ) : ?>
+					<?php
+					$is_custom_size = $size_id && (bool) get_post_meta( $size_id, YeffoPrint_Sticker_Size_Meta::IS_CUSTOM, true );
+					$sticker_type   = (string) $m( YeffoPrint_Custom_Order_Meta::STICKER_TYPE );
+					$shape          = (string) $m( YeffoPrint_Custom_Order_Meta::SHAPE );
+					$artwork        = (array) $m( YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS );
+					?>
+					<tr><th><?php esc_html_e( 'Sticker Type', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( YeffoPrint_Sticker_Pricing::TYPES[ $sticker_type ] ?? '—' ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Shape', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( YeffoPrint_Sticker_Pricing::SHAPES[ $shape ] ?? '—' ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Size', 'yeffoprint-core' ); ?></th><td>
+						<?php if ( $is_custom_size ) : ?>
+							<?php
+							printf(
+								/* translators: 1: width in inches, 2: height in inches */
+								esc_html__( 'Custom: %1$s" × %2$s"', 'yeffoprint-core' ),
+								esc_html( $m( YeffoPrint_Custom_Order_Meta::CUSTOM_WIDTH_IN ) ),
+								esc_html( $m( YeffoPrint_Custom_Order_Meta::CUSTOM_HEIGHT_IN ) )
+							);
+							?>
+						<?php else : ?>
+							<?php echo esc_html( $size_id ? get_the_title( $size_id ) : '—' ); ?>
+						<?php endif; ?>
+					</td></tr>
+					<tr><th><?php esc_html_e( 'Material', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $material_id ? get_the_title( $material_id ) : '—' ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Artwork Files', 'yeffoprint-core' ); ?></th><td>
+						<?php echo $this->render_upload_list( $artwork ); ?>
+					</td></tr>
+				<?php else : ?>
+					<tr><th><?php esc_html_e( 'Brand Name', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::BRAND_NAME ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Compound / Strength', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH ) ?: '—' ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Size', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $size_id ? get_the_title( $size_id ) : '—' ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Material', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $material_id ? get_the_title( $material_id ) : '—' ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Style / Colors', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::STYLE_NOTES ) ?: '—' ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Inspiration Files', 'yeffoprint-core' ); ?></th><td>
+						<?php echo $this->render_upload_list( $uploads ); ?>
+					</td></tr>
+				<?php endif; ?>
 				<tr><th><?php esc_html_e( 'Design Fee', 'yeffoprint-core' ); ?></th><td>
 					<?php
 					$fee = $m( YeffoPrint_Custom_Order_Meta::DESIGN_FEE );
@@ -103,6 +131,29 @@ class YeffoPrint_Custom_Order_Editor {
 			</tbody>
 		</table>
 		<?php
+	}
+
+	/** @param int[] $attachment_ids */
+	private function render_upload_list( array $attachment_ids ): string {
+		if ( ! $attachment_ids ) {
+			return '—';
+		}
+
+		$items = '';
+		foreach ( $attachment_ids as $attachment_id ) {
+			$url = wp_get_attachment_url( $attachment_id );
+			if ( ! $url ) {
+				continue;
+			}
+
+			$items .= sprintf(
+				'<li><a href="%s" target="_blank" rel="noopener noreferrer">%s</a></li>',
+				esc_url( $url ),
+				esc_html( basename( $url ) )
+			);
+		}
+
+		return $items ? '<ul>' . $items . '</ul>' : '—';
 	}
 
 	public function render_status_box( \WP_Post $post ): void {
@@ -148,6 +199,19 @@ class YeffoPrint_Custom_Order_Editor {
 			esc_url( admin_url( 'post-new.php?post_type=yp_proof&custom_order=' . $post->ID ) ),
 			esc_html__( 'Add Proof', 'yeffoprint-core' )
 		);
+
+		if ( $proof_ids && 'publish' === $post->post_status ) {
+			$approval_url = yeffoprint_core_proof_approval_url( $post->ID );
+			if ( $approval_url ) {
+				?>
+				<p>
+					<label for="yp-proof-approval-link"><strong><?php esc_html_e( 'Customer approval link', 'yeffoprint-core' ); ?></strong></label><br />
+					<input type="text" id="yp-proof-approval-link" class="widefat" readonly onclick="this.select();" value="<?php echo esc_attr( $approval_url ); ?>" />
+					<span class="description"><?php esc_html_e( 'No account needed — emailed automatically when a proof advances the order to "Awaiting Proof Approval," and copyable here any time to resend (e.g. by text) for a guest order.', 'yeffoprint-core' ); ?></span>
+				</p>
+				<?php
+			}
+		}
 	}
 
 	public function save( int $post_id ): void {

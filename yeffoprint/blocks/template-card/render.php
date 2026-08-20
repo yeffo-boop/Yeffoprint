@@ -21,22 +21,28 @@ $card = yeffoprint_core_get_template_card_data( (int) $post_id );
 if ( ! $card ) {
 	return;
 }
+
+/**
+ * Vial mockup leads (direct request: show the vial preview, not just
+ * the flat label, on the gallery cards). Used to hover-swap to the
+ * flat label artwork, but that box is now sized/shaped for the vial
+ * photo (a tall standing bottle), and the label image — a short, wide
+ * 15:7 rectangle — read badly cropped inside it on hover. Direct
+ * follow-up request: drop the hover-swap entirely here; the flat
+ * label artwork is still what the configurator's Label View uses on
+ * the actual template customization page, just not shown on this
+ * card at all anymore. Falls back to artwork-only when a Template has
+ * no vial mockup uploaded yet (still admin-optional per
+ * template-api.php), rather than showing an empty media box.
+ */
+$primary_image_url = $card['vial_mockup_url'] ?: $card['artwork_url'];
 ?>
 <a class="yp-card yp-template-card" href="<?php echo esc_url( $card['permalink'] ); ?>">
 	<div class="yp-card__media yp-template-card__media">
-		<?php if ( $card['artwork_url'] ) : ?>
+		<?php if ( $primary_image_url ) : ?>
 			<img
-				class="yp-template-card__image yp-template-card__image--primary"
-				src="<?php echo esc_url( $card['artwork_url'] ); ?>"
-				alt=""
-				loading="lazy"
-				decoding="async"
-			/>
-		<?php endif; ?>
-		<?php if ( $card['vial_mockup_url'] ) : ?>
-			<img
-				class="yp-template-card__image yp-template-card__image--hover"
-				src="<?php echo esc_url( $card['vial_mockup_url'] ); ?>"
+				class="yp-template-card__image"
+				src="<?php echo esc_url( $primary_image_url ); ?>"
 				alt=""
 				loading="lazy"
 				decoding="async"
@@ -48,6 +54,19 @@ if ( ! $card ) {
 	</div>
 	<div class="yp-card__body yp-template-card__body">
 		<span class="yp-template-card__title"><?php echo esc_html( $card['title'] ); ?></span>
-		<span class="yp-template-card__price"><?php echo esc_html( $card['starting_price'] ); ?></span>
+		<?php if ( $card['material_label'] || $card['size_label'] ) : ?>
+			<div class="yp-template-card__specs">
+				<?php if ( $card['size_label'] ) : ?>
+					<span class="yp-spec-chip"><?php echo esc_html( $card['size_label'] ); ?></span>
+				<?php endif; ?>
+				<?php if ( $card['material_label'] ) : ?>
+					<span class="yp-spec-chip"><?php echo esc_html( $card['material_label'] ); ?></span>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+		<div class="yp-template-card__foot">
+			<span class="yp-template-card__price"><?php echo esc_html( $card['starting_price'] ); ?></span>
+			<span class="yp-template-card__cta">Customize</span>
+		</div>
 	</div>
 </a>

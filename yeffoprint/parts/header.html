@@ -8,12 +8,23 @@
 
 		<!-- wp:group {"className":"yp-header__logo","layout":{"type":"flex","flexWrap":"nowrap"}} -->
 		<div class="wp-block-group yp-header__logo">
-			<!-- wp:site-logo {"width":40,"shouldSyncIcon":false} /-->
-			<!-- wp:site-title {"level":0} /-->
+			<!-- wp:html -->
+			<a href="/" class="yp-brand-lockup" aria-label="YeffoPrint home">
+				<svg class="yp-brand-lockup__mark" viewBox="0 0 30 34" aria-hidden="true" focusable="false">
+					<clipPath id="ypHeaderBrandMarkClip"><path d="M4 6C4 3.79 5.79 2 8 2h14c2.21 0 4 1.79 4 4v22c0 3.31-2.69 6-6 6h-10c-3.31 0-6-2.69-6-6V6z" /></clipPath>
+					<g clip-path="url(#ypHeaderBrandMarkClip)">
+						<rect x="4" y="2" width="7.3" height="34" fill="var(--wp--preset--color--cyan)" />
+						<rect x="11.3" y="2" width="7.3" height="34" fill="var(--wp--preset--color--magenta)" />
+						<rect x="18.7" y="2" width="7.3" height="34" fill="var(--wp--preset--color--yellow)" />
+					</g>
+				</svg>
+				<span class="yp-brand-lockup__word">YeffoPrint</span>
+			</a>
+			<!-- /wp:html -->
 		</div>
 		<!-- /wp:group -->
 
-		<!-- wp:navigation {"className":"yp-header__nav","overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"center"}} -->
+		<!-- wp:navigation {"className":"yp-header__nav","overlayMenu":"mobile","overlayBackgroundColor":"near-black","overlayTextColor":"warm-white","layout":{"type":"flex","justifyContent":"center"}} -->
 			<!-- wp:navigation-link {"label":"Shop Labels","url":"/shop-labels/"} /-->
 			<!-- wp:navigation-link {"label":"Custom Design","url":"/custom-design/"} /-->
 			<!-- wp:navigation-link {"label":"Custom Stickers","url":"/custom-stickers/"} /-->
@@ -55,6 +66,17 @@
 <!-- /wp:group -->
 
 <!-- wp:html -->
+<div class="yp-search-bar" data-yp-search-scope>
+	<form role="search" method="get" class="yp-search-bar__form" action="/">
+		<label class="screen-reader-text" for="yp-search-bar-input">Search designs, styles, materials</label>
+		<input type="search" id="yp-search-bar-input" name="s" data-yp-search-input placeholder="Search designs, styles, materials&hellip;" autocomplete="off" />
+		<button type="submit" class="yp-search-bar__button">Search</button>
+	</form>
+	<div class="yp-search-results yp-search-bar__results" data-yp-search-results aria-live="polite"></div>
+</div>
+<!-- /wp:html -->
+
+<!-- wp:html -->
 <div id="yp-search-drawer" class="yp-drawer yp-drawer--top" aria-hidden="true">
 	<div class="yp-drawer__backdrop"></div>
 	<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="Search">
@@ -67,12 +89,12 @@
 				</svg>
 			</button>
 		</div>
-		<div class="yp-drawer__body">
+		<div class="yp-drawer__body" data-yp-search-scope>
 			<form role="search" method="get" class="yp-search-form" action="/">
 				<label class="screen-reader-text" for="yp-search-input">Search designs, styles, materials</label>
-				<input type="search" id="yp-search-input" name="s" placeholder="Search designs, styles, materials&hellip;" autocomplete="off" />
+				<input type="search" id="yp-search-input" name="s" data-yp-search-input placeholder="Search designs, styles, materials&hellip;" autocomplete="off" />
 			</form>
-			<div id="yp-search-results" class="yp-search-results" aria-live="polite"></div>
+			<div class="yp-search-results" data-yp-search-results aria-live="polite"></div>
 		</div>
 	</div>
 </div>

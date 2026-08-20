@@ -25,7 +25,7 @@
 			</div>
 
 			<div class="yp-field">
-				<label for="yp-co-quantity">Quantity</label>
+				<label for="yp-co-quantity-input">Quantity</label>
 				<div class="yp-quantity-control" data-yp-co-quantity></div>
 			</div>
 
@@ -55,11 +55,21 @@
 				<ul class="yp-custom-order__file-list" data-yp-co-file-list></ul>
 			</div>
 
-			<div class="yp-custom-order__fee">
-				<span>Custom design fee</span>
-				<strong data-yp-co-fee>&mdash;</strong>
+			<div class="yp-custom-order__pricing">
+				<div class="yp-custom-order__fee">
+					<span>Custom design fee</span>
+					<strong data-yp-co-fee>&mdash;</strong>
+				</div>
+				<div class="yp-custom-order__fee">
+					<span>Labels (<span data-yp-co-label-qty>&mdash;</span> @ <span data-yp-co-unit-price>&mdash;</span>/label)</span>
+					<strong data-yp-co-labels-total>&mdash;</strong>
+				</div>
+				<div class="yp-custom-order__fee yp-custom-order__fee--total">
+					<span>Total due today</span>
+					<strong data-yp-co-total>&mdash;</strong>
+				</div>
 			</div>
-			<p class="description">Charged now to begin your design. Your printed order is priced and placed separately once your proof is approved.</p>
+			<p class="description">Charged now: the design fee plus your printed labels, at checkout. A designer reviews your request and sends a proof before anything prints — production begins once you approve it.</p>
 
 			<p>
 				<button type="submit" class="wp-block-button__link is-style-accent" data-yp-co-submit>Continue to Payment</button>

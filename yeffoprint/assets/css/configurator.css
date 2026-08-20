@@ -12,7 +12,7 @@
 }
 
 .yp-configurator__status[data-state="error"] {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 }
 
 .yp-configurator__noscript {
@@ -36,7 +36,11 @@
 
 .yp-configurator__preview {
 	position: sticky;
-	top: 96px;
+	/* --yp-header-height is published live by site.js (initHeaderScroll)
+	   — the header's real height changes with scroll compaction and nav
+	   wrapping, so a fixed guess doesn't reliably clear it at every
+	   viewport/zoom combination. 96px is the pre-JS/no-JS fallback. */
+	top: calc(var(--yp-header-height, 96px) + var(--wp--preset--spacing--xs));
 }
 
 @media (max-width: 960px) {
@@ -72,12 +76,22 @@
 }
 
 .yp-configurator__stage {
+	/* Label View (default) is rectangular — 15:7, the same real 45mm x
+	   21mm label ratio as the shop-gallery cards (patterns.css). Vial
+	   View is square. A fixed 1:1 box for both (the old rule) squeezed
+	   the rectangular label artwork down to fit inside a square via
+	   object-fit:contain, leaving visible letterboxing on the sides —
+	   this makes each view's box match what's actually uploaded to it. */
 	position: relative;
-	aspect-ratio: 1;
+	aspect-ratio: 15 / 7;
 	background: var(--wp--preset--color--light-gray);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	overflow: hidden;
+}
+
+.yp-configurator__stage[data-view="vial"] {
+	aspect-ratio: 1;
 }
 
 .yp-stage__background {
@@ -88,7 +102,33 @@
 	object-fit: contain;
 }
 
+.yp-configurator__stage[data-view="vial"] .yp-stage__background {
+	/* The square box (above) was already correct — the reported gray
+	   bars are `contain` letterboxing whenever an uploaded vial photo's
+	   own proportions aren't exactly square, which real bottle/vial
+	   product photography usually isn't (naturally taller than wide).
+	   `contain` never crops but always leaves bars for any mismatch;
+	   `cover` never leaves bars but crops to fill instead — the right
+	   trade for a product photo (some crop is normal and expected,
+	   visible gray bars read as broken) where `contain` matters for
+	   Label View because that artwork carries text that must never be
+	   cropped off. If this crops a specific photo awkwardly, the fix is
+	   re-cropping that source image close to square before uploading —
+	   not the CSS, since no single object-fit is right for every
+	   possible source aspect ratio without knowing it. */
+	object-fit: cover;
+}
+
 .yp-stage__field {
+	/* transform is set per-field by configurator.js (anchorTransformFor())
+	   based on the field's own alignment — left/right alignment needs a
+	   *different* anchor edge of the box sitting at position.x, not just
+	   text-align inside a box that's always centered on x regardless
+	   (the bug this replaced: "left justified" text still looked
+	   centered because the box itself never stopped being centered on
+	   its position). This translate(-50%,-50%) is only the pre-JS
+	   fallback default (center), immediately overridden inline once
+	   rendered. */
 	position: absolute;
 	transform: translate(-50%, -50%);
 	white-space: nowrap;
@@ -107,15 +147,43 @@
 	outline-offset: 4px;
 }
 
-/*
- * Vial View reuses the exact same field DOM/positions as Label View
- * (Architecture §4: one state, two renderers) — only the background
- * image and this visual scale differ, standing in for "the label
- * wrapped smaller onto a bottle" until per-template vial placement
- * data exists. See docs/ARCHITECTURE.md §9.
- */
-.yp-configurator__stage[data-view="vial"] .yp-stage__field {
-	transform: translate(-50%, -50%) scale(0.55);
+.yp-stage__field.is-swatch {
+	/* A color-type field's value is a hex string, not text to display —
+	   rendered as a small swatch at the field's position instead. */
+	width: 2rem;
+	height: 2rem;
+	border-radius: 999px;
+	border: 2px solid var(--wp--preset--color--white);
+	box-shadow: 0 0 0 1px rgba(20, 20, 20, 0.15), var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-stage__field.is-qr {
+	/* qr_size (% of stage width) drives the actual width via inline
+	   style (configurator.js); height follows automatically from the
+	   image's own 1:1 intrinsic ratio. */
+	display: block;
+	aspect-ratio: 1;
+	box-shadow: 0 0 0 1px rgba(20, 20, 20, 0.1), var(--wp--custom--shadow-elevation--low);
+	background: var(--wp--preset--color--white);
+}
+
+.yp-stage__field.is-qr.is-empty {
+	/* No URL typed yet (or the src request hasn't resolved) — a faint
+	   placeholder box instead of a broken-image icon. */
+	background: repeating-linear-gradient(
+		45deg,
+		var(--wp--preset--color--light-gray),
+		var(--wp--preset--color--light-gray) 6px,
+		transparent 6px,
+		transparent 12px
+	);
+	opacity: 0.6;
+}
+
+.yp-configurator__description {
+	margin-top: 0.9rem;
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 .yp-configurator__overflow-warning {
@@ -189,6 +257,21 @@
 	margin-bottom: 1.25rem;
 }
 
+.yp-field__color-input {
+	/* !important: global.css's generic text-input rule
+	   (input:not([type="checkbox"]):not(...):not(...):not(...)) has
+	   higher specificity than a single class here (4 chained :not()
+	   attribute selectors vs. 1 class) despite being the more generic
+	   rule — this is the more specific one that should actually win,
+	   not an unrelated-bug workaround. A native color swatch button
+	   needs none of that padding/width/border treatment, it has its
+	   own compact built-in appearance. */
+	width: 3.5rem !important;
+	height: 2.75rem !important;
+	padding: 0.25rem !important;
+	cursor: pointer;
+}
+
 .yp-field__label-row {
 	display: flex;
 	justify-content: space-between;
@@ -201,8 +284,41 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+.yp-field__tooltip-trigger {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.1rem;
+	height: 1.1rem;
+	margin-left: 0.3rem;
+	border-radius: 999px;
+	border: 1.5px solid var(--wp--preset--color--charcoal);
+	background: transparent;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.65rem;
+	font-weight: 700;
+	line-height: 1;
+	cursor: pointer;
+	vertical-align: middle;
+}
+
+.yp-field__tooltip-trigger:hover,
+.yp-field__tooltip-trigger[aria-expanded="true"] {
+	border-color: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-field__tooltip {
+	margin: -0.1rem 0 0.6rem;
+	padding: 0.6rem 0.85rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--near-black);
+}
+
 .yp-field__counter.is-over {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 	font-weight: 600;
 }
 
@@ -236,6 +352,34 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	gap: 1rem;
+}
+
+/* "+ Add another label" as a real button, not an easy-to-miss text
+   link — this is the one action that starts the batch feature, so it
+   should read as clearly clickable. */
+.yp-add-variant-btn {
+	flex-shrink: 0;
+	padding: 0.5rem 0.9rem;
+	border: 1.5px dashed var(--wp--preset--color--charcoal);
+	border-radius: var(--wp--custom--radius--control);
+	background: transparent;
+	color: var(--wp--preset--color--near-black);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-style 150ms ease, background-color 150ms ease;
+}
+
+.yp-add-variant-btn:hover {
+	border-style: solid;
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-variants-blurb {
+	margin: 0.5rem 0 1rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
 }
 
 .yp-variant-cards {
@@ -249,21 +393,57 @@
 	justify-content: space-between;
 	align-items: center;
 	gap: 0.75rem;
-	padding: 0.75rem 1rem;
+	padding: 0.6rem 0.85rem;
 	border: 1.5px solid var(--wp--preset--color--light-gray);
 	border-radius: var(--wp--custom--radius--control);
 }
 
 .yp-variant-card.is-active {
 	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
 }
 
 .yp-variant-card__summary {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
 	font-size: var(--wp--preset--font-size--small);
+	text-align: left;
 }
 
 .yp-variant-card__summary strong {
 	display: block;
+}
+
+/* Numbered badge per label, cycling the same three brand colors as
+   the "How It Works" step numbers — makes each row in the batch read
+   as its own distinct item at a glance instead of a plain list. */
+.yp-variant-card__index {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex-shrink: 0;
+	border-radius: 999px;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.78rem;
+	font-weight: 700;
+}
+
+.yp-variant-card:nth-child(3n+1) .yp-variant-card__index {
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-variant-card:nth-child(3n+2) .yp-variant-card__index {
+	background: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-variant-card:nth-child(3n) .yp-variant-card__index {
+	background: var(--wp--preset--color--yellow);
+	color: var(--wp--preset--color--near-black);
 }
 
 .yp-variant-card__actions {
@@ -282,6 +462,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
+	font-family: var(--wp--preset--font-family--mono);
 	font-size: var(--wp--preset--font-size--x-large);
 	font-weight: 600;
 }
@@ -307,6 +488,9 @@
 
 .yp-configurator__desktop-cta {
 	margin-top: 1rem;
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
 }
 
 @media (max-width: 960px) {
@@ -322,7 +506,7 @@
 }
 
 .yp-configurator__cart-status.is-error {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 	font-weight: 600;
 }
 
@@ -352,5 +536,6 @@
 }
 
 .yp-sticky-bar__total {
+	font-family: var(--wp--preset--font-family--mono);
 	font-weight: 600;
 }

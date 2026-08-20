@@ -8,12 +8,52 @@
 /* ---------- Shared section rhythm ---------- */
 
 .yp-section {
-	padding-block: var(--wp--preset--spacing--xl);
+	/* Tighter than the shared --spacing-xl token (used verbatim
+	   elsewhere, e.g. the footer) — direct feedback that the homepage's
+	   section rhythm reads as too much blank space stacked between
+	   fairly sparse content; a slightly denser rhythm plus the richer
+	   content added within each section (icons, stat row, material
+	   swatch copy) address that together rather than through padding
+	   alone. */
+	padding-block: 3rem;
+	/* Every .yp-section is a direct child of `main.wp-block-group`,
+	   which now carries its own padding-inline (global.css, "Root
+	   template spacing") so mobile content isn't flush against the
+	   screen edge. That padding would also inset a --dark/--tint
+	   section's own background, though, which is meant to bleed full-
+	   width — clawed back here with a matching negative margin, then
+	   restored as this element's own padding so its *content* still
+	   gets the same inset. A background always paints under an
+	   element's own padding regardless, so this two-step is only
+	   needed to keep main's padding from doubling up visually. */
+	margin-inline: calc(-1 * var(--wp--preset--spacing--sm));
+	padding-inline: var(--wp--preset--spacing--sm);
+}
+
+@media (min-width: 782px) {
+	.yp-section {
+		margin-inline: calc(-1 * var(--wp--preset--spacing--md));
+		padding-inline: var(--wp--preset--spacing--md);
+	}
 }
 
 .yp-section--dark {
+	position: relative;
 	background: var(--wp--preset--color--near-black);
 	color: var(--wp--preset--color--warm-white);
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.yp-section--dark::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(32rem 22rem at 15% 0%, rgba(0, 174, 239, 0.45), transparent 65%),
+		radial-gradient(30rem 24rem at 90% 100%, rgba(236, 0, 140, 0.4), transparent 65%);
+	z-index: -1;
+	pointer-events: none;
 }
 
 .yp-section--dark h1,
@@ -22,13 +62,25 @@
 	color: var(--wp--preset--color--warm-white);
 }
 
+/* A faint brand-tinted wash — not flat gray — applied to alternating
+   homepage sections so the page isn't wall-to-wall white/warm-white. */
+.yp-section--tint {
+	background: linear-gradient(180deg, rgba(0, 174, 239, 0.06), rgba(236, 0, 140, 0.06));
+}
+
 .yp-eyebrow {
-	display: inline-block;
+	/* Block, not inline-block: has-text-align-center (the WP core class
+	   already on Materials/Trending/Inspiration/Fully Custom's eyebrow
+	   paragraphs) centers a block's full-width content, but has no
+	   visible effect on an inline-block box that's already shrunk to
+	   fit its own text — which was rendering those four off to the
+	   left instead of centered under their heading. */
+	display: block;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	font-size: 0.75rem;
-	font-weight: 600;
-	color: var(--wp--preset--color--charcoal);
+	font-size: 0.8125rem;
+	font-weight: 700;
+	color: var(--wp--preset--color--magenta-deep);
 	margin-bottom: 0.5rem;
 }
 
@@ -56,82 +108,365 @@
 
 .yp-hero {
 	position: relative;
-	padding-block: var(--wp--preset--spacing--2xl) var(--wp--preset--spacing--xl);
-	background: linear-gradient(180deg, var(--wp--preset--color--white) 0%, var(--wp--preset--color--warm-white) 100%);
+	padding-block: 4.5rem 3rem;
+	background: var(--wp--preset--color--warm-white);
 	border-radius: 0 0 var(--wp--custom--radius--container) var(--wp--custom--radius--container);
 	overflow: hidden;
+	isolation: isolate;
+}
+
+.yp-hero::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(38rem 26rem at 8% 10%, rgba(0, 174, 239, 0.4), transparent 62%),
+		radial-gradient(34rem 28rem at 92% 8%, rgba(236, 0, 140, 0.34), transparent 62%),
+		radial-gradient(32rem 24rem at 50% 100%, rgba(255, 242, 0, 0.28), transparent 62%);
+	z-index: -1;
+	pointer-events: none;
 }
 
 .yp-hero__eyebrow-accent {
 	display: inline-flex;
-	gap: 0.35rem;
+	align-items: center;
+	gap: 0.4rem;
 	margin-bottom: 1rem;
+	padding: 0 0.6rem;
+	position: relative;
+}
+
+/* A pair of print registration ticks flanking the CMY dots — a small,
+   literal nod to the press-proof motif (crop marks/registration marks)
+   without touching the hero's existing copy or layout. */
+.yp-hero__eyebrow-accent::before,
+.yp-hero__eyebrow-accent::after {
+	content: "";
+	width: 9px;
+	height: 9px;
+	flex-shrink: 0;
+	border: 1.2px solid var(--wp--preset--color--charcoal);
+	border-radius: 50%;
+	opacity: 0.3;
+	background:
+		linear-gradient(var(--wp--preset--color--charcoal), var(--wp--preset--color--charcoal)) center / 1px 100% no-repeat,
+		linear-gradient(var(--wp--preset--color--charcoal), var(--wp--preset--color--charcoal)) center / 100% 1px no-repeat;
 }
 
 .yp-hero__eyebrow-accent span {
-	width: 0.5rem;
-	height: 0.5rem;
+	width: 0.6rem;
+	height: 0.6rem;
 	border-radius: 999px;
 }
 
-.yp-hero__eyebrow-accent span:nth-child(1) { background: var(--wp--preset--color--cyan); }
-.yp-hero__eyebrow-accent span:nth-child(2) { background: var(--wp--preset--color--magenta); }
-.yp-hero__eyebrow-accent span:nth-child(3) { background: var(--wp--preset--color--yellow); }
+.yp-hero__eyebrow-accent span:nth-child(1) { background: var(--wp--preset--color--cyan); box-shadow: 0 0 14px rgba(0, 174, 239, 0.55); }
+.yp-hero__eyebrow-accent span:nth-child(2) { background: var(--wp--preset--color--magenta); box-shadow: 0 0 14px rgba(236, 0, 140, 0.55); }
+.yp-hero__eyebrow-accent span:nth-child(3) { background: var(--wp--preset--color--yellow); box-shadow: 0 0 14px rgba(255, 242, 0, 0.55); }
+
+.yp-eyebrow-label {
+	display: inline-flex;
+	align-items: center;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--charcoal);
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 999px;
+	padding: 0.4rem 0.9rem;
+	margin: 0 0 1.1rem;
+}
+
+.yp-hero__accent-word {
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-hero__stats {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	gap: 0.75rem 1.75rem;
+	margin: 2rem 0 0;
+	padding: 0;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal);
+}
+
+/* ---------- Hero: two-column grid + press-proof visual ---------- */
+
+/* layout:"default" on the block (a flow container) so WordPress's own
+   blockGap CSS custom property stays available to fall back on, then
+   overridden into an actual grid here — the same technique already
+   used by .yp-steps below, for the same reason: a real grid, not a
+   flex/flow approximation of one. */
+.yp-hero__grid {
+	display: grid;
+	grid-template-columns: 1.05fr 0.95fr;
+	gap: clamp(2rem, 5vw, 4rem);
+	align-items: center;
+}
+
+/* Same fix as .yp-steps below: layout:"default" auto-injects
+   margin-block-start on every child but the first, meant for a
+   stacked flow layout — this container is a grid instead, already
+   spaced by `gap` above, so that margin only pushes the second column
+   out of vertical alignment with the first. */
+.yp-hero__grid > * {
+	margin-block-start: 0 !important;
+	margin-block-end: 0 !important;
+}
+
+@media (max-width: 900px) {
+	.yp-hero__grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.yp-hero__visual {
+	display: flex;
+	justify-content: center;
+}
+
+.yp-proof {
+	position: relative;
+	aspect-ratio: 1 / 1;
+	width: 100%;
+	max-width: 400px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--container);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+}
+
+.yp-proof__corner {
+	position: absolute;
+	width: 20px;
+	height: 20px;
+	opacity: 0.35;
+}
+
+.yp-proof__corner::before,
+.yp-proof__corner::after {
+	content: "";
+	position: absolute;
+	background: var(--wp--preset--color--charcoal);
+}
+
+.yp-proof__corner::before { top: 0; left: 0; width: 1.4px; height: 100%; }
+.yp-proof__corner::after { top: 0; left: 0; width: 100%; height: 1.4px; }
+
+.yp-proof__corner--tl { top: 16px; left: 16px; }
+.yp-proof__corner--tr { top: 16px; right: 16px; transform: scaleX(-1); }
+.yp-proof__corner--bl { bottom: 16px; left: 16px; transform: scaleY(-1); }
+.yp-proof__corner--br { bottom: 16px; right: 16px; transform: scale(-1); }
+
+.yp-proof__mark {
+	width: 42%;
+	filter: drop-shadow(0 14px 20px rgba(20, 20, 20, 0.18));
+}
+
+/* Each bar snaps in from a slightly different direction/delay — a
+   small nod to a press proof's colors dropping into registration one
+   pass at a time. */
+.yp-proof__bar {
+	transform-origin: bottom;
+	animation-duration: 1.1s;
+	animation-timing-function: cubic-bezier(0.2, 0.9, 0.25, 1);
+	animation-iteration-count: 1;
+	animation-fill-mode: both;
+}
+
+.yp-proof__bar--c { animation-name: yp-proof-snap-left; animation-delay: 0s; }
+.yp-proof__bar--m { animation-name: yp-proof-snap-down; animation-delay: 0.06s; }
+.yp-proof__bar--y { animation-name: yp-proof-snap-right; animation-delay: 0.12s; }
+
+@keyframes yp-proof-snap-left {
+	0% { transform: translateX(-14px); opacity: 0; }
+	60% { opacity: 1; }
+	100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes yp-proof-snap-down {
+	0% { transform: translateY(14px); opacity: 0; }
+	60% { opacity: 1; }
+	100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes yp-proof-snap-right {
+	0% { transform: translateX(14px); opacity: 0; }
+	60% { opacity: 1; }
+	100% { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yp-proof__bar {
+		animation: none;
+	}
+}
+
+.yp-proof__caption {
+	position: absolute;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--charcoal);
+	opacity: 0.55;
+	white-space: nowrap;
+}
+
+.yp-hero__stats li {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.yp-hero__stats-dot {
+	width: 0.55rem;
+	height: 0.55rem;
+	border-radius: 999px;
+	flex-shrink: 0;
+}
+
+.yp-view-all-link {
+	display: inline-flex;
+	align-items: center;
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+	padding: 0.55rem 1.1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	text-decoration: none !important;
+	color: var(--wp--preset--color--near-black) !important;
+	transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.yp-view-all-link:hover {
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+	transform: translateY(-1px);
+}
 
 /* ---------- Card grids (Featured Designs, Popular Designs) ---------- */
 
 .yp-card-grid {
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	/* Fixed-width columns (auto-fill, not auto-fit/minmax(...,1fr)) —
+	   the previous 1fr version stretched each item's own grid cell to
+	   fill the row, so with e.g. 2 cards in a 4-column-wide row, card 2
+	   sat at the start of its own (very wide) second cell, landing far
+	   to the right instead of right next to card 1 — the "cards aren't
+	   lined up" bug. Fixed columns mean every card is the same width
+	   and sits immediately next to the last one; any leftover row
+	   space is simply blank at the end, not distributed into cells.
+	   Still fully responsive: auto-fill fits as many 270px columns as
+	   the container allows at any viewport, down to one on mobile.
+	   !important on the grid-defining properties: this has now gone
+	   through several rounds of genuine, verified-correct fixes for
+	   *different* real bugs (sparse-row tracks, a stretch regression, a
+	   static-positioned image, an aspect-ratio specificity conflict)
+	   without the live site ever confirming resolved — strongly
+	   suggesting something outside this stylesheet (a competing rule
+	   with unexpected load order, or a caching/Site-Editor-database
+	   override serving a stale version of this file/template entirely)
+	   rather than another undiscovered bug in this exact rule. This
+	   guarantees the grid itself can't lose to anything else targeting
+	   the same element, closing off that specific failure mode either
+	   way. See docs/ARCHITECTURE.md §9. */
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, 270px) !important;
+	/* justify-content only — align-items stays the grid default
+	   (stretch), which keeps every card the same outer height across a
+	   row even when body text length differs between cards; align-
+	   items:start would let each card size to its own content instead,
+	   leaving bottom edges misaligned whenever text length differs. */
+	justify-content: start !important;
 	gap: var(--wp--preset--spacing--sm);
 }
 
-@media (max-width: 1024px) {
-	.yp-card-grid {
-		grid-template-columns: repeat(2, 1fr);
-	}
+/* Defensive reset on the grid items themselves (core/post-template
+   renders each result as an <li>, one level above .yp-template-card) —
+   in case any core/theme default ever puts a width or margin on these
+   that would fight the grid's own column sizing. */
+.yp-card-grid > li {
+	margin: 0 !important;
+	width: auto !important;
+	min-width: 0;
 }
 
-@media (max-width: 600px) {
-	.yp-card-grid {
-		grid-template-columns: 1fr;
-	}
+.yp-customer-tile {
+	/* Real customer photos aren't in yet — a soft brand-gradient wash
+	   with a photo icon reads as "coming soon," not as a broken/missing
+	   image the way a flat gray box (the .yp-card__media default) did. */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, rgba(0, 174, 239, 0.14), rgba(236, 0, 140, 0.14));
+	color: var(--wp--preset--color--magenta-deep);
 }
 
 /* ---------- Template card (gallery + homepage rails) ---------- */
 
 .yp-template-card {
+	/* .yp-card-grid's columns are a fixed width now, so the card just
+	   fills its own column — no separate cap needed. */
 	display: block;
+	width: 100%;
 	color: inherit;
 	text-decoration: none;
 }
 
-.yp-template-card__media {
+.yp-card__media.yp-template-card__media {
+	/* Both classes in the selector, not just .yp-template-card__media
+	   alone — .yp-card__media (global.css) sets aspect-ratio:4/5 on the
+	   exact same element (render.php outputs both classes together),
+	   and with equal single-class specificity on each, which one wins
+	   depended entirely on stylesheet load order rather than being
+	   guaranteed. Was 15:7 (the real flat label's 45mm x 21mm ratio)
+	   back when the flat label artwork was the primary card image —
+	   now that the vial-mockup photo is primary (direct request: show
+	   the vial preview, not just the label), that wide/short box would
+	   object-fit:cover-crop a tall standing-vial photo down to a
+	   narrow middle strip, cutting off most of the actual label. No
+	   override needed: falls through to .yp-card__media's own 4:5,
+	   which is also what the approved brand mockup used for these
+	   cards.
+
+	   The navy gradient background is the approved brand mockup's
+	   product-photography backdrop — kept on this combined selector
+	   (not the shared .yp-card__media base) so other card types, e.g.
+	   the customer-work tiles, keep their own background. It only
+	   shows through where an image has transparent padding, but still
+	   reads as a considered "on a light table" backdrop even when the
+	   image fills the box completely. */
 	position: relative;
+	background: var(--wp--custom--gradient-navy);
 }
 
 .yp-template-card__image {
+	/* Absolute, not static — with .yp-template-card__media a fixed
+	   aspect-ratio box, a static image relying on height:100% doesn't
+	   reliably resolve against an aspect-ratio-derived height and falls
+	   back to its own intrinsic ratio instead, so the card's height
+	   would end up depending on whatever ratio the uploaded image
+	   happens to have rather than the fixed box. No hover-swap anymore
+	   (direct request — the second image read badly cropped in this
+	   box's shape) — just the one vial-mockup-or-artwork-fallback image
+	   from render.php, filling the box via object-fit:cover. */
 	position: absolute;
 	inset: 0;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	transition: opacity 250ms ease;
-}
-
-.yp-template-card__image--primary {
-	position: static;
-	opacity: 1;
-}
-
-.yp-template-card__image--hover {
-	opacity: 0;
-}
-
-@media (hover: hover) {
-	.yp-template-card:hover .yp-template-card__image--hover {
-		opacity: 1;
-	}
 }
 
 .yp-template-card__badge {
@@ -143,18 +478,59 @@
 
 .yp-template-card__body {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0.5rem;
+	flex-direction: column;
+	gap: 0.6rem;
 }
 
 .yp-template-card__title {
 	font-weight: 600;
 }
 
-.yp-template-card__price {
-	font-size: var(--wp--preset--font-size--small);
+.yp-template-card__specs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+.yp-spec-chip {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
 	color: var(--wp--preset--color--charcoal);
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.2rem 0.5rem;
+}
+
+.yp-template-card__foot {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-top: auto;
+}
+
+.yp-template-card__price {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-template-card__cta {
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--warm-white);
+	background: var(--wp--preset--color--near-black);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.4rem 0.85rem;
+	transition: background 150ms ease, color 150ms ease;
+}
+
+.yp-template-card:hover .yp-template-card__cta {
+	background: var(--wp--custom--gradient-brand-deep);
 }
 
 /* ---------- How It Works ---------- */
@@ -163,6 +539,24 @@
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: var(--wp--preset--spacing--md);
+	align-items: stretch;
+}
+
+/* The real cause of "first card taller than the rest": .yp-steps is a
+   Group block with layout:"default" (flow), so WordPress auto-injects
+   its own vertical blockGap spacing as margin-block-start on every
+   child except the first — meant for a normal stacked/flow layout, but
+   this container is a grid instead (our own `gap` above already spaces
+   the 3 columns). With align-items:stretch, each item's box is
+   stretched to fill the shared row height *minus its own margin* — so
+   card 1 (no margin subtracted, nothing bumps it) ends up visibly
+   taller than cards 2/3 (which lose height to that unwanted top
+   margin), even though all three have identical box-sizing otherwise.
+   Zeroing it is safe: spacing between the cards is already fully
+   handled by `gap`, so this margin was doing nothing but causing this. */
+.yp-steps > * {
+	margin-block-start: 0 !important;
+	margin-block-end: 0 !important;
 }
 
 @media (max-width: 781px) {
@@ -172,23 +566,62 @@
 }
 
 .yp-step {
+	/* flex column, not just relying on implicit grid stretch — the
+	   three cards' description text differs slightly in length, and
+	   this guarantees identical card heights regardless of that rather
+	   than leaving it to each browser's own stretch/sizing behavior. */
+	position: relative;
+	display: flex;
+	flex-direction: column;
 	background: var(--wp--preset--color--white);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	padding: var(--wp--preset--spacing--md);
+	overflow: hidden;
 }
+
+.yp-step::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+}
+
+.yp-step:nth-child(1)::before { background: var(--wp--preset--color--cyan); }
+.yp-step:nth-child(2)::before { background: var(--wp--preset--color--magenta-deep); }
+.yp-step:nth-child(3)::before { background: var(--wp--preset--color--yellow); }
 
 .yp-step__index {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 2.25rem;
-	height: 2.25rem;
+	width: 2.5rem;
+	height: 2.5rem;
 	border-radius: 999px;
 	background: var(--wp--preset--color--near-black);
 	color: var(--wp--preset--color--warm-white);
-	font-weight: 600;
+	font-weight: 700;
 	margin-bottom: 1rem;
+}
+
+.yp-step:nth-child(1) .yp-step__index {
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--near-black);
+	box-shadow: 0 6px 16px rgba(0, 174, 239, 0.35);
+}
+
+.yp-step:nth-child(2) .yp-step__index {
+	background: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--white);
+	box-shadow: 0 6px 16px rgba(236, 0, 140, 0.35);
+}
+
+.yp-step:nth-child(3) .yp-step__index {
+	background: var(--wp--preset--color--yellow);
+	color: var(--wp--preset--color--near-black);
+	box-shadow: 0 6px 16px rgba(255, 242, 0, 0.4);
 }
 
 /* ---------- Materials ---------- */
@@ -216,29 +649,108 @@
 }
 
 .yp-material-swatch__chip {
+	/* A real uploaded photo (admin: Materials → Featured Image for the
+	   swatch, "Hover / on-vial image" for the hover-swap — V2, direct
+	   request) always wins; the gradient variants below are the fallback
+	   for a Material that doesn't have a photo uploaded yet, keyed by
+	   the record's own slug (matches the demo-seeded Glossy White/Matte
+	   White/Holographic/Clear/Metallic records) rather than a flat gray
+	   box that actively misrepresents these finishes' distinct looks. */
 	aspect-ratio: 1;
 	border-radius: var(--wp--custom--radius--card);
-	background: var(--wp--preset--color--light-gray);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
+	background: var(--wp--preset--color--light-gray);
 	margin-bottom: 0.75rem;
+	position: relative;
+	overflow: hidden;
+}
+
+.yp-material-swatch__image {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: opacity 250ms ease;
+}
+
+.yp-material-swatch__image--primary {
+	opacity: 1;
+}
+
+.yp-material-swatch__image--hover {
+	opacity: 0;
+}
+
+@media (hover: hover) {
+	.yp-material-swatch:hover .yp-material-swatch__image--hover {
+		opacity: 1;
+	}
+}
+
+.yp-material-swatch__chip--glossy-white {
+	background: linear-gradient(135deg, #ffffff 0%, #f2f1ee 55%, #ffffff 100%);
+}
+
+.yp-material-swatch__chip--glossy-white::after {
+	/* A soft diagonal highlight band reads as "glossy/reflective" rather
+	   than flat, without needing a real photo. */
+	content: "";
+	position: absolute;
+	inset: -60% -10%;
+	background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%);
+	transform: rotate(3deg);
+}
+
+.yp-material-swatch__chip--matte-white {
+	background: linear-gradient(160deg, #f5f4f0 0%, #e9e7e1 100%);
+}
+
+.yp-material-swatch__chip--holographic {
+	background: linear-gradient(120deg, #00aeef 0%, #ec008c 33%, #fff200 66%, #00aeef 100%);
+	background-size: 220% 220%;
+}
+
+.yp-material-swatch__chip--clear {
+	background:
+		repeating-linear-gradient(45deg, rgba(20, 20, 20, 0.05) 0 2px, transparent 2px 10px),
+		linear-gradient(160deg, rgba(0, 174, 239, 0.12), rgba(236, 0, 140, 0.1));
+	border: 1.5px solid rgba(20, 20, 20, 0.12);
+}
+
+.yp-material-swatch__chip--metallic {
+	background: linear-gradient(135deg, #d8dbe0 0%, #9a9fa8 40%, #eef0f2 55%, #7d828c 100%);
+}
+
+.yp-material-swatch__name {
+	font-weight: 600;
+	margin-bottom: 0.15rem;
+}
+
+.yp-material-swatch__blurb {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin: 0;
 }
 
 /* ---------- Rewards promo ---------- */
 
 .yp-rewards-promo {
 	background: var(--wp--preset--color--warm-white);
-	border: 1px solid var(--wp--preset--color--light-gray);
+	border: 1.5px solid rgba(236, 0, 140, 0.22);
 	border-radius: var(--wp--custom--radius--container);
 	padding: var(--wp--preset--spacing--lg);
 	position: relative;
 	overflow: hidden;
+	isolation: isolate;
 }
 
 .yp-rewards-promo::before {
 	content: "";
 	position: absolute;
 	inset: 0;
-	background: linear-gradient(120deg, rgba(0, 174, 239, 0.08), rgba(236, 0, 140, 0.08), rgba(255, 242, 0, 0.08));
+	background: linear-gradient(120deg, rgba(0, 174, 239, 0.18), rgba(236, 0, 140, 0.18), rgba(255, 242, 0, 0.18));
+	z-index: -1;
 	pointer-events: none;
 }
 
@@ -264,7 +776,7 @@
 }
 
 .yp-review-card__stars {
-	color: var(--wp--preset--color--magenta);
+	color: var(--wp--preset--color--magenta-deep);
 	letter-spacing: 0.15em;
 	margin-bottom: 0.75rem;
 }
@@ -310,9 +822,16 @@
 	border-radius: var(--wp--custom--radius--control);
 	border: 1px solid var(--wp--preset--color--light-gray);
 	background: var(--wp--preset--color--white);
-	font-size: var(--wp--preset--font-size--small);
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.78rem;
+	font-weight: 600;
 	color: var(--wp--preset--color--charcoal);
 	text-decoration: none;
+	transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.yp-filter-pill:hover {
+	border-color: var(--wp--preset--color--charcoal);
 }
 
 .yp-filter-pill.is-active {

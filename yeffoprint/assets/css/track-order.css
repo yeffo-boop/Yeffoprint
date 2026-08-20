@@ -1,0 +1,127 @@
+/*
+ * Public order-tracking page. Reuses .yp-configurator__status from
+ * configurator.css (enqueued alongside this file) for the loading/error
+ * state — same pattern as proof-approval.css.
+ */
+
+.yp-track-order {
+	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
+}
+
+.yp-track-order__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-track-order__header strong {
+	font-size: var(--wp--preset--font-size--large);
+}
+
+.yp-track-order__status-pill {
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	padding: 0.35rem 0.85rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	white-space: nowrap;
+}
+
+.yp-track-order__shipments {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.yp-track-order__shipment {
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--warm-white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: 1.5rem;
+}
+
+.yp-track-order__shipment-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	margin-bottom: 1.25rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-track-order__carrier {
+	font-weight: 700;
+}
+
+.yp-track-order__tracking-number {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-track-order__events {
+	list-style: none;
+	margin: 0 0 1.25rem;
+	padding: 0;
+}
+
+.yp-track-order__event {
+	display: flex;
+	gap: 0.85rem;
+	padding-bottom: 1rem;
+	position: relative;
+}
+
+.yp-track-order__event:not(:last-child)::before {
+	content: "";
+	position: absolute;
+	left: 3px;
+	top: 14px;
+	bottom: -2px;
+	width: 1.5px;
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-track-order__event-dot {
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	margin-top: 6px;
+	background: var(--wp--preset--color--charcoal);
+}
+
+.yp-track-order__event.is-latest .yp-track-order__event-dot {
+	background: var(--wp--preset--color--magenta-deep);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--wp--preset--color--magenta) 20%, transparent);
+}
+
+.yp-track-order__event-body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.yp-track-order__event.is-latest .yp-track-order__event-description {
+	font-weight: 700;
+}
+
+.yp-track-order__event-meta {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-track-order__no-events {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin: 0 0 1.25rem;
+}
+
+.yp-track-order__carrier-link {
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+}
