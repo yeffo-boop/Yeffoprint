@@ -47,19 +47,6 @@ $email = $email ?? null;
 																<a href="<?php echo esc_url( home_url( '/privacy-policy/' ) ); ?>"><?php esc_html_e( 'Privacy Policy', 'yeffoprint' ); ?></a>
 																<a href="<?php echo esc_url( home_url( '/terms/' ) ); ?>"><?php esc_html_e( 'Terms of Service', 'yeffoprint' ); ?></a>
 															</p>
-															<?php
-															/**
-															 * Still fired so a store-specific note added in
-															 * Settings → Emails → "Email footer text" keeps
-															 * showing up (e.g. a business address some payment
-															 * processors require) — it just renders under the
-															 * brand footer above instead of replacing it.
-															 */
-															$email_footer_text = get_option( 'woocommerce_email_footer_text' );
-															if ( $email_footer_text ) {
-																echo wp_kses_post( wpautop( wptexturize( apply_filters( 'woocommerce_email_footer_text', $email_footer_text, $email ) ) ) );
-															}
-															?>
 															<p>&copy; <?php echo esc_html( gmdate( 'Y' ) ); ?> <?php echo esc_html( get_bloginfo( 'name', 'display' ) ); ?>. <?php esc_html_e( 'All rights reserved.', 'yeffoprint' ); ?></p>
 														</td>
 													</tr>
