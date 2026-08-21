@@ -77,8 +77,19 @@ svg {
    (.yp-hero, .yp-section) opt back out with a negative margin below,
    the standard "inset content, full-bleed section" pattern — a
    background always paints under an element's own padding, so this
-   never affects anything that *doesn't* also claw the width back. */
+   never affects anything that *doesn't* also claw the width back.
+
+   flow-root: `main` has no padding-block, so a first-child section's
+   own margin-top (e.g. .yp-promo's, patterns.css) collapses straight
+   through it and lands above `main` instead — same end result on a
+   plain warm-white body background, but it made that margin read as
+   barely-there once .yp-promo's own dark/colorful background sat
+   right against the dark search bar above it with only the collapsed
+   amount of visible gap. flow-root gives `main` its own block
+   formatting context so a child's margin renders as real space inside
+   it instead, with no other layout side effects. */
 main.wp-block-group {
+	display: flow-root;
 	padding-inline: var(--wp--preset--spacing--sm);
 }
 

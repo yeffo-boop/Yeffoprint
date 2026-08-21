@@ -484,3 +484,117 @@ add_filter( 'hooked_block_types', function ( $hooked_block_types, $relative_posi
 	return array_values( array_diff( $hooked_block_types, [ 'woocommerce/mini-cart' ] ) );
 }, 20, 4 );
 
+/**
+ * Login page — direct request to style wp-login.php like the rest of
+ * the site, plus make sure it's the *only* login screen a visitor ever
+ * sees. WordPress deliberately never loads the theme's normal
+ * stylesheet or template parts on wp-login.php, so this styles it
+ * directly (assets/css/login.css) rather than trying to route it
+ * through global.css's theme.json custom properties, which don't exist
+ * on that page at all.
+ *
+ * The consolidation half: WooCommerce renders its own inline login
+ * form on the My Account page for a logged-out visitor (same idea as
+ * the Mini Cart block hook stripped above — a second, independently-
+ * styled UI competing with the one this theme actually owns) instead of
+ * sending them here. Redirecting that one specific case to wp-login.php
+ * is enough to cover every entry point on this site: the header's
+ * Customer Account icon and the configurator's "Log in to save this
+ * design" button (assets/js/configurator.js) both just link to the My
+ * Account page already, wp-admin's own access check already sends
+ * logged-out staff to wp-login.php on its own, and this deliberately
+ * leaves the "Lost your password?" flow alone — WooCommerce sends its
+ * own branded reset email (woocommerce/emails/customer-reset-
+ * password.php) from its own version of that flow, not core's, so
+ * rerouting it here would silently swap that for WordPress's plain
+ * default email instead.
+ */
+add_action( 'login_enqueue_scripts', function () {
+	wp_enqueue_style(
+		'yeffoprint-fonts',
+		'https://fonts.googleapis.com/css2?family=Geist:wght@600;700;800&family=Inter:wght@400;500;600&display=swap',
+		[],
+		null
+	);
+
+	wp_enqueue_style(
+		'yeffoprint-login',
+		get_theme_file_uri( 'assets/css/login.css' ),
+		[ 'login', 'yeffoprint-fonts' ],
+		yeffoprint_asset_version( 'assets/css/login.css' )
+	);
+} );
+
+add_filter( 'login_headerurl', function () {
+	return home_url( '/' );
+} );
+
+add_filter( 'login_headertext', function () {
+	return get_bloginfo( 'name' );
+} );
+
+/** Same brand lockup markup as parts/header.html's — WordPress's own logo/h1 is hidden via login.css instead of overridden in place, so this doesn't have to fight its background-image approach. */
+add_action( 'login_header', function () {
+	?>
+	<div class="yp-login-lockup">
+		<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="yp-brand-lockup" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+			<svg class="yp-brand-lockup__mark" viewBox="0 0 30 34" aria-hidden="true" focusable="false">
+				<clipPath id="ypLoginBrandMarkClip"><path d="M4 6C4 3.79 5.79 2 8 2h14c2.21 0 4 1.79 4 4v22c0 3.31-2.69 6-6 6h-10c-3.31 0-6-2.69-6-6V6z" /></clipPath>
+				<g clip-path="url(#ypLoginBrandMarkClip)">
+					<rect x="4" y="2" width="7.3" height="34" fill="#00AEEF" />
+					<rect x="11.3" y="2" width="7.3" height="34" fill="#EC008C" />
+					<rect x="18.7" y="2" width="7.3" height="34" fill="#FFF200" />
+				</g>
+			</svg>
+			<span class="yp-brand-lockup__word"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></span>
+		</a>
+	</div>
+	<?php
+} );
+
+/** The consolidation redirect described above. */
+add_action( 'template_redirect', function () {
+	if ( is_user_logged_in() || ! function_exists( 'is_account_page' ) || ! is_account_page() ) {
+		return;
+	}
+
+	if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'lost-password' ) ) {
+		return; // Left on WooCommerce's own page — see the doc comment above.
+	}
+
+	// wp-login.php only shows a "Register" link/form when the site-wide
+	// users_can_register option is on — a separate setting from this
+	// one, which is what actually controls the Register column WC's own
+	// login form shows here. If a store has this on, it's actively using
+	// self-service registration from this exact page, so redirecting
+	// away would silently remove that ability rather than just
+	// reskinning it; leaving WooCommerce's page in place for that case
+	// is the safe default until wp-login.php's own register flow is
+	// confirmed to cover the same ground.
+	if ( 'yes' === get_option( 'woocommerce_enable_myaccount_registration' ) ) {
+		return;
+	}
+
+	wp_safe_redirect( wp_login_url( home_url( add_query_arg( [] ) ) ) );
+	exit;
+} );
+
+/**
+ * WooCommerce's own login form used to default a customer straight back
+ * to the My Account page after signing in; now that this is the only
+ * login screen, this replicates that so a customer who lands here
+ * directly (no explicit redirect_to already set, e.g. by the
+ * consolidation redirect above) doesn't end up dropped into wp-admin,
+ * which they have no reason to be in. Staff/admin logins are
+ * untouched — manage_options is the same capability every other
+ * admin-only screen in this codebase gates on (e.g. class-rewards-
+ * admin.php).
+ */
+add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $user ) {
+	if ( '' !== $requested_redirect_to || ! ( $user instanceof WP_User ) || user_can( $user, 'manage_options' ) ) {
+		return $redirect_to;
+	}
+
+	return function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : $redirect_to;
+}, 10, 3 );
+

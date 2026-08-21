@@ -1,0 +1,225 @@
+/*
+ * wp-login.php, styled to match the rest of the site — direct request.
+ * This page never loads theme.json's generated stylesheet (WordPress
+ * deliberately keeps wp-login.php isolated from the active theme's
+ * normal front-end asset pipeline), so every token used here is the
+ * same value theme.json declares, just hardcoded rather than read from
+ * a --wp--preset/--wp--custom custom property. Some rules need
+ * !important to beat wp-admin/css/login.min.css's own ID+class-level
+ * specificity — same reasoning already documented in woocommerce.css
+ * for the Cart/Checkout blocks.
+ *
+ * See functions.php's "Login page" section for the PHP half: the
+ * enqueue for this file, the brand lockup markup injected in place of
+ * WordPress's own logo, and the redirect that sends any other login
+ * entry point (WooCommerce's own My Account login form included) here
+ * instead, so this is the one login screen a visitor ever sees.
+ */
+
+body.login {
+	background-color: #141414; /* near-black */
+	background-image:
+		radial-gradient(32rem 22rem at 15% 0%, rgba(0, 174, 239, 0.35), transparent 65%),
+		radial-gradient(30rem 24rem at 90% 100%, rgba(236, 0, 140, 0.3), transparent 65%);
+	font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ---------- Brand lockup (replaces WordPress's own logo/h1) ---------- */
+
+body.login #login h1 {
+	display: none;
+}
+
+.yp-login-lockup {
+	display: flex;
+	justify-content: center;
+	padding-top: 2.75rem;
+}
+
+.yp-login-lockup .yp-brand-lockup {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.7rem;
+	text-decoration: none;
+}
+
+.yp-login-lockup .yp-brand-lockup__mark {
+	width: 2rem;
+	height: 2.25rem;
+	flex-shrink: 0;
+}
+
+.yp-login-lockup .yp-brand-lockup__word {
+	font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	font-weight: 800;
+	font-size: 1.5rem;
+	letter-spacing: -0.02em;
+	color: #FAF9F6; /* warm-white */
+}
+
+/* ---------- Card ---------- */
+
+body.login #login {
+	width: 380px;
+	padding-top: 1.5rem;
+}
+
+@media (max-width: 420px) {
+	body.login #login {
+		width: 92%;
+	}
+}
+
+body.login #loginform {
+	background: #FFFFFF !important;
+	border: none !important;
+	border-radius: 20px !important; /* radius--card */
+	box-shadow: 0 6px 20px rgba(20, 20, 20, 0.08), 0 2px 6px rgba(20, 20, 20, 0.05) !important; /* shadow-elevation--medium */
+	padding: 2rem 1.75rem 1.75rem !important;
+}
+
+body.login .login label {
+	color: #3A3A3C; /* charcoal */
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+
+body.login #loginform .input,
+body.login #loginform input[type="text"],
+body.login #loginform input[type="password"],
+body.login #loginform input[type="email"] {
+	border-radius: 12px !important; /* radius--input */
+	border: 1.5px solid #E7E5E1 !important; /* light-gray */
+	box-shadow: none !important;
+	padding: 0.7rem 0.9rem !important;
+	font-size: 1rem !important;
+	background: #FFFFFF !important;
+	color: #141414;
+}
+
+body.login #loginform .input:focus,
+body.login #loginform input[type="text"]:focus,
+body.login #loginform input[type="password"]:focus,
+body.login #loginform input[type="email"]:focus {
+	border-color: #00AEEF !important; /* cyan */
+	box-shadow: 0 0 0 2px rgba(0, 174, 239, 0.22) !important;
+	outline: none;
+}
+
+body.login .forgetmenot {
+	font-size: 0.875rem;
+	color: #3A3A3C;
+}
+
+body.login .forgetmenot input[type="checkbox"] {
+	border-radius: 4px;
+}
+
+body.login .wp-hide-pw .dashicons {
+	color: #3A3A3C;
+}
+
+/* ---------- Submit button — same accent gradient/hover treatment as .wp-block-button.is-style-accent elsewhere on the site ---------- */
+
+body.login .submit {
+	margin-top: 1.25rem;
+}
+
+body.login #wp-submit {
+	width: 100%;
+	background: linear-gradient(135deg, #C2007A 0%, #0078A4 100%) !important; /* gradient-brand-deep */
+	background-size: 160% 160%;
+	background-position: 0% 50%;
+	border: none !important;
+	border-radius: 12px !important;
+	color: #FFFFFF !important;
+	text-shadow: none !important;
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	font-size: 1rem;
+	box-shadow: 0 8px 22px rgba(194, 0, 122, 0.28) !important;
+	padding: 0.8rem 1rem !important;
+	height: auto !important;
+	line-height: 1.4 !important;
+	transition: background-position 300ms ease, box-shadow 200ms ease, transform 150ms ease;
+}
+
+body.login #wp-submit:hover,
+body.login #wp-submit:focus {
+	background-position: 100% 50%;
+	box-shadow: 0 10px 28px rgba(0, 120, 164, 0.35) !important;
+	transform: translateY(-1px);
+	color: #FFFFFF !important;
+}
+
+/* ---------- Links, notices, footer ---------- */
+
+body.login #nav,
+body.login #backtoblog {
+	text-align: center;
+	margin-top: 1.5rem;
+}
+
+body.login #nav a,
+body.login #backtoblog a {
+	color: #FAF9F6;
+	font-size: 0.875rem;
+	text-decoration: none;
+}
+
+body.login #nav a:hover,
+body.login #backtoblog a:hover {
+	text-decoration: underline;
+	color: #FFFFFF;
+}
+
+body.login #login_error,
+body.login .message,
+body.login .notice {
+	border-radius: 12px !important;
+	border: none !important;
+	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04) !important; /* shadow-elevation--low */
+	background: #FFFFFF !important;
+	padding: 1rem 1.1rem !important;
+	font-size: 0.875rem;
+	margin: 0 0 1.25rem !important;
+}
+
+body.login #login_error {
+	border-left: 4px solid #EC008C !important; /* magenta */
+}
+
+body.login .message {
+	border-left: 4px solid #00AEEF !important; /* cyan */
+}
+
+body.login .privacy-policy-page-link {
+	text-align: center;
+	margin-top: 1rem;
+}
+
+body.login .privacy-policy-page-link a {
+	color: #FAF9F6;
+	opacity: 0.75;
+	font-size: 0.8rem;
+}
+
+body.login .privacy-policy-page-link a:hover {
+	opacity: 1;
+}
+
+/* Language switcher (only present on multisite/multilingual installs) — left functional, just recolored for the dark backdrop. */
+body.login .language-switcher {
+	text-align: center;
+	margin-top: 1rem;
+}
+
+body.login .language-switcher label,
+body.login .language-switcher .locale-dropdown {
+	color: #FAF9F6;
+}
+
+:where(body.login a, body.login button, body.login input, body.login select):focus-visible {
+	outline: 2px solid #00AEEF;
+	outline-offset: 2px;
+}

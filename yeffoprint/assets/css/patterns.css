@@ -891,8 +891,16 @@
 	   root-level spacing rule in global.css zeroes out margin-block-start
 	   on `main` itself, so without this the banner's top edge otherwise
 	   touches the search bar exactly) — same radius token as the other
-	   full-width rounded banner on this page, .yp-rewards-promo. */
-	margin-top: var(--wp--preset--spacing--sm);
+	   full-width rounded banner on this page, .yp-rewards-promo. Reported
+	   as still reading like there was no gap at spacing--sm: the actual
+	   root cause was margin-collapsing shrinking this margin as it passed
+	   through `main` on its way to becoming visible space (see global.css's
+	   `main.wp-block-group { display: flow-root; }`), on some of the promo
+	   banner's own dark theme colors (class-promo-themes.php) reading as
+	   barely separated from the dark search bar above even once it did
+	   render at the full amount — bumped a size up on top of the flow-root
+	   fix so there's still a clearly visible gap on those themes too. */
+	margin-top: var(--wp--preset--spacing--md);
 	border-radius: var(--wp--custom--radius--container);
 }
 
