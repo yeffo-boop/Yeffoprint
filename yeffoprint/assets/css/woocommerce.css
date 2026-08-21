@@ -187,23 +187,29 @@
 /* Both shipping-method and payment-method radio groups render with WC
    Blocks' own "highlight checked" treatment (payment methods always;
    shipping whenever the block enables it — screenshot showed both).
-   That treatment draws a second border/box shadow of its own, at a
-   hardcoded 4px radius that doesn't know about --radius--control above
-   — with every option already fully bordered/rounded on its own, the
-   only visible effect left was that hardcoded 4px corner poking out
-   past each option's larger rounded corner: a group-level box, near-
-   square, sized to the group, with the individual (more rounded) rows
-   sticking out past its edges. Every option already carries its own
-   full border and its own [aria-checked] treatment above, so this
-   group-level box and the checked option's extra box-shadow are pure
-   redundant duplicates once removed — not load-bearing for anything
-   this site's markup needs. */
+   That treatment draws its own border/box-shadow at a hardcoded 4px
+   radius that doesn't know about --radius--control above — with every
+   option already fully bordered/rounded on its own, the only visible
+   effect left was that mismatched hardcoded corner poking out past
+   each option's larger rounded corner. Two separate copies of it exist
+   and both need disabling, not just one — the option label itself
+   (`__option--checked-option-highlighted`) AND, for payment methods
+   specifically, a second wrapper one level up
+   (`-accordion-option--checked-option-highlighted`) that boxes the
+   *entire* selected accordion item, label plus its expanded redirect-
+   gateway content ("After submission, you will be redirected…") —
+   fixing only the first still left this second one drawing its own
+   square-cornered box around both. Every option already carries its
+   own full border and its own [aria-checked] treatment above, so all
+   of this is pure redundant duplication once identified — not load-
+   bearing for anything this site's markup needs. */
 .wc-block-components-radio-control--highlight-checked::after,
 .wc-block-components-radio-control--highlight-checked .wc-block-components-radio-control__option::after {
 	display: none !important;
 }
 
-.wc-block-components-radio-control__option--checked-option-highlighted {
+.wc-block-components-radio-control__option--checked-option-highlighted,
+.wc-block-components-radio-control-accordion-option--checked-option-highlighted {
 	box-shadow: none !important;
 }
 

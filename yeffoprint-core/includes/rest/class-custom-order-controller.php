@@ -190,10 +190,18 @@ class YeffoPrint_Custom_Order_Controller {
 	}
 
 	public function options() {
+		// Raw post_title, not get_the_title() — this feeds custom-
+		// order-form.js's <option> text via the same escapeHtml()
+		// (textContent/innerHTML) round trip as the Custom Stickers and
+		// main configurator size/material pickers, so it has the same
+		// double-escaping problem with any texturized title (e.g. a
+		// "2x3"-style Size name becomes the literal text "2&#215;3"
+		// instead of "2×3") — see class-custom-sticker-controller.php's
+		// options() for the full explanation.
 		$format = static function ( \WP_Post $post ) {
 			return [
 				'id'   => $post->ID,
-				'name' => get_the_title( $post ),
+				'name' => $post->post_title,
 			];
 		};
 

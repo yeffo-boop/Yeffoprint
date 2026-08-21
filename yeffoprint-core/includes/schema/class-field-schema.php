@@ -230,7 +230,16 @@ class YeffoPrint_Field_Schema {
 		return array_map( static function ( \WP_Post $post ) {
 			return [
 				'id'     => $post->ID,
-				'name'   => get_the_title( $post ),
+				// Raw post_title, not get_the_title() — field-schema.js
+				// renders this through its own escapeHtml()
+				// (textContent/innerHTML) when building the preset
+				// <option>, so a texturized title (e.g. one containing
+				// an apostrophe, which 'the_title' converts to a curly-
+				// quote HTML entity) would have its "&" escaped a
+				// second time and show up on the page as literal entity
+				// text — same bug as class-custom-sticker-controller.php's
+				// options().
+				'name'   => $post->post_title,
 				'fields' => self::get( $post->ID ),
 			];
 		}, $posts );
