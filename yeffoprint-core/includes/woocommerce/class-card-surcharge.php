@@ -1,16 +1,19 @@
 <?php
 /**
- * Passes credit card processing fees on to the customer — direct
- * request. Adds a cart fee (same mechanism YeffoPrint_Rewards already
- * uses for its own, negative, redemption fee) when the customer's
- * currently-selected payment method is one an admin has explicitly
- * opted in to (Dashboard → YeffoPrint → Settings → Card Surcharge).
+ * Passes payment processing fees on to the customer — direct request,
+ * at a different rate per gateway (a card and a "buy now, pay later"
+ * gateway like Afterpay typically cost genuinely different percentages
+ * to accept). Adds a cart fee (same mechanism YeffoPrint_Rewards
+ * already uses for its own, negative, redemption fee) sized to whatever
+ * rate an admin set for the customer's currently-selected payment
+ * method (Dashboard → YeffoPrint → Settings → Card Surcharge).
  *
- * Deliberately opt-in per gateway, not "surcharge every card
- * automatically" — this store also has manual gateways (Venmo, Zelle)
- * that must never be surcharged, and there's no reliable way to
- * distinguish "a card gateway" from "not a card gateway" by
- * inspecting a WC_Payment_Gateway object alone.
+ * Deliberately opt-in per gateway (a gateway missing from the stored
+ * rates, or with a rate at or below 0, is never surcharged) — this
+ * store also has manual gateways (Venmo, Zelle) that must never be
+ * surcharged, and there's no reliable way to distinguish "a gateway
+ * that costs a processing fee" from "one that doesn't" by inspecting a
+ * WC_Payment_Gateway object alone.
  *
  * The one thing this deliberately can't do: exclude debit cards.
  * Surcharging a debit card is a federal Durbin Amendment violation,
@@ -43,13 +46,14 @@ class YeffoPrint_Card_Surcharge {
 			return;
 		}
 
-		$rate = self::get_rate();
-		if ( $rate <= 0 ) {
+		$chosen_gateway = WC()->session ? (string) WC()->session->get( 'chosen_payment_method' ) : '';
+		if ( '' === $chosen_gateway ) {
 			return;
 		}
 
-		$chosen_gateway = WC()->session ? (string) WC()->session->get( 'chosen_payment_method' ) : '';
-		if ( '' === $chosen_gateway || ! in_array( $chosen_gateway, self::get_surcharged_gateway_ids(), true ) ) {
+		$rates = self::get_gateway_rates();
+		$rate  = (float) ( $rates[ $chosen_gateway ]['rate'] ?? 0 );
+		if ( $rate <= 0 ) {
 			return;
 		}
 
@@ -69,24 +73,21 @@ class YeffoPrint_Card_Surcharge {
 			return;
 		}
 
-		$cart->add_fee( self::get_label( $rate ), $surcharge, false );
+		$label = (string) ( $rates[ $chosen_gateway ]['label'] ?? '' );
+		$cart->add_fee( self::format_label( $label, $rate ), $surcharge, false );
 	}
 
-	public static function get_rate(): float {
-		return max( 0, (float) get_option( YeffoPrint_Admin_Menu::SURCHARGE_RATE_OPTION, 0 ) );
-	}
-
-	/** @return string[] Gateway ids an admin has explicitly opted in — empty by default, so nothing is ever surcharged until configured. */
-	public static function get_surcharged_gateway_ids(): array {
-		$stored = get_option( YeffoPrint_Admin_Menu::SURCHARGE_GATEWAYS_OPTION, [] );
+	/** @return array<string, array{rate:float, label:string}> Keyed by gateway id — empty by default, so nothing is ever surcharged until configured. */
+	public static function get_gateway_rates(): array {
+		$stored = get_option( YeffoPrint_Admin_Menu::SURCHARGE_GATEWAY_RATES_OPTION, [] );
 		return is_array( $stored ) ? $stored : [];
 	}
 
-	private static function get_label( float $rate ): string {
-		$template = (string) get_option( YeffoPrint_Admin_Menu::SURCHARGE_LABEL_OPTION ) ?: YeffoPrint_Admin_Menu::SURCHARGE_LABEL_DEFAULT;
+	private static function format_label( string $label, float $rate ): string {
+		$label      = '' !== $label ? $label : YeffoPrint_Admin_Menu::SURCHARGE_LABEL_DEFAULT;
 		$rate_label = rtrim( rtrim( number_format( $rate, 2 ), '0' ), '.' );
 
 		/* translators: 1: configured label text, 2: surcharge rate as a plain number */
-		return sprintf( __( '%1$s (%2$s%%)', 'yeffoprint-core' ), $template, $rate_label );
+		return sprintf( __( '%1$s (%2$s%%)', 'yeffoprint-core' ), $label, $rate_label );
 	}
 }
