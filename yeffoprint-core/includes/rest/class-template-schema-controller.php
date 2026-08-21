@@ -54,7 +54,11 @@ class YeffoPrint_Template_Schema_Controller {
 
 		return rest_ensure_response( [
 			'id'               => $template->ID,
-			'title'            => get_the_title( $template ),
+			// Raw post_title, not get_the_title() — see format_size()
+			// below for why (configurator.js sets this straight via
+			// titleEl.textContent, so a texturized entity would show up
+			// on the page literally rather than being decoded).
+			'title'            => $template->post_title,
 			// post_content is raw block markup, not renderable text as-is
 			// — run it through the_content first (so blocks actually
 			// render to HTML) before stripping tags down to plain text.
@@ -96,7 +100,17 @@ class YeffoPrint_Template_Schema_Controller {
 	private function format_size( \WP_Post $size ): array {
 		return [
 			'id'               => $size->ID,
-			'name'             => get_the_title( $size ),
+			// Raw post_title, not get_the_title() — configurator.js
+			// renders this through its own escapeHtml() (textContent
+			// then innerHTML) before building each Size/Material
+			// picker option, a plain-data context. get_the_title() runs
+			// the 'the_title' filter (wptexturize), which turns a title
+			// like "2x3" into the HTML entity "2&#215;3" — correct for
+			// direct HTML output, but escapeHtml() then escapes that
+			// entity's "&" a second time, so the page shows the raw
+			// entity text instead of "×". Same reasoning in
+			// format_material() below.
+			'name'             => $size->post_title,
 			'print_width_mm'   => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRINT_WIDTH_MM, true ),
 			'print_height_mm'  => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRINT_HEIGHT_MM, true ),
 			'price_adjustment' => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
@@ -108,7 +122,7 @@ class YeffoPrint_Template_Schema_Controller {
 
 		return [
 			'id'               => $material->ID,
-			'name'             => get_the_title( $material ),
+			'name'             => $material->post_title,
 			'description'      => wp_strip_all_tags( $material->post_content ),
 			'swatch_url'       => get_the_post_thumbnail_url( $material, 'thumbnail' ) ?: null,
 			'hover_image_url'  => $hover_id ? ( wp_get_attachment_image_url( $hover_id, 'thumbnail' ) ?: null ) : null,

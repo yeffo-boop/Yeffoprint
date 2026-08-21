@@ -54,7 +54,16 @@ class YeffoPrint_Custom_Sticker_Controller {
 		$size_data = array_map( static function ( \WP_Post $post ) {
 			return [
 				'id'        => $post->ID,
-				'name'      => get_the_title( $post ),
+				// Raw post_title, not get_the_title() — this feeds
+				// custom-sticker-form.js's <option> text via a
+				// textContent/innerHTML escape round-trip, a plain-data
+				// context. get_the_title() runs the 'the_title' filter
+				// (wptexturize), which turns a title like "2x2" into
+				// "2&#215;2" — appropriate for direct HTML output, but
+				// that HTML-entity substring then gets escaped a second
+				// time by the JS and shows up on the page literally as
+				// "2&#215;2" instead of "2×2".
+				'name'      => $post->post_title,
 				'price'     => (float) get_post_meta( $post->ID, YeffoPrint_Sticker_Size_Meta::PRICE, true ),
 				'width_in'  => (float) get_post_meta( $post->ID, YeffoPrint_Sticker_Size_Meta::WIDTH_IN, true ),
 				'height_in' => (float) get_post_meta( $post->ID, YeffoPrint_Sticker_Size_Meta::HEIGHT_IN, true ),
@@ -63,7 +72,7 @@ class YeffoPrint_Custom_Sticker_Controller {
 		}, $sizes );
 
 		$material_format = static function ( \WP_Post $post ) {
-			return [ 'id' => $post->ID, 'name' => get_the_title( $post ) ];
+			return [ 'id' => $post->ID, 'name' => $post->post_title ];
 		};
 
 		return rest_ensure_response( [
