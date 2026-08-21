@@ -34,7 +34,8 @@
 .woocommerce button.button,
 .woocommerce input.button,
 .wc-block-cart__submit-container .wc-block-cart__submit-button,
-.wc-block-components-checkout-place-order-button {
+.wc-block-components-checkout-place-order-button,
+#place_order {
 	border-radius: var(--wp--custom--radius--input) !important;
 	background: var(--wp--preset--color--near-black) !important;
 	color: var(--wp--preset--color--warm-white) !important;
@@ -43,7 +44,8 @@
 
 .woocommerce a.button:hover,
 .woocommerce button.button:hover,
-.wc-block-components-checkout-place-order-button:hover {
+.wc-block-components-checkout-place-order-button:hover,
+#place_order:hover {
 	background: var(--wp--preset--color--charcoal) !important;
 }
 
@@ -211,6 +213,89 @@
 .wc-block-components-radio-control__option--checked-option-highlighted,
 .wc-block-components-radio-control-accordion-option--checked-option-highlighted {
 	box-shadow: none !important;
+}
+
+/* ---------- Classic payment method list (the "Pay for order" page) ----------
+   WooCommerce never actually rebuilt checkout/form-pay.php (the page
+   behind both a declined-payment retry link and an admin-created
+   order's "customer payment link") on top of the Checkout block — it
+   always renders the old ul.wc_payment_methods/li.wc_payment_method
+   markup, completely different classes than the .wc-block-components-
+   radio-control__option styled above, so none of that styling reached
+   this page at all: default browser radio buttons, no card treatment,
+   nothing matching the rest of the site. Same visual language as the
+   block version above (card border, radius, checked state), rebuilt
+   against the classic selectors this one page actually renders. */
+.wc_payment_methods {
+	list-style: none;
+	margin: 0 0 1.5rem;
+	padding: 0;
+}
+
+.wc_payment_methods .wc_payment_method {
+	position: relative;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	margin-bottom: 0.6rem;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+	overflow: hidden;
+}
+
+.wc_payment_methods .wc_payment_method:has(> input.input-radio:checked) {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.wc_payment_methods .wc_payment_method > label {
+	display: block;
+	padding: 0.85rem 1rem 0.85rem 3rem;
+	cursor: pointer;
+}
+
+/* Native radio, custom-drawn to match the Blocks version's circle-plus-
+   dot rather than each browser's own default appearance — the two
+   checkouts sit one click apart (a declined payment sends the customer
+   straight back here) and shouldn't look like different sites. */
+.wc_payment_methods .wc_payment_method > input.input-radio {
+	appearance: none;
+	position: absolute;
+	left: 1rem;
+	top: 1.05rem;
+	width: 20px;
+	height: 20px;
+	margin: 0;
+	border: 1px solid var(--wp--preset--color--charcoal);
+	border-radius: 50%;
+	background: var(--wp--preset--color--white);
+}
+
+.wc_payment_methods .wc_payment_method > input.input-radio:checked {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.wc_payment_methods .wc_payment_method > input.input-radio:checked::after {
+	content: "";
+	position: absolute;
+	inset: 4px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--near-black);
+}
+
+.wc_payment_methods .payment_box {
+	background: var(--wp--preset--color--warm-white);
+	padding: 0 1rem 1rem 3rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+/* The default theme draws a small css-triangle "speech bubble" arrow
+   pointing up from this box to its radio — a nice touch on WC's own
+   plain white background, but it sits at a fixed left offset that
+   lands under the radio circle now that this box has its own
+   background and the radio has its own custom look above; simpler to
+   drop it than to keep re-deriving its position against both. */
+.wc_payment_methods .payment_box::before {
+	display: none;
 }
 
 .yp-blocks-payment-description {
