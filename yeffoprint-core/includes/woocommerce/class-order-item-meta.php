@@ -25,6 +25,8 @@ class YeffoPrint_Order_Item_Meta {
 		add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'snapshot' ], 10, 4 );
 		add_filter( 'woocommerce_hidden_order_itemmeta', [ $this, 'hide_internal_keys' ] );
 		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'add_qr_download_links' ], 10, 2 );
+		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'format_customization_display' ], 10, 2 );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_order_screen_assets' ] );
 	}
 
 	public function snapshot( \WC_Order_Item_Product $item, string $cart_item_key, array $values, \WC_Order $order ): void {
@@ -256,6 +258,116 @@ class YeffoPrint_Order_Item_Meta {
 		}
 
 		return $formatted_meta;
+	}
+
+	/**
+	 * Reformats the "Customization"/"Label N (qty M)" row(s) add_variant_
+	 * rows() adds — direct report: crammed into one meta value ("Compound
+	 * Name: X — Strength: Y — Color: Z — …"), that row is unreadable on
+	 * the order screen, exactly the field-by-field detail staff most need
+	 * clear when producing labels.
+	 *
+	 * Deliberately doesn't touch the *stored* meta value (still the
+	 * plain " — "-joined string add_variant_rows() wrote) — only
+	 * display_value, only on this one screen. That value is also what
+	 * plain-text customer emails and the migration plugin's export both
+	 * read verbatim; reformatting it as HTML would leave literal markup
+	 * showing in both. Rebuilding the list from the item's own
+	 * `_yp_variants`/`_yp_template_snapshot` (the same source
+	 * add_qr_download_links() above already reads) instead of parsing
+	 * the joined string back apart also sidesteps a real ambiguity a
+	 * regex split would hit: nothing stops a field's own value from
+	 * containing " — " or ": " itself.
+	 */
+	public function format_customization_display( array $formatted_meta, \WC_Order_Item $item ): array {
+		if ( ! $this->is_order_edit_screen() ) {
+			return $formatted_meta;
+		}
+
+		$variants_json = $item->get_meta( '_yp_variants' );
+		$snapshot_json = $item->get_meta( '_yp_template_snapshot' );
+		if ( ! $variants_json || ! $snapshot_json ) {
+			return $formatted_meta;
+		}
+
+		$variants     = json_decode( $variants_json, true );
+		$snapshot     = json_decode( $snapshot_json, true );
+		$field_schema = is_array( $snapshot['field_schema'] ?? null ) ? $snapshot['field_schema'] : [];
+
+		if ( ! is_array( $variants ) || ! $field_schema ) {
+			return $formatted_meta;
+		}
+
+		$multiple = count( $variants ) > 1;
+
+		foreach ( $variants as $index => $variant ) {
+			// Same label add_variant_rows() computed when it originally
+			// wrote this meta row — matching on it (rather than a new,
+			// separately-tracked key) finds the right entry without
+			// needing to change what gets stored.
+			$row_label = $multiple
+				? sprintf(
+					/* translators: 1: label number within the batch, 2: that label's own quantity */
+					__( 'Label %1$d (qty %2$d)', 'yeffoprint-core' ),
+					$index + 1,
+					(int) ( $variant['quantity'] ?? 0 )
+				)
+				: __( 'Customization', 'yeffoprint-core' );
+
+			foreach ( $formatted_meta as $entry ) {
+				if ( $entry->key !== $row_label ) {
+					continue;
+				}
+
+				$html = $this->variant_fields_html( $variant, $field_schema );
+				if ( '' !== $html ) {
+					$entry->display_value = $html;
+				}
+				break;
+			}
+		}
+
+		return $formatted_meta;
+	}
+
+	/** One row per field, label above value — see format_customization_display() above for why this is built from the variant/field_schema directly rather than reformatting the joined summary string. */
+	private function variant_fields_html( array $variant, array $field_schema ): string {
+		$values = (array) ( $variant['values'] ?? [] );
+		$rows   = [];
+
+		foreach ( $field_schema as $field ) {
+			$value = trim( (string) ( $values[ $field['id'] ] ?? '' ) );
+			if ( '' === $value ) {
+				continue;
+			}
+
+			$rows[] = sprintf(
+				'<div class="yp-order-field"><span class="yp-order-field__label">%s</span><span class="yp-order-field__value">%s</span></div>',
+				esc_html( (string) ( $field['label'] ?? '' ) ),
+				esc_html( $value )
+			);
+		}
+
+		return $rows ? '<div class="yp-order-fields">' . implode( '', $rows ) . '</div>' : '';
+	}
+
+	/** admin.css's .yp-order-field* rules above — order-edit screen only, same screen-id check as is_order_edit_screen(). */
+	public function enqueue_order_screen_assets( string $hook ): void {
+		if ( ! in_array( $hook, [ 'post.php', 'woocommerce_page_wc-orders' ], true ) ) {
+			return;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || ! in_array( $screen->id, [ 'shop_order', 'woocommerce_page_wc-orders' ], true ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'yeffoprint-core-admin',
+			YEFFOPRINT_CORE_URL . 'assets/admin/admin.css',
+			[],
+			yeffoprint_core_asset_version( 'assets/admin/admin.css' )
+		);
 	}
 
 	/**
