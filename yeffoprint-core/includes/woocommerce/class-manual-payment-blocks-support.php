@@ -50,6 +50,13 @@ abstract class YeffoPrint_Manual_Payment_Blocks_Support extends \Automattic\WooC
 		return [
 			'title'       => $this->settings['title'] ?? '',
 			'description' => $this->settings['description'] ?? '',
+			// The "send payment to" account (WooCommerce → Settings →
+			// Payments → Venmo/Zelle → the handle field) — direct
+			// request: previously only shown after checkout and in the
+			// on-hold email, so the checkout step itself had nowhere to
+			// tell the customer where to actually send money, only the
+			// generic admin-written description above.
+			'handle'      => $this->settings['handle'] ?? '',
 		];
 	}
 }

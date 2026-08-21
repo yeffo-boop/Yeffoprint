@@ -28,4 +28,22 @@ class YeffoPrint_Venmo_Gateway extends YeffoPrint_Manual_Payment_Gateway {
 	protected function default_description(): string {
 		return __( 'Pay with Venmo — we\'ll confirm your payment and begin your order shortly after.', 'yeffoprint-core' );
 	}
+
+	/**
+	 * Venmo's own profile link (`venmo.com/u/username`) — opens the
+	 * Venmo app on mobile (a universal link) or the profile page on
+	 * desktop, either way landing the customer on a real "Pay" button.
+	 * Deliberately not the app-only `venmo://paycharge?...` deep-link
+	 * scheme some integrations use to prefill the amount/note: that one
+	 * has no web fallback at all, so it just fails silently for anyone
+	 * without the Venmo app installed (or opening this from a desktop
+	 * email client) — a plain, always-working link beats a fancier one
+	 * that sometimes does nothing. The amount/order-number the customer
+	 * still needs to enter themselves are right next to this link in
+	 * instructions_text().
+	 */
+	protected function pay_url(): ?string {
+		$handle = ltrim( trim( (string) $this->get_option( 'handle' ) ), '@' );
+		return '' !== $handle ? 'https://venmo.com/u/' . rawurlencode( $handle ) : null;
+	}
 }
