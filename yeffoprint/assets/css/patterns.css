@@ -887,6 +887,13 @@
 		radial-gradient(circle at 100% 120%, var(--yp-promo-glow-b), transparent 60%);
 	color: var(--yp-promo-ink);
 	overflow: hidden;
+	/* A little breathing room off the search bar directly above it (the
+	   root-level spacing rule in global.css zeroes out margin-block-start
+	   on `main` itself, so without this the banner's top edge otherwise
+	   touches the search bar exactly) — same radius token as the other
+	   full-width rounded banner on this page, .yp-rewards-promo. */
+	margin-top: var(--wp--preset--spacing--sm);
+	border-radius: var(--wp--custom--radius--container);
 }
 
 .yp-promo__grid {
