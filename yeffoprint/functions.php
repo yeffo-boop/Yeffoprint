@@ -357,6 +357,87 @@ add_action( 'wp_enqueue_scripts', function () {
 			'nonce'   => wp_create_nonce( 'wp_rest' ),
 		] );
 	}
+
+	if ( is_page() && in_array( get_page_template_slug(), [ 'contact-form', 'contact-form.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-custom-order',
+			get_theme_file_uri( 'assets/css/custom-order.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/custom-order.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-contact-form',
+			get_theme_file_uri( 'assets/js/contact-form.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/contact-form.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		// Same stale-nonce-from-a-cached-page risk as the configurator
+		// above — see that comment.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		wp_localize_script( 'yeffoprint-contact-form', 'yeffoprintContact', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+		] );
+	}
+} );
+
+/**
+ * "We've upgraded" homepage splash — Dashboard → YeffoPrint → Settings
+ * → Splash Screen. Reuses the same accessible drawer primitive already
+ * driving the header's search/cart drawers (assets/js/site.js's
+ * openDrawer/closeDrawer + the .yp-drawer markup convention), just a
+ * centered-modal variant instead of a side panel — see global.css's
+ * .yp-drawer--center rules and site.js's initSplashScreen(). Markup
+ * only exists in the page at all when there's something to show,
+ * rather than always being present and CSS/JS-hidden — a disabled or
+ * unconfigured splash costs this page nothing.
+ */
+add_action( 'wp_footer', function () {
+	if ( ! is_front_page() || ! get_option( YeffoPrint_Admin_Menu::SPLASH_ENABLED_OPTION ) ) {
+		return;
+	}
+
+	$image_id  = (int) get_option( YeffoPrint_Admin_Menu::SPLASH_IMAGE_ID_OPTION );
+	$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'large' ) : '';
+	if ( ! $image_url ) {
+		return; // Nothing configured yet — see the Settings screen's own description.
+	}
+	?>
+	<div id="yp-splash-drawer" class="yp-drawer yp-drawer--center" aria-hidden="true">
+		<div class="yp-drawer__backdrop"></div>
+		<div class="yp-drawer__panel yp-splash" role="dialog" aria-modal="true" aria-labelledby="yp-splash-heading">
+			<button type="button" class="yp-icon-button yp-splash__close" data-yp-drawer-close aria-label="<?php esc_attr_e( 'Close', 'yeffoprint' ); ?>">
+				<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+					<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+				</svg>
+			</button>
+			<img class="yp-splash__image" src="<?php echo esc_url( $image_url ); ?>" alt="<?php esc_attr_e( 'A preview of the new YeffoPrint site', 'yeffoprint' ); ?>" />
+			<div class="yp-splash__body">
+				<p class="yp-eyebrow"><?php esc_html_e( "We've Upgraded", 'yeffoprint' ); ?></p>
+				<h2 id="yp-splash-heading"><?php esc_html_e( 'Welcome to the New YeffoPrint', 'yeffoprint' ); ?></h2>
+				<p><?php esc_html_e( "You're looking at our newly rebuilt site — faster, and easier to order from. We're still smoothing out a few rough edges after the move, so if anything looks off or isn't working the way it should, we'd genuinely appreciate you letting us know.", 'yeffoprint' ); ?></p>
+				<div class="yp-splash__actions">
+					<a href="/contact/" class="wp-block-button__link is-style-accent"><?php esc_html_e( 'Report an Issue', 'yeffoprint' ); ?></a>
+					<button type="button" class="yp-splash__dismiss" data-yp-drawer-close><?php esc_html_e( 'Continue to the site', 'yeffoprint' ); ?></button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php
 } );
 
 /**

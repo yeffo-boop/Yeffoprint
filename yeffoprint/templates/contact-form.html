@@ -1,0 +1,62 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-contact" class="yp-custom-order yp-section">
+
+		<p class="yp-eyebrow">Contact</p>
+		<h1>Get in Touch</h1>
+		<p>Question, order issue, or something on the site not working right? Send us a message and we'll get back to you.</p>
+
+		<form id="yp-contact-form">
+
+			<div class="yp-field">
+				<label for="yp-contact-name">Name</label>
+				<input type="text" id="yp-contact-name" name="name" autocomplete="name" required />
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-contact-email">Email</label>
+				<input type="email" id="yp-contact-email" name="email" autocomplete="email" required />
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-contact-method">Preferred contact method</label>
+				<select id="yp-contact-method" name="contact_method" required>
+					<option value="email">Email</option>
+					<option value="whatsapp">WhatsApp</option>
+					<option value="telegram">Telegram</option>
+				</select>
+			</div>
+
+			<div class="yp-field" data-yp-contact-handle-field hidden>
+				<label for="yp-contact-handle" data-yp-contact-handle-label>Username</label>
+				<input type="text" id="yp-contact-handle" name="contact_handle" />
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-contact-message">Message</label>
+				<textarea id="yp-contact-message" name="message" rows="6" maxlength="3000" required></textarea>
+			</div>
+
+			<!-- Honeypot — left visually hidden for real visitors (not type="hidden"; see class-contact-controller.php) and never filled in by one. -->
+			<div class="yp-field yp-field--honeypot" aria-hidden="true">
+				<label for="yp-contact-website">Website</label>
+				<input type="text" id="yp-contact-website" name="website" tabindex="-1" autocomplete="off" />
+			</div>
+
+			<p>
+				<button type="submit" class="wp-block-button__link is-style-accent" data-yp-contact-submit>Send Message</button>
+			</p>
+
+		</form>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

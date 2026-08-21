@@ -80,6 +80,25 @@ class YeffoPrint_Admin_Menu {
 	 */
 	const LIVE_PREVIEW_ENABLED_OPTION = 'yeffoprint_live_preview_enabled';
 
+	/** Also read by class-contact-controller.php — same reasoning as the options above. */
+	const CONTACT_RECIPIENT_EMAIL_OPTION  = 'yeffoprint_contact_recipient_email';
+	const CONTACT_RECIPIENT_EMAIL_DEFAULT = 'yeffo@yeffoprint.com';
+
+	/**
+	 * Also read by functions.php's wp_footer splash-screen renderer —
+	 * same reasoning as the options above. Direct request, for a brand-
+	 * new site: a dismissible "we've upgraded" splash on the homepage,
+	 * with a kill switch here for once it's no longer needed — rather
+	 * than deleting/re-adding code each time, an admin just unchecks
+	 * this box. Off by default: nothing to show until an admin has
+	 * actually picked a screenshot below.
+	 */
+	const SPLASH_ENABLED_OPTION  = 'yeffoprint_splash_enabled';
+	const SPLASH_IMAGE_ID_OPTION = 'yeffoprint_splash_image_id';
+
+	/** Hook suffix for the Settings screen, captured from add_submenu_page()'s own return value — see enqueue_settings_assets(). */
+	private $settings_page_hook = '';
+
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
 		// Runs after WordPress has built every submenu (including the
@@ -89,6 +108,7 @@ class YeffoPrint_Admin_Menu {
 		// as reliable as chasing an exact "after CPT registration" hook.
 		add_action( 'admin_menu', [ $this, 'add_needs_attention_badge' ], 999 );
 		add_action( 'admin_init', [ $this, 'register_settings' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_settings_assets' ] );
 	}
 
 	public function register_menu(): void {
@@ -102,13 +122,30 @@ class YeffoPrint_Admin_Menu {
 			25
 		);
 
-		add_submenu_page(
+		$this->settings_page_hook = (string) add_submenu_page(
 			'yeffoprint',
 			__( 'Settings', 'yeffoprint-core' ),
 			__( 'Settings', 'yeffoprint-core' ),
 			'manage_options',
 			'yeffoprint-settings',
 			[ $this, 'render_settings_page' ]
+		);
+	}
+
+	/** wp.media, for the splash screenshot picker below — only on the Settings screen itself, not every wp-admin page. */
+	public function enqueue_settings_assets( string $hook ): void {
+		if ( ! $this->settings_page_hook || $hook !== $this->settings_page_hook ) {
+			return;
+		}
+
+		wp_enqueue_media();
+
+		wp_enqueue_script(
+			'yeffoprint-core-vial-mockup-picker', // Generic wp.media picker script from Phase 4 — reused as-is (see class-material-size-editor.php/class-proof-editor.php for the same pattern).
+			YEFFOPRINT_CORE_URL . 'assets/admin/vial-mockup-picker.js',
+			[ 'media-editor' ],
+			yeffoprint_core_asset_version( 'assets/admin/vial-mockup-picker.js' ),
+			true
 		);
 	}
 
@@ -255,6 +292,111 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_live_preview'
 		);
+
+		register_setting( 'yeffoprint_settings', self::CONTACT_RECIPIENT_EMAIL_OPTION, [
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_email',
+			'default'           => self::CONTACT_RECIPIENT_EMAIL_DEFAULT,
+		] );
+
+		add_settings_section(
+			'yeffoprint_contact',
+			__( 'Contact Form', 'yeffoprint-core' ),
+			'__return_false',
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::CONTACT_RECIPIENT_EMAIL_OPTION,
+			__( 'Send messages to', 'yeffoprint-core' ),
+			[ $this, 'render_contact_recipient_email_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_contact'
+		);
+
+		register_setting( 'yeffoprint_settings', self::SPLASH_ENABLED_OPTION, [
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		] );
+
+		register_setting( 'yeffoprint_settings', self::SPLASH_IMAGE_ID_OPTION, [
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'default'           => 0,
+		] );
+
+		add_settings_section(
+			'yeffoprint_splash',
+			__( 'Splash Screen', 'yeffoprint-core' ),
+			[ $this, 'render_splash_section_intro' ],
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::SPLASH_ENABLED_OPTION,
+			__( 'Show splash screen', 'yeffoprint-core' ),
+			[ $this, 'render_splash_enabled_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_splash'
+		);
+
+		add_settings_field(
+			self::SPLASH_IMAGE_ID_OPTION,
+			__( 'Screenshot', 'yeffoprint-core' ),
+			[ $this, 'render_splash_image_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_splash'
+		);
+	}
+
+	public function render_contact_recipient_email_field(): void {
+		$value = get_option( self::CONTACT_RECIPIENT_EMAIL_OPTION, self::CONTACT_RECIPIENT_EMAIL_DEFAULT );
+		?>
+		<input
+			type="email"
+			class="regular-text"
+			name="<?php echo esc_attr( self::CONTACT_RECIPIENT_EMAIL_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Every Contact form submission is emailed here. Replying to that email replies straight to the customer — their address is set as the Reply-To, not the From.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_splash_section_intro(): void {
+		esc_html_e( 'A dismissible welcome screen shown once per visit on the homepage — useful right after a relaunch, to point visitors at the Contact form if they run into anything. Each visitor sees it once per browser session; it comes back if they close the tab and return later, until it\'s switched off here.', 'yeffoprint-core' );
+	}
+
+	public function render_splash_enabled_field(): void {
+		$enabled = (bool) get_option( self::SPLASH_ENABLED_OPTION, false );
+		?>
+		<input type="hidden" name="<?php echo esc_attr( self::SPLASH_ENABLED_OPTION ); ?>" value="0" />
+		<label>
+			<input
+				type="checkbox"
+				name="<?php echo esc_attr( self::SPLASH_ENABLED_OPTION ); ?>"
+				value="1"
+				<?php checked( $enabled ); ?>
+			/>
+			<?php esc_html_e( 'Show it on the homepage', 'yeffoprint-core' ); ?>
+		</label>
+		<p class="description"><?php esc_html_e( 'Turn this off once it\'s no longer needed — nothing else about the site changes either way.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	/** Same generic wp.media picker as class-material-size-editor.php's "Vial mockup image" field — see enqueue_settings_assets() above. */
+	public function render_splash_image_field(): void {
+		$image_id = (int) get_option( self::SPLASH_IMAGE_ID_OPTION, 0 );
+		$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'medium' ) : '';
+		?>
+		<span id="yp-vial-mockup-preview"><?php if ( $image_url ) : ?><img src="<?php echo esc_url( $image_url ); ?>" alt="" style="max-width:100%;height:auto;" /><?php endif; ?></span>
+		<p>
+			<input type="hidden" id="yp-vial-mockup-id" name="<?php echo esc_attr( self::SPLASH_IMAGE_ID_OPTION ); ?>" value="<?php echo esc_attr( $image_id ); ?>" />
+			<button type="button" class="button" id="yp-vial-mockup-select"><?php esc_html_e( 'Select screenshot', 'yeffoprint-core' ); ?></button>
+			<button type="button" class="button-link" id="yp-vial-mockup-remove" <?php echo $image_id ? '' : 'style="display:none;"'; ?>><?php esc_html_e( 'Remove', 'yeffoprint-core' ); ?></button>
+		</p>
+		<p class="description"><?php esc_html_e( 'A screenshot of the new site — shown alongside the "we\'ve upgraded" message. A wide screenshot (e.g. the homepage) works best.', 'yeffoprint-core' ); ?></p>
+		<?php
 	}
 
 	/**
