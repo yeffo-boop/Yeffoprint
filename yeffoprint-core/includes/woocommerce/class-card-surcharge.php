@@ -60,6 +60,94 @@ class YeffoPrint_Card_Surcharge {
 		// chosen gateway's process_payment() on submit — so both what's
 		// shown and what's actually charged reflect it.
 		add_action( 'woocommerce_before_pay_action', [ $this, 'sync_pay_order_surcharge' ] );
+
+		// The above gets the fee showing at all on page load/submit, but
+		// unlike the real (block) Checkout, this classic page has no
+		// built-in AJAX totals refresh when a different payment radio is
+		// picked — WooCommerce's own checkout.js only binds to
+		// form.checkout, not this page's #order_review form. Direct
+		// follow-up request: make the displayed total update live here
+		// too, the same way it already does on Checkout (class-card-
+		// surcharge-blocks-integration.php). ajax_sync_pay_order_
+		// surcharge() below and assets/frontend/pay-order-surcharge.js
+		// are the two pieces that do it.
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_pay_order_script' ] );
+		add_action( 'wp_ajax_yeffoprint_sync_pay_order_surcharge', [ $this, 'ajax_sync_pay_order_surcharge' ] );
+		add_action( 'wp_ajax_nopriv_yeffoprint_sync_pay_order_surcharge', [ $this, 'ajax_sync_pay_order_surcharge' ] );
+	}
+
+	public function enqueue_pay_order_script(): void {
+		if ( ! function_exists( 'is_checkout_pay_page' ) || ! is_checkout_pay_page() ) {
+			return;
+		}
+
+		$order_id = absint( get_query_var( 'order-pay' ) );
+		if ( ! $order_id ) {
+			return;
+		}
+
+		$path = 'assets/frontend/pay-order-surcharge.js';
+		wp_enqueue_script(
+			'yeffoprint-pay-order-surcharge',
+			YEFFOPRINT_CORE_URL . $path,
+			[],
+			yeffoprint_core_asset_version( $path ),
+			true
+		);
+
+		wp_localize_script( 'yeffoprint-pay-order-surcharge', 'yeffoprintPayOrderSurcharge', [
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'orderId' => $order_id,
+			'nonce'   => wp_create_nonce( 'yeffoprint_pay_order_surcharge' ),
+		] );
+	}
+
+	/**
+	 * The nonce above proves the request came from this page load; it
+	 * doesn't prove the requester actually owns this order (a guest has
+	 * no account to check against). order_key is the same secret
+	 * WC_Form_Handler::pay_action() itself requires for the real
+	 * submission — checked here the same way, via hash_equals(), before
+	 * this touches the order at all.
+	 */
+	public function ajax_sync_pay_order_surcharge(): void {
+		check_ajax_referer( 'yeffoprint_pay_order_surcharge', 'nonce' );
+
+		$order_id  = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+		$order_key = isset( $_POST['order_key'] ) ? sanitize_text_field( wp_unslash( $_POST['order_key'] ) ) : '';
+		$order     = $order_id ? wc_get_order( $order_id ) : false;
+
+		if ( ! $order instanceof \WC_Order || '' === $order_key || ! hash_equals( $order->get_order_key(), $order_key ) ) {
+			wp_send_json_error( [ 'message' => __( 'Order not found.', 'yeffoprint-core' ) ], 404 );
+		}
+
+		if ( ! $order->needs_payment() ) {
+			wp_send_json_error( [ 'message' => __( 'This order no longer needs payment.', 'yeffoprint-core' ) ], 400 );
+		}
+
+		// sync_pay_order_surcharge() reads the chosen gateway from
+		// $_POST['payment_method'] itself (chosen_gateway_for_pay_order()
+		// below) — already present here, sent by pay-order-surcharge.js
+		// as the radio the customer just clicked.
+		$this->sync_pay_order_surcharge( $order );
+
+		wp_send_json_success( [
+			'totalsHtml' => $this->render_order_totals_rows( $order ),
+		] );
+	}
+
+	/** Same <tr> markup checkout/form-pay.php's own <tfoot> builds from this exact method — kept identical so the live-updated rows match what a full page load would have rendered. */
+	private function render_order_totals_rows( \WC_Order $order ): string {
+		ob_start();
+		foreach ( $order->get_order_item_totals() as $total ) {
+			?>
+			<tr>
+				<th scope="row"><?php echo esc_html( $total['label'] ); ?></th>
+				<td><?php echo wp_kses_post( $total['value'] ); ?></td>
+			</tr>
+			<?php
+		}
+		return (string) ob_get_clean();
 	}
 
 	public function apply_surcharge( \WC_Cart $cart ): void {
