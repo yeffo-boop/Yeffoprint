@@ -40,7 +40,19 @@ class YeffoPrint_Migrate_File_Store {
 		}
 	}
 
-	/** @return string|\WP_Error Absolute path to the new, empty file. */
+	/**
+	 * @return string|\WP_Error Absolute path to the new, empty file.
+	 *   Actually creates that empty file (not just the path string) —
+	 *   the batched export loop's very first call (class-ajax-
+	 *   controller.php's export_batch()) calls this, then immediately
+	 *   calls resolve() on the same path to get back a real, checked
+	 *   path to append each batch's rows to. resolve() requires the
+	 *   file to already exist ("was this migration file actually
+	 *   found," not "is this a safe path to write one at") — without
+	 *   creating it here first, that resolve() call always failed with
+	 *   "That migration file was not found," on every single export,
+	 *   before a single row was ever written.
+	 */
 	public static function new_export_path( string $kind, string $extension ) {
 		self::protect_storage_dir();
 
@@ -50,7 +62,13 @@ class YeffoPrint_Migrate_File_Store {
 		}
 
 		$filename = sprintf( 'yeffoprint-migrate-%s-%s.%s', $kind, gmdate( 'Ymd-His' ), $extension );
-		return $dir . '/' . $filename;
+		$path     = $dir . '/' . $filename;
+
+		if ( false === file_put_contents( $path, '' ) ) {
+			return new \WP_Error( 'yeffoprint_migrate_file_create_failed', __( "Couldn't create the export file.", 'yeffoprint-migrate' ) );
+		}
+
+		return $path;
 	}
 
 	/** Validates that $filename (a bare filename, no path segments) exists inside the protected dir and returns its absolute path, or a WP_Error. */
