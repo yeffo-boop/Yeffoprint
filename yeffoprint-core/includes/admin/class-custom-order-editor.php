@@ -117,7 +117,16 @@ class YeffoPrint_Custom_Order_Editor {
 						<?php echo $this->render_upload_list( $uploads ); ?>
 					</td></tr>
 				<?php endif; ?>
-				<tr><th><?php esc_html_e( 'Design Fee', 'yeffoprint-core' ); ?></th><td>
+				<tr><th>
+					<?php
+					// Stickers have no separate flat fee (class-custom-
+					// order-payment.php's find_design_fee()) — this field
+					// records the whole amount paid for that flow instead,
+					// so the row is labeled to match what it's actually
+					// showing.
+					echo esc_html( $is_sticker ? __( 'Amount Paid', 'yeffoprint-core' ) : __( 'Design Fee', 'yeffoprint-core' ) );
+					?>
+				</th><td>
 					<?php
 					$fee = $m( YeffoPrint_Custom_Order_Meta::DESIGN_FEE );
 					echo $fee ? esc_html( '$' . number_format_i18n( (float) $fee, 2 ) . ' — paid' ) : esc_html__( 'Awaiting payment', 'yeffoprint-core' );

@@ -51,6 +51,29 @@ class YeffoPrint_Pricing_Controller {
 				'exclude_cart_item_key' => [ 'required' => false ],
 			],
 		] );
+
+		// Custom Stickers' own preview — kept here alongside the label
+		// one above rather than in class-custom-sticker-controller.php,
+		// same "one authoritative pricing home" reasoning this whole
+		// file's docblock already states; not folded into /pricing/
+		// calculate itself since the two flows' formulas take genuinely
+		// different inputs (a sticker size tier can mean custom
+		// dimensions, plus a type/shape neither label pricing has).
+		register_rest_route( self::NAMESPACE, '/pricing/calculate-sticker', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'calculate_sticker' ],
+			'permission_callback' => '__return_true',
+			'args'                => [
+				'quantity'              => [ 'required' => true ],
+				'size_id'               => [ 'required' => true ],
+				'material_id'           => [ 'required' => false ],
+				'sticker_type'          => [ 'required' => true ],
+				'shape'                 => [ 'required' => true ],
+				'custom_width_in'       => [ 'required' => false ],
+				'custom_height_in'      => [ 'required' => false ],
+				'exclude_cart_item_key' => [ 'required' => false ],
+			],
+		] );
 	}
 
 	public function calculate( \WP_REST_Request $request ) {
@@ -91,6 +114,38 @@ class YeffoPrint_Pricing_Controller {
 
 		return rest_ensure_response(
 			YeffoPrint_Pricing_Rule::calculate( (float) $material_adjustment, (float) $size_adjustment, (int) $quantity, $tier_quantity )
+		);
+	}
+
+	public function calculate_sticker( \WP_REST_Request $request ) {
+		$quantity = $request->get_param( 'quantity' );
+
+		if ( ! is_numeric( $quantity ) || (int) $quantity < 1 || (int) $quantity > self::MAX_QUANTITY ) {
+			return new \WP_Error(
+				'yeffoprint_invalid_quantity',
+				__( 'Quantity must be a whole number of at least 1.', 'yeffoprint-core' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		if ( function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart(); // So combined_sticker_quantity() below sees this session's actual cart.
+		}
+
+		$exclude_cart_item_key = (string) $request->get_param( 'exclude_cart_item_key' );
+		$tier_quantity          = (int) $quantity + YeffoPrint_Cart_Pricing::combined_sticker_quantity( null, $exclude_cart_item_key ?: null );
+
+		return rest_ensure_response(
+			YeffoPrint_Sticker_Pricing::calculate(
+				absint( $request->get_param( 'size_id' ) ),
+				(float) $request->get_param( 'custom_width_in' ),
+				(float) $request->get_param( 'custom_height_in' ),
+				absint( $request->get_param( 'material_id' ) ),
+				sanitize_key( (string) $request->get_param( 'sticker_type' ) ),
+				sanitize_key( (string) $request->get_param( 'shape' ) ),
+				(int) $quantity,
+				$tier_quantity
+			)
 		);
 	}
 

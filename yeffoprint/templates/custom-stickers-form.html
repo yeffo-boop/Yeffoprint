@@ -1,0 +1,86 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-custom-sticker" class="yp-custom-order yp-section">
+
+		<p class="yp-eyebrow">Custom Stickers</p>
+		<h1>Order Custom Stickers</h1>
+		<p>Upload your print-ready artwork and we'll take it from there. A designer reviews every request and sends a proof before anything prints.</p>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<form id="yp-custom-sticker-form" hidden>
+
+			<div class="yp-field">
+				<label for="yp-cs-type">Sticker type</label>
+				<select id="yp-cs-type" name="sticker_type" required></select>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-cs-shape">Shape</label>
+				<select id="yp-cs-shape" name="shape" required></select>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-cs-size">Size</label>
+				<select id="yp-cs-size" name="size_id" required></select>
+			</div>
+
+			<div class="yp-field" data-yp-cs-custom-dimensions hidden>
+				<label for="yp-cs-width">Width &times; height (inches)</label>
+				<div class="yp-custom-sticker__dimensions">
+					<input type="number" id="yp-cs-width" name="custom_width_in" min="0.1" step="0.1" placeholder="Width" />
+					<span aria-hidden="true">&times;</span>
+					<input type="number" id="yp-cs-height" name="custom_height_in" min="0.1" step="0.1" placeholder="Height" />
+				</div>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-cs-material">Material</label>
+				<select id="yp-cs-material" name="material_id" required></select>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-cs-quantity-input">Quantity</label>
+				<div class="yp-quantity-control" data-yp-cs-quantity></div>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-cs-instructions">Instructions <span class="description">(optional)</span></label>
+				<textarea id="yp-cs-instructions" name="instructions" rows="4" maxlength="1000" class="widefat"></textarea>
+			</div>
+
+			<div class="yp-field">
+				<label for="yp-cs-files">Print-ready artwork <span class="description">(required — PDF, SVG, PNG, or JPG, up to 5 files)</span></label>
+				<input type="file" id="yp-cs-files" name="files" multiple accept=".pdf,.svg,.png,.jpg,.jpeg,application/pdf,image/svg+xml,image/png,image/jpeg" />
+				<ul class="yp-custom-order__file-list" data-yp-cs-file-list></ul>
+			</div>
+
+			<div class="yp-custom-order__pricing">
+				<div class="yp-custom-order__fee">
+					<span>Stickers (<span data-yp-cs-qty>&mdash;</span> @ <span data-yp-cs-unit-price>&mdash;</span>/sticker)</span>
+					<strong data-yp-cs-subtotal>&mdash;</strong>
+				</div>
+				<div class="yp-custom-order__fee yp-custom-order__fee--total">
+					<span>Total due today</span>
+					<strong data-yp-cs-total>&mdash;</strong>
+				</div>
+			</div>
+			<p class="description">A designer reviews your artwork and sends a proof before anything prints — production begins once you approve it.</p>
+
+			<p>
+				<button type="submit" class="wp-block-button__link is-style-accent" data-yp-cs-submit>Continue to Payment</button>
+			</p>
+
+		</form>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

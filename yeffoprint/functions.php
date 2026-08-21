@@ -243,6 +243,43 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
+	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-stickers-form', 'custom-stickers-form.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		// Same custom-order.css both forms share — see that file's own
+		// docblock for why it isn't split in two.
+		wp_enqueue_style(
+			'yeffoprint-custom-order',
+			get_theme_file_uri( 'assets/css/custom-order.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/custom-order.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-custom-sticker-form',
+			get_theme_file_uri( 'assets/js/custom-sticker-form.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/custom-sticker-form.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		// Same stale-nonce-from-a-cached-page risk as the configurator
+		// above — see that comment.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		wp_localize_script( 'yeffoprint-custom-sticker-form', 'yeffoprintCustomSticker', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+		] );
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'proof-approval', 'proof-approval.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',

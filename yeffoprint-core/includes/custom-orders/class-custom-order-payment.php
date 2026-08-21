@@ -85,8 +85,28 @@ class YeffoPrint_Custom_Order_Payment {
 	 * (`_yp_batch_quantity`, set only on the labels item — class-order-
 	 * item-meta.php) rather than trusting "whichever item triggered
 	 * this call" to be the fee.
+	 *
+	 * Custom Stickers has no equivalent flat fee item at all (direct
+	 * pricing decision, docs/ARCHITECTURE.md — preset size tiers only,
+	 * no separate proofing charge), so its one linked item *always*
+	 * carries `_yp_batch_quantity` and would otherwise fall through to
+	 * the label flow's own fee constant below — meaningless for a
+	 * sticker order, and not even the right dollar amount. DESIGN_FEE's
+	 * stored meaning here is really "what unlocked production," not
+	 * literally "the flat design fee" — for a sticker order that's just
+	 * the sum of its own linked item(s).
 	 */
 	private function find_design_fee( \WC_Order $order, int $custom_order_id ): float {
+		if ( 'sticker' === YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id ) ) {
+			$total = 0.0;
+			foreach ( $order->get_items() as $item ) {
+				if ( (int) $item->get_meta( '_yp_custom_order_id' ) === $custom_order_id ) {
+					$total += (float) $item->get_total();
+				}
+			}
+			return $total;
+		}
+
 		foreach ( $order->get_items() as $item ) {
 			if ( (int) $item->get_meta( '_yp_custom_order_id' ) !== $custom_order_id ) {
 				continue;

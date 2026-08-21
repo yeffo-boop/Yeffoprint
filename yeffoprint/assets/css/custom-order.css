@@ -1,8 +1,12 @@
 /*
- * Create a Custom Label form (PROJECT_SPEC §13). Reuses .yp-field,
- * .yp-quantity-* and .yp-configurator__cart-status from
- * configurator.css (enqueued alongside this file) — this only adds
- * what's unique to this form.
+ * Create a Custom Label form (PROJECT_SPEC §13) and the Custom Stickers
+ * form (docs/ARCHITECTURE.md) — both reuse this same file rather than
+ * each getting their own: same field/pricing-summary layout, same
+ * .yp-custom-order root class on both pages (a shared "one-off request
+ * form" shell, not a Template-batch/configurator one), the only real
+ * difference between the two is which fields the form asks for. Also
+ * reuses .yp-field, .yp-quantity-* and .yp-configurator__cart-status
+ * from configurator.css (enqueued alongside this file).
  */
 
 .yp-custom-order {
@@ -55,4 +59,14 @@
 	font-size: var(--wp--preset--font-size--large);
 	font-weight: 700;
 	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-custom-sticker__dimensions {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.yp-custom-sticker__dimensions input {
+	max-width: 8rem;
 }

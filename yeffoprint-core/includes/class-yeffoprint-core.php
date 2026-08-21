@@ -53,11 +53,13 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-cart-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-design-fee-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-order-labels-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-sticker-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/uploads/class-secure-upload.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-payment.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-custom-order-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-custom-sticker-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-proof-approval-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-endpoints.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rewards/class-rewards.php';
@@ -93,6 +95,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Custom_Order_Meta();
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
+		new YeffoPrint_Custom_Sticker_Controller();
 		new YeffoPrint_Proof_Approval_Controller();
 		new YeffoPrint_Account_Endpoints();
 		new YeffoPrint_Rewards();
