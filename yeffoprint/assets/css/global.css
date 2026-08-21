@@ -628,6 +628,12 @@ fieldset {
 	bottom: auto;
 	width: min(600px, calc(100% - 2rem));
 	max-height: min(680px, calc(100% - 2rem));
+	/* dvh accounts for a mobile browser's own collapsing address/tab
+	   bar — % and vh both size against the *largest* case there, which
+	   overstates how much vertical room is actually available once
+	   that bar is on-screen. Harmless on browsers that don't support
+	   dvh: an invalid value here is ignored, leaving the line above. */
+	max-height: min(680px, calc(100dvh - 2rem));
 	height: auto;
 	border-radius: var(--wp--custom--radius--card);
 	transform: translate(-50%, -50%) scale(0.96);
@@ -782,7 +788,7 @@ fieldset {
 }
 
 .yp-splash__body {
-	padding: 1.75rem 2rem 2rem;
+	padding: 1.75rem 2rem 0;
 }
 
 .yp-splash__body h2 {
@@ -794,12 +800,24 @@ fieldset {
 	color: var(--wp--preset--color--charcoal);
 }
 
+/* Sticky, not just "last in the flow": on a phone-height screen this
+   panel scrolls internally (.yp-drawer--center's own max-height), and
+   a button that only appears once you've scrolled to the very bottom
+   is a button most people never find — direct report, confirmed on a
+   real device. Pinning it to the bottom of the panel's own scroll area
+   means it's always the last thing in view, however tall the message
+   above ends up being on a given screen. */
 .yp-splash__actions {
+	position: sticky;
+	bottom: 0;
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
 	gap: 1.25rem;
 	margin-top: 1.25rem;
+	padding: 1rem 0;
+	background: var(--wp--preset--color--white);
+	border-top: 1px solid var(--wp--preset--color--light-gray);
 }
 
 .yp-splash__dismiss {
@@ -822,5 +840,16 @@ fieldset {
 @media (max-width: 781px) {
 	.yp-header__row {
 		flex-wrap: nowrap;
+	}
+
+	/* Less room to give the screenshot on a phone-height screen, so
+	   there's more left for the actual message before the sticky
+	   actions bar (above) has to kick in at all. */
+	.yp-splash__image {
+		height: 8rem;
+	}
+
+	.yp-splash__body {
+		padding: 1.25rem 1.5rem 0;
 	}
 }

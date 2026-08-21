@@ -431,8 +431,8 @@ add_action( 'wp_footer', function () {
 				<h2 id="yp-splash-heading"><?php esc_html_e( 'Welcome to the New YeffoPrint', 'yeffoprint' ); ?></h2>
 				<p><?php esc_html_e( "You're looking at our newly rebuilt site — faster, and easier to order from. We're still smoothing out a few rough edges after the move, so if anything looks off or isn't working the way it should, we'd genuinely appreciate you letting us know.", 'yeffoprint' ); ?></p>
 				<div class="yp-splash__actions">
-					<a href="/contact/" class="wp-block-button__link is-style-accent"><?php esc_html_e( 'Report an Issue', 'yeffoprint' ); ?></a>
-					<button type="button" class="yp-splash__dismiss" data-yp-drawer-close><?php esc_html_e( 'Continue to the site', 'yeffoprint' ); ?></button>
+					<button type="button" class="wp-block-button__link is-style-accent" data-yp-drawer-close><?php esc_html_e( 'Continue to the site', 'yeffoprint' ); ?></button>
+					<a href="/contact/" class="yp-splash__dismiss"><?php esc_html_e( 'Report an Issue', 'yeffoprint' ); ?></a>
 				</div>
 			</div>
 		</div>
