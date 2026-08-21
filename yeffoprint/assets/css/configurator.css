@@ -195,6 +195,19 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
+/* Informational, not an error — same shape as the overflow warning
+   above, neutral tone instead of magenta since nothing is wrong here,
+   just intentionally turned off (Dashboard → YeffoPrint → Settings →
+   Label Configurator). */
+.yp-configurator__live-preview-note {
+	margin-top: 0.75rem;
+	padding: 0.75rem 1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+}
+
 .yp-configurator__title {
 	margin-top: 0;
 }

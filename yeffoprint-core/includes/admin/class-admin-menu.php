@@ -66,6 +66,20 @@ class YeffoPrint_Admin_Menu {
 	const SURCHARGE_GATEWAY_RATES_OPTION = 'yeffoprint_surcharge_gateway_rates';
 	const SURCHARGE_LABEL_DEFAULT         = 'Processing Fee';
 
+	/**
+	 * Also read by class-template-schema-controller.php — same reasoning
+	 * as the options above. Direct request: a kill switch for the
+	 * configurator's live, per-keystroke on-label text preview, for
+	 * whenever an admin is mid-way through adjusting field positions
+	 * (Template editor) and doesn't want customers seeing not-yet-
+	 * correct alignment in the meantime. Off doesn't touch anything
+	 * else — customers can still fill in every field, add variants, and
+	 * check out; they just don't see live on-image text on Label View
+	 * until this is switched back on. Vial View (never live text to
+	 * begin with) is unaffected either way.
+	 */
+	const LIVE_PREVIEW_ENABLED_OPTION = 'yeffoprint_live_preview_enabled';
+
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
 		// Runs after WordPress has built every submenu (including the
@@ -220,6 +234,53 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_surcharge'
 		);
+
+		register_setting( 'yeffoprint_settings', self::LIVE_PREVIEW_ENABLED_OPTION, [
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		] );
+
+		add_settings_section(
+			'yeffoprint_live_preview',
+			__( 'Label Configurator', 'yeffoprint-core' ),
+			'__return_false',
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::LIVE_PREVIEW_ENABLED_OPTION,
+			__( 'Live preview', 'yeffoprint-core' ),
+			[ $this, 'render_live_preview_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_live_preview'
+		);
+	}
+
+	/**
+	 * Standard WordPress Settings API checkbox idiom: the hidden input
+	 * (same name, rendered first) submits "0" whenever the checkbox is
+	 * unchecked — browsers send both when checked, but only the last
+	 * same-named field of the two survives into $_POST either way, so
+	 * this always submits a value instead of a plain checkbox's "just
+	 * omit the key when unchecked" (which options.php would otherwise
+	 * read as "leave the previous value alone", not "turn it off").
+	 */
+	public function render_live_preview_field(): void {
+		$enabled = (bool) get_option( self::LIVE_PREVIEW_ENABLED_OPTION, true );
+		?>
+		<input type="hidden" name="<?php echo esc_attr( self::LIVE_PREVIEW_ENABLED_OPTION ); ?>" value="0" />
+		<label>
+			<input
+				type="checkbox"
+				name="<?php echo esc_attr( self::LIVE_PREVIEW_ENABLED_OPTION ); ?>"
+				value="1"
+				<?php checked( $enabled ); ?>
+			/>
+			<?php esc_html_e( 'Show customers the live, per-keystroke text preview on Label View', 'yeffoprint-core' ); ?>
+		</label>
+		<p class="description"><?php esc_html_e( 'Turn this off while adjusting field alignment on the Template editor\'s position preview so customers don\'t see not-yet-correct positioning in the meantime. Vial View, all form fields, pricing, and checkout keep working normally either way — this only hides the live on-image text on Label View. Turn it back on the same way once alignment looks right.', 'yeffoprint-core' ); ?></p>
+		<?php
 	}
 
 	public function render_surcharge_section_intro(): void {

@@ -46,6 +46,7 @@
 	var layoutEl = root.querySelector( '.yp-configurator__layout' );
 	var stageEl = root.querySelector( '[data-yp-stage]' );
 	var overflowWarningEl = root.querySelector( '[data-yp-overflow-warning]' );
+	var livePreviewNoteEl = root.querySelector( '[data-yp-live-preview-note]' );
 	var descriptionEl = root.querySelector( '[data-yp-description]' );
 	var titleEl = root.querySelector( '[data-yp-title]' );
 	var sizeOptionsEl = root.querySelector( '[data-yp-size-options]' );
@@ -551,14 +552,25 @@
 			: '';
 		stageEl.setAttribute( 'data-view', state.view );
 
+		// Admin kill switch (Dashboard → YeffoPrint → Settings → Label
+		// Configurator) for whenever field alignment is still being
+		// worked on — customers shouldn't see not-yet-correct live text
+		// in the meantime. Only affects Label View; Vial View never had
+		// live text to begin with, so the note below stays hidden there.
+		var livePreviewSuppressed = false === schema.live_preview_enabled && 'label' === state.view;
+		if ( livePreviewNoteEl ) {
+			livePreviewNoteEl.hidden = ! livePreviewSuppressed;
+		}
+
 		// Vial View is a plain reference photo of the vial, not a live
 		// proof — direct request: live-as-you-type editing should only
 		// ever show up on Label View. No field elements get appended
 		// here, which also means updateStageField() (the per-keystroke
 		// path below) naturally no-ops while this view is active: it
 		// looks a field up by data-field-id and bails out when nothing
-		// matches.
-		if ( 'vial' === state.view ) {
+		// matches. Live preview being switched off reuses this exact
+		// same no-fields path.
+		if ( 'vial' === state.view || livePreviewSuppressed ) {
 			overflowWarningEl.hidden = true;
 			return;
 		}
