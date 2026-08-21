@@ -235,11 +235,17 @@ add_action( 'wp_enqueue_scripts', function () {
 		}
 
 		wp_localize_script( 'yeffoprint-custom-order-form', 'yeffoprintCustomOrder', [
-			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'restUrl'      => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			// Sent on every upload/submit call — guests aren't checked
 			// (class-rest-security.php), but a signed-in customer's
 			// request needs a valid nonce to pass.
-			'nonce'   => wp_create_nonce( 'wp_rest' ),
+			'nonce'        => wp_create_nonce( 'wp_rest' ),
+			// Reorder mode has no guest path (class-custom-order-
+			// controller.php's /custom-orders/eligible-reorders is
+			// logged-in only) — told up front so the form can disable
+			// that option for a guest instead of letting them pick it
+			// and only then discovering the picker has nothing to show.
+			'isLoggedIn'   => is_user_logged_in(),
 		] );
 	}
 

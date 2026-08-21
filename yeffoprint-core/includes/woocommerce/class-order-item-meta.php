@@ -59,7 +59,13 @@ class YeffoPrint_Order_Item_Meta {
 			// A Custom Order's own labels: same Size/Material/pricing
 			// snapshot shape as a Template batch, but there's no
 			// template/field_schema/variants behind it (Architecture §2).
-			$this->snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing );
+			// row_index/compound_strength are only ever present for a
+			// batched Custom Design order (one cart item per row) — see
+			// class-cart-item-keys.php's own doc comment for why a batch
+			// splits across multiple line items here specifically.
+			$row_index         = (int) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ROW_INDEX ] ?? 0 );
+			$compound_strength = (string) ( $values[ YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH ] ?? '' );
+			$this->snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength );
 			return;
 		}
 
@@ -88,16 +94,23 @@ class YeffoPrint_Order_Item_Meta {
 		$this->add_variant_rows( $item, $variants, $field_schema );
 	}
 
-	private function snapshot_custom_order_labels( \WC_Order_Item_Product $item, int $custom_order_id, int $size_id, int $material_id, int $quantity, ?array $pricing ): void {
+	private function snapshot_custom_order_labels( \WC_Order_Item_Product $item, int $custom_order_id, int $size_id, int $material_id, int $quantity, ?array $pricing, int $row_index = 0, string $compound_strength = '' ): void {
 		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
 		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( $this->record_snapshot( $size_id ) ), true );
 		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( $this->record_snapshot( $material_id ) ), true );
 		$item->add_meta_data( '_yp_batch_quantity', $quantity, true );
 		$item->add_meta_data( '_yp_pricing_snapshot', wp_json_encode( $pricing ), true );
+		// Batching-only fields — a pre-batching order's single labels item
+		// still gets row_index 0 and an empty compound_strength, harmlessly.
+		$item->add_meta_data( '_yp_batch_row_index', $row_index, true );
+		$item->add_meta_data( '_yp_compound_strength_snapshot', $compound_strength, true );
 
 		$item->add_meta_data( __( 'Size', 'yeffoprint-core' ), $size_id ? get_the_title( $size_id ) : '—', true );
 		$item->add_meta_data( __( 'Material', 'yeffoprint-core' ), $material_id ? get_the_title( $material_id ) : '—', true );
 		$item->add_meta_data( __( 'Quantity', 'yeffoprint-core' ), $quantity, true );
+		if ( '' !== $compound_strength ) {
+			$item->add_meta_data( __( 'Compound/Strength', 'yeffoprint-core' ), $compound_strength, true );
+		}
 	}
 
 	/** Custom Stickers' own line item — same shape as snapshot_custom_order_labels() above, this flow's own fields (type/shape/size, including the custom-dimensions tier) instead. */
@@ -407,6 +420,8 @@ class YeffoPrint_Order_Item_Meta {
 			'_yp_custom_order_id',
 			'_yp_sticker_type',
 			'_yp_shape',
+			'_yp_batch_row_index',
+			'_yp_compound_strength_snapshot',
 		] );
 	}
 }

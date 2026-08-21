@@ -61,6 +61,109 @@
 	border-top: 1px solid var(--wp--preset--color--light-gray);
 }
 
+.yp-custom-order__mode {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.yp-radio-option {
+	display: flex;
+	align-items: baseline;
+	gap: 0.6rem;
+	padding: 0.75rem 1rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	cursor: pointer;
+	font-weight: 400;
+}
+
+.yp-radio-option:has(input:checked) {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-radio-option input {
+	margin: 0;
+}
+
+.yp-radio-option.is-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Always-expanded batch rows (Custom Design) — same numbered-badge
+   language as .yp-variant-card in configurator.css, but every row
+   shows its fields inline rather than switching one active card, since
+   a custom design row is only four fields, not a whole preview stage. */
+.yp-custom-order__batch {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.yp-batch-row {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 1rem;
+}
+
+.yp-batch-row__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin-bottom: 1rem;
+}
+
+.yp-batch-row__title {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	font-family: var(--wp--preset--font-family--mono);
+	font-weight: 700;
+}
+
+.yp-batch-row__index {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	flex-shrink: 0;
+	border-radius: 999px;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-batch-row:nth-child(3n+1) .yp-batch-row__index {
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-batch-row:nth-child(3n+2) .yp-batch-row__index {
+	background: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-batch-row:nth-child(3n) .yp-batch-row__index {
+	background: var(--wp--preset--color--yellow);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-batch-row__actions {
+	display: flex;
+	gap: 0.4rem;
+	flex-shrink: 0;
+}
+
+.yp-batch-row .yp-field {
+	margin-bottom: 1rem;
+}
+
+.yp-batch-row .yp-field:last-child {
+	margin-bottom: 0;
+}
+
 .yp-custom-sticker__dimensions {
 	display: flex;
 	align-items: center;

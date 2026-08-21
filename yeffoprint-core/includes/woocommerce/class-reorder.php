@@ -64,11 +64,7 @@ class YeffoPrint_Reorder {
 		// GET /custom-orders/{id}, ownership-checked there).
 		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
 
-		// A Custom Order's fee and labels line items both carry
-		// _yp_custom_order_id (class-order-item-meta.php) so the price
-		// snapshot has one meaning; only the fee item (no batch
-		// quantity) renders the link, or it would print twice per order.
-		if ( $custom_order_id && ! $item->get_meta( '_yp_batch_quantity' ) ) {
+		if ( $custom_order_id && $this->should_render_link_for_item( $item, $custom_order_id, $order ) ) {
 			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
 
 			printf(
@@ -77,6 +73,49 @@ class YeffoPrint_Reorder {
 				esc_html__( 'Reorder this custom design', 'yeffoprint-core' )
 			);
 		}
+	}
+
+	/**
+	 * A Custom Order's fee and labels line item(s) all carry
+	 * _yp_custom_order_id (class-order-item-meta.php), and — since
+	 * batching (direct request) — there can now be several labels items
+	 * for one custom order, one per batch row. The link still needs to
+	 * print exactly once per custom order, not once per item:
+	 *
+	 * - If a fee item exists for this custom order, that's the one item
+	 *   that prints it (unchanged from before batching existed).
+	 * - A customer-provided-design or fee-free-reorder order never has a
+	 *   fee item at all (YeffoPrint_Custom_Order_Meta::is_fee_skipped()) —
+	 *   for those, the labels item with the lowest _yp_batch_row_index
+	 *   (i.e. row 0) prints it instead, so the link doesn't just silently
+	 *   disappear for exactly the orders customers are most likely to
+	 *   want to reorder again.
+	 */
+	private function should_render_link_for_item( \WC_Order_Item_Product $item, int $custom_order_id, \WC_Order $order ): bool {
+		$fee_item_id       = null;
+		$lowest_row_index  = null;
+		$lowest_row_item_id = null;
+
+		foreach ( $order->get_items() as $sibling ) {
+			if ( (int) $sibling->get_meta( '_yp_custom_order_id' ) !== $custom_order_id ) {
+				continue;
+			}
+
+			if ( ! $sibling->get_meta( '_yp_batch_quantity' ) ) {
+				$fee_item_id = $sibling->get_id();
+				continue;
+			}
+
+			$row_index = (int) $sibling->get_meta( '_yp_batch_row_index' );
+			if ( null === $lowest_row_index || $row_index < $lowest_row_index ) {
+				$lowest_row_index   = $row_index;
+				$lowest_row_item_id = $sibling->get_id();
+			}
+		}
+
+		$target_item_id = $fee_item_id ?? $lowest_row_item_id;
+
+		return null !== $target_item_id && $target_item_id === $item->get_id();
 	}
 
 	public function hide_native_order_again( array $actions, \WC_Order $order ): array {

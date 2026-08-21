@@ -97,6 +97,14 @@ class YeffoPrint_Custom_Order_Payment {
 	 * the sum of its own linked item(s).
 	 */
 	private function find_design_fee( \WC_Order $order, int $custom_order_id ): float {
+		// A customer-provided-design or fee-free-reorder order never has a
+		// fee item at all (direct request) — without this check, falling
+		// through to the fallback below would wrongly record the nominal
+		// $25 as "what was paid" even though nothing was charged.
+		if ( YeffoPrint_Custom_Order_Meta::is_fee_skipped( $custom_order_id ) ) {
+			return 0.0;
+		}
+
 		if ( 'sticker' === YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id ) ) {
 			$total = 0.0;
 			foreach ( $order->get_items() as $item ) {

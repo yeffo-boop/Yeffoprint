@@ -14,29 +14,35 @@
 
 		<form id="yp-custom-order-form" hidden>
 
-			<div class="yp-field">
-				<label for="yp-co-size">Size</label>
-				<select id="yp-co-size" name="size_id" required></select>
+			<div class="yp-field yp-custom-order__mode" role="radiogroup" aria-label="How would you like to submit this design?">
+				<label class="yp-radio-option">
+					<input type="radio" name="mode" value="new_design" checked />
+					<span>Design something new <span class="description">— $25 design fee</span></span>
+				</label>
+				<label class="yp-radio-option">
+					<input type="radio" name="mode" value="own_design" />
+					<span>I have my own print-ready design <span class="description">— no design fee</span></span>
+				</label>
+				<label class="yp-radio-option">
+					<input type="radio" name="mode" value="reorder" />
+					<span>Reorder a past design <span class="description">— no design fee</span></span>
+				</label>
 			</div>
 
-			<div class="yp-field">
-				<label for="yp-co-material">Material</label>
-				<select id="yp-co-material" name="material_id" required></select>
+			<div class="yp-field" data-yp-co-reorder-picker hidden>
+				<label for="yp-co-reorder-select">Which past design?</label>
+				<select id="yp-co-reorder-select"></select>
+				<p class="description" data-yp-co-reorder-empty hidden>You don't have any past designs eligible to reorder without the design fee yet — a design becomes eligible once it's approved, printing, or shipped.</p>
 			</div>
 
-			<div class="yp-field">
-				<label for="yp-co-quantity-input">Quantity</label>
-				<div class="yp-quantity-control" data-yp-co-quantity></div>
-			</div>
+			<div class="yp-custom-order__batch" data-yp-co-batch></div>
+			<p>
+				<button type="button" class="button-link" data-yp-co-add-row>+ Add another label</button>
+			</p>
 
 			<div class="yp-field">
 				<label for="yp-co-brand">Brand name</label>
 				<input type="text" id="yp-co-brand" name="brand_name" maxlength="80" required class="widefat" />
-			</div>
-
-			<div class="yp-field">
-				<label for="yp-co-compound">Compound / strength <span class="description">(optional)</span></label>
-				<input type="text" id="yp-co-compound" name="compound_strength" maxlength="120" class="widefat" />
 			</div>
 
 			<div class="yp-field">
@@ -50,7 +56,7 @@
 			</div>
 
 			<div class="yp-field">
-				<label for="yp-co-files">Inspiration files <span class="description">(optional — PDF, SVG, PNG, or JPG, up to 5 files)</span></label>
+				<label for="yp-co-files"><span data-yp-co-files-label-text>Inspiration files</span> <span class="description" data-yp-co-files-hint>(optional — PDF, SVG, PNG, or JPG, up to 5 files)</span></label>
 				<input type="file" id="yp-co-files" name="files" multiple accept=".pdf,.svg,.png,.jpg,.jpeg,application/pdf,image/svg+xml,image/png,image/jpeg" />
 				<ul class="yp-custom-order__file-list" data-yp-co-file-list></ul>
 			</div>
@@ -61,7 +67,7 @@
 					<strong data-yp-co-fee>&mdash;</strong>
 				</div>
 				<div class="yp-custom-order__fee">
-					<span>Labels (<span data-yp-co-label-qty>&mdash;</span> @ <span data-yp-co-unit-price>&mdash;</span>/label)</span>
+					<span>Labels</span>
 					<strong data-yp-co-labels-total>&mdash;</strong>
 				</div>
 				<div class="yp-custom-order__fee yp-custom-order__fee--total">
@@ -69,7 +75,7 @@
 					<strong data-yp-co-total>&mdash;</strong>
 				</div>
 			</div>
-			<p class="description">Charged now: the design fee plus your printed labels, at checkout. A designer reviews your request and sends a proof before anything prints — production begins once you approve it.</p>
+			<p class="description">A designer reviews your request and sends a proof before anything prints — production begins once you approve it.</p>
 
 			<p>
 				<button type="submit" class="wp-block-button__link is-style-accent" data-yp-co-submit>Continue to Payment</button>

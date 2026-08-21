@@ -45,7 +45,14 @@ class YeffoPrint_Custom_Order_Meta {
 	public const STYLE_NOTES         = '_yp_style_notes';
 	public const INSTRUCTIONS        = '_yp_instructions';
 	public const INSPIRATION_UPLOADS = '_yp_inspiration_uploads';
-	/** Sticker orders only — the actual print-ready artwork file(s), a distinct field from INSPIRATION_UPLOADS (a label order's visual reference images, never printed as-is). */
+	/**
+	 * The actual print-ready artwork file(s), a distinct field from
+	 * INSPIRATION_UPLOADS (a label order's visual reference images,
+	 * never printed as-is). Originally sticker-only; also used by the
+	 * label flow's "I have my own print-ready design" path (CUSTOMER_
+	 * PROVIDED_DESIGN below) — same real meaning both times, so this
+	 * one field covers both rather than adding a near-duplicate key.
+	 */
 	public const ARTWORK_UPLOADS     = '_yp_artwork_uploads';
 	/** Sticker orders only — 'sheet' or one of YeffoPrint_Sticker_Pricing::TYPES. */
 	public const STICKER_TYPE        = '_yp_sticker_type';
@@ -74,6 +81,38 @@ class YeffoPrint_Custom_Order_Meta {
 	/** The customer's own free-text feedback from the last "Request changes" response — staff-visible on the CustomOrder admin screen. */
 	public const CHANGE_REQUEST_NOTES = '_yp_change_request_notes';
 
+	/**
+	 * Direct request: two ways to skip the $25 design fee. Points back to
+	 * the source yp_custom_order this one was reordered from — absent
+	 * means this order was either a normal new-design submission or a
+	 * CUSTOMER_PROVIDED_DESIGN one, never both at once with this.
+	 */
+	public const SOURCE_CUSTOM_ORDER_ID = '_yp_source_custom_order_id';
+
+	/**
+	 * '1' when the customer already had their own completed, print-ready
+	 * design and just wants it printed — no design work needed, so the
+	 * fee is skipped. ARTWORK_UPLOADS holds the actual file(s) in this
+	 * case, not INSPIRATION_UPLOADS.
+	 */
+	public const CUSTOMER_PROVIDED_DESIGN = '_yp_customer_provided_design';
+
+	/**
+	 * Batching: a JSON-encoded array of
+	 * { size_id, material_id, quantity, compound_strength }, one entry
+	 * per label in the order — direct request, so a customer needing more
+	 * than one compound/strength/size doesn't have to submit (and pay
+	 * the fee) separately for each. A repeating structured unit, the one
+	 * case PROJECT_SPEC's "never one opaque blob" rule already carves out
+	 * for _yp_variants on the Template side (class-order-item-meta.php) —
+	 * same reasoning applies here. SIZE_ID/MATERIAL_ID/QUANTITY/
+	 * COMPOUND_STRENGTH above stay populated from this array's first row
+	 * on every order (including pre-batching ones, which only ever had
+	 * one row), so anything reading only those single-row fields keeps
+	 * working unchanged.
+	 */
+	public const BATCH = '_yp_batch';
+
 	/** In pipeline order — PROJECT_SPEC §13. */
 	public const STATUSES = [
 		'design_in_progress' => 'Design in progress',
@@ -83,6 +122,15 @@ class YeffoPrint_Custom_Order_Meta {
 		'printing'           => 'Printing',
 		'shipped'            => 'Shipped',
 	];
+
+	/**
+	 * Which statuses mean a past order's design is actually finished and
+	 * reusable enough to reorder without paying the fee again — anything
+	 * still design_in_progress/proof_ready/awaiting_approval hasn't
+	 * produced a real, finished design yet, so a "reorder" of one of
+	 * those would just be asking for fresh (unpaid) design work.
+	 */
+	public const FEE_FREE_REORDER_STATUSES = [ 'approved', 'printing', 'shipped' ];
 
 	public function __construct() {
 		add_filter( 'manage_yp_custom_order_posts_columns', [ $this, 'columns' ] );
@@ -97,6 +145,67 @@ class YeffoPrint_Custom_Order_Meta {
 	public static function get_order_type( int $post_id ): string {
 		$type = get_post_meta( $post_id, self::ORDER_TYPE, true );
 		return array_key_exists( $type, self::ORDER_TYPES ) ? $type : 'label';
+	}
+
+	/**
+	 * Whether $customer_id may reorder $custom_order_id without paying
+	 * the design fee again — published, a label order (stickers have no
+	 * flat fee to skip in the first place — see class-custom-order-
+	 * payment.php's find_design_fee()), owned by this customer, and far
+	 * enough along the pipeline that a finished design actually exists.
+	 */
+	public static function is_eligible_for_fee_free_reorder( int $custom_order_id, int $customer_id ): bool {
+		if ( ! $customer_id || 'publish' !== get_post_status( $custom_order_id ) ) {
+			return false;
+		}
+
+		if ( 'label' !== self::get_order_type( $custom_order_id ) ) {
+			return false;
+		}
+
+		$owner_id = (int) get_post_meta( $custom_order_id, self::CUSTOMER_ID, true );
+		if ( $owner_id !== $customer_id ) {
+			return false;
+		}
+
+		$status = (string) get_post_meta( $custom_order_id, self::STATUS, true );
+		return in_array( $status, self::FEE_FREE_REORDER_STATUSES, true );
+	}
+
+	/**
+	 * Whether this order's $25 fee was intentionally never charged (a
+	 * customer-provided design, or a fee-free reorder) — so "no fee line
+	 * item on the WooCommerce order" is never mistaken for "the fee just
+	 * hasn't been paid yet" anywhere that checks for one (find_design_fee(),
+	 * the admin editor, class-reorder.php's own reorder-link rendering).
+	 */
+	public static function is_fee_skipped( int $custom_order_id ): bool {
+		return (bool) get_post_meta( $custom_order_id, self::CUSTOMER_PROVIDED_DESIGN, true )
+			|| (bool) get_post_meta( $custom_order_id, self::SOURCE_CUSTOM_ORDER_ID, true );
+	}
+
+	/**
+	 * The batch rows for this order, decoded from BATCH — falling back to
+	 * a single row built from the legacy SIZE_ID/MATERIAL_ID/QUANTITY/
+	 * COMPOUND_STRENGTH fields for any order submitted before batching
+	 * existed (which never wrote BATCH at all).
+	 *
+	 * @return array<int, array{size_id:int, material_id:int, quantity:int, compound_strength:string}>
+	 */
+	public static function get_batch_rows( int $custom_order_id ): array {
+		$raw  = (string) get_post_meta( $custom_order_id, self::BATCH, true );
+		$rows = $raw ? json_decode( $raw, true ) : null;
+
+		if ( is_array( $rows ) && $rows ) {
+			return $rows;
+		}
+
+		return [ [
+			'size_id'           => (int) get_post_meta( $custom_order_id, self::SIZE_ID, true ),
+			'material_id'       => (int) get_post_meta( $custom_order_id, self::MATERIAL_ID, true ),
+			'quantity'          => (int) get_post_meta( $custom_order_id, self::QUANTITY, true ),
+			'compound_strength' => (string) get_post_meta( $custom_order_id, self::COMPOUND_STRENGTH, true ),
+		] ];
 	}
 
 	public function columns( array $columns ): array {
