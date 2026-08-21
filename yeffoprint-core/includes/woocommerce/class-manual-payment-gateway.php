@@ -82,6 +82,18 @@ abstract class YeffoPrint_Manual_Payment_Gateway extends \WC_Payment_Gateway {
 
 	abstract protected function default_description(): string;
 
+	/**
+	 * @return string|null A link the customer can tap/click to open this
+	 *   method's own app and pay directly — null when there isn't a
+	 *   reliable universal one. Zelle never overrides this: unlike
+	 *   Venmo, there's no cross-bank Zelle payment URL — Zelle lives
+	 *   inside each customer's own bank app, with no shared link format
+	 *   across banks — so making one up would just be a broken button.
+	 */
+	protected function pay_url(): ?string {
+		return null;
+	}
+
 	public function process_payment( $order_id ) {
 		$order = wc_get_order( $order_id );
 
@@ -116,7 +128,13 @@ abstract class YeffoPrint_Manual_Payment_Gateway extends \WC_Payment_Gateway {
 			return;
 		}
 
-		echo '<div class="woocommerce-message woocommerce-message--info" style="margin-top:1.5rem;">' . wp_kses_post( $this->instructions_text( $order ) ) . '</div>';
+		echo '<div class="woocommerce-message woocommerce-message--info" style="margin-top:1.5rem;">';
+		echo wp_kses_post( $this->instructions_text( $order ) );
+		// "button" — the same classic-WooCommerce button class the rest
+		// of this site's own woocommerce.css already themes (`.woocommerce
+		// a.button`), so this needs no page-specific CSS of its own.
+		echo wp_kses_post( $this->payment_action_html( 'button' ) );
+		echo '</div>';
 	}
 
 	public function email_instructions( $order, $sent_to_admin, $plain_text = false ): void {
@@ -126,6 +144,7 @@ abstract class YeffoPrint_Manual_Payment_Gateway extends \WC_Payment_Gateway {
 
 		if ( $plain_text ) {
 			echo wp_strip_all_tags( $this->instructions_text( $order ) ) . "\n\n";
+			echo $this->payment_action_plain(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- plain-text email body (a URL built from esc_url()-safe input), not HTML.
 		} else {
 			// Styled by the theme's email-styles.php override (.yp-email-callout)
 			// as a highlighted box — this is the one thing in an on-hold order
@@ -134,7 +153,64 @@ abstract class YeffoPrint_Manual_Payment_Gateway extends \WC_Payment_Gateway {
 			echo '<table class="yp-email-callout" role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td>';
 			echo '<span class="yp-email-callout-label">' . esc_html__( 'Payment instructions', 'yeffoprint-core' ) . '</span>';
 			echo '<p>' . wp_kses_post( $this->instructions_text( $order ) ) . '</p>';
+			echo wp_kses_post( $this->payment_action_html( 'yp-email-button' ) );
 			echo '</td></tr></table>';
 		}
+	}
+
+	/**
+	 * A "Pay with Venmo" button plus a QR code pointed at the same link
+	 * (scanning it just opens that link on the customer's phone) — direct
+	 * request. Renders nothing for a gateway with no pay_url() (Zelle).
+	 * Reuses the plugin's own public QR endpoint (class-qr-controller.php,
+	 * already built for the label configurator) as a plain <img src>
+	 * rather than embedding a generated image inline — the inline
+	 * approach (a data: URI) is unreliable in email specifically: several
+	 * major email clients (Outlook desktop among them) don't render
+	 * data: URIs in HTML email at all, while a normal external image URL
+	 * works the same way any other image in a marketing email does.
+	 *
+	 * @param string $button_class CSS class for the link — the site's
+	 *   own classic-WooCommerce button class on the thank-you page,
+	 *   email-styles.php's own button class in the order email; the two
+	 *   contexts are styled completely differently, so this can't be a
+	 *   single hardcoded class.
+	 */
+	private function payment_action_html( string $button_class ): string {
+		$url = $this->pay_url();
+		if ( ! $url ) {
+			return '';
+		}
+
+		$qr_url = add_query_arg(
+			[ 'text' => rawurlencode( $url ), 'format' => 'png', 'module_px' => 8 ],
+			rest_url( 'yeffoprint-core/v1/qr' )
+		);
+
+		return sprintf(
+			'<p style="margin-top:14px;margin-bottom:6px;"><a class="%1$s" href="%2$s" target="_blank" rel="noopener noreferrer">%3$s</a></p>' .
+			'<img class="yp-payment-qr" src="%4$s" alt="%5$s" width="140" height="140" />' .
+			'<p class="yp-payment-qr-caption">%6$s</p>',
+			esc_attr( $button_class ),
+			esc_url( $url ),
+			/* translators: %s: gateway title, e.g. "Venmo" */
+			esc_html( sprintf( __( 'Pay with %s', 'yeffoprint-core' ), $this->method_title ) ),
+			esc_url( $qr_url ),
+			/* translators: %s: gateway title, e.g. "Venmo" */
+			esc_attr( sprintf( __( 'QR code to pay with %s', 'yeffoprint-core' ), $this->method_title ) ),
+			/* translators: %s: gateway title, e.g. "Venmo" */
+			esc_html( sprintf( __( 'Or scan to open %s on your phone', 'yeffoprint-core' ), $this->method_title ) )
+		);
+	}
+
+	/** Plain-text-email counterpart to payment_action_html() above — just the raw link, no button/QR possible in plain text. */
+	private function payment_action_plain(): string {
+		$url = $this->pay_url();
+		if ( ! $url ) {
+			return '';
+		}
+
+		/* translators: %s: a Venmo pay link */
+		return sprintf( __( 'Pay directly: %s', 'yeffoprint-core' ), $url ) . "\n\n";
 	}
 }

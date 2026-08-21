@@ -219,6 +219,41 @@
 	margin-top: 0.35rem;
 }
 
+/* The Venmo/Zelle "send payment to" account — venmo-payment-method.js /
+   zelle-payment-method.js. Its own line (not folded into the plain
+   description text above) so it reads as the one actionable detail in
+   this section, not just more copy. */
+.yp-blocks-payment-handle {
+	font-size: var(--wp--preset--font-size--small);
+	margin-top: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-blocks-payment-handle strong {
+	font-family: var(--wp--preset--font-family--mono);
+}
+
+/* Order-received page's "Pay with Venmo" QR (class-manual-payment-
+   gateway.php's payment_action_html()) — email's own copy of this is
+   styled separately in woocommerce/emails/email-styles.php, since
+   email HTML can't share a stylesheet with the rest of the site. */
+.yp-payment-qr {
+	display: block;
+	margin-top: 0.5rem;
+	padding: 0.5rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+}
+
+.yp-payment-qr-caption {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin-top: 0.35rem;
+}
+
 /* Order summary (right column): line items + totals */
 .wc-block-components-order-summary-item {
 	padding-block: 0.6rem !important;

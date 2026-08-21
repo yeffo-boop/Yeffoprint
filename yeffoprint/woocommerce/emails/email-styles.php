@@ -335,7 +335,9 @@ p.yp-reorder-link a {
 	color: #0078A4; /* cyan-deep — a second text-safe accent, so it reads distinct from the magenta-deep primary link color. */
 }
 
-/* "Track your order" button (class-order-tracking.php). */
+/* "Track your order" button (class-order-tracking.php) — also reused
+   as-is for the "Pay with Venmo" button (class-manual-payment-
+   gateway.php's payment_action_html()), same "one clear action" look. */
 a.yp-email-button {
 	display: inline-block;
 	background-color: <?php echo esc_attr( $band ); ?>;
@@ -346,6 +348,23 @@ a.yp-email-button {
 	padding: 12px 22px;
 	border-radius: 6px;
 	letter-spacing: .01em;
+}
+
+/* QR code alongside the Venmo button above — scanning it opens the
+   exact same link. */
+img.yp-payment-qr {
+	display: block;
+	margin-top: 4px;
+	border: 1px solid <?php echo esc_attr( $border ); ?>;
+	border-radius: 8px;
+	padding: 6px;
+	background-color: #FFFFFF;
+}
+
+p.yp-payment-qr-caption {
+	font-size: 12px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 6px 0 0;
 }
 
 /* Payment-instructions callout (class-manual-payment-gateway.php's email_instructions()). */

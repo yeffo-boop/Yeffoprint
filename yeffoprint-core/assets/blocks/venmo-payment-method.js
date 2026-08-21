@@ -15,8 +15,27 @@
 	var decode = window.wp.htmlEntities ? window.wp.htmlEntities.decodeEntities : function ( value ) { return value; };
 	var label = decode( settings.title || 'Venmo' );
 	var description = decode( settings.description || '' );
+	var handle = decode( settings.handle || '' );
 
-	var content = window.wp.element.createElement( 'div', { className: 'yp-blocks-payment-description' }, description );
+	var descriptionEl = window.wp.element.createElement( 'div', { className: 'yp-blocks-payment-description' }, description );
+
+	// The account to actually pay (WooCommerce → Settings → Payments →
+	// Venmo) — direct request: this used to only show up after
+	// checkout, leaving nothing here but the admin's generic
+	// description. A full "pay now" link/QR only makes sense once an
+	// order (and its number, for the payment note) actually exists —
+	// see class-manual-payment-gateway.php's thankyou_page()/
+	// email_instructions() for that.
+	var content = descriptionEl;
+	if ( handle ) {
+		var handleEl = window.wp.element.createElement(
+			'div',
+			{ className: 'yp-blocks-payment-handle' },
+			'Send payment to: ',
+			window.wp.element.createElement( 'strong', null, handle )
+		);
+		content = window.wp.element.createElement( window.wp.element.Fragment, null, descriptionEl, handleEl );
+	}
 
 	window.wc.wcBlocksRegistry.registerPaymentMethod( {
 		name: 'yeffoprint_venmo',
