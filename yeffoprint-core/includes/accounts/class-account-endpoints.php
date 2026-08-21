@@ -259,7 +259,57 @@ class YeffoPrint_Account_Endpoints {
 			</form>
 		<?php endif; ?>
 
+		<?php $this->render_referrals( $user_id ); ?>
 		<?php $this->render_rewards_history( $user_id ); ?>
+		<?php
+	}
+
+	private function render_referrals( int $user_id ): void {
+		$link     = YeffoPrint_Referrals::referral_link( $user_id );
+		$joined   = YeffoPrint_Referrals::count_referred( $user_id );
+		$rewarded = YeffoPrint_Referrals::count_rewarded_referrals( $user_id );
+		$points   = YeffoPrint_Referrals::points_per_referral();
+
+		if ( $points <= 0 ) {
+			return; // Admin has turned referral rewards off (Dashboard → YeffoPrint → Settings) — nothing to show or share.
+		}
+		?>
+		<div class="yp-referrals">
+			<h3><?php esc_html_e( 'Refer a Friend', 'yeffoprint-core' ); ?></h3>
+			<p class="description">
+				<?php
+				printf(
+					/* translators: %s: points awarded per successful referral */
+					esc_html__( 'Share your link — once someone you refer places their first paid order, you earn %s points.', 'yeffoprint-core' ),
+					'<strong>' . esc_html( number_format_i18n( $points ) ) . '</strong>'
+				);
+				?>
+			</p>
+			<div class="yp-referrals__link-row">
+				<input type="text" readonly class="yp-referrals__link" value="<?php echo esc_url( $link ); ?>" onclick="this.select();" />
+				<button type="button" class="button" data-yp-copy-referral-link><?php esc_html_e( 'Copy Link', 'yeffoprint-core' ); ?></button>
+			</div>
+			<?php if ( $joined > 0 ) : ?>
+				<p class="yp-referrals__stats">
+					<?php
+					printf(
+						/* translators: %s: number of people who signed up using this link */
+						esc_html( _n( '%s person has joined using your link.', '%s people have joined using your link.', $joined, 'yeffoprint-core' ) ),
+						esc_html( number_format_i18n( $joined ) )
+					);
+					?>
+					<?php if ( $rewarded > 0 ) : ?>
+						<?php
+						printf(
+							/* translators: %s: how many of those referrals have gone on to place a paid order */
+							esc_html( _n( '%s has placed an order so far.', '%s have placed an order so far.', $rewarded, 'yeffoprint-core' ) ),
+							esc_html( number_format_i18n( $rewarded ) )
+						);
+						?>
+					<?php endif; ?>
+				</p>
+			<?php endif; ?>
+		</div>
 		<?php
 	}
 

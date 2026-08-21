@@ -153,9 +153,10 @@ class YeffoPrint_Rewards_Admin {
 			</thead>
 			<tbody>
 				<?php foreach ( $entries as $entry ) :
-					$user  = get_userdata( (int) ( $entry['user_id'] ?? 0 ) );
-					$admin = get_userdata( (int) ( $entry['admin_id'] ?? 0 ) );
-					$delta = (int) ( $entry['delta'] ?? 0 );
+					$user     = get_userdata( (int) ( $entry['user_id'] ?? 0 ) );
+					$admin_id = (int) ( $entry['admin_id'] ?? 0 );
+					$admin    = $admin_id ? get_userdata( $admin_id ) : null;
+					$delta    = (int) ( $entry['delta'] ?? 0 );
 					?>
 					<tr>
 						<td><?php echo esc_html( wp_date( 'Y-m-d H:i', strtotime( (string) ( $entry['date'] ?? '' ) ) ?: null ) ); ?></td>
@@ -164,7 +165,21 @@ class YeffoPrint_Rewards_Admin {
 							<?php echo esc_html( ( $delta >= 0 ? '+' : '' ) . number_format_i18n( $delta ) ); ?>
 						</td>
 						<td><?php echo esc_html( (string) ( $entry['reason'] ?? '' ) ); ?></td>
-						<td><?php echo esc_html( $admin ? $admin->display_name : '—' ); ?></td>
+						<td>
+							<?php
+							// admin_id 0 means a system-triggered adjustment (e.g.
+							// class-referrals.php's referral bonus) — no staff
+							// member behind it, distinct from a real user record
+							// that's since been deleted.
+							if ( $admin ) {
+								echo esc_html( $admin->display_name );
+							} elseif ( 0 === $admin_id ) {
+								esc_html_e( 'System', 'yeffoprint-core' );
+							} else {
+								echo '—';
+							}
+							?>
+						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
