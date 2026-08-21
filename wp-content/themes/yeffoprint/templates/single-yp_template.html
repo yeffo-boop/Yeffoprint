@@ -1,0 +1,65 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"1400px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-configurator" class="yp-configurator" data-loading="true">
+		<noscript>
+			<p class="yp-configurator__noscript">This design's live configurator needs JavaScript enabled. You can still <a href="/shop-labels/">browse the full gallery</a> or contact us to order.</p>
+		</noscript>
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading design&hellip;</div>
+		<div class="yp-configurator__layout" hidden>
+			<div class="yp-configurator__preview">
+				<div class="yp-configurator__view-toggle" role="tablist" aria-label="Preview mode">
+					<button type="button" class="yp-view-tab is-active" role="tab" aria-selected="true" data-yp-view="label">Label View</button>
+					<button type="button" class="yp-view-tab" role="tab" aria-selected="false" data-yp-view="vial">Vial View</button>
+				</div>
+				<div class="yp-configurator__stage" data-yp-stage></div>
+				<div class="yp-configurator__overflow-warning" data-yp-overflow-warning hidden>Text is too long for this design.</div>
+			</div>
+			<div class="yp-configurator__controls">
+				<h1 class="yp-configurator__title" data-yp-title></h1>
+				<div class="yp-configurator__section" data-yp-section="size">
+					<h2>Size</h2>
+					<div class="yp-option-group" data-yp-size-options></div>
+				</div>
+				<div class="yp-configurator__section" data-yp-section="material">
+					<h2>Material</h2>
+					<div class="yp-option-group" data-yp-material-options></div>
+				</div>
+				<div class="yp-configurator__section" data-yp-section="fields">
+					<h2>Customize</h2>
+					<div class="yp-field-inputs" data-yp-field-inputs></div>
+				</div>
+				<div class="yp-configurator__section" data-yp-section="quantity">
+					<h2>Quantity</h2>
+					<div class="yp-quantity-control" data-yp-quantity></div>
+				</div>
+				<div class="yp-configurator__section" data-yp-section="variants">
+					<div class="yp-variants-header">
+						<h2>Batch</h2>
+						<button type="button" class="button-link" data-yp-add-variant>+ Add another label</button>
+					</div>
+					<div class="yp-variant-cards" data-yp-variant-cards></div>
+				</div>
+				<div class="yp-configurator__summary" data-yp-summary></div>
+				<p class="yp-configurator__desktop-cta">
+					<button type="button" class="wp-block-button__link is-style-accent" data-yp-add-to-cart>Add to Cart</button>
+				</p>
+			</div>
+		</div>
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:html -->
+<div class="yp-sticky-bar" data-yp-sticky-bar hidden>
+	<div class="yp-sticky-bar__total" data-yp-sticky-total></div>
+	<button type="button" class="wp-block-button__link" data-yp-add-to-cart>Add to Cart</button>
+</div>
+<!-- /wp:html -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

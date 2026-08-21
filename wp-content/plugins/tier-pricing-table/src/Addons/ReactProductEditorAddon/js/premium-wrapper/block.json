@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "tiered-pricing-table/premium-wrapper",
+  "title": "Woo blocks-based product editor: Premium Wrapper",
+  "category": "tiered-pricing-table",
+  "description": "",
+  "keywords": [
+    "products"
+  ],
+  "textdomain": "tier-pricing-table",
+  "attributes": {
+    "upgradeUrl": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "supports": {
+    "align": false,
+    "html": false,
+    "multiple": true,
+    "reusable": false,
+    "inserter": false,
+    "lock": false,
+    "__experimentalToolbar": false
+  },
+  "editorScript": "file:./index.js"
+}

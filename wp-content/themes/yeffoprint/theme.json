@@ -1,0 +1,147 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/theme.json",
+	"version": 3,
+	"settings": {
+		"appearanceTools": true,
+		"layout": {
+			"contentSize": "1200px",
+			"wideSize": "1440px"
+		},
+		"color": {
+			"palette": [
+				{ "slug": "warm-white", "name": "Warm White", "color": "#FAF9F6" },
+				{ "slug": "white", "name": "White", "color": "#FFFFFF" },
+				{ "slug": "light-gray", "name": "Light Gray", "color": "#E7E5E1" },
+				{ "slug": "charcoal", "name": "Charcoal", "color": "#3A3A3C" },
+				{ "slug": "near-black", "name": "Near Black", "color": "#141414" },
+				{ "slug": "cyan", "name": "CMYK Cyan", "color": "#00AEEF" },
+				{ "slug": "magenta", "name": "CMYK Magenta", "color": "#EC008C" },
+				{ "slug": "yellow", "name": "CMYK Yellow", "color": "#FFF200" }
+			],
+			"customDuotone": false,
+			"customGradient": false,
+			"defaultPalette": false
+		},
+		"custom": {
+			"radius": {
+				"control": "10px",
+				"input": "12px",
+				"card": "20px",
+				"container": "28px"
+			},
+			"spacing-scale": {
+				"xs": "0.5rem",
+				"sm": "1rem",
+				"md": "1.5rem",
+				"lg": "2.5rem",
+				"xl": "4rem",
+				"2xl": "6rem"
+			},
+			"shadow-elevation": {
+				"low": "0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04)",
+				"medium": "0 6px 20px rgba(20, 20, 20, 0.08), 0 2px 6px rgba(20, 20, 20, 0.05)",
+				"high": "0 16px 40px rgba(20, 20, 20, 0.12), 0 4px 12px rgba(20, 20, 20, 0.06)"
+			},
+			"glass": {
+				"background": "rgba(255, 255, 255, 0.72)",
+				"border": "rgba(255, 255, 255, 0.5)",
+				"blur": "16px"
+			},
+			"focus-ring": "var(--wp--preset--color--cyan)"
+		},
+		"typography": {
+			"fontFamilies": [
+				{
+					"slug": "heading",
+					"name": "Heading",
+					"fontFamily": "'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+				},
+				{
+					"slug": "body",
+					"name": "Body",
+					"fontFamily": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+				}
+			],
+			"fontSizes": [
+				{ "slug": "small", "name": "Small", "size": "0.875rem" },
+				{ "slug": "medium", "name": "Medium", "size": "1rem" },
+				{ "slug": "large", "name": "Large", "size": "1.25rem" },
+				{ "slug": "x-large", "name": "Extra Large", "size": "1.75rem" },
+				{ "slug": "xx-large", "name": "XX Large", "size": "2.5rem" }
+			]
+		},
+		"spacing": {
+			"units": ["px", "%", "rem", "vh", "vw"],
+			"spacingSizes": [
+				{ "slug": "xs", "name": "XS", "size": "0.5rem" },
+				{ "slug": "sm", "name": "S", "size": "1rem" },
+				{ "slug": "md", "name": "M", "size": "1.5rem" },
+				{ "slug": "lg", "name": "L", "size": "2.5rem" },
+				{ "slug": "xl", "name": "XL", "size": "4rem" },
+				{ "slug": "2xl", "name": "2XL", "size": "6rem" }
+			]
+		}
+	},
+	"styles": {
+		"color": {
+			"background": "var(--wp--preset--color--warm-white)",
+			"text": "var(--wp--preset--color--near-black)"
+		},
+		"typography": {
+			"fontFamily": "var(--wp--preset--font-family--body)",
+			"fontSize": "var(--wp--preset--font-size--medium)"
+		},
+		"elements": {
+			"heading": {
+				"typography": {
+					"fontFamily": "var(--wp--preset--font-family--heading)"
+				}
+			},
+			"link": {
+				"color": {
+					"text": "var(--wp--preset--color--near-black)"
+				},
+				":hover": {
+					"color": {
+						"text": "var(--wp--preset--color--charcoal)"
+					}
+				}
+			},
+			"button": {
+				"color": {
+					"text": "var(--wp--preset--color--warm-white)",
+					"background": "var(--wp--preset--color--near-black)"
+				},
+				"border": {
+					"radius": "var(--wp--custom--radius--input)"
+				},
+				"spacing": {
+					"padding": {
+						"top": "0.85rem",
+						"bottom": "0.85rem",
+						"left": "1.75rem",
+						"right": "1.75rem"
+					}
+				},
+				":hover": {
+					"color": {
+						"text": "var(--wp--preset--color--warm-white)",
+						"background": "var(--wp--preset--color--charcoal)"
+					}
+				}
+			}
+		}
+	},
+	"templateParts": [
+		{ "name": "header", "area": "header" },
+		{ "name": "footer", "area": "footer" },
+		{ "name": "announcement-bar", "area": "uncategorized", "title": "Announcement Bar" }
+	],
+	"customTemplates": [
+		{
+			"name": "custom-design-form",
+			"title": "Custom Design Form",
+			"postTypes": [ "page" ]
+		}
+	]
+}

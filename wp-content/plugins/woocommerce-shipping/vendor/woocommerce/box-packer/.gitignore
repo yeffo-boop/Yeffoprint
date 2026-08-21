@@ -1,0 +1,7 @@
+phpunit.xml
+composer.phar
+vendor
+build
+/tests/cache/
+/tests/coverage-report/
+/.phpunit.result.cache

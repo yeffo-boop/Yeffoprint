@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/gallery-toolbar",
+	"title": "Gallery Toolbar",
+	"category": "theme",
+	"description": "Shop Labels sort + Style/Color/Material filters. Fully server-rendered, GET-based, works with JS disabled.",
+	"render": "file:./render.php",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"textdomain": "yeffoprint"
+}

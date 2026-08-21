@@ -1,0 +1,1 @@
+{"version":3,"file":"./style-index.css","mappings":";;;AAAA;EACE;AACF;;AAEA;EACE;AACF,C","sources":["webpack://tiered-pricing-block/./src/style.scss"],"sourcesContent":[".wp-block-create-block-tiered-pricing-block table {\n  border-collapse: collapse;\n}\n\n.tiered-pricing-table__base-control {\n  width: 100%;\n}\n\n"],"names":[],"sourceRoot":""}

@@ -1,0 +1,21 @@
+{
+  "name": "tpt-role-tax-settings",
+  "version": "1.0.0",
+  "description": "Role-Based Tax Settings Addon",
+  "main": "index.js",
+  "scripts": {
+    "start": "wp-scripts start js-source/index.js",
+    "build": "wp-scripts build js-source/index.js"
+  },
+  "devDependencies": {
+    "@wordpress/element": "^5.0.0",
+    "@wordpress/scripts": "^26.11.0"
+  },
+  "dependencies": {
+    "@wordpress/api-fetch": "^6.0.0",
+    "@wordpress/components": "^25.0.0",
+    "@wordpress/core-data": "^6.0.0",
+    "@wordpress/i18n": "^4.0.0",
+    "@wordpress/icons": "^14.0.0"
+  }
+}

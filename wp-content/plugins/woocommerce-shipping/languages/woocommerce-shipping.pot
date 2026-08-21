@@ -1,0 +1,5370 @@
+# Copyright (C) 2026 WooCommerce
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: WooCommerce Shipping 2.3.14\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/woocommerce-shipping\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-08-17T10:44:21+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: woocommerce-shipping\n"
+
+#. Plugin Name of the plugin
+#: woocommerce-shipping.php
+#: classes/class-wc-connect-privacy.php:38
+#: classes/class-wc-connect-settings-pages.php:89
+#: src/ServiceData/ServicesErrorNotice.php:229
+msgid "WooCommerce Shipping"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: woocommerce-shipping.php
+msgid "https://woocommerce.com/products/shipping/"
+msgstr ""
+
+#. Description of the plugin
+#: woocommerce-shipping.php
+msgid "Save time and money with WooCommerce Shipping. Print discounted shipping labels with just a few clicks from your WooCommerce dashboard."
+msgstr ""
+
+#. Author of the plugin
+#: woocommerce-shipping.php
+msgid "WooCommerce"
+msgstr ""
+
+#. Author URI of the plugin
+#: woocommerce-shipping.php
+msgid "https://woocommerce.com/"
+msgstr ""
+
+#: classes/class-wc-connect-account-settings.php:30
+msgid "There was a problem updating your saved credit cards."
+msgstr ""
+
+#: classes/class-wc-connect-api-client-live.php:25
+#: src/Bulk/BatchableApiClient.php:118
+msgid "Unable to send request to WooCommerce Shipping server. Jetpack_Data was not found."
+msgstr ""
+
+#: classes/class-wc-connect-api-client-live.php:32
+#: src/Bulk/BatchableApiClient.php:126
+msgid "Unable to send request to WooCommerce Shipping server. Jetpack connection does not implement get_access_token."
+msgstr ""
+
+#: classes/class-wc-connect-api-client-live.php:39
+#: src/Bulk/BatchableApiClient.php:155
+msgid "Unable to send request to WooCommerce Shipping server. Body must be an array."
+msgstr ""
+
+#: classes/class-wc-connect-api-client-live.php:55
+#: src/Bulk/BatchableApiClient.php:165
+msgid "Unable to encode body for request to WooCommerce Shipping server."
+msgstr ""
+
+#. translators: %d: HTTP response code
+#: classes/class-wc-connect-api-client-live.php:90
+#: src/Bulk/BatchableApiClient.php:251
+#, php-format
+msgid "Error: The WooCommerce Shipping server returned HTTP code: %d"
+msgstr ""
+
+#. translators: %d: HTTP response code
+#: classes/class-wc-connect-api-client-live.php:112
+#: src/Bulk/BatchableApiClient.php:266
+#, php-format
+msgid "Error: The WooCommerce Shipping server returned ( %d ) and an empty response body."
+msgstr ""
+
+#. translators: %1$s: error code, %2$s: error message, %3$d: HTTP response code
+#: classes/class-wc-connect-api-client-live.php:143
+#: src/Bulk/BatchableApiClient.php:289
+#, php-format
+msgid "Error: The WooCommerce Shipping server returned: %1$s %2$s ( %3$d )"
+msgstr ""
+
+#: classes/class-wc-connect-api-client.php:71
+msgid "Invalid WooCommerce Shipping service slug provided"
+msgstr ""
+
+#. translators: %d: Product ID.
+#: classes/class-wc-connect-api-client.php:105
+#, php-format
+msgid "Product ( ID: %d ) did not include a weight. Shipping rates cannot be calculated."
+msgstr ""
+
+#. translators: %d: Product ID.
+#: classes/class-wc-connect-api-client.php:121
+#, php-format
+msgid "Product ( ID: %d ) is missing a dimension value. Shipping rates cannot be calculated."
+msgstr ""
+
+#: classes/class-wc-connect-api-client.php:169
+msgid "No shipping rate could be calculated. No items in the package are shippable."
+msgstr ""
+
+#: classes/class-wc-connect-api-client.php:630
+msgid "Unable to send request to WooCommerce Shipping server. Jetpack Token is missing"
+msgstr ""
+
+#: classes/class-wc-connect-api-client.php:637
+msgid "Unable to send request to WooCommerce Shipping server. Jetpack Token is malformed."
+msgstr ""
+
+#: classes/class-wc-connect-api-client.php:700
+msgid "Unable to send request to WooCommerce Shipping server. The timestamp generated for the signature is too old."
+msgstr ""
+
+#: classes/class-wc-connect-debug-tools.php:21
+msgid "Test your WooCommerce Shipping connection"
+msgstr ""
+
+#: classes/class-wc-connect-debug-tools.php:22
+msgid "Test Connection"
+msgstr ""
+
+#: classes/class-wc-connect-debug-tools.php:23
+msgid "This will test your WooCommerce Shipping connection to ensure everything is working correctly"
+msgstr ""
+
+#: classes/class-wc-connect-debug-tools.php:33
+msgid "Your site is successfully communicating to the WooCommerce Shipping API."
+msgstr ""
+
+#: classes/class-wc-connect-debug-tools.php:36
+msgid "ERROR: Your site has a problem connecting to the WooCommerce Shipping API. Please make sure your Jetpack connection is working."
+msgstr ""
+
+#. translators: %1$s: link to product edit page, %2$s: product name
+#: classes/class-wc-connect-error-notice.php:85
+#, php-format
+msgid "<strong>\"%2$s\" is missing weight, length, width, or height.</strong><br />Shipping rates cannot be calculated. <a href=\"%1$s\">Enter dimensions and weight for %2$s</a> so your customers can purchase this item."
+msgstr ""
+
+#: classes/class-wc-connect-error-notice.php:102
+#: src/Loader.php:2112
+#: src/Promo/PromoService.php:143
+msgid "Dismiss this notice"
+msgstr ""
+
+#: classes/class-wc-connect-functions.php:43
+msgid "WooCommerce Helper auth is missing"
+msgstr ""
+
+#. translators: %1$s: minimum WooCommerce version, %2$s: current WooCommerce version
+#: classes/class-wc-connect-help-view.php:64
+#, php-format
+msgid "WooCommerce %1$s or higher is required (You are running %2$s)"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:72
+msgid "Please set Base Location in WooCommerce Settings > General"
+msgstr ""
+
+#. translators: %s: current WooCommerce version
+#: classes/class-wc-connect-help-view.php:79
+#, php-format
+msgid "WooCommerce %s is configured correctly"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:92
+msgid "WooCommerce Shipping is not connected to WordPress.com. WooCommerce Shipping requires you to connect to a WordPress.com account to be able to offer shipping rates and label purchases."
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:97
+msgid "WooCommerce Shipping is connected to WordPress.com, and working correctly"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:149
+msgid "Setup for this service has not yet been completed"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:152
+msgid "No rate requests have yet been made for this service"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:155
+msgid "The most recent rate request was successful"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:158
+msgid "The most recent rate request failed"
+msgstr ""
+
+#. translators: %s: shipping zone name
+#: classes/class-wc-connect-help-view.php:163
+#, php-format
+msgid "%s Shipping Zone"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:235
+msgid "Log is empty"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:264
+#: classes/class-wc-connect-settings-pages.php:50
+#: src/Loader.php:925
+#: src/Onboarding/SettingsPage.php:75
+msgctxt "The WooCommerce Shipping brandname"
+msgid "WooCommerce Shipping"
+msgstr ""
+
+#: classes/class-wc-connect-help-view.php:292
+msgid "WooCommerce Shipping Status"
+msgstr ""
+
+#: classes/class-wc-connect-nux.php:266
+msgid "shipping label printing, and smoother payment setup"
+msgstr ""
+
+#: classes/class-wc-connect-nux.php:268
+#: classes/class-wc-connect-nux.php:274
+msgid "smoother payment setup"
+msgstr ""
+
+#: classes/class-wc-connect-nux.php:270
+#: classes/class-wc-connect-nux.php:276
+msgid "shipping label printing"
+msgstr ""
+
+#: classes/class-wc-connect-nux.php:272
+msgid "shipping label printing and smoother payment setup"
+msgstr ""
+
+#. translators: %s: list of features, potentially comma separated
+#: classes/class-wc-connect-nux.php:435
+#, php-format
+msgid "Connect your store to activate <strong>WooCommerce Shipping</strong>. Once you connect your store to WordPress.com, you'll have access to %s."
+msgstr ""
+
+#: classes/class-wc-connect-nux.php:440
+msgid "Connect"
+msgstr ""
+
+#. translators: %s: list of features, potentially comma separated
+#: classes/class-wc-connect-nux.php:479
+#, php-format
+msgid "You can now enjoy %s."
+msgstr ""
+
+#: classes/class-wc-connect-nux.php:486
+msgid "Got it, thanks!"
+msgstr ""
+
+#. translators: %s: list of features, potentially comma separated
+#: classes/class-wc-connect-nux.php:540
+#, php-format
+msgid "Your store is connected to WordPress.com. Accept our terms to activate <strong>WooCommerce Shipping</strong> and access %s."
+msgstr ""
+
+#: classes/class-wc-connect-nux.php:547
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "Enable WooCommerce Shipping"
+msgstr ""
+
+#. translators: %1$s: "Terms of Service", %2$s: "https://wordpress.com/tos/", %3$s: "https://automattic.com/privacy/"
+#: classes/class-wc-connect-nux.php:602
+#, php-format
+msgid "By clicking \"%1$s\", you agree to the <a href=\"%2$s\">Terms of Service</a> and have read our <a href=\"%3$s\">Privacy Policy</a>"
+msgstr ""
+
+#. translators: %s: link to privacy policy
+#: classes/class-wc-connect-privacy.php:43
+#, php-format
+msgid "By using this extension, you may be storing personal data or sharing data with external services. <a href=\"%s\" target=\"_blank\">Learn more about how this works, including what you may want to include in your privacy policy.</a>"
+msgstr ""
+
+#: classes/class-wc-connect-privacy.php:74
+msgid "Warning: Erasing personal data will cause the ability to reprint or refund WooCommerce Shipping shipping labels to be lost on the affected orders."
+msgstr ""
+
+#: classes/class-wc-connect-privacy.php:95
+msgid "Shipping label service"
+msgstr ""
+
+#: classes/class-wc-connect-privacy.php:99
+msgid "Shipping label tracking number"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:617
+msgctxt "A service with an unknown title and unknown method_title"
+msgid "Unknown"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:621
+msgid "Rest of the World"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:653
+msgid "An invalid service instance was received."
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:658
+msgid "An invalid service ID was received."
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:794
+msgid "kg"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:796
+msgid "g"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:798
+msgid "lbs"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:800
+msgid "oz"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:802
+msgid "m"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:804
+msgid "cm"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:806
+msgid "mm"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:808
+msgid "in"
+msgstr ""
+
+#: classes/class-wc-connect-service-settings-store.php:810
+msgid "yd"
+msgstr ""
+
+#: classes/class-wc-connect-settings-pages.php:124
+msgid "Note: Jetpack is connected, but development mode is also enabled on this site. Please disable development mode."
+msgstr ""
+
+#: classes/class-wc-connect-settings-pages.php:126
+msgid "Note: Jetpack development mode is enabled on this site. This site will not be able to obtain payment methods from WooCommerce Shipping production servers."
+msgstr ""
+
+#. translators: %d: Deleted Product ID
+#: classes/class-wc-connect-utils.php:34
+#, php-format
+msgid "#%d - [Deleted product]"
+msgstr ""
+
+#. translators: %1$d: Product ID, %2$s: Product Name
+#: classes/class-wc-connect-utils.php:38
+#, php-format
+msgid "#%1$d - %2$s"
+msgstr ""
+
+#. translators: %s: error message
+#: classes/legacy-api-controllers/class-wc-rest-connect-account-settings-controller.php:66
+#: src/LabelSettings/AccountSettingsRestController.php:99
+#, php-format
+msgid "Unable to update settings. %s"
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-packages-controller.php:99
+#: src/Packages/PackagesRESTController.php:178
+msgid "The new custom package names are not unique."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-packages-controller.php:113
+#: src/Packages/PackagesRESTController.php:192
+msgid "At least one of the new custom packages has the same name as existing packages."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-packages-controller.php:144
+msgid "The new predefined package names are not unique."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-packages-controller.php:165
+msgid "At least one of the new predefined packages has the same name as existing packages."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-self-help-controller.php:23
+#: src/LabelSettings/SelfHelpRestController.php:45
+msgid "Unable to update settings. The form data could not be read."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-services-controller.php:44
+msgid "Service schemas were not loaded"
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-services-controller.php:71
+msgid "Unable to update service settings. Form data is missing service ID."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-services-controller.php:83
+msgid "Unable to update service settings. The form data could not be read."
+msgstr ""
+
+#. translators: %s: error message
+#: classes/legacy-api-controllers/class-wc-rest-connect-services-controller.php:97
+#, php-format
+msgid "Unable to update service settings. Validation failed. %s"
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-shipping-label-controller.php:58
+#: src/Integrations/ConfigRESTController.php:124
+#: src/LabelPurchase/LabelPrintService.php:100
+#: src/LabelPurchase/LabelPrintService.php:360
+#: src/LabelPurchase/LabelPurchaseService.php:158
+msgid "Order not found"
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-shipping-label-controller.php:151
+#: src/LabelPurchase/LabelPurchaseService.php:1075
+msgid "Individual packaging"
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-shipping-label-controller.php:155
+#: src/LabelPurchase/LabelPurchaseService.php:1079
+msgid "Unknown package"
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-shipping-label-print-controller.php:24
+#: src/LabelPurchase/LabelPrintController.php:331
+msgid "Invalid PDF request."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-subscription-activate-controller.php:27
+msgid "The subscription is already active."
+msgstr ""
+
+#: classes/legacy-api-controllers/class-wc-rest-connect-tos-controller.php:29
+#: src/Integrations/TosRESTController.php:33
+msgid "Bad request"
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:83
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:188
+msgid "2 character continent code."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:123
+msgid "There are no locations matching these parameters."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:194
+msgid "Full name of continent."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:200
+msgid "List of countries on this continent."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:210
+msgid "ISO3166 alpha-2 country code."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:216
+msgid "Default ISO4127 alpha-3 currency code for the country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:222
+msgid "Currency symbol position for this country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:228
+msgid "Decimal separator for displayed prices for this country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:234
+msgid "The unit lengths are defined in for this country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:240
+msgid "Full name of country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:246
+msgid "Number of decimal points shown in displayed prices for this country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:252
+msgid "List of states in this country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:262
+msgid "State code."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:268
+msgid "Full name of state."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:277
+msgid "Thousands separator for displayed prices in this country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-continents-controller.php:283
+msgid "The unit weights are defined in for this country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-controller.php:74
+msgid "Sorry, you cannot list resources."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-controller.php:88
+msgid "Sorry, you cannot view this resource."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-controller.php:106
+msgid "List of supported continents, countries, and states."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-controller.php:110
+msgid "List of supported states in a given country."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-controller.php:114
+msgid "List of supported currencies."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-controller.php:181
+msgid "Data resource ID."
+msgstr ""
+
+#: classes/wc-api-dev/class-wc-rest-dev-data-controller.php:187
+msgid "Data resource description."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:39
+msgid "Get shipping labels report"
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:40
+msgid "Retrieve a curated, read-only report of purchased WooCommerce Shipping labels for a date range."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:130
+msgid "Inclusive start date/time for labels to include."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:135
+msgid "Inclusive end date/time for labels to include."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:179
+msgid "Label cost as a decimal string without a currency symbol."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:183
+msgid "Refund state for the label; an empty string means no refund is recorded."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:204
+msgid "Aggregate totals for the full filtered date range, not only the current page."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:208
+msgid "Total labels in the full filtered date range."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:213
+msgid "Total label cost across the full filtered date range as a decimal string without a currency symbol."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:217
+msgid "Number of labels in the full filtered date range with a completed refund."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:242
+msgid "The after and before values must be valid date-time strings."
+msgstr ""
+
+#: src/Abilities/ShippingLabelsReport.php:250
+msgid "The after date must be earlier than or equal to the before date."
+msgstr ""
+
+#: src/Analytics/LabelsService.php:199
+msgid "Requested"
+msgstr ""
+
+#: src/Analytics/ShippingLabel.php:29
+#: dist/180.js:4
+#: dist/woocommerce-shipping-analytics.js:1
+#: dist/woocommerce-shipping-analytics.js:115
+msgid "Shipping Labels"
+msgstr ""
+
+#: src/Banners/BulkLabelsBanner.php:94
+msgid "Fulfill with labels"
+msgstr ""
+
+#: src/Bulk/BatchableApiClient.php:84
+msgid "A payment method is required to purchase labels. Set one in WooCommerce Shipping settings."
+msgstr ""
+
+#: src/Bulk/BatchableApiClient.php:90
+msgid "Cannot purchase a batch with no shipments."
+msgstr ""
+
+#: src/Bulk/BatchableApiClient.php:235
+msgid "No response received from the WooCommerce Shipping server."
+msgstr ""
+
+#: src/Carrier/FedEx/FedExCarrierStrategyRESTController.php:85
+msgid "You must accept the FedEx Terms of Service."
+msgstr ""
+
+#: src/Carrier/FedEx/FedExCarrierStrategyService.php:44
+msgid "A valid email address is required to accept FedEx Terms of Service. Please update your account email."
+msgstr ""
+
+#: src/Carrier/UPSDAP/UPSDAPCarrierStrategyService.php:48
+msgid "A valid email address is required to accept UPS Terms of Service. Please update your account email."
+msgstr ""
+
+#: src/Checkout/CheckoutService.php:191
+#: src/Checkout/CheckoutService.php:218
+msgid "We couldn't verify the shipping address you entered. Please review and ensure it's accurate before placing your order."
+msgstr ""
+
+#: src/Checkout/CheckoutService.php:410
+msgid "Apply suggested address"
+msgstr ""
+
+#. translators: 1: address, 2: button
+#: src/Checkout/CheckoutService.php:414
+#, php-format
+msgid "We couldn't verify your shipping address. Did you mean %1$s? %2$s"
+msgstr ""
+
+#. translators: %s is a link to the status page.
+#: src/DOM/Manipulation.php:34
+#, php-format
+msgid "Section not loading? Visit the <a href=\"%s\">status page</a> for troubleshooting steps."
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:46
+msgid "Admin Return Label Notification"
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:49
+msgid "This email is sent to store admins when a return label is created for an order."
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:163
+#: src/Emails/WC_Return_Label_Email.php:175
+msgid "Enable/Disable"
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:165
+#: src/Emails/WC_Return_Label_Email.php:177
+msgid "Enable this email notification"
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:169
+msgid "Recipient(s)"
+msgstr ""
+
+#. translators: %s: admin email address
+#: src/Emails/WC_Admin_Return_Label_Email.php:172
+#, php-format
+msgid "Enter recipients (comma separated) for this email. Defaults to %s."
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:178
+#: src/Emails/WC_Return_Label_Email.php:181
+msgid "Subject"
+msgstr ""
+
+#. translators: %s: list of placeholders
+#. translators: %s: list of available placeholders
+#: src/Emails/WC_Admin_Return_Label_Email.php:182
+#: src/Emails/WC_Admin_Return_Label_Email.php:191
+#: src/Emails/WC_Admin_Return_Label_Email.php:199
+#: src/Emails/WC_Return_Label_Email.php:185
+#: src/Emails/WC_Return_Label_Email.php:194
+#: src/Emails/WC_Return_Label_Email.php:201
+#, php-format
+msgid "Available placeholders: %s"
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:187
+#: src/Emails/WC_Return_Label_Email.php:190
+msgid "Email heading"
+msgstr ""
+
+#. translators: %s: list of placeholders
+#: src/Emails/WC_Admin_Return_Label_Email.php:197
+#: src/Emails/WC_Return_Label_Email.php:199
+msgid "Additional content"
+msgstr ""
+
+#. translators: %s: list of placeholders
+#. translators: %s: list of available placeholders
+#: src/Emails/WC_Admin_Return_Label_Email.php:199
+#: src/Emails/WC_Return_Label_Email.php:201
+msgid "Text to appear below the main email content."
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:206
+#: src/Emails/WC_Return_Label_Email.php:208
+msgid "Email type"
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:208
+#: src/Emails/WC_Return_Label_Email.php:210
+msgid "Choose which format of email to send."
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:223
+msgid "[{site_title}]: Return label created for order #{order_number}"
+msgstr ""
+
+#: src/Emails/WC_Admin_Return_Label_Email.php:232
+msgid "Return label created"
+msgstr ""
+
+#: src/Emails/WC_Return_Label_Email.php:53
+msgid "Return Label"
+msgstr ""
+
+#: src/Emails/WC_Return_Label_Email.php:56
+msgid "This email is sent to customers when a return label is created for their order."
+msgstr ""
+
+#. translators: Placeholders: {site_title} - site name, {order_number} - order number
+#: src/Emails/WC_Return_Label_Email.php:226
+msgid "[{site_title}]: Return label for order #{order_number}"
+msgstr ""
+
+#: src/Emails/WC_Return_Label_Email.php:235
+msgid "Your return label is ready"
+msgstr ""
+
+#: src/Emails/WC_Return_Label_Email.php:244
+msgid "If you have any questions, please contact us."
+msgstr ""
+
+#: src/Fulfillments/ShippingFulfillmentsDataStore.php:70
+msgid "Failed to read fulfillment data."
+msgstr ""
+
+#: src/Fulfillments/ShippingFulfillmentsDataStore.php:124
+msgid "Failed to search fulfillment data."
+msgstr ""
+
+#: src/Integrations/WCST.php:87
+msgctxt "WooCommerce Shipping & Tax plugin description override to WooCommerce Tax"
+msgid "Previously WooCommerce Shipping & Tax. Hosted tax calculations for WooCommerce."
+msgstr ""
+
+#: src/LabelPurchase/AddressNormalizationService.php:157
+#: src/LabelPurchase/AddressNormalizationService.php:206
+msgid "Address normalization failed"
+msgstr ""
+
+#: src/LabelPurchase/EligibilityRESTController.php:79
+msgid "The order ID."
+msgstr ""
+
+#: src/LabelPurchase/EligibilityRESTController.php:84
+msgid "Whether the client can create a customs form."
+msgstr ""
+
+#: src/LabelPurchase/EligibilityRESTController.php:89
+msgid "Whether the client can create a package."
+msgstr ""
+
+#: src/LabelPurchase/EligibilityRESTController.php:94
+msgid "Whether the client can create a payment method."
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintController.php:350
+msgid "Bulk label printing requires the fulfillment API."
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:124
+msgid "Label not found"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:220
+#: src/LabelPurchase/LabelPrintService.php:242
+msgid "Packing Slip"
+msgstr ""
+
+#. translators: %s is the order number.
+#: src/LabelPurchase/LabelPrintService.php:246
+#, php-format
+msgid "Order #%s"
+msgstr ""
+
+#. translators: %1$s is the shipment number, %2$s is the total shipments.
+#: src/LabelPurchase/LabelPrintService.php:252
+#, php-format
+msgid "Shipment #%1$s of %2$s"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:261
+msgid "Shipping Label Details"
+msgstr ""
+
+#. translators: %s is the service name.
+#: src/LabelPurchase/LabelPrintService.php:265
+#, php-format
+msgid "Service: %s"
+msgstr ""
+
+#. translators: %s is the tracking number.
+#: src/LabelPurchase/LabelPrintService.php:270
+#, php-format
+msgid "Tracking #: %s"
+msgstr ""
+
+#. translators: %s is the package name.
+#: src/LabelPurchase/LabelPrintService.php:275
+#, php-format
+msgid "Package: %s"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:283
+msgid "From:"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:287
+msgid "Ship To:"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:295
+msgid "Item"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:296
+msgid "SKU"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:297
+msgid "Variant"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:298
+msgid "Quantity"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:299
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Weight"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:300
+msgid "Dimensions"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:301
+msgid "Picked"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:443
+msgid "PDF generation failed"
+msgstr ""
+
+#: src/LabelPurchase/LabelPrintService.php:446
+msgid "PDF generation returned empty response"
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseRESTController.php:82
+#: src/LabelRate/LabelRateRESTController.php:129
+msgid "Extra options for the shipment"
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseRESTController.php:87
+#: src/LabelRate/LabelRateRESTController.php:134
+msgid "ISO 8601 formatted date string for the shipping label"
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseRESTController.php:95
+msgid "Whether this is a return shipment"
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseRESTController.php:219
+msgid "The batch label-purchase request must include a batch-level `origin` object. Per-shipment origin is not supported in bulk mode."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseRESTController.php:227
+msgid "The batch label-purchase request must include a non-empty `shipments` array."
+msgstr ""
+
+#. translators: %d: maximum number of shipments per batch label-purchase request
+#: src/LabelPurchase/LabelPurchaseRESTController.php:237
+#, php-format
+msgid "Batch label-purchase requests are limited to %d shipments."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseRESTController.php:251
+msgid "Per-shipment `origin` is not allowed in bulk mode. Move `origin` to the batch root."
+msgstr ""
+
+#. translators: %d: duplicated order_id
+#: src/LabelPurchase/LabelPurchaseRESTController.php:268
+#, php-format
+msgid "Duplicate `order_id` %d in batch label-purchase request; each order must appear at most once."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:514
+msgid "Bulk label purchase requires the fulfillment API. Enable it before using this endpoint."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:549
+msgid "Shipment is missing a valid `order_id` (must be a positive integer)."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:566
+msgid "Could not load or create a fulfillment record for the order."
+msgstr ""
+
+#. translators: %d: WooCommerce order ID
+#: src/LabelPurchase/LabelPurchaseService.php:648
+#, php-format
+msgid "The shipping server did not return a result for order #%d. Please retry; if the problem persists, contact support with this order ID."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:677
+msgid "Label purchase failed."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:896
+msgid "Unexpected response shape from the WooCommerce Shipping server (no per-order entries)."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:1013
+msgid "The shipping server returned an invalid response entry (missing labels array)."
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:1332
+msgid "Invalid PDF response format"
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:1340
+msgid "Response does not contain valid PDF data"
+msgstr ""
+
+#: src/LabelPurchase/LabelPurchaseService.php:1360
+msgid "Failed to save PDF file"
+msgstr ""
+
+#: src/LabelPurchase/OrdersShippingContextRESTController.php:94
+msgid "Order IDs to fetch shipping context for."
+msgstr ""
+
+#. translators: %d: maximum number of orders that can be processed in a single bulk-labels request.
+#: src/LabelPurchase/OrdersShippingContextRESTController.php:130
+#, php-format
+msgid "Up to %d orders can be processed at a time."
+msgstr ""
+
+#: src/LabelPurchase/OrdersShippingContextRESTController.php:147
+#: src/LabelPurchase/View.php:203
+#: src/PackageAssignment/PackageAssignmentService.php:192
+msgid "Order not found."
+msgstr ""
+
+#: src/LabelPurchase/OrdersShippingContextRESTController.php:160
+msgid "This order already has a shipping label or is fulfilled."
+msgstr ""
+
+#: src/LabelPurchase/View.php:196
+msgid "You do not have permission to view this banner, please contact your administrator."
+msgstr ""
+
+#: src/LabelPurchase/View.php:226
+msgid "Unable to retrieve WordPress connection data. Please try reconnecting your WordPress connection."
+msgstr ""
+
+#: src/LabelPurchase/View.php:239
+msgid "The origin country of this store is not supported by WooCommerce Shipping yet."
+msgstr ""
+
+#: src/LabelPurchase/View.php:258
+msgid "The order does not contain any shippable products."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:98
+msgid "Order ID for this shipping label."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:103
+msgid "Ship from address"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:111
+msgid "Ship to address"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:119
+msgid "The package object that describe how the shipment is packed."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:142
+msgid "Define label as a return label. This will reverse the to and from addresses."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:155
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:55
+msgid "Company name."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:160
+msgid "Name of the shipper."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:166
+msgid "Address line"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:172
+msgid "Address line 1"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:178
+msgid "Address line 2"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:183
+msgid "City name."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:188
+msgid "ISO code or name of the state, province or district."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:193
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:82
+msgid "Postal code."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:199
+msgid "ISO code of the country."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:205
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:103
+msgid "Phone number."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:211
+msgid "Whether the address is residential. Optional; when omitted, EasyPost applies its own classification."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:226
+msgid "Package slug (ie. default_box)"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:232
+msgid "Box ID (ie. small_flat_box)"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:238
+msgid "Length of the box. The unit is based on the store setting unit."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:246
+msgid "Width of the box. The unit is based on the store setting unit."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:254
+msgid "Height of the box. The unit is based on the store setting unit."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:262
+msgid "Weight of the box. The unit is based on the store setting unit."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:270
+msgid "Is this an envelope or package?"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:275
+msgid "Customs info contents type"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:280
+msgid "Custom infos restriction type"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:285
+msgid "Custom infos, what to do if it can not be delivered, abandon? or return?"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:290
+msgid "Custom infos, internal transaction number"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:295
+msgid "List of products being shipped in this package"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:314
+msgid "Description of this item"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:320
+msgid "Quanity of this item in the shipment"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:326
+msgid "The total value of this item"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:331
+msgid "The total weight of this item"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:336
+msgid "HS Tariff number for this item"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:341
+msgid "The origin country of this item"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:346
+msgid "The product ID of this item"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:371
+msgid "The provided phone number is not valid"
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:446
+msgid "The batch rate-quote request must include a single root `origin` object shared by all orders."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:454
+msgid "The batch rate-quote request must include a non-empty `orders` array."
+msgstr ""
+
+#. translators: %d: maximum number of orders per batch rate-quote request
+#: src/LabelRate/LabelRateRESTController.php:464
+#, php-format
+msgid "Batch rate-quote requests are limited to %d orders."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:478
+msgid "Per-order `origin` is not allowed in batch rate-quote requests; provide a single root `origin` shared by all orders."
+msgstr ""
+
+#. translators: %d: duplicated order_id
+#: src/LabelRate/LabelRateRESTController.php:494
+#, php-format
+msgid "Duplicate `order_id` %d in batch rate-quote request; each order must appear at most once."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:559
+msgid "Order entry must be an object."
+msgstr ""
+
+#. translators: %s: comma-separated list of missing required keys
+#: src/LabelRate/LabelRateRESTController.php:576
+#, php-format
+msgid "Order is missing required field(s): %s."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:586
+msgid "Order is missing a valid `order_id` (must be a positive integer)."
+msgstr ""
+
+#: src/LabelRate/LabelRateRESTController.php:595
+msgid "Order destination and packages must be non-empty arrays."
+msgstr ""
+
+#: src/LabelRate/LabelRateService.php:159
+msgid "Order is missing a valid order_id and could not be rated."
+msgstr ""
+
+#. translators: %s WC download URL link.
+#: src/Loader.php:763
+#, php-format
+msgid "WooCommerce Shipping requires the WooCommerce plugin to be installed and active. You can download %s here."
+msgstr ""
+
+#: src/Loader.php:1116
+msgid "Settings"
+msgstr ""
+
+#: src/Loader.php:1123
+msgid "Documentation"
+msgstr ""
+
+#: src/Loader.php:1124
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "Support"
+msgstr ""
+
+#: src/Loader.php:1659
+#: src/Loader.php:1667
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Tracking"
+msgstr ""
+
+#: src/Loader.php:1671
+msgid "Provider"
+msgstr ""
+
+#: src/Loader.php:1673
+msgid "Tracking number"
+msgstr ""
+
+#: src/Loader.php:1802
+msgid "Shipping Label"
+msgstr ""
+
+#: src/Loader.php:1814
+msgid "Shipment Tracking"
+msgstr ""
+
+#: src/Loader.php:1869
+#: src/Loader.php:1898
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Phone"
+msgstr ""
+
+#: src/Loader.php:2141
+msgid "WooCommerce Shipping & Tax has been deactivated. Your data and settings have been carried over to the dedicated WooCommerce Shipping and WooCommerce Tax extensions.<br />For support, please <a href=\"https://woocommerce.com/my-account/create-a-ticket/\">contact our Happiness Engineers</a>."
+msgstr ""
+
+#: src/Migration/LegacyLabelMigrator.php:63
+msgid "WooCommerce Shipping label migrator"
+msgstr ""
+
+#: src/Migration/LegacyLabelMigrator.php:67
+msgid "Migrates labels from legacy extension to WooCommerce Shipping"
+msgstr ""
+
+#: src/Migration/MigrationController.php:78
+msgid "This will migrate the labels purchased by WooCommerce Shipping & Tax to be viewable in WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationController.php:82
+#: src/Migration/MigrationController.php:109
+msgid "Start migrating WooCommerce Shipping labels"
+msgstr ""
+
+#: src/Migration/MigrationController.php:83
+#: src/Migration/MigrationController.php:110
+#: src/Migration/MigrationController.php:132
+#: src/Migration/MigrationController.php:143
+msgid "Start migration"
+msgstr ""
+
+#: src/Migration/MigrationController.php:89
+msgid "Stop migrating WooCommerce Shipping labels"
+msgstr ""
+
+#: src/Migration/MigrationController.php:90
+msgid "Stop migration"
+msgstr ""
+
+#. translators: %d=count of labels pending migration
+#: src/Migration/MigrationController.php:94
+#, php-format
+msgid "This will stop the background process that migrates purchased labels. There are currently <strong>%d label</strong> that can be migrated."
+msgid_plural "This will stop the background process that migrates purchased labels. There are currently <strong>%d labels</strong> that can be migrated."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Migration/MigrationController.php:104
+msgid "The WooCommerce Shipping & Tax shipping label migration has been stopped."
+msgstr ""
+
+#. translators: %d is the number of labels. The word "label(s)" is wrapped in <strong> tags.
+#: src/Migration/MigrationController.php:114
+#, php-format
+msgid "There are currently <strong>%d label</strong> that can be migrated."
+msgid_plural "There are currently <strong>%d labels</strong> that can be migrated."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Migration/MigrationController.php:124
+msgid "The migration of WooCommerce Shipping & Tax shipping labels has started."
+msgstr ""
+
+#: src/Migration/MigrationController.php:131
+#: src/Migration/MigrationController.php:142
+msgid "Start migrating WooCommerce Shipping settings"
+msgstr ""
+
+#: src/Migration/MigrationController.php:134
+#: src/Migration/MigrationController.php:145
+msgid "This will migrate the settings set by WooCommerce Shipping & Tax and make them usable in WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationController.php:137
+msgid "Your WooCommerce Shipping & Tax settings has been successfully migrated."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:61
+msgid "WooCommerce Shipping has successfully been installed and activated — enjoy the new WooCommerce Shipping experience."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:99
+msgid "Next, transfer your WooCommerce Shipping & Tax settings to WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:102
+msgid "Next, transfer your WooCommerce Shipping & Tax shipping labels to WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:105
+msgid "Next, transfer your WooCommerce Shipping & Tax settings and shipping labels to WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:119
+msgid "Congratulations! You have successfully installed and activated WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:121
+msgid "Click here to start the process"
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:152
+msgid "WooCommerce Shipping & Tax settings are being migrated to WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:156
+msgid "WooCommerce Shipping & Tax labels are being migrated to WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:160
+msgid "WooCommerce Shipping & Tax legacy settings and labels are being migrated to WooCommerce Shipping."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:169
+msgid "You may continue to use your website as usual. We will notify you once the migration process is complete."
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:202
+msgid "Current progress:"
+msgstr ""
+
+#: src/Migration/MigrationNotices.php:234
+msgid "Your shipping settings and label history have been successfully migrated — enjoy the new WooCommerce Shipping experience."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentRESTController.php:88
+#: src/PackageAssignment/PackageAssignmentRESTController.php:108
+#: src/PackageAssignment/PackageAssignmentRESTController.php:115
+msgid "order_ids must be a non-empty array of positive integers."
+msgstr ""
+
+#. translators: %d: maximum number of orders allowed in a single batch.
+#: src/PackageAssignment/PackageAssignmentRESTController.php:97
+#, php-format
+msgid "Batch exceeds the maximum of %d orders."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentRESTController.php:128
+msgid "order_ids must contain unique positive integers."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:114
+msgid "No packages are configured for this store."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:152
+msgid "All configured packages have invalid dimensions or could not be resolved."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:154
+msgid "No box-type packages are configured. Add a box-type package in Settings → Shipping → Packages."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:200
+msgid "Order has no items that need shipping."
+msgstr ""
+
+#. translators: %s: product name
+#: src/PackageAssignment/PackageAssignmentService.php:210
+#, php-format
+msgid "Product \"%s\" is missing length, width, height, or weight."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:260
+#: src/PackageAssignment/PackageAssignmentService.php:317
+msgid "An unexpected error occurred while suggesting a package."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:273
+msgid "No packages were produced by the packer."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:285
+msgid "An item is too large for any configured package."
+msgstr ""
+
+#: src/PackageAssignment/PackageAssignmentService.php:293
+msgid "This order's items don't all fit in one package. Pick a larger package, or split the order into multiple shipments."
+msgstr ""
+
+#: src/Packages/PackagesRESTController.php:223
+msgid "At least one of the new carrier package names is not unique."
+msgstr ""
+
+#: src/Packages/PackagesRESTController.php:244
+msgid "At least one of the new predefined packages has the same name as an existing package."
+msgstr ""
+
+#: src/Packages/PackagesRESTController.php:292
+msgid "Custom package not found."
+msgstr ""
+
+#: src/Packages/PackagesRESTController.php:329
+msgid "Predefined package not found."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:96
+#: src/RestAPi/Routes/V2/AbstractController.php:193
+msgid "An error occurred while processing your request."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:120
+msgid "Invalid error object provided."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:137
+msgid "Sorry, you cannot view resources."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:141
+msgid "Sorry, you cannot create resources."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:145
+#: src/RestAPi/Routes/V2/AbstractController.php:149
+msgid "Sorry, you cannot update resources."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:153
+msgid "Sorry, you cannot delete resources."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:176
+msgid "Invalid ID."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:177
+msgid "Resource already exists."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:178
+msgid "Cannot create resource."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:179
+msgid "Cannot delete resource."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:180
+msgid "Cannot trash resource."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/AbstractController.php:181
+msgid "Trash not supported."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:37
+msgid "Unique identifier for the address."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:43
+msgid "First name."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:49
+msgid "Last name."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:61
+msgid "Address line."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:68
+msgid "City."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:75
+msgid "State."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:89
+msgid "Country code in ISO 3166-1 alpha-2 format."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:95
+msgid "Email address."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:110
+msgid "Indicates if this is the default address."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:116
+msgid "Indicates if the verified address (from address validation) is being used."
+msgstr ""
+
+#: src/RestAPi/Routes/V2/Addresses/AddressSchema.php:123
+msgid "Indicates if the address has been approved by the merchant."
+msgstr ""
+
+#: src/ScanForm/ScanForm.php:71
+#: dist/woocommerce-shipping-scanform.js:202
+msgid "Create USPS® SCAN Form"
+msgstr ""
+
+#: src/ScanForm/ScanFormHistoryRESTController.php:149
+msgid "Invalid SCAN Form ID format"
+msgstr ""
+
+#: src/ScanForm/ScanFormRESTController.php:340
+msgid "Failed to create SCAN Form"
+msgstr ""
+
+#: src/ScanForm/ScanFormRESTController.php:469
+#: src/ScanForm/ScanFormRESTController.php:470
+msgid "Failed to review labels"
+msgstr ""
+
+#: src/ScanForm/ScanFormService.php:288
+msgid "No labels provided"
+msgstr ""
+
+#: src/ServiceData/ServicesErrorNotice.php:231
+msgid "Unable to connect to the WooCommerce Shipping server. Some features like promotions and service announcements may not be available."
+msgstr ""
+
+#: src/ServiceData/ServicesErrorNotice.php:239
+msgid "Check your connection status"
+msgstr ""
+
+#: src/ServiceData/ServiceStatusRESTController.php:80
+#: src/ServiceData/ServiceStatusRESTController.php:89
+msgid "Unable to fetch service status."
+msgstr ""
+
+#: src/Shipment/Address.php:140
+msgid "Missing state code."
+msgstr ""
+
+#: src/Shipment/Address.php:152
+msgid "Invalid city provided. City name must be more than 2 characters long."
+msgstr ""
+
+#: src/Shipment/Address.php:170
+msgid "Invalid country code provided. Country code must be 2 characters."
+msgstr ""
+
+#. translators: %s valid country codes
+#: src/Shipment/Address.php:182
+#, php-format
+msgid "Invalid country code provided. Must be one of: %s"
+msgstr ""
+
+#: src/Shipment/Address.php:202
+msgid "The provided postal code / ZIP is not valid"
+msgstr ""
+
+#: src/Shipments/ShipmentsService.php:60
+msgid "Order not found when updating order shipments "
+msgstr ""
+
+#. translators: %s: Reason for the failure in creating the data model
+#: src/Shipments/ShipmentsService.php:173
+#, php-format
+msgid "Shipment model creation failed after repair attempt: %s"
+msgstr ""
+
+#. translators: %s: Reason for the failure in creating the data model
+#: src/Shipments/ShipmentsService.php:182
+#, php-format
+msgid "Shipment model creation failed with error: %s"
+msgstr ""
+
+#: src/StoreApi/Extensions/BlocksCheckoutAddressValidationExtension.php:109
+msgid "WC Shipping checkout address validation notices"
+msgstr ""
+
+#. translators: %s: The missing query parameter.
+#: src/WCShippingRESTController.php:44
+#, php-format
+msgid "Required body parameter is missing: %s"
+msgstr ""
+
+#. translators: %s: The missing query parameter.
+#: src/WCShippingRESTController.php:82
+#, php-format
+msgid "Required parameter is missing: %s"
+msgstr ""
+
+#: src/WPCOMConnection/WPCOMConnectionRESTController.php:53
+msgid "Return URL: The location the user should return to after authorizing the site on WordPress.com."
+msgstr ""
+
+#: src/WPCOMConnection/WPCOMConnectionRESTController.php:60
+msgid "A string representative of where the connection was initiated."
+msgstr ""
+
+#: dist/180.js:1
+msgid "Date"
+msgstr ""
+
+#: dist/180.js:1
+#: dist/woocommerce-shipping-bulk-labels-banner.js:192
+msgid "Order"
+msgstr ""
+
+#: dist/180.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Price"
+msgstr ""
+
+#: dist/180.js:1
+#: dist/woocommerce-shipping-bulk-labels-banner.js:187
+#: dist/woocommerce-shipping-bulk-labels-banner.js:197
+msgid "Service"
+msgstr ""
+
+#: dist/180.js:1
+msgid "Tracking Number"
+msgstr ""
+
+#: dist/180.js:1
+msgid "Refund status"
+msgstr ""
+
+#: dist/180.js:1
+msgid "Labels purchased in this period"
+msgstr ""
+
+#: dist/180.js:1
+msgid "Total label cost in this period"
+msgstr ""
+
+#: dist/180.js:1
+msgid "Refund in this period"
+msgstr ""
+
+#. translators: %d is the cache expiration in minutes
+#: dist/180.js:4
+#, js-format
+msgid "To improve performance, the data shown here may be up to %d minutes old."
+msgstr ""
+
+#: dist/180.js:4
+msgid "Labels in this period"
+msgstr ""
+
+#: dist/180.js:4
+msgid "Failed to fetch data for export."
+msgstr ""
+
+#: dist/180.js:4
+msgid "Failed to request download of CSV file."
+msgstr ""
+
+#: dist/180.js:4
+msgid "Export CSV"
+msgstr ""
+
+#: dist/180.js:4
+msgid "Download"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Addresses"
+msgstr ""
+
+#. translators: accessibility text
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:9
+#: dist/woocommerce-shipping-plugin.js:8
+msgid "The component <mark/> encountered an error"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:9
+#: dist/woocommerce-shipping-plugin.js:8
+msgid "Please report the following error by <feedbackform>submitting a crash report</feedbackform> or contacting <a>WooCommerce Shipping Support</a>"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:9
+#: dist/woocommerce-shipping-plugin.js:8
+msgid "submitting a crash report"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:9
+#: dist/woocommerce-shipping-plugin.js:8
+msgid "WooCommerce Shipping Support"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Name"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Company"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Email address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "e.g., +1 (212) 555–0123 or 2125550123"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Country"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "City"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "State"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Postal code"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Save as default sender address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:47
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Save as default return address"
+msgstr ""
+
+#. translators: %d: Number of fields that need attention
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "We have slightly modified the address entered. If correct, please use the suggested address to ensure accurate delivery."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "We were unable to verify the address entered. It may still be a valid address, but we cannot ensure accurate delivery to this address as entered. Please confirm if you would like to continue with the address as entered or return to edit the address."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Use selected address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Confirm unverified address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Confirm Address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Close modal"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "We found a similar address, Please review the suggestion below, or proceed with your original address."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+#: dist/woocommerce-shipping-scanform.js:12
+msgid "Choose an address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Keep my address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Suggested address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:228
+#: dist/woocommerce-shipping-plugin.js:231
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Edit address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "What you entered"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Suggested"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Unverified address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Address verified"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Validating…"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Verifying address…"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Recipient Name"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Name must be at least 3 characters long."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Shipping Address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Apartment, suite, etc."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Postal Code"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Email"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Email (optional)"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Phone (optional)"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Please fix the error below to continue:"
+msgid_plural "Please fix the errors below to continue:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-create-shipping-label.js:45
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:30
+#: dist/woocommerce-shipping-plugin.js:41
+#: dist/woocommerce-shipping-plugin.js:228
+#: dist/woocommerce-shipping-scanform.js:205
+#: dist/woocommerce-shipping-scanform.js:208
+msgid "Cancel"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Validate and save"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Unvalidated address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Please complete all required fields and click the 'Validate and save' button below to confirm and validate your address details."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Save without validating"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Confirm address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Save without validation?"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "This address could not be validated. By proceeding, you confirm the address is correct and deliverable. Incorrect addresses may result in delivery issues and are not eligible for refunds."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:256
+#: dist/woocommerce-shipping-plugin.js:228
+msgid "Approve and save anyway"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Email Address"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "mail@example.com"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "123456789"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Add address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "The store address is already filled in below. Validate and save this sender address if you want to sync it with your store address."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Your store address has been updated to <strong />. Your sender address is different. You can update it now."
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Failed to open sender address editor"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Update sender address"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Keep current address"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Address updated"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Address added"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Sender addresses"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Add the addresses of any locations you ship from. The sender address you select will be used to calculate shipping rates and delivery times."
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Default sender"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Default return"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:231
+msgid "Edit"
+msgstr ""
+
+#: dist/next/903.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Delete"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Address deleted"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Error deleting address"
+msgstr ""
+
+#: dist/next/903.js:1
+msgid "Add sender address"
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please provide a valid address."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please provide a valid city."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please provide a valid postal code."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please provide a valid country."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Email address can't be empty for this address."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Phone number can't be empty for this address."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please provide a valid name or company name."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please provide a valid state."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please provide a valid phone number."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Please, enter a valid email address."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Address contains invalid characters."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "City contains invalid characters."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Postal code contains invalid characters."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "State contains invalid characters."
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:8
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Failed to update shipment address"
+msgstr ""
+
+#: dist/next/woocommerce-shipping-next.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:8
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Failed to add origin address"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:8
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "A4"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:8
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "210x297mm"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:8
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Label (4\"x6\")"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:8
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "4\"x6\""
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:8
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "Letter (8.5\"x11\")"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:8
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+msgid "8.5\"x11\""
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:8
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Selected paper size is no longer available. Please pick another."
+msgstr ""
+
+#. translators: %s is last update time.
+#: dist/woocommerce-shipping-admin-status.js:11
+#, js-format
+msgid "Last update on %s"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:11
+msgid "Cannot retrieve the last update time."
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:11
+msgid "Service data was found, but is more than three days old"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:11
+msgid "Service data was found, but is more than one day old"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:11
+msgid "Service data is up-to-date"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:11
+msgid "Service data found, but may be out of date"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:11
+msgid "No service data available"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:11
+msgid "Other Log"
+msgstr ""
+
+#. translators: %d is the number of entries to show.
+#: dist/woocommerce-shipping-admin-status.js:14
+#, js-format
+msgid "Last %d entry"
+msgid_plural "Last %d entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "Our team is here for you. View our"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "support docs"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "or"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "contact support"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "Test Label Printing"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "Test label failed to print, please try again later."
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "Having trouble configuring your printer? You can run a test print for shipping labels by selecting the paper size, then print."
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+msgid "Label size"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+#: dist/woocommerce-shipping-bulk-labels-banner.js:206
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Unable to create blob url"
+msgstr ""
+
+#: dist/woocommerce-shipping-admin-status.js:14
+#: dist/woocommerce-shipping-bulk-labels-banner.js:204
+msgid "Print"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "Order shipping context"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "Order shipping contexts"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "QWER"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "Medium box"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "Padded mailer"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "Not assigned"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "Priority Mail"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "3 biz days"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "Ground Advantage"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "3–4 biz days"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "This order needs a different package."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:1
+msgid "International. Customs form required."
+msgstr ""
+
+#. translators: %s: comma-separated list of order numbers, e.g. "#101, #102"
+#: dist/woocommerce-shipping-bulk-labels-banner.js:2
+#, js-format
+msgid "Same address as %s"
+msgstr ""
+
+#. translators: %d: maximum number of orders that can be processed at once
+#: dist/woocommerce-shipping-bulk-labels-banner.js:3
+#, js-format
+msgid "Up to %d orders can be processed at a time. Deselect some to continue."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:3
+msgid "Ready to review in bulk"
+msgstr ""
+
+#. translators: %d: number of selected orders
+#: dist/woocommerce-shipping-bulk-labels-banner.js:4
+#, js-format
+msgid "%d selected order"
+msgid_plural "%d selected orders"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:4
+msgid "Select orders to start purchasing shipping labels"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:4
+msgid "Orders selected and ready to review in bulk"
+msgstr ""
+
+#. translators: %d: number of selected orders
+#: dist/woocommerce-shipping-bulk-labels-banner.js:5
+#, js-format
+msgid "%d order selected."
+msgid_plural "%d orders selected."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of selected orders to review for bulk labels
+#: dist/woocommerce-shipping-bulk-labels-banner.js:6
+#, js-format
+msgid "Review %d selected order"
+msgid_plural "Review %d selected orders"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:6
+msgid "We couldn't apply your saved paper-size preference on this store. We are using the default size instead."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:6
+msgid "No successful labels to print."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:6
+msgid "Allow popups for this site to print your labels."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:6
+msgid "Error printing labels, try to print later."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:6
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "We couldn't save your paper-size preference. Your next print will still use the size you picked."
+msgstr ""
+
+#. translators: 1: number of labels in the batch, 2: paper size (e.g. "4"x6"")
+#: dist/woocommerce-shipping-bulk-labels-banner.js:7
+#, js-format
+msgid "Print %1$d label (%2$s)"
+msgid_plural "Print %1$d labels (%2$s)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:7
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Select label size"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:7
+msgid "Select Label Size"
+msgstr ""
+
+#. translators: 1: Filter name.
+#: dist/woocommerce-shipping-bulk-labels-banner.js:182
+msgid "Keep separate"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:182
+msgid "Combine into 1 label"
+msgstr ""
+
+#. translators: %d: number of orders shipping to the same address
+#: dist/woocommerce-shipping-bulk-labels-banner.js:183
+#, js-format
+msgid "%d order ships to the same address. Combine into one package?"
+msgid_plural "%d orders ship to the same address. Combine into one package?"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: list of order numbers, 2: customer name, 3: city, state, 4: number of orders, 5: dollar savings
+#: dist/woocommerce-shipping-bulk-labels-banner.js:184
+#, js-format
+msgid "Orders %1$s all ship to %2$s, %3$s. One label instead of %4$d saves %5$s."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:184
+msgid "Show only issues"
+msgstr ""
+
+#. translators: %d: number of orders needing attention
+#: dist/woocommerce-shipping-bulk-labels-banner.js:185
+#, js-format
+msgid "%d order needs a quick fix"
+msgid_plural "%d orders need a quick fix"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of ready orders
+#: dist/woocommerce-shipping-bulk-labels-banner.js:186
+#, js-format
+msgid "before we can label them. You can still purchase the %d ready order and come back."
+msgid_plural "before we can label them. You can still purchase the %d ready orders and come back."
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:186
+msgid "before we can label them."
+msgstr ""
+
+#. translators: 1: number selected, 2: total count
+#: dist/woocommerce-shipping-bulk-labels-banner.js:187
+#, js-format
+msgid "%1$d of %2$d selected"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:187
+msgid "Apply to all:"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:187
+#: dist/woocommerce-shipping-bulk-labels-banner.js:195
+#: dist/woocommerce-shipping-bulk-labels-banner.js:196
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-plugin.js:31
+#: dist/woocommerce-shipping-plugin.js:32
+#: dist/woocommerce-shipping-plugin.js:246
+msgid "Package"
+msgstr ""
+
+#. translators: 1: The calendar date. 2: Number of events on the calendar date.
+#: dist/woocommerce-shipping-bulk-labels-banner.js:187
+#: dist/woocommerce-shipping-create-shipping-label.js:271
+#: dist/woocommerce-shipping-plugin.js:243
+msgid "Ship date"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:187
+msgid "Signature"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:187
+msgid "Filter orders"
+msgstr ""
+
+#. translators: %d: total order count
+#: dist/woocommerce-shipping-bulk-labels-banner.js:188
+#, js-format
+msgid "All %d"
+msgstr ""
+
+#. translators: %d: number of ready orders
+#: dist/woocommerce-shipping-bulk-labels-banner.js:189
+#, js-format
+msgid "Ready %d"
+msgstr ""
+
+#. translators: %d: number of orders needing fix
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+#, js-format
+msgid "Needs fix %d"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+msgid "Batch summary"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+msgid "Ready to buy"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+#: dist/woocommerce-shipping-bulk-labels-banner.js:199
+msgid "Needs fix"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+msgid "Labels subtotal"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+msgid "WooCommerce Shipping discount"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+#: dist/woocommerce-shipping-create-shipping-label.js:262
+#: dist/woocommerce-shipping-plugin.js:234
+msgid "Total"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:190
+msgid "Change in settings."
+msgstr ""
+
+#. translators: 1: number of ready labels, 2: total cost
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+#, js-format
+msgid "Purchase %1$d label · %2$s"
+msgid_plural "Purchase %1$d labels · %2$s"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "After purchase, we'll merge all labels into a single PDF for printing."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "After purchase"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "Auto-download combined PDF"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "Mark orders as completed"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "Email tracking numbers to customers"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "Add USPS SCAN form to batch"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Ship from"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "Change"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "Automatic package selection"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:191
+msgid "Customized manually"
+msgstr ""
+
+#. translators: 1: package name, 2: package dimensions e.g. 12×9×6
+#: dist/woocommerce-shipping-bulk-labels-banner.js:192
+#: dist/woocommerce-shipping-bulk-labels-banner.js:196
+#: dist/woocommerce-shipping-bulk-labels-banner.js:197
+#, js-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:192
+msgid "No verified ship-from address. Verify an origin address in settings to quote rates."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:192
+msgid "Cheapest available"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:192
+msgid "Fastest available"
+msgstr ""
+
+#. translators: %s: order number
+#. translators: %s is order number
+#: dist/woocommerce-shipping-bulk-labels-banner.js:193
+#: dist/woocommerce-shipping-scanform.js:189
+#, js-format
+msgid "#%s"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:193
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:246
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Ship to"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:193
+msgid "Intl"
+msgstr ""
+
+#. translators: %d: number of items in the order
+#. translators: %d: number of items
+#: dist/woocommerce-shipping-bulk-labels-banner.js:194
+#: dist/woocommerce-shipping-plugin.js:320
+#, js-format
+msgid "%d item"
+msgid_plural "%d items"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:194
+msgid "Total weight"
+msgstr ""
+
+#. translators: 1: total order weight, 2: weight unit (e.g. kg)
+#: dist/woocommerce-shipping-bulk-labels-banner.js:195
+#, js-format
+msgid "%1$s %2$s"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:196
+msgid "Select a package…"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:196
+msgid "No packages available"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:197
+msgid "No rates available"
+msgstr ""
+
+#. translators: 1: service title, 2: price, 3: delivery days
+#: dist/woocommerce-shipping-bulk-labels-banner.js:198
+#, js-format
+msgid "%1$s — $%2$s · %3$d days"
+msgstr ""
+
+#. translators: 1: service title, 2: price
+#: dist/woocommerce-shipping-bulk-labels-banner.js:199
+#, js-format
+msgid "%1$s — $%2$s"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:199
+msgid "Notes"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:199
+msgid "Cost"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:199
+msgid "Status"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:199
+msgid "Ready"
+msgstr ""
+
+#. translators: %d: number of shipping labels to create
+#: dist/woocommerce-shipping-bulk-labels-banner.js:200
+#, js-format
+msgid "Create %d shipping label"
+msgid_plural "Create %d shipping labels"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:200
+msgid "We picked the cheapest service and your most-used package for each order. Review, override what you need to, and purchase everything at once."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:200
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+msgid "Close"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:200
+msgid "Could not load order details."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:200
+msgid "No orders found for this selection."
+msgstr ""
+
+#. translators: %s: error message from the rate/origin request
+#: dist/woocommerce-shipping-bulk-labels-banner.js:201
+#, js-format
+msgid "Couldn’t fetch shipping rates: %s. Service and cost are unavailable until this is resolved."
+msgstr ""
+
+#. translators: 1: number of orders that could not be loaded, 2: comma-separated list of failed order IDs (e.g. #101, #102)
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+#, js-format
+msgid "%1$d order could not be loaded and will be skipped: %2$s."
+msgid_plural "%1$d orders could not be loaded and will be skipped: %2$s."
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "Label creation was interrupted before this order finished. Reopen and try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "We could not reach the shipping service. Try again in a moment."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "Destination address could not be validated. Verify the recipient address and try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "The selected service is no longer available for this shipment. Pick a different rate and retry."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "Package dimensions are missing or invalid for this carrier. Update the package and retry."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "We could not create this label. Open the order to retry."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "Label created"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "Failed"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:202
+msgid "Waiting…"
+msgstr ""
+
+#. translators: 1: number of orders processed, 2: total order count
+#: dist/woocommerce-shipping-bulk-labels-banner.js:203
+#, js-format
+msgid "Processed %1$d of %2$d orders."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:203
+msgid "Creating labels…"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:203
+msgid "Bulk label purchase progress"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:203
+msgid "Keep this window open. Closing it now cancels any unfinished label."
+msgid_plural "Keep this window open. Closing it now cancels any unfinished labels."
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:203
+msgid "Some labels need attention"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:203
+msgid "All labels created"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:203
+msgid "No labels were created"
+msgstr ""
+
+#. translators: %d: total number of labels printed across all succeeded orders (an order can produce more than one)
+#: dist/woocommerce-shipping-bulk-labels-banner.js:204
+#, js-format
+msgid "%d label created"
+msgid_plural "%d labels created"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:204
+msgid "Print label"
+msgid_plural "Print all labels"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of failed orders
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+#, js-format
+msgid "%d order needs a fix"
+msgid_plural "%d orders need a fix"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "The batch did not finish. Close this dialog and start the batch again from the orders list."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "Open each failed order to resolve the issue, then come back here and try the batch again."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "Fix and retry"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+#: dist/woocommerce-shipping-scanform.js:208
+msgid "Done"
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "No origin address is configured for batch label purchase."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "Batch label-purchase request failed."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "The shipping service returned a partial response. Try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "The shipping service returned an unexpected response."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "All labels created."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "No labels were created."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "Some labels need attention."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:205
+msgid "Bulk label purchase"
+msgstr ""
+
+#. translators: %d: maximum number of orders that can be processed at once
+#: dist/woocommerce-shipping-bulk-labels-banner.js:206
+#, js-format
+msgid "You can process up to %d orders at a time. Please reduce your selection and try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-bulk-labels-banner.js:206
+msgid "Print labels"
+msgstr ""
+
+#: dist/woocommerce-shipping-checkout-address-validation.js:1
+msgid "We were unable to update your shipping address. Please verify that the entered address is correct."
+msgstr ""
+
+#. translators: %s is the formatted date
+#: dist/woocommerce-shipping-create-shipping-label.js:4
+#: dist/woocommerce-shipping-plugin.js:4
+#, js-format
+msgid "Today (%s)"
+msgstr ""
+
+#. translators: %s is the formatted date
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-plugin.js:7
+#, js-format
+msgid "Tomorrow (%s)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+msgid "Close purchase label modal"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:7
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+msgid "Create shipping label"
+msgid_plural "Create shipping labels"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: order ID
+#: dist/woocommerce-shipping-create-shipping-label.js:8
+#, js-format
+msgid "Order %d"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:9
+#: dist/woocommerce-shipping-plugin.js:8
+msgid "An error occurred while loading the content."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:9
+#: dist/woocommerce-shipping-plugin.js:8
+msgid "Try Again"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:9
+#: dist/woocommerce-shipping-plugin.js:8
+msgid "By selecting this package, you add it to the saved templates section."
+msgstr ""
+
+#. translators: %1$s: minimum weight, %2$s: weight unit
+#: dist/woocommerce-shipping-create-shipping-label.js:12
+#: dist/woocommerce-shipping-plugin.js:11
+#, js-format
+msgid "Weight must be greater than or equal to %1$s %2$s"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:12
+#: dist/woocommerce-shipping-plugin.js:11
+msgid "Total Shipment Weight"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:12
+#: dist/woocommerce-shipping-plugin.js:11
+msgid "Total shipment weight (with package)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:12
+#: dist/woocommerce-shipping-plugin.js:11
+msgid "Unit"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:12
+#: dist/woocommerce-shipping-plugin.js:11
+msgid "Customs items weigh more than the total shipment weight. Update the total shipment weight before purchasing."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:12
+#: dist/woocommerce-shipping-plugin.js:11
+msgid "Complete package selection/fields to get shipping rates"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:12
+#: dist/woocommerce-shipping-plugin.js:11
+msgid "Get shipping rates"
+msgstr ""
+
+#. translators: %s: carrier name
+#: dist/woocommerce-shipping-create-shipping-label.js:15
+#, js-format
+msgid "Ship with %s"
+msgstr ""
+
+#. translators: %d: remaining count
+#: dist/woocommerce-shipping-create-shipping-label.js:18
+#: dist/woocommerce-shipping-plugin.js:14
+#, js-format
+msgid "Promo ending soon · %d left"
+msgstr ""
+
+#. translators: %1$s: carrier name, %2$d: remaining count
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+#, js-format
+msgid "%1$s Promo: %2$d remaining"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "No carrier packages available"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Invalid dimension value. Value should be a number greater than 0."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Invalid dimension value."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Package name should be at least 3 characters long."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Package type"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Box"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Poly mailer"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Envelope"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Length"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Width"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Height"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Save this as a new package template"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Successfully saved to Saved templates."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Template name"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Enter a unique package name"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-create-shipping-label.js:271
+#: dist/woocommerce-shipping-plugin.js:17
+#: dist/woocommerce-shipping-plugin.js:32
+#: dist/woocommerce-shipping-plugin.js:243
+msgid "Package weight"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:21
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#: dist/woocommerce-shipping-plugin.js:17
+msgid "Save"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:28
+#: dist/woocommerce-shipping-plugin.js:24
+msgid "Delete package"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:28
+#: dist/woocommerce-shipping-plugin.js:24
+msgid "Remove package"
+msgstr ""
+
+#. translators: %s: package name
+#: dist/woocommerce-shipping-create-shipping-label.js:31
+#: dist/woocommerce-shipping-plugin.js:27
+#, js-format
+msgid "Delete %s"
+msgstr ""
+
+#. translators: %s: package name
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+#, js-format
+msgid "Remove %s"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Are you sure you want to remove this custom package?. You can create a new one at any time, if necessary."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "This will remove the carrier package from your saved templates. You can star packages from the Carrier Package tab to add them to this list again."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "You have no saved templates. Star carrier packages or add custom packages."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Package template"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Please select"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Air Eligible Ethanol Package - (authorized fragrance and hand sanitizer shipments)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 1 – Toy Propellant/Safety Fuse Package"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 3 - Package (Hand sanitizer, rubbing alcohol, ethanol base products, flammable liquids etc.)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 7 – Radioactive Materials Package (e.g., smoke detectors, minerals, gun sights, etc.)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 8 – Corrosive Materials Package - Air Eligible Corrosive Materials (certain cleaning or tree/weed killing compounds, etc.)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 8 – Nonspillable Wet Battery Package - Sealed lead acid batteries"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 9 - Lithium Battery Marked – Ground Only Package - New Individual or spare lithium batteries (marked UN3480 or UN3090)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 9 - Lithium Battery – Returns Package - Used electronic devices containing or packaged with lithium batteries (markings required)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 9 - Lithium batteries, marked package - New electronic devices packaged with lithium batteries (marked UN3481 or UN3091)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 9 – Dry Ice Package (limited to 5 lbs. if shipped via Air)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 9 – Lithium batteries, unmarked package - New electronic devices installed or packaged with lithium batteries (no marking)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Class 9 – Magnetized Materials Package"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Division 4.1 – Mailable flammable solids and Safety Matches Package - Safety/strike on box matches, book matches, mailable flammable solids"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Division 5.1 – Oxidizers Package - Hydrogen peroxide (8 to 20% concentration)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Division 5.2 – Organic Peroxides Package"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Division 6.1 – Toxic Materials Package (with an LD50 of 50 mg/kg or less) - (pesticides, herbicides, etc.)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Division 6.2 - Hazardous Materials - Biological Materials (e.g., lab test kits, authorized COVID test kit returns)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Excepted Quantity Provision Package (e.g., small volumes of flammable liquids, corrosive, toxic or environmentally hazardous materials - marking required)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Ground Only Hazardous Materials (For items that are not listed, but are restricted to surface only)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "ID8000 Consumer Commodity Package - Air Eligible ID8000 Consumer Commodity (Non-flammableaerosols, Flammable combustible liquids, Toxic Substance, Miscellaneious hazardous materials)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Lighters Package - Authorized Lighters"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "LTD QTY Ground Package - Aerosols, spray disinfectants, spray paint, hair spray, propane, butane, cleaning products, etc. - Fragrances, nail polish, nail polish remover, solvents, hand sanitizer, rubbing alcohol, ethanol base products, etc. - Other limited quantity surface materials (cosmetics, cleaning products, paints, etc.)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Small Quantity Provision Package (markings required)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Shipment contains hazardous materials."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Examples include batteries, dry ice, flammable liquids, aerosol sprays, airbags, fireworks, gasoline, lighters, lithium batteries, matches, paint, perfume, camping stoves, radioactive materials, solvents, and more."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "See examples"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Are you shipping dangerous goods or hazardous materials?"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "No"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Yes"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Hazardous material category"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Select a hazardous or dangerous material category"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Important: Shipping hazardous materials"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Ship hazardous items in <strong>separate packages</strong>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Use the <strong>required hazardous material labels and paperwork.</strong>"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Be aware: <strong>extra fees and carrier restrictions may apply.</strong>"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "<a>Learn more about shipping hazardous materials</a>"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Potentially hazardous material includes items such as batteries, dry ice, flammable liquids, aerosols, ammunition, fireworks, nail polish, perfume, paint, solvents, and more. Hazardous items must ship in separate packages."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Learn how to securely package, label, and ship HAZMAT through USPS® at <a1>www.usps.com/hazmat</a1>. Determine your product's mailability using the <a2>USPS HAZMAT Search Tool</a2>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "WooCommerce Shipping only supports HAZMAT shipments through USPS."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:34
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Selecting a hazardous or dangerous material category is required."
+msgstr ""
+
+#. translators: %s: weight in lbs
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-plugin.js:31
+#, js-format
+msgid "%slb"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-plugin.js:31
+msgid "Choose Package"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:31
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Custom package"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:31
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Saved templates"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Collapse"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-plugin.js:30
+msgid "Expand"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:35
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:31
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Needs dimensions"
+msgstr ""
+
+#. translators: %1$s: length, %2$s: width, %3$s: height, %4$s: hazmat info
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+#, js-format
+msgid "%1$sin x %2$sin x %3$sin %4$s"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Fetching rates …"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Get shipping rates for your package."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Enter your package's dimensions or pick a carrier package option to see the available shipping rates."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Carrier package"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Origin address"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Destination address"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Package length"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Package width"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:36
+#: dist/woocommerce-shipping-plugin.js:32
+msgid "Package height"
+msgstr ""
+
+#. translators: %1$s The name of the form section containing the erroneous form field, %2$s is the error message.
+#: dist/woocommerce-shipping-create-shipping-label.js:39
+#: dist/woocommerce-shipping-plugin.js:35
+#, js-format
+msgid "%1$s: %2$s"
+msgstr ""
+
+#. translators: %1$s The name of the form field that has an error (origin address or destination), %2$s is the error message, e.g. "must be greater than 0".
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+#, js-format
+msgid "%1$s %2$s."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Merchandise"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Gift"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Returned Goods"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Sample"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Documents"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Other"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "None"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Quarantine"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Sanitary/Phytosanitary Inspection"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Other…"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Please describe what kind of goods this package contains."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Please describe what kind of restrictions this package must have."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:38
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Schedule pickup"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:38
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Track shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:42
+#: dist/woocommerce-shipping-plugin.js:38
+msgid "Request a shipping label refund"
+msgstr ""
+
+#. translators: %s: refundable amount
+#: dist/woocommerce-shipping-create-shipping-label.js:45
+#: dist/woocommerce-shipping-plugin.js:41
+#, js-format
+msgid "Refund label (-%s)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:45
+#: dist/woocommerce-shipping-plugin.js:41
+msgid "There was a problem requesting a refund, please try again later"
+msgstr ""
+
+#. translators: %s: number of days
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-plugin.js:44
+#, js-format
+msgid "Request a refund for your unused shipping label. The refund process for the shipping label will begin immediately and is typically completed within %s business days."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-plugin.js:44
+msgid "Purchase date"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-plugin.js:44
+msgid "Amount eligible for refund"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-plugin.js:44
+msgid "Please note that this refund request applies only to the unused shipping label and will not affect the order itself."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-plugin.js:44
+msgid "Label is non-refundable"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:44
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Request refund"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:44
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Print customs form"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:48
+#: dist/woocommerce-shipping-plugin.js:44
+msgid "This is a migrated shipping label"
+msgstr ""
+
+#. translators: %s is filled with `and customs form`, if label has customs form
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+#, js-format
+msgid "The \"WooCommerce Shipping & Tax\" plugin doesn't store as much information about labels as WooCommerce Shipping. Please refer to the label %s for more details. This affects the following label information:"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgctxt "Migrated Label Description"
+msgid "and customs form"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Ship from address."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "HAZMAT configurations."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Label addons such as <i1/> and <i2/>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "signature required"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "adult signature required"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Customs information."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Print packing slip"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Error printing label, try to print later."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "All items from this shipment have already been returned"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Return labels are only available for domestic shipments (US to US)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Return label"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Shipping label"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "There was an issue processing your purchase"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Processing your order"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "This won't take long!"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Please wait while we process your shipping label purchase"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "This shipping label was created via the mobile app and may include item differences. All original order items are still included in this shipment."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Copied tracking number"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Copy tracking number"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Ready to print"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Label images older than 180 days are deleted by our technology partners for general security and data privacy concerns."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "More actions"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Note: Reusing a printed label is a violation of our terms of service and may result in criminal charges."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "You have successfully requested to purchase a shipping label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "You have purchased a label, but the purchase status is still pending. Please wait a few minutes and refresh the purchase status. If the status is still pending, please contact support."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Refresh purchase status"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Error fetching label status. Please check the purchase status later."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "No label to print."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "No label data found for packing slip."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Error printing packing list."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Label purchase is taking longer than expected. The purchase may still be processing. Please try refreshing the status in a few minutes or contact support if the issue persists."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Error fetching label status."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "Error purchasing label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "No label to refund."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:47
+msgid "There was an issue getting rates for this package, please try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Product"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:310
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Qty"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Variation"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:51
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "selected"
+msgstr ""
+
+#. translators: %d: number of items
+#: dist/woocommerce-shipping-create-shipping-label.js:54
+#: dist/woocommerce-shipping-plugin.js:313
+#, js-format
+msgid "Select all (%d)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:54
+#: dist/woocommerce-shipping-plugin.js:313
+msgid "Clear selection"
+msgstr ""
+
+#. translators: %1$d is the shipment number, %2$d is the total number of shipments
+#: dist/woocommerce-shipping-create-shipping-label.js:57
+#: dist/woocommerce-shipping-plugin.js:303
+#, js-format
+msgid "Return %1$d/%2$d"
+msgstr ""
+
+#. translators: %1$d is the shipment number, %2$d is the total number of shipments
+#: dist/woocommerce-shipping-create-shipping-label.js:60
+#: dist/woocommerce-shipping-plugin.js:306
+#, js-format
+msgid "Shipment %1$d/%2$d"
+msgstr ""
+
+#. translators: %1$d: number of items
+#: dist/woocommerce-shipping-create-shipping-label.js:63
+#, js-format
+msgid "%1$d item was fulfilled."
+msgid_plural "%1$d items were fulfilled."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %1$d: number of items fulfilled
+#: dist/woocommerce-shipping-create-shipping-label.js:66
+#, js-format
+msgid "%1$d item was fulfilled,"
+msgid_plural "%1$d items were fulfilled,"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of items to be fulfilled
+#: dist/woocommerce-shipping-create-shipping-label.js:69
+#, js-format
+msgid "%d item still requires fulfillment."
+msgid_plural "%d items still require fulfillment."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of items
+#: dist/woocommerce-shipping-create-shipping-label.js:72
+#, js-format
+msgid "%d item is ready to be fulfilled"
+msgid_plural "%d items are ready to be fulfilled"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:72
+#: dist/woocommerce-shipping-plugin.js:313
+msgid "Select all items in this shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:72
+#: dist/woocommerce-shipping-plugin.js:313
+msgid "Remove shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:72
+msgid "Move To"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:72
+msgid "Split Shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:72
+msgid "To create a split shipment, please select the respective products and click on <strong>create new shipment.</strong>"
+msgstr ""
+
+#. translators: %s: error message
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+#, js-format
+msgid "There was an error while updating the shipments. %s"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+msgid "Create new shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+msgid "Close and revert the changes"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+msgid "Continue editing the shipments"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+msgid "There are unsaved changes"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:75
+msgid "Are you sure you want to close the split shipment modal?"
+msgstr ""
+
+#. translators: %1$s a user defined name for the address.
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:231
+#, js-format
+msgctxt "Origin address"
+msgid "%1$s (Default Origin)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:231
+msgid "Verify to use this address"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:231
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "You have no verified origin address, <a>visit settings</a> to add one"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:231
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "visit settings"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:231
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Choose a ship from address"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:259
+#: dist/woocommerce-shipping-plugin.js:231
+msgid "Validate your address"
+msgstr ""
+
+#. translators: %s is the parent rate title
+#: dist/woocommerce-shipping-create-shipping-label.js:262
+#: dist/woocommerce-shipping-plugin.js:234
+#, js-format
+msgid "%s (base fee)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:262
+#: dist/woocommerce-shipping-plugin.js:234
+msgid "Subtotal"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:262
+#: dist/woocommerce-shipping-plugin.js:234
+msgid "Discount"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:271
+#: dist/woocommerce-shipping-plugin.js:243
+msgid "The date your package will be picked up by the shipping carrier."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:271
+#: dist/woocommerce-shipping-plugin.js:243
+msgid "Shipping date cannot be in the past."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:271
+#: dist/woocommerce-shipping-plugin.js:243
+msgid "Please enter a valid date."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:271
+#: dist/woocommerce-shipping-plugin.js:243
+msgid "Package dimensions"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:271
+#: dist/woocommerce-shipping-plugin.js:243
+#, js-format
+msgid "You're saving %s with carrier discounts"
+msgstr ""
+
+#. translators: %s: number of days
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-create-shipping-label.js:307
+#: dist/woocommerce-shipping-plugin.js:246
+#: dist/woocommerce-shipping-plugin.js:279
+#, js-format
+msgid "%s business day"
+msgid_plural "%s business days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-plugin.js:246
+msgid "Rates"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-plugin.js:246
+msgid "Adult signature required"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-plugin.js:246
+msgid "Signature required"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-plugin.js:246
+msgid "Carbon neutral"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-plugin.js:246
+msgid "Additional handling"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:274
+#: dist/woocommerce-shipping-plugin.js:246
+msgid "Saturday delivery"
+msgstr ""
+
+#. translators: %1$s: the amount the customer paid for shipping, %2$s: the shipping method name
+#: dist/woocommerce-shipping-create-shipping-label.js:277
+#: dist/woocommerce-shipping-create-shipping-label.js:316
+#: dist/woocommerce-shipping-plugin.js:249
+#: dist/woocommerce-shipping-plugin.js:288
+#, js-format
+msgid "Customer paid: %1$s for shipping (%2$s)"
+msgstr ""
+
+#. translators: %s: the amount the customer paid for shipping
+#: dist/woocommerce-shipping-create-shipping-label.js:280
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:252
+#: dist/woocommerce-shipping-plugin.js:291
+#, js-format
+msgid "Customer paid: %s for shipping"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:280
+#: dist/woocommerce-shipping-plugin.js:252
+msgid "This order will be fulfilled after you buy the shipping label."
+msgstr ""
+
+#. translators: %s is the discount amount
+#: dist/woocommerce-shipping-create-shipping-label.js:283
+#: dist/woocommerce-shipping-plugin.js:255
+#, js-format
+msgid "You saved %s with WooCommerce Shipping. <i/>"
+msgstr ""
+
+#. translators: %s is the discount amount
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+#, js-format
+msgid "You save %s with WooCommerce Shipping. <i/>"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Click to change address"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Residential address"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Applies residential FedEx rates and services. Uncheck for commercial destinations."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Residential"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Commercial"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Order details"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Return to"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Number of items"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Order value"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Shipping type"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Shipping costs"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Package details"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "Shipment details"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+msgid "WooCommerce Shipping gives you access to commercial pricing, which is discounted over retail rates."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:286
+#: dist/woocommerce-shipping-plugin.js:258
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Edit destination address"
+msgstr ""
+
+#. translators: %s the cost of the additional service.
+#: dist/woocommerce-shipping-create-shipping-label.js:289
+#: dist/woocommerce-shipping-plugin.js:261
+#, js-format
+msgid "Signature required ( +%s )"
+msgstr ""
+
+#. translators: %s the cost of the additional service.
+#: dist/woocommerce-shipping-create-shipping-label.js:292
+#: dist/woocommerce-shipping-plugin.js:264
+#, js-format
+msgid "Adult signature required ( +%s )"
+msgstr ""
+
+#. translators: %s the cost of the additional service.
+#: dist/woocommerce-shipping-create-shipping-label.js:295
+#: dist/woocommerce-shipping-plugin.js:267
+#, js-format
+msgid "Carbon neutral ( +%s )"
+msgstr ""
+
+#. translators: %s the cost of the additional service.
+#: dist/woocommerce-shipping-create-shipping-label.js:298
+#: dist/woocommerce-shipping-plugin.js:270
+#, js-format
+msgid "Additional handling ( +%s )"
+msgstr ""
+
+#. translators: %s the cost of the additional service.
+#: dist/woocommerce-shipping-create-shipping-label.js:301
+#: dist/woocommerce-shipping-plugin.js:273
+#, js-format
+msgid "Saturday delivery ( %s )"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:301
+#: dist/woocommerce-shipping-plugin.js:273
+msgid "Free"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:301
+#: dist/woocommerce-shipping-plugin.js:273
+msgid "tracking"
+msgstr ""
+
+#. translators: %s: insurance amount
+#: dist/woocommerce-shipping-create-shipping-label.js:304
+#: dist/woocommerce-shipping-plugin.js:276
+#, js-format
+msgid "insurance (up to %s)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:304
+#: dist/woocommerce-shipping-plugin.js:276
+msgid "free pickup"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:307
+#: dist/woocommerce-shipping-plugin.js:279
+msgid "Books and <auspsmedia>other media</auspsmedia> only"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:307
+#: dist/woocommerce-shipping-plugin.js:279
+msgid "Books and other media only"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:307
+#: dist/woocommerce-shipping-plugin.js:279
+msgid "Non-refundable"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:307
+#: dist/woocommerce-shipping-plugin.js:279
+msgid "Tracking is not available"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:307
+#: dist/woocommerce-shipping-plugin.js:279
+msgid "Lowest price"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:307
+#: dist/woocommerce-shipping-plugin.js:279
+msgid "Fastest delivery"
+msgstr ""
+
+#. translators: %s: list of extras
+#: dist/woocommerce-shipping-create-shipping-label.js:310
+#: dist/woocommerce-shipping-plugin.js:282
+#, js-format
+msgid "Includes %s"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:310
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:282
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Promo applied"
+msgstr ""
+
+#. translators: %s: list of extras
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+#, js-format
+msgid "includes %s"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Show more"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Show less"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Sort by"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Low to high"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Fastest"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Cheapest"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "All carriers"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Carriers"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Apply"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Shipping service"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:313
+#: dist/woocommerce-shipping-plugin.js:285
+msgid "Please select a shipping service before purchasing a shipping label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:291
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "UPS, the UPS brandmark, UPS Ready®, and the color brown are trademarks of United Parcel Service of America, Inc. All Rights Reserved."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Content type"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Content details"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Restriction type"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Restriction details"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "International transaction number (<a>more info about ITN</a>)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Please enter a valid ITN in one of these formats: X12345678901234, AES X12345678901234, or NOEEI 30.37(a)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Return package to sender if undeliverable"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Sender will be charged all return shipping costs and any applicable customs duties, taxes, or fees."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Document mailings don’t include a customs item declaration, so no product details are submitted for this label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Product details"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Description"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "When shipping to countries that follow European Union (EU) customs rules, you must provide a clear, specific description on every item. For example, if you are sending clothing, you must indicate what type of clothing (e.g. men's shirts, girl's vest, boy's jacket) for the description to be acceptable. Otherwise, shipments may be delayed or interrupted at customs. <a>Learn more about customs rules <i></i></a>"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "HS tariff number (<a>more…</a>)"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Optional"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Value per unit"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Weight per unit"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Origin country"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Country where the product was manufactured or assembled."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "Customs"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:319
+#: dist/woocommerce-shipping-plugin.js:291
+msgid "For shipments exceeding $2,500, obtaining a 14-digit AES ITN is required for U.S. export reporting."
+msgstr ""
+
+#. translators: %s is the country name
+#: dist/woocommerce-shipping-create-shipping-label.js:322
+#: dist/woocommerce-shipping-plugin.js:294
+#, js-format
+msgid "International Transaction Number is required for shipments to %s"
+msgstr ""
+
+#. translators: %s is the tariff number
+#: dist/woocommerce-shipping-create-shipping-label.js:325
+#: dist/woocommerce-shipping-plugin.js:297
+#, js-format
+msgid "International Transaction Number is required for shipping items valued over $2,500 per tariff number. Products with tariff number %s add up to more than $2,500."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:325
+#: dist/woocommerce-shipping-plugin.js:297
+msgid "This field contains invalid characters."
+msgstr ""
+
+#. translators: %d is the maximum number of characters allowed in a customs item description.
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:300
+#, js-format
+msgid "Description must be %d characters or fewer."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:300
+msgid "This field is required"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:300
+msgid "Weight must be greater than zero"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:300
+msgid "Declared value must be greater than zero"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:300
+msgid "The tariff number must be between 6 and 12 digits long"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Select <fb>the products</fb> you want to ship with the new label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Select a <fb>HAZMAT</fb> category."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Complete <fb1>the Customs section</fb1>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Complete <fb1>the Package section</fb1>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Choose <fb1>a shipping service</fb1> after getting shipping rate."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "UPS® Terms and Conditions"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Shipping from"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "To start shipping from this address with UPS®, we need you to agree to the following terms and conditions:"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "<strong>UPS Ground Saver®</strong>, an economy, ground delivery service, for your lightweight, non-time sensitive packages, is now available on WooCommerce Shipping."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "UPS Ground Saver®"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "To start shipping from this address with <strong>UPS Ground Saver</strong>, please review and accept the following terms and conditions:"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "I agree to the <a>UPS® Terms of Service</a>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "UPS® Terms of Service"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "I will not ship any <a>Prohibited Items</a> that UPS® disallows, nor any regulated items without the necessary permissions."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Prohibited Items"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "I also agree to the <a>UPS® Technology Agreement</a>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "UPS Technology Agreement"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Confirm and continue"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "FedEx Terms of Service"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "To purchase FedEx shipping labels, you need to agree to the following terms:"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "I agree to the <tos>Terms of Service</tos> (including the <shipping>terms on shipping services</shipping>)."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "Terms of Service"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:328
+#: dist/woocommerce-shipping-plugin.js:306
+msgid "terms on shipping services"
+msgstr ""
+
+#. translators: %s is the selected FedEx service name, e.g. FedEx Ground Economy.
+#: dist/woocommerce-shipping-create-shipping-label.js:329
+#: dist/woocommerce-shipping-plugin.js:307
+#, js-format
+msgid "%s requires a recipient phone number."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:329
+#: dist/woocommerce-shipping-plugin.js:307
+msgid "FedEx"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:329
+#: dist/woocommerce-shipping-plugin.js:307
+msgid "Add phone number"
+msgstr ""
+
+#. translators: %s is the shipment title as Shipment 1/2, Shipment 2/2, etc.
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+#, js-format
+msgid "Purchase %s"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Purchase label"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Buy shipping label"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "You must agree to the UPS® Terms and Conditions to purchase a UPS® label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "We were unable to update your acceptance of the UPS® Terms and Conditions. Please try again later or contact WooCommerce support if the issue persists."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "The shipping rate has changed significantly. Please review the available rates and select one to continue."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "You must agree to the FedEx Terms of Service to purchase a FedEx label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "We were unable to record your acceptance of the FedEx Terms of Service. Please try again later or contact WooCommerce support if the issue persists."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "A payment method is required to purchase shipping labels."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Add a payment method"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "After purchasing a label, mark this order as complete and notify the customer"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Add credit card"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "To print this shipping label, <a>add a credit card to your account</a>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Please contact your site administrator to add a payment method."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Choose credit card"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "To print this shipping label, <a>choose a credit card to add to your account</a>."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Please contact your site administrator to set a default payment method."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "You have successfully submitted a request for refund. You can purchase a new label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Add or select your package to get started."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "The shipping label couldn’t be purchased due to a payment issue. Update your payment settings to try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Manage payment methods"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "An error occurred while purchasing the label"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Click <a>here</a> and visit settings to update your payment settings and try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "Open WooCommerce Shipping settings"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:310
+msgid "here"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:313
+msgid "View status page"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:313
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Items"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:313
+msgid "This is a return shipment."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:313
+msgid "You can select the products the customer wishes to return to help gauge the package criteria of the shipping label."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:313
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Select the items you want to include in the new shipment."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:332
+#: dist/woocommerce-shipping-plugin.js:313
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "The following lists shows all the items in the current order. You can select multiple items from the list."
+msgstr ""
+
+#. translators: %1$s: HAZMAT part, %2$s: package part
+#: dist/woocommerce-shipping-create-shipping-label.js:335
+#: dist/woocommerce-shipping-plugin.js:316
+#, js-format
+msgid "No shipping rates were found based on the combination of %1$s%2$s and the total shipment weight."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:335
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:316
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "the selected HAZMAT category,"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:335
+#: dist/woocommerce-shipping-plugin.js:316
+msgid "the package type, package dimensions"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:335
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:316
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "the selected package"
+msgstr ""
+
+#. translators: %1$s: HAZMAT part, %2$s: package part
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:319
+#, js-format
+msgid "We couldn't find a shipping service for the combination of %1$s%2$s and the total shipment weight. Please adjust your input and try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "selected package type, package dimensions"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "This order has been fulfilled"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "A shipping label can't be created for an order<br/> that's already been fulfilled."
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Back to the order details"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Split shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Add shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+msgid "View or add shipment"
+msgid_plural "View or add shipments"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Signature Required"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Adult Signature Required"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Carbon Neutral"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Additional Handling"
+msgstr ""
+
+#: dist/woocommerce-shipping-create-shipping-label.js:338
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Saturday Delivery"
+msgstr ""
+
+#. translators: accessibility text
+#: dist/woocommerce-shipping-onboarding.js:2
+msgid "The site is unable to use WooCommerce Shipping for the following reason(s):"
+msgstr ""
+
+#. translators: %s The full country name of the store's address.
+#: dist/woocommerce-shipping-onboarding.js:5
+#, js-format
+msgid "Your country, <strong>%s</strong>, is not supported yet."
+msgstr ""
+
+#. translators: %s The store's selected currency in short-form (e.g. USD).
+#: dist/woocommerce-shipping-onboarding.js:8
+#, js-format
+msgid "Your currency, <strong>%s</strong>, is not supported yet."
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "We are actively expanding our international support and will notify you as soon as your store is fully supported.."
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "Connect your store"
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "By clicking Enable WooCommerce Shipping, you agree to the <tos>Terms of Service<icon /></tos> and have read our <privacy_policy>Privacy Policy<icon /></privacy_policy>."
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "By clicking Connect your store, you agree to the <tos>Terms of Service<icon /></tos> and have read our <privacy_policy>Privacy Policy<icon /></privacy_policy>."
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "Almost ready"
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "Connect your store to WordPress.com"
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "Your store is already connected to WordPress.com — you’re just one step away from printing discounted shipping labels with just a few clicks from your WooCommerce dashboard."
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "Review our terms below to enable WooCommerce Shipping and start using Automattic’s best-in-class infrastructure, so your store stays more stable and faster."
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "Save time and money with WooCommerce Shipping by printing discounted shipping labels with just a few clicks from your WooCommerce dashboard."
+msgstr ""
+
+#: dist/woocommerce-shipping-onboarding.js:8
+msgid "With WooCommerce Shipping, critical services are hosted on Automattic’s best-in-class infrastructure, rather than relying on your store’s hosting. That means your store will be more stable and faster."
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "In this shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Order total"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Products"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Total Weight"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:319
+msgid "Total Value"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "No rates available for this HAZMAT shipment. Check your shipment details and try again."
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "No rates available for this package. Check the details, weight, and destination."
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "No rates available for this package. Check the weight, destination, or try another."
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Add package details to see available shipping rates."
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Checking available shipping rates. Usually just a moment."
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Shipping rates"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Missing package info"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Review"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Your shipping details and final costs will appear here once you've configured your package above."
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Not validated"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Manage Address"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "No name provided"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "No address provided"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "No phone provided"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Validating address…"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Review recipient address"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Review sender address"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Sender"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Click to update address"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Recipient"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Validate sender details"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:320
+msgid "Validate recipient details"
+msgstr ""
+
+#. translators: 1: Card type (e.g., Visa), 2: Masked card digits (e.g., •••• 4242)
+#: dist/woocommerce-shipping-plugin.js:321
+#, js-format
+msgid "Label will be charged to %1$s %2$s"
+msgstr ""
+
+#: dist/woocommerce-shipping-plugin.js:321
+msgid "Manage payment method"
+msgstr ""
+
+#. translators: %d is number of labels excluded due to missing destination country
+#: dist/woocommerce-shipping-scanform.js:9
+#, js-format
+msgid "%d label was excluded because its destination country could not be determined and cannot be added to a SCAN Form."
+msgid_plural "%d labels were excluded because their destination country could not be determined and cannot be added to a SCAN Form."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of envelope labels excluded from SCAN Form
+#: dist/woocommerce-shipping-scanform.js:10
+#, js-format
+msgid "%d label is an envelope shipment and cannot be included in a SCAN Form."
+msgid_plural "%d labels are envelope shipments and cannot be included in a SCAN Form."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of labels that could not be added
+#: dist/woocommerce-shipping-scanform.js:11
+#, js-format
+msgid "%d label could not be added to a SCAN Form."
+msgid_plural "%d labels could not be added to a SCAN Form."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of labels
+#: dist/woocommerce-shipping-scanform.js:12
+#, js-format
+msgid "%d eligible label"
+msgid_plural "%d eligible labels"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-scanform.js:12
+msgid "All shipments in a SCAN Form must share the same origin address. Select one address to continue."
+msgstr ""
+
+#. translators: 1: Filter name.
+#: dist/woocommerce-shipping-scanform.js:187
+#: dist/woocommerce-shipping-scanform.js:202
+msgid "Select labels"
+msgstr ""
+
+#. translators: %d is number of eligible labels
+#: dist/woocommerce-shipping-scanform.js:188
+#, js-format
+msgid "Select All (%d Eligible label)"
+msgid_plural "Select All (%d Eligible labels)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-scanform.js:189
+msgid "Ship Date"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:189
+msgid "Label Created"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:189
+msgid "Select the USPS labels you want to include in this SCAN Form. Only labels with the same ship-from address are shown here."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:189
+msgid "After creation, SCAN Form cannot be edited or updated."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:189
+msgid "Ship from:"
+msgstr ""
+
+#. translators: %1$s is order number, %2$s is tracking number
+#: dist/woocommerce-shipping-scanform.js:190
+#, js-format
+msgid "Order #%1$s - %2$s"
+msgstr ""
+
+#. translators: %d is label ID
+#: dist/woocommerce-shipping-scanform.js:191
+#: dist/woocommerce-shipping-scanform.js:197
+#: dist/woocommerce-shipping-scanform.js:199
+#, js-format
+msgid "Label ID: %d"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:191
+msgid "Review the results below before creating the SCAN Form."
+msgstr ""
+
+#. translators: %d is number of eligible labels
+#: dist/woocommerce-shipping-scanform.js:192
+#, js-format
+msgid "%d label is eligible for SCAN Form creation."
+msgid_plural "%d labels are eligible for SCAN Form creation."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of already scanned labels
+#: dist/woocommerce-shipping-scanform.js:193
+#, js-format
+msgid "%d label has already been included in a SCAN Form and will be skipped."
+msgid_plural "%d labels have already been included in a SCAN Form and will be skipped."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of not found labels
+#: dist/woocommerce-shipping-scanform.js:194
+#, js-format
+msgid "%d label was not found and will be skipped."
+msgid_plural "%d labels were not found and will be skipped."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of invalid site labels
+#: dist/woocommerce-shipping-scanform.js:195
+#, js-format
+msgid "%d label belongs to a different site and will be skipped."
+msgid_plural "%d labels belong to a different site and will be skipped."
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-scanform.js:195
+msgid "No eligible labels found. Please go back and select different labels."
+msgstr ""
+
+#. translators: %1$s is order number, %2$s is tracking number, %3$s is service name
+#: dist/woocommerce-shipping-scanform.js:196
+#: dist/woocommerce-shipping-scanform.js:198
+#, js-format
+msgid "Order #%1$s - %2$s - %3$s"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:197
+msgid "Processed Labels:"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:199
+msgid "Domestic"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:199
+msgid "International"
+msgstr ""
+
+#. translators: %1$s is the scan form type (Domestic/International)
+#: dist/woocommerce-shipping-scanform.js:200
+#, js-format
+msgid "View USPS SCAN Form — %1$s"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "View SCAN Form PDF"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "No eligible labels found. Please ensure you have USPS labels with tracking numbers that have not been refunded."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "Failed to fetch origin addresses."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "Your selected labels include both domestic and international shipments. This will create 2 USPS SCAN Forms: one for domestic labels and one for international labels."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "Failed to review labels."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "Please select at least one label."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "No eligible labels to create SCAN Form."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:200
+msgid "Failed to create SCAN Form."
+msgstr ""
+
+#. translators: %d is number of labels
+#: dist/woocommerce-shipping-scanform.js:201
+#, js-format
+msgid "SCAN Form created successfully for %d label!"
+msgid_plural "SCAN Form created successfully for %d labels!"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of labels that failed
+#: dist/woocommerce-shipping-scanform.js:202
+#, js-format
+msgid "%d label could not be added to a SCAN Form and will need to be retried."
+msgid_plural "%d labels could not be added to a SCAN Form and will need to be retried."
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-scanform.js:202
+msgid "Select ship-from address"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:202
+msgid "No Valid Labels Found"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:202
+msgid "All selected labels are ineligible for SCAN Form creation. Labels must have EasyPost shipment IDs, shipment dates must be today or later, and must not already be manifested."
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:202
+msgid "OK"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:202
+msgid "Some Labels Could Not Be Processed"
+msgstr ""
+
+#. translators: %d is number of labels
+#: dist/woocommerce-shipping-scanform.js:203
+#, js-format
+msgid "%d label has already been included in a SCAN Form or has been shipped."
+msgid_plural "%d labels have already been included in a SCAN Form or have been shipped."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of labels
+#: dist/woocommerce-shipping-scanform.js:204
+#, js-format
+msgid "%d label could not be included in the SCAN Form (it may have been refunded or deleted)."
+msgid_plural "%d labels could not be included in the SCAN Form (they may have been refunded or deleted)."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of valid labels
+#: dist/woocommerce-shipping-scanform.js:205
+#, js-format
+msgid "You still have %d valid label. Would you like to create a SCAN Form with the remaining valid label?"
+msgid_plural "You still have %d valid labels. Would you like to create a SCAN Form with the remaining valid labels?"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d is number of valid labels
+#: dist/woocommerce-shipping-scanform.js:206
+#, js-format
+msgid "Proceed with %d Valid Label"
+msgid_plural "Proceed with %d Valid Labels"
+msgstr[0] ""
+msgstr[1] ""
+
+#: dist/woocommerce-shipping-scanform.js:206
+msgid "No eligible USPS labels found in the selected orders. Labels must be USPS, have a tracking number, and not be refunded."
+msgstr ""
+
+#. translators: %d is number of selected labels
+#: dist/woocommerce-shipping-scanform.js:207
+#, js-format
+msgid "%d label selected"
+msgid_plural "%d labels selected"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: domestic count, 2: international count
+#: dist/woocommerce-shipping-scanform.js:208
+#, js-format
+msgid "%1$d domestic + %2$d international"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:208
+msgid "Continue"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:208
+msgid "Back"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:208
+msgid "Create SCAN Form"
+msgstr ""
+
+#: dist/woocommerce-shipping-scanform.js:208
+msgid "Review Labels"
+msgstr ""
+
+#. translators: %s: the status of the refund (e.g. "pending").
+#: dist/woocommerce-shipping-shipment-tracking.js:4
+#, js-format
+msgid "[ Refund - %s ]"
+msgstr ""
+
+#: dist/woocommerce-shipping-shipment-tracking.js:4
+msgid "Return"
+msgstr ""
+
+#: dist/woocommerce-shipping-shipment-tracking.js:4
+msgid "Shipment"
+msgstr ""
+
+#: dist/woocommerce-shipping-shipment-tracking.js:4
+msgid "No shipping labels have been created for this order yet."
+msgstr ""

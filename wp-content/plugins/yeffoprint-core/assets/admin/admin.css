@@ -1,0 +1,92 @@
+/*
+ * YeffoPrint admin styles — Template/Material/Size/Pricing Rule editor
+ * screens only (enqueued conditionally per screen).
+ */
+
+.yp-pricing-tier-row {
+	display: flex;
+	align-items: flex-end;
+	gap: 16px;
+	padding: 12px 0;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.yp-pricing-tier-row label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-weight: 600;
+	font-size: 12px;
+}
+
+.yp-pricing-tier-row input,
+.yp-pricing-tier-row select {
+	font-weight: 400;
+}
+
+.yp-pricing-tier-row .button-link-delete {
+	margin-left: auto;
+	color: #b32d2e;
+}
+
+.yp-field-schema-row {
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 12px 16px 16px;
+	margin-bottom: 16px;
+	background: #fff;
+}
+
+.yp-field-schema-row legend {
+	font-weight: 600;
+	padding: 0 6px;
+}
+
+.yp-field-schema-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px 16px;
+	margin-top: 8px;
+}
+
+.yp-field-schema-field {
+	display: block;
+	font-size: 12px;
+}
+
+.yp-field-schema-field span {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.yp-field-schema-checkbox {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	align-self: end;
+}
+
+.yp-field-schema-row-actions {
+	display: flex;
+	gap: 12px;
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid #dcdcde;
+}
+
+.yp-field-schema-row-actions .button-link-delete {
+	margin-left: auto;
+	color: #b32d2e;
+}
+
+.yp-field-schema-empty {
+	color: #646970;
+	font-style: italic;
+}
+
+@media (max-width: 960px) {
+	.yp-field-schema-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}

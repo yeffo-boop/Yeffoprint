@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "tiered-pricing-table/product-editor-role-based-pricing",
+  "version": "0.1.0",
+  "title": "Woo blocks-based product editor: Role-based pricing",
+  "category": "widgets",
+  "icon": "flag",
+  "description": "Tiered Pricing - Role based pricing",
+  "attributes": {
+    "availableRoles": {
+      "type": "object",
+      "default": []
+    },
+    "isPremium": {
+      "type": "boolean",
+      "default": true
+    },
+    "upgradeUrl": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "supports": {
+    "html": false,
+    "inserter": false
+  },
+  "textdomain": "test-editor",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css"
+}

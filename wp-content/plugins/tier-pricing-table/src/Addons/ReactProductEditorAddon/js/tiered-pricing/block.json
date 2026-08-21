@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "tiered-pricing-table/product-editor-tiered-pricing",
+  "version": "0.1.0",
+  "title": "Woo blocks-based product editor: Tiered Pricing",
+  "category": "widgets",
+  "icon": "flag",
+  "description": "A block to allow users to input tiered pricing",
+  "supports": {
+    "html": false,
+    "inserter": false
+  },
+  "attributes": {
+    "isPremium": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "textdomain": "tier-pricing-table",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css"
+}
