@@ -393,6 +393,19 @@
 	gap: var(--wp--preset--spacing--sm);
 }
 
+/* Direct request: on a phone-width screen this grid almost always has
+   room for exactly one 270px column, and justify-content:start above
+   (deliberately kept for desktop's multi-card rows, see that rule's own
+   comment) left that single card pinned to the left edge with a wall of
+   blank space beside it instead of centered. Same 782px breakpoint the
+   rest of this theme already treats as the mobile/desktop line (e.g.
+   global.css's main.wp-block-group padding-inline). */
+@media (max-width: 782px) {
+	.yp-card-grid {
+		justify-content: center !important;
+	}
+}
+
 /* Defensive reset on the grid items themselves (core/post-template
    renders each result as an <li>, one level above .yp-template-card) —
    in case any core/theme default ever puts a width or margin on these
