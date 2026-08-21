@@ -46,6 +46,20 @@ class YeffoPrint_Admin_Menu {
 	const USPS_CONSUMER_KEY_OPTION    = 'yeffoprint_usps_consumer_key';
 	const USPS_CONSUMER_SECRET_OPTION = 'yeffoprint_usps_consumer_secret';
 
+	/**
+	 * Also read by YeffoPrint_Card_Surcharge (includes/woocommerce/
+	 * class-card-surcharge.php) — same reasoning as the options above.
+	 * Direct request: pass processing fees on to the customer. Opt-in
+	 * per gateway (SURCHARGE_GATEWAYS_OPTION defaults to none checked),
+	 * not a blanket "surcharge every card payment" switch — a store
+	 * with, say, Venmo/Zelle plus a card gateway should never end up
+	 * surcharging the former by a config accident.
+	 */
+	const SURCHARGE_RATE_OPTION     = 'yeffoprint_surcharge_rate_percent';
+	const SURCHARGE_LABEL_OPTION    = 'yeffoprint_surcharge_label';
+	const SURCHARGE_GATEWAYS_OPTION = 'yeffoprint_surcharge_gateway_ids';
+	const SURCHARGE_LABEL_DEFAULT   = 'Card Processing Fee';
+
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
 		// Runs after WordPress has built every submenu (including the
@@ -178,6 +192,127 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_tracking'
 		);
+
+		register_setting( 'yeffoprint_settings', self::SURCHARGE_RATE_OPTION, [
+			'type'              => 'number',
+			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
+			'default'           => 0,
+		] );
+		register_setting( 'yeffoprint_settings', self::SURCHARGE_LABEL_OPTION, [
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => self::SURCHARGE_LABEL_DEFAULT,
+		] );
+		register_setting( 'yeffoprint_settings', self::SURCHARGE_GATEWAYS_OPTION, [
+			'type'              => 'array',
+			'sanitize_callback' => [ $this, 'sanitize_surcharge_gateways' ],
+			'default'           => [],
+			'show_in_rest'      => false, // An array option needs an explicit schema to be REST-visible; nothing here reads it over REST.
+		] );
+
+		add_settings_section(
+			'yeffoprint_surcharge',
+			__( 'Card Surcharge', 'yeffoprint-core' ),
+			[ $this, 'render_surcharge_section_intro' ],
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::SURCHARGE_RATE_OPTION,
+			__( 'Surcharge rate', 'yeffoprint-core' ),
+			[ $this, 'render_surcharge_rate_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_surcharge'
+		);
+
+		add_settings_field(
+			self::SURCHARGE_LABEL_OPTION,
+			__( 'Line item label', 'yeffoprint-core' ),
+			[ $this, 'render_surcharge_label_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_surcharge'
+		);
+
+		add_settings_field(
+			self::SURCHARGE_GATEWAYS_OPTION,
+			__( 'Apply to', 'yeffoprint-core' ),
+			[ $this, 'render_surcharge_gateways_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_surcharge'
+		);
+	}
+
+	public function render_surcharge_section_intro(): void {
+		echo '<p>' . wp_kses(
+			__( 'Adds a fee to the order total when the customer pays with a gateway checked below — direct request, to pass processing fees on to the customer. <strong>Before turning this on:</strong> credit card surcharging is banned outright in a few states (Connecticut, Massachusetts, Maine, and — as of a 2024 law — California, though its status has been challenged in court) and is capped by the card networks (currently 3% for Visa, 4% for Mastercard, or your actual processing cost if lower, whichever is less). It can never legally apply to a debit card — and this plugin has no way to tell a credit card from a debit card before checkout, since that only becomes known to your payment processor at the moment of payment, not to WooCommerce beforehand. Confirm with your payment processor or a lawyer that this is set up correctly for your state and card mix before relying on it.', 'yeffoprint-core' ),
+			[ 'strong' => [] ]
+		) . '</p>';
+	}
+
+	public function render_surcharge_rate_field(): void {
+		$value = get_option( self::SURCHARGE_RATE_OPTION, 0 );
+		?>
+		<input
+			type="number"
+			step="0.01"
+			min="0"
+			max="10"
+			name="<?php echo esc_attr( self::SURCHARGE_RATE_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/> %
+		<p class="description"><?php esc_html_e( '0 turns the surcharge off entirely, regardless of which gateways are checked below.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_surcharge_label_field(): void {
+		$value = get_option( self::SURCHARGE_LABEL_OPTION, self::SURCHARGE_LABEL_DEFAULT );
+		?>
+		<input
+			type="text"
+			class="regular-text"
+			name="<?php echo esc_attr( self::SURCHARGE_LABEL_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Shown in the cart, checkout, and order emails as "Label (rate%)" — e.g. "Card Processing Fee (3%)". Card network rules require this fee to be clearly disclosed before payment, not folded into another line item.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_surcharge_gateways_field(): void {
+		$selected = YeffoPrint_Card_Surcharge::get_surcharged_gateway_ids();
+		$gateways = function_exists( 'WC' ) && WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : [];
+
+		if ( ! $gateways ) {
+			esc_html_e( 'No payment gateways are registered yet.', 'yeffoprint-core' );
+			return;
+		}
+
+		foreach ( $gateways as $gateway ) {
+			?>
+			<label style="display:block;margin-bottom:6px;">
+				<input
+					type="checkbox"
+					name="<?php echo esc_attr( self::SURCHARGE_GATEWAYS_OPTION ); ?>[]"
+					value="<?php echo esc_attr( $gateway->id ); ?>"
+					<?php checked( in_array( $gateway->id, $selected, true ) ); ?>
+				/>
+				<?php echo esc_html( $gateway->get_title() ); ?>
+				<span class="description">(<?php echo esc_html( 'yes' === $gateway->enabled ? __( 'enabled', 'yeffoprint-core' ) : __( 'disabled', 'yeffoprint-core' ) ); ?>)</span>
+			</label>
+			<?php
+		}
+		?>
+		<p class="description"><?php esc_html_e( 'Only check your actual credit card gateway(s) — never a debit-only, bank-transfer, or manual gateway like Venmo/Zelle.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	/** @return string[] Only gateway ids that actually exist right now — a stale id from a since-removed/renamed gateway is dropped rather than silently kept around. */
+	public function sanitize_surcharge_gateways( $raw ): array {
+		$submitted = array_map( 'sanitize_key', is_array( $raw ) ? $raw : [] );
+		$known_ids = function_exists( 'WC' ) && WC()->payment_gateways()
+			? array_keys( WC()->payment_gateways()->payment_gateways() )
+			: [];
+
+		return array_values( array_intersect( $submitted, $known_ids ) );
 	}
 
 	public function render_tracking_section_intro(): void {
