@@ -91,6 +91,22 @@ class YeffoPrint_Admin_Menu {
 	 */
 	const LIVE_PREVIEW_ENABLED_OPTION = 'yeffoprint_live_preview_enabled';
 
+	/**
+	 * Also read by yeffoprint/blocks/promo-banner's render.php — same
+	 * reasoning as the options above. Direct request: a seasonal
+	 * homepage promo banner an admin can turn on, pick a theme for
+	 * (YeffoPrint_Promo_Themes::all()), and set the active code/offer
+	 * on — off by default, and off again the moment PROMO_CODE_OPTION
+	 * or PROMO_OFFER_OPTION is blank, so there's no way to end up with
+	 * a live banner advertising a code that was never actually set.
+	 */
+	const PROMO_ENABLED_OPTION = 'yeffoprint_promo_enabled';
+	const PROMO_THEME_OPTION   = 'yeffoprint_promo_theme';
+	const PROMO_CODE_OPTION    = 'yeffoprint_promo_code';
+	const PROMO_OFFER_OPTION   = 'yeffoprint_promo_offer';
+	const PROMO_THEME_DEFAULT  = 'summer';
+	const PROMO_OFFER_DEFAULT  = '15% off';
+
 	/** Also read by class-contact-controller.php — same reasoning as the options above. */
 	const CONTACT_RECIPIENT_EMAIL_OPTION  = 'yeffoprint_contact_recipient_email';
 	const CONTACT_RECIPIENT_EMAIL_DEFAULT = 'yeffo@yeffoprint.com';
@@ -318,6 +334,69 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint_live_preview'
 		);
 
+		register_setting( 'yeffoprint_settings', self::PROMO_ENABLED_OPTION, [
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		] );
+
+		register_setting( 'yeffoprint_settings', self::PROMO_THEME_OPTION, [
+			'type'              => 'string',
+			'sanitize_callback' => [ $this, 'sanitize_promo_theme' ],
+			'default'           => self::PROMO_THEME_DEFAULT,
+		] );
+
+		register_setting( 'yeffoprint_settings', self::PROMO_CODE_OPTION, [
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => '',
+		] );
+
+		register_setting( 'yeffoprint_settings', self::PROMO_OFFER_OPTION, [
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => self::PROMO_OFFER_DEFAULT,
+		] );
+
+		add_settings_section(
+			'yeffoprint_promo',
+			__( 'Homepage Promo', 'yeffoprint-core' ),
+			[ $this, 'render_promo_section_intro' ],
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::PROMO_ENABLED_OPTION,
+			__( 'Show promo banner', 'yeffoprint-core' ),
+			[ $this, 'render_promo_enabled_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_promo'
+		);
+
+		add_settings_field(
+			self::PROMO_THEME_OPTION,
+			__( 'Theme', 'yeffoprint-core' ),
+			[ $this, 'render_promo_theme_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_promo'
+		);
+
+		add_settings_field(
+			self::PROMO_OFFER_OPTION,
+			__( 'Offer', 'yeffoprint-core' ),
+			[ $this, 'render_promo_offer_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_promo'
+		);
+
+		add_settings_field(
+			self::PROMO_CODE_OPTION,
+			__( 'Promo code', 'yeffoprint-core' ),
+			[ $this, 'render_promo_code_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_promo'
+		);
+
 		register_setting( 'yeffoprint_settings', self::CONTACT_RECIPIENT_EMAIL_OPTION, [
 			'type'              => 'string',
 			'sanitize_callback' => 'sanitize_email',
@@ -448,6 +527,72 @@ class YeffoPrint_Admin_Menu {
 		</label>
 		<p class="description"><?php esc_html_e( 'Turn this off while adjusting field alignment on the Template editor\'s position preview so customers don\'t see not-yet-correct positioning in the meantime. Vial View, all form fields, pricing, and checkout keep working normally either way — this only hides the live on-image text on Label View. Turn it back on the same way once alignment looks right.', 'yeffoprint-core' ); ?></p>
 		<?php
+	}
+
+	public function render_promo_section_intro(): void {
+		esc_html_e( 'A seasonal banner between the header and the hero on the homepage — pick a theme, fill in this promotion\'s offer and code, and turn it on. Off by default, and it won\'t show even when on until both Offer and Promo code are filled in.', 'yeffoprint-core' );
+	}
+
+	/** Same hidden-input-plus-checkbox idiom as render_live_preview_field() above. */
+	public function render_promo_enabled_field(): void {
+		$enabled = (bool) get_option( self::PROMO_ENABLED_OPTION, false );
+		?>
+		<input type="hidden" name="<?php echo esc_attr( self::PROMO_ENABLED_OPTION ); ?>" value="0" />
+		<label>
+			<input
+				type="checkbox"
+				name="<?php echo esc_attr( self::PROMO_ENABLED_OPTION ); ?>"
+				value="1"
+				<?php checked( $enabled ); ?>
+			/>
+			<?php esc_html_e( 'Show it on the homepage', 'yeffoprint-core' ); ?>
+		</label>
+		<?php
+	}
+
+	public function render_promo_theme_field(): void {
+		$selected = (string) get_option( self::PROMO_THEME_OPTION, self::PROMO_THEME_DEFAULT );
+		?>
+		<select name="<?php echo esc_attr( self::PROMO_THEME_OPTION ); ?>">
+			<?php foreach ( YeffoPrint_Promo_Themes::all() as $slug => $theme ) : ?>
+				<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $selected, $slug ); ?>><?php echo esc_html( $theme['label'] ); ?></option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	public function render_promo_offer_field(): void {
+		$value = get_option( self::PROMO_OFFER_OPTION, self::PROMO_OFFER_DEFAULT );
+		?>
+		<input
+			type="text"
+			class="regular-text"
+			name="<?php echo esc_attr( self::PROMO_OFFER_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+			placeholder="<?php echo esc_attr( self::PROMO_OFFER_DEFAULT ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Short phrase describing the deal, e.g. "15% off" or "20% off everything" — dropped straight into the theme\'s own headline (e.g. "Ring in the New Year with 15% off").', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_promo_code_field(): void {
+		$value = get_option( self::PROMO_CODE_OPTION, '' );
+		?>
+		<input
+			type="text"
+			class="regular-text"
+			name="<?php echo esc_attr( self::PROMO_CODE_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+			placeholder="<?php echo esc_attr( 'SUMMERWEEN26' ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Shown in the banner exactly as typed — this plugin doesn\'t create the coupon itself, so make sure a matching WooCommerce coupon (Marketing → Coupons) with this exact code actually exists and is active before turning the banner on.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	/** Falls back to the default theme for an unrecognized/removed slug, rather than saving something get() can never resolve. */
+	public function sanitize_promo_theme( $value ): string {
+		$value = sanitize_key( (string) $value );
+		return null !== YeffoPrint_Promo_Themes::get( $value ) ? $value : self::PROMO_THEME_DEFAULT;
 	}
 
 	public function render_surcharge_section_intro(): void {

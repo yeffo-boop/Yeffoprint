@@ -71,6 +71,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-payment-webhook-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/promotions/class-promo-themes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/class-tracking-exception.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/interface-tracking-provider.php';

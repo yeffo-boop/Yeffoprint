@@ -872,3 +872,226 @@
 	color: var(--wp--preset--color--charcoal);
 	font-size: var(--wp--preset--font-size--small);
 }
+
+/* ---------- Homepage promo banner (blocks/promo-banner) ----------
+   Dashboard → YeffoPrint → Settings → Homepage Promo. One set of rules
+   for all 12 seasonal themes (YeffoPrint_Promo_Themes) — render.php
+   sets the --yp-promo-* custom properties per theme on the section
+   root, so switching themes never means switching stylesheets. */
+
+.yp-promo {
+	position: relative;
+	background-color: var(--yp-promo-bg);
+	background-image:
+		radial-gradient(circle at 14% -10%, var(--yp-promo-glow-a), transparent 55%),
+		radial-gradient(circle at 100% 120%, var(--yp-promo-glow-b), transparent 60%);
+	color: var(--yp-promo-ink);
+	overflow: hidden;
+}
+
+.yp-promo__grid {
+	display: grid;
+	grid-template-columns: 1.15fr 0.85fr;
+	align-items: center;
+	gap: var(--wp--preset--spacing--md);
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: var(--wp--preset--spacing--lg) var(--wp--preset--spacing--sm);
+}
+
+.yp-promo__eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 0.78rem;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--yp-promo-accent);
+	margin: 0 0 0.85rem;
+}
+
+.yp-promo__dash {
+	width: 20px;
+	height: 1.5px;
+	background: var(--yp-promo-accent);
+	display: inline-block;
+}
+
+.yp-promo__headline {
+	font-family: var(--wp--preset--font-family--heading);
+	font-weight: 800;
+	font-size: clamp(1.9rem, 3.3vw, 2.75rem);
+	line-height: 1.05;
+	margin: 0 0 0.9rem;
+	letter-spacing: -0.01em;
+	text-wrap: balance;
+	color: var(--yp-promo-ink);
+}
+
+.yp-promo__body {
+	font-size: 1.02rem;
+	line-height: 1.55;
+	color: var(--yp-promo-ink-soft);
+	max-width: 46ch;
+	margin: 0 0 1.5rem;
+}
+
+.yp-promo__row {
+	display: flex;
+	align-items: center;
+	gap: 1.1rem;
+	flex-wrap: wrap;
+}
+
+.yp-promo__code {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	background: var(--yp-promo-code-bg);
+	color: var(--yp-promo-code-ink);
+	padding: 0.55rem 0.5rem 0.55rem 0.9rem;
+	border-radius: var(--wp--custom--radius--control);
+	font-family: var(--wp--preset--font-family--mono);
+	font-weight: 600;
+	font-size: 0.92rem;
+	letter-spacing: 0.02em;
+}
+
+.yp-promo__code-hole {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--yp-promo-code-ink) 10%, transparent);
+	border: 1.5px dashed color-mix(in srgb, var(--yp-promo-code-ink) 35%, transparent);
+	flex-shrink: 0;
+}
+
+.yp-promo__code-label {
+	font-family: var(--wp--preset--font-family--body);
+	font-weight: 600;
+	font-size: 0.74rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	opacity: 0.65;
+}
+
+.yp-promo__cta {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	background: var(--yp-promo-accent);
+	color: var(--yp-promo-accent-ink);
+	font-family: var(--wp--preset--font-family--heading);
+	font-weight: 700;
+	font-size: 0.92rem;
+	text-decoration: none;
+	padding: 0.8rem 1.4rem;
+	border-radius: var(--wp--custom--radius--input);
+	transition: filter 150ms ease;
+}
+
+.yp-promo__cta:hover {
+	filter: brightness(1.08);
+}
+
+.yp-promo__visual {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.yp-promo__proof {
+	position: relative;
+	width: 220px;
+	height: 250px;
+}
+
+.yp-promo__corner {
+	position: absolute;
+	width: 22px;
+	height: 22px;
+	border-color: color-mix(in srgb, var(--yp-promo-ink) 55%, transparent);
+}
+
+.yp-promo__corner--tl {
+	top: 0;
+	left: 0;
+	border-top: 1.5px solid;
+	border-left: 1.5px solid;
+}
+
+.yp-promo__corner--tr {
+	top: 0;
+	right: 0;
+	border-top: 1.5px solid;
+	border-right: 1.5px solid;
+}
+
+.yp-promo__corner--bl {
+	bottom: 0;
+	left: 0;
+	border-bottom: 1.5px solid;
+	border-left: 1.5px solid;
+}
+
+.yp-promo__corner--br {
+	bottom: 0;
+	right: 0;
+	border-bottom: 1.5px solid;
+	border-right: 1.5px solid;
+}
+
+.yp-promo__mark {
+	position: absolute;
+	inset: 8px;
+	border-radius: 20px;
+	overflow: hidden;
+	display: flex;
+	box-shadow: var(--wp--custom--shadow-elevation--high);
+}
+
+.yp-promo__bar {
+	flex: 1;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.yp-promo__bar--1 {
+	background: var(--yp-promo-bar-1);
+}
+
+.yp-promo__bar--2 {
+	background: var(--yp-promo-bar-2);
+}
+
+.yp-promo__bar--3 {
+	background: var(--yp-promo-bar-3);
+}
+
+.yp-promo__icon {
+	width: 28px;
+	height: 28px;
+	color: var(--yp-promo-bg);
+	opacity: 0.85;
+}
+
+@media (max-width: 761px) {
+	.yp-promo__grid {
+		grid-template-columns: 1fr;
+		text-align: left;
+	}
+
+	.yp-promo__visual {
+		order: -1;
+		margin-bottom: 0.5rem;
+	}
+
+	.yp-promo__proof {
+		width: 150px;
+		height: 170px;
+	}
+}
