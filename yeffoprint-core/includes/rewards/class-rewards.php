@@ -54,6 +54,21 @@ class YeffoPrint_Rewards {
 	public const ORDER_POINTS_EARNED_META   = '_yp_rewards_points_earned';
 	public const ORDER_POINTS_REDEEMED_META = '_yp_rewards_points_redeemed';
 
+	/**
+	 * A short, capped log of manual admin adjustments only (class-
+	 * rewards-admin.php) — migrating a balance from the old site, or
+	 * making a customer-service situation right, neither of which has a
+	 * real order behind it the way every other balance change here does.
+	 * Deliberately not the "full transaction ledger" this class's own
+	 * docblock rules out in general: normal earn/redeem is still just
+	 * the running balance plus per-order meta, this only exists because
+	 * a manual adjustment has no order to explain itself later, and an
+	 * admin giving a customer points genuinely needs a record of who
+	 * did that, when, and why.
+	 */
+	private const ADJUSTMENTS_OPTION = 'yeffoprint_rewards_manual_adjustments';
+	private const ADJUSTMENTS_MAX    = 300;
+
 	public function __construct() {
 		add_action( 'woocommerce_cart_calculate_fees', [ $this, 'apply_pending_redemption' ] );
 		add_action( 'woocommerce_payment_complete', [ $this, 'finalize_order' ] );
@@ -170,5 +185,35 @@ class YeffoPrint_Rewards {
 		$order->update_meta_data( self::ORDER_POINTS_EARNED_META, $points_earned );
 		$order->update_meta_data( self::ORDER_POINTS_REDEEMED_META, $points_redeemed );
 		$order->save();
+	}
+
+	/**
+	 * Manual, admin-driven balance change (class-rewards-admin.php) —
+	 * see ADJUSTMENTS_OPTION above for why this is logged when nothing
+	 * else here is. Never brings the balance below 0, same floor every
+	 * other balance change in this class already enforces.
+	 *
+	 * @return int The resulting balance.
+	 */
+	public static function adjust_balance( int $user_id, int $delta, string $reason, int $admin_id ): int {
+		$balance = max( 0, self::get_balance( $user_id ) + $delta );
+		update_user_meta( $user_id, self::BALANCE_META, $balance );
+
+		$log = (array) get_option( self::ADJUSTMENTS_OPTION, [] );
+		array_unshift( $log, [
+			'user_id'  => $user_id,
+			'delta'    => $delta,
+			'reason'   => $reason,
+			'admin_id' => $admin_id,
+			'date'     => current_time( 'mysql' ),
+		] );
+		update_option( self::ADJUSTMENTS_OPTION, array_slice( $log, 0, self::ADJUSTMENTS_MAX ), false );
+
+		return $balance;
+	}
+
+	/** @return array<int, array{user_id:int, delta:int, reason:string, admin_id:int, date:string}> Newest first. */
+	public static function get_recent_adjustments( int $limit = 50 ): array {
+		return array_slice( (array) get_option( self::ADJUSTMENTS_OPTION, [] ), 0, max( 1, $limit ) );
 	}
 }

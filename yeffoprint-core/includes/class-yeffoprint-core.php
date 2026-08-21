@@ -186,6 +186,7 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-pricing-rule-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-custom-order-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-proof-editor.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-rewards-admin.php';
 
 			new YeffoPrint_Template_Editor();
 			new YeffoPrint_Field_Preset_Editor();
@@ -194,6 +195,7 @@ final class YeffoPrint_Core {
 			new YeffoPrint_Pricing_Rule_Editor();
 			new YeffoPrint_Custom_Order_Editor();
 			new YeffoPrint_Proof_Editor();
+			new YeffoPrint_Rewards_Admin();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
