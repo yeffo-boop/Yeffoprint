@@ -18,13 +18,19 @@ class YeffoPrint_Post_Type_Registry {
 	}
 
 	public function register_post_types(): void {
+		$template_args = $this->args(
+			__( 'Templates', 'yeffoprint-core' ),
+			__( 'Template', 'yeffoprint-core' ),
+			[ 'title', 'editor', 'thumbnail', 'custom-fields' ],
+			true // publicly queryable: the storefront gallery reads these.
+		);
+		// Renamed in the sidebar since this is also the landing tab of the
+		// consolidated Templates/Sizes/Materials/Sticker Sizes page — see
+		// class-design-setup-menu.php.
+		$template_args['labels']['menu_name'] = __( 'Design Setup', 'yeffoprint-core' );
+
 		register_post_type( 'yp_template', array_merge(
-			$this->args(
-				__( 'Templates', 'yeffoprint-core' ),
-				__( 'Template', 'yeffoprint-core' ),
-				[ 'title', 'editor', 'thumbnail', 'custom-fields' ],
-				true // publicly queryable: the storefront gallery reads these.
-			),
+			$template_args,
 			[
 				// Archive lives at /shop-labels/ per PROJECT_SPEC §9 — the
 				// Shop Labels page *is* the yp_template archive.
@@ -42,14 +48,16 @@ class YeffoPrint_Post_Type_Registry {
 			// sort_order via menu_order. Active/inactive reuses post_status
 			// (publish/draft) rather than a redundant meta flag.
 			[ 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields' ],
-			false
+			false,
+			false // Consolidated onto the "Design Setup" tabbed page — see class-design-setup-menu.php.
 		) );
 
 		register_post_type( 'yp_size', $this->args(
 			__( 'Sizes', 'yeffoprint-core' ),
 			__( 'Size', 'yeffoprint-core' ),
 			[ 'title', 'page-attributes', 'custom-fields' ],
-			false
+			false,
+			false // Consolidated onto the "Design Setup" tabbed page — see class-design-setup-menu.php.
 		) );
 
 		// Custom Stickers (PROJECT_SPEC §19 non-goal, now in scope): a
@@ -65,7 +73,8 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Sticker Sizes', 'yeffoprint-core' ),
 			__( 'Sticker Size', 'yeffoprint-core' ),
 			[ 'title', 'page-attributes', 'custom-fields' ],
-			false
+			false,
+			false // Consolidated onto the "Design Setup" tabbed page — see class-design-setup-menu.php.
 		) );
 
 		register_post_type( 'yp_pricing_rule', $this->args(
@@ -126,8 +135,18 @@ class YeffoPrint_Post_Type_Registry {
 	 * under the top-level "YeffoPrint" admin menu, and internal by
 	 * default — only Templates are publicly queryable, since the
 	 * storefront gallery and configurator read them directly.
+	 *
+	 * $show_in_menu defaults to attaching as its own "YeffoPrint" submenu
+	 * item. Sizes/Materials/Sticker Sizes instead pass false — direct
+	 * request, to fold them into Templates' own submenu item (relabeled
+	 * "Design Setup" below) with tabs between the four, rather than four
+	 * separate sidebar entries (class-design-setup-menu.php adds the tab
+	 * strip). show_ui stays true regardless, so each one's post.php/
+	 * post-new.php/edit.php still work fine at their direct URLs — the
+	 * tabs just link straight to them — they're just not duplicated in
+	 * the sidebar.
 	 */
-	private function args( string $plural, string $singular, array $supports, bool $public ): array {
+	private function args( string $plural, string $singular, array $supports, bool $public, $show_in_menu = 'yeffoprint' ): array {
 		return [
 			'label'               => $plural,
 			'labels'              => [
@@ -140,7 +159,7 @@ class YeffoPrint_Post_Type_Registry {
 			'public'              => $public,
 			'publicly_queryable'  => $public,
 			'show_ui'             => true,
-			'show_in_menu'        => 'yeffoprint',
+			'show_in_menu'        => $show_in_menu,
 			'show_in_rest'        => true,
 			'capability_type'     => 'post',
 			'map_meta_cap'        => true,
