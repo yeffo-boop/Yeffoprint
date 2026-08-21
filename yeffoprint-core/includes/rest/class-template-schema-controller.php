@@ -53,27 +53,29 @@ class YeffoPrint_Template_Schema_Controller {
 		}
 
 		return rest_ensure_response( [
-			'id'               => $template->ID,
+			'id'                    => $template->ID,
 			// Raw post_title, not get_the_title() — see format_size()
 			// below for why (configurator.js sets this straight via
 			// titleEl.textContent, so a texturized entity would show up
 			// on the page literally rather than being decoded).
-			'title'            => $template->post_title,
+			'title'                 => $template->post_title,
 			// post_content is raw block markup, not renderable text as-is
 			// — run it through the_content first (so blocks actually
 			// render to HTML) before stripping tags down to plain text.
-			'description'      => wp_strip_all_tags( apply_filters( 'the_content', $template->post_content ) ),
-			'artwork_url'      => get_the_post_thumbnail_url( $template, 'large' ) ?: null,
-			'vial_mockup_url'  => $this->vial_mockup_url( $template->ID ),
+			'description'           => wp_strip_all_tags( apply_filters( 'the_content', $template->post_content ) ),
+			'artwork_url'           => get_the_post_thumbnail_url( $template, 'large' ) ?: null,
+			'vial_mockup_url'       => $this->vial_mockup_url( $template->ID ),
 			// Empty string (the default/unset state) tells configurator.js
 			// to leave Label View on the site's own font rather than set
 			// an empty font-family.
-			'preview_font'     => (string) get_post_meta( $template->ID, YeffoPrint_Template_Meta::PREVIEW_FONT, true ),
-			'base_unit_price'  => function_exists( 'yeffoprint_core_base_unit_price' ) ? yeffoprint_core_base_unit_price() : 0,
-			'quantity_presets' => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
-			'field_schema'     => YeffoPrint_Field_Schema::get( $template->ID ),
-			'sizes'            => $this->records( YeffoPrint_Template_Meta::COMPATIBLE_SIZES, $template->ID, [ $this, 'format_size' ] ),
-			'materials'        => $this->records( YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS, $template->ID, [ $this, 'format_material' ] ),
+			'preview_font'          => (string) get_post_meta( $template->ID, YeffoPrint_Template_Meta::PREVIEW_FONT, true ),
+			// Dashboard → YeffoPrint → Settings → Label Configurator.
+			'live_preview_enabled'  => (bool) get_option( YeffoPrint_Admin_Menu::LIVE_PREVIEW_ENABLED_OPTION, true ),
+			'base_unit_price'       => function_exists( 'yeffoprint_core_base_unit_price' ) ? yeffoprint_core_base_unit_price() : 0,
+			'quantity_presets'      => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
+			'field_schema'          => YeffoPrint_Field_Schema::get( $template->ID ),
+			'sizes'                 => $this->records( YeffoPrint_Template_Meta::COMPATIBLE_SIZES, $template->ID, [ $this, 'format_size' ] ),
+			'materials'             => $this->records( YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS, $template->ID, [ $this, 'format_material' ] ),
 		] );
 	}
 

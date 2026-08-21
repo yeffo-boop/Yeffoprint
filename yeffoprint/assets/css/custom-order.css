@@ -70,3 +70,16 @@
 .yp-custom-sticker__dimensions input {
 	max-width: 8rem;
 }
+
+/* Contact form honeypot (class-contact-controller.php) — off-screen
+   rather than display:none/visibility:hidden, which some spam bots
+   specifically check for and skip filling in. aria-hidden on the
+   wrapping div (contact-form.html) keeps it out of a screen reader's
+   way too. */
+.yp-field--honeypot {
+	position: absolute;
+	left: -9999px;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}

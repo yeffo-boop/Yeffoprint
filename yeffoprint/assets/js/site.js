@@ -240,10 +240,55 @@
 		} );
 	}
 
+	/* ---------- Splash screen ---------- */
+
+	/**
+	 * The markup only exists in the page when there's actually something
+	 * to show (functions.php's wp_footer renderer) — this just opens it
+	 * once per browser session and remembers a dismissal for the rest of
+	 * that session, so returning to the homepage mid-session doesn't
+	 * show it again. A new session (new tab/window, or the old one
+	 * closed and reopened) sees it again — deliberate, not a bug: the
+	 * kill switch for "stop showing this at all" is the Settings screen
+	 * checkbox, not this.
+	 */
+	function initSplashScreen() {
+		var splash = document.getElementById( 'yp-splash-drawer' );
+		if ( ! splash ) {
+			return;
+		}
+
+		var DISMISSED_KEY = 'ypSplashDismissed';
+
+		try {
+			if ( sessionStorage.getItem( DISMISSED_KEY ) ) {
+				return;
+			}
+		} catch ( e ) {
+			// Storage unavailable (private mode, blocked site data, etc.) —
+			// falls through to showing the splash every visit rather than
+			// never at all.
+		}
+
+		// One observer covers every way the drawer can close (the X
+		// button, "Continue to the site," the backdrop, Escape) instead
+		// of binding a dismiss handler to each trigger individually.
+		new MutationObserver( function () {
+			if ( 'false' === splash.dataset.open ) {
+				try {
+					sessionStorage.setItem( DISMISSED_KEY, '1' );
+				} catch ( e ) {}
+			}
+		} ).observe( splash, { attributes: true, attributeFilter: [ 'data-open' ] } );
+
+		openDrawer( splash );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initHeaderScroll();
 		initDrawers();
 		initGalleryToolbar();
 		initCartDrawer();
+		initSplashScreen();
 	} );
 } )();

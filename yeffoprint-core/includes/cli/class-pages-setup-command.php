@@ -57,6 +57,13 @@ class YeffoPrint_Pages_Setup_Command {
 			'',
 			'custom-stickers-form.html'
 		);
+
+		$this->create_page(
+			'contact',
+			__( 'Contact', 'yeffoprint-core' ),
+			'',
+			'contact-form.html'
+		);
 	}
 
 	private function create_page( string $slug, string $title, string $content, string $template = '' ): void {

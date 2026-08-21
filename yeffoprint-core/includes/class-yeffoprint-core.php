@@ -78,6 +78,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/class-tracking-provider-registry.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-tracking.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-contact-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -109,6 +110,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Payment_Webhook_Controller();
 		new YeffoPrint_Order_Tracking();
 		new YeffoPrint_Order_Tracking_Controller();
+		new YeffoPrint_Contact_Controller();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)
