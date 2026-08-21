@@ -887,20 +887,19 @@
 		radial-gradient(circle at 100% 120%, var(--yp-promo-glow-b), transparent 60%);
 	color: var(--yp-promo-ink);
 	overflow: hidden;
-	/* A little breathing room off the search bar directly above it (the
-	   root-level spacing rule in global.css zeroes out margin-block-start
-	   on `main` itself, so without this the banner's top edge otherwise
-	   touches the search bar exactly) — same radius token as the other
-	   full-width rounded banner on this page, .yp-rewards-promo. Reported
-	   as still reading like there was no gap at spacing--sm: the actual
-	   root cause was margin-collapsing shrinking this margin as it passed
-	   through `main` on its way to becoming visible space (see global.css's
-	   `main.wp-block-group { display: flow-root; }`), on some of the promo
-	   banner's own dark theme colors (class-promo-themes.php) reading as
-	   barely separated from the dark search bar above even once it did
-	   render at the full amount — bumped a size up on top of the flow-root
-	   fix so there's still a clearly visible gap on those themes too. */
-	margin-top: var(--wp--preset--spacing--md);
+	/* A little breathing room off the search bar directly above it — same
+	   radius token as the other full-width rounded banner on this page,
+	   .yp-rewards-promo. Needs !important: confirmed via computed styles
+	   that WordPress's own generated layout CSS for a "flow" group
+	   (`.wp-block-group.is-layout-flow > *:first-child { margin-block-
+	   start: 0; }`, three classes/pseudo-classes) otherwise beats a plain
+	   `.yp-promo` selector (one class) regardless of load order or the
+	   physical/logical property difference — the earlier flow-root fix
+	   on `main` (global.css) was real and necessary (stops the margin
+	   from collapsing through main entirely) but doesn't help against
+	   this separate, more specific rule zeroing the child's own margin
+	   directly. Also bumped a size up from the original spacing--sm. */
+	margin-top: var(--wp--preset--spacing--md) !important;
 	border-radius: var(--wp--custom--radius--container);
 }
 
