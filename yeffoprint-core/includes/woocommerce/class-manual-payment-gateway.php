@@ -83,6 +83,41 @@ abstract class YeffoPrint_Manual_Payment_Gateway extends \WC_Payment_Gateway {
 	abstract protected function default_description(): string;
 
 	/**
+	 * The classic "Pay for order" page (checkout/form-pay.php) — a
+	 * declined-payment retry link or an admin-created order's customer
+	 * payment link — is the one place a customer picks this gateway
+	 * without ever seeing the fuller instructions (they only otherwise
+	 * show up after checkout, on the thank-you page and in the on-hold
+	 * email — see thankyou_page()/email_instructions() below). It's not
+	 * a gap on the real Checkout page: that one is block-based, and
+	 * shows its own copy of the "send payment to" handle through
+	 * venmo-payment-method.js/zelle-payment-method.js (class-manual-
+	 * payment-blocks-support.php) instead of this server-rendered
+	 * payment_fields() output, which the block Checkout never calls.
+	 * The Pay for Order page always renders the classic (non-block)
+	 * template, though, and an order already exists there — so this can
+	 * show the same exact-amount/handle/order-number instructions (plus
+	 * the pay button/QR) the thank-you page shows, rather than just the
+	 * generic admin-written description.
+	 */
+	public function payment_fields() {
+		parent::payment_fields();
+
+		if ( ! function_exists( 'is_checkout_pay_page' ) || ! is_checkout_pay_page() ) {
+			return;
+		}
+
+		$order_id = absint( get_query_var( 'order-pay' ) );
+		$order    = $order_id ? wc_get_order( $order_id ) : null;
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+
+		echo '<div class="yp-blocks-payment-handle">' . wp_kses_post( $this->instructions_text( $order ) ) . '</div>';
+		echo wp_kses_post( $this->payment_action_html( 'button' ) );
+	}
+
+	/**
 	 * @return string|null A link the customer can tap/click to open this
 	 *   method's own app and pay directly — null when there isn't a
 	 *   reliable universal one. Zelle never overrides this: unlike

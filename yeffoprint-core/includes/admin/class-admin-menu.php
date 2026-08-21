@@ -28,7 +28,13 @@ class YeffoPrint_Admin_Menu {
 	const ANNOUNCEMENT_BAR_OPTION  = 'yeffoprint_announcement_bar_text';
 	const ANNOUNCEMENT_BAR_DEFAULT = 'Free proofing on every fully custom order.';
 
-	/** Also read by YeffoPrint_Rewards (includes/rewards/class-rewards.php) — same reasoning as the announcement bar option above. */
+	/**
+	 * Also read by YeffoPrint_Rewards (includes/rewards/class-rewards.php)
+	 * — same reasoning as the announcement bar option above. Registered
+	 * and edited on the dedicated Rewards page (class-rewards-admin.php),
+	 * not here — the constants stay on this class since several other
+	 * classes already reference them from here.
+	 */
 	const REWARDS_POINTS_PER_DOLLAR_OPTION = 'yeffoprint_rewards_points_per_dollar';
 	const REWARDS_DOLLARS_PER_POINT_OPTION = 'yeffoprint_rewards_dollars_per_point';
 	const REWARDS_POINTS_PER_DOLLAR_DEFAULT = 1;
@@ -47,8 +53,10 @@ class YeffoPrint_Admin_Menu {
 
 	/**
 	 * Also read by the tracking-providers/ classes — same reasoning as
-	 * the rewards options above. Empty until an admin actually signs up
-	 * for each carrier's developer program and pastes these in; the
+	 * the rewards options above. Registered and edited on this Settings
+	 * page (unlike Rewards/Card Surcharge, tracking credentials didn't
+	 * warrant their own dedicated page). Empty until an admin actually
+	 * signs up for each carrier's developer program and pastes these in; the
 	 * tracking page works before that too (class-order-tracking.php's
 	 * direct carrier-site links), just without the live in-page timeline.
 	 */
@@ -60,7 +68,9 @@ class YeffoPrint_Admin_Menu {
 	/**
 	 * Also read by YeffoPrint_Card_Surcharge (includes/woocommerce/
 	 * class-card-surcharge.php) — same reasoning as the options above.
-	 * Direct request: pass processing fees on to the customer, at a
+	 * Registered and edited on the dedicated Card Surcharge page
+	 * (class-surcharge-admin.php), not here. Direct request: pass
+	 * processing fees on to the customer, at a
 	 * different rate per gateway (cards vs. Afterpay, etc. each cost a
 	 * different percentage to accept). One option, keyed by gateway id,
 	 * rather than a separate rate/label option per gateway — a fixed
@@ -198,55 +208,6 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint_announcement_bar'
 		);
 
-		register_setting( 'yeffoprint_settings', self::REWARDS_POINTS_PER_DOLLAR_OPTION, [
-			'type'              => 'number',
-			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
-			'default'           => self::REWARDS_POINTS_PER_DOLLAR_DEFAULT,
-		] );
-
-		register_setting( 'yeffoprint_settings', self::REWARDS_DOLLARS_PER_POINT_OPTION, [
-			'type'              => 'number',
-			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
-			'default'           => self::REWARDS_DOLLARS_PER_POINT_DEFAULT,
-		] );
-
-		register_setting( 'yeffoprint_settings', self::REFERRAL_POINTS_OPTION, [
-			'type'              => 'number',
-			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
-			'default'           => self::REFERRAL_POINTS_DEFAULT,
-		] );
-
-		add_settings_section(
-			'yeffoprint_rewards',
-			__( 'Rewards', 'yeffoprint-core' ),
-			'__return_false',
-			'yeffoprint-settings'
-		);
-
-		add_settings_field(
-			self::REWARDS_POINTS_PER_DOLLAR_OPTION,
-			__( 'Points earned per $1 spent', 'yeffoprint-core' ),
-			[ $this, 'render_rewards_points_per_dollar_field' ],
-			'yeffoprint-settings',
-			'yeffoprint_rewards'
-		);
-
-		add_settings_field(
-			self::REWARDS_DOLLARS_PER_POINT_OPTION,
-			__( 'Redemption value per point', 'yeffoprint-core' ),
-			[ $this, 'render_rewards_dollars_per_point_field' ],
-			'yeffoprint-settings',
-			'yeffoprint_rewards'
-		);
-
-		add_settings_field(
-			self::REFERRAL_POINTS_OPTION,
-			__( 'Points per successful referral', 'yeffoprint-core' ),
-			[ $this, 'render_referral_points_field' ],
-			'yeffoprint-settings',
-			'yeffoprint_rewards'
-		);
-
 		register_setting( 'yeffoprint_settings', self::UPS_CLIENT_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ] );
 		register_setting( 'yeffoprint_settings', self::UPS_CLIENT_SECRET_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ] );
 		register_setting( 'yeffoprint_settings', self::USPS_CONSUMER_KEY_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ] );
@@ -289,28 +250,6 @@ class YeffoPrint_Admin_Menu {
 			[ $this, 'render_usps_consumer_secret_field' ],
 			'yeffoprint-settings',
 			'yeffoprint_tracking'
-		);
-
-		register_setting( 'yeffoprint_settings', self::SURCHARGE_GATEWAY_RATES_OPTION, [
-			'type'              => 'array',
-			'sanitize_callback' => [ $this, 'sanitize_surcharge_gateway_rates' ],
-			'default'           => [],
-			'show_in_rest'      => false, // An array-of-arrays option needs an explicit schema to be REST-visible; nothing here reads it over REST.
-		] );
-
-		add_settings_section(
-			'yeffoprint_surcharge',
-			__( 'Card Surcharge', 'yeffoprint-core' ),
-			[ $this, 'render_surcharge_section_intro' ],
-			'yeffoprint-settings'
-		);
-
-		add_settings_field(
-			self::SURCHARGE_GATEWAY_RATES_OPTION,
-			__( 'Per-gateway rates', 'yeffoprint-core' ),
-			[ $this, 'render_surcharge_gateway_rates_field' ],
-			'yeffoprint-settings',
-			'yeffoprint_surcharge'
 		);
 
 		register_setting( 'yeffoprint_settings', self::LIVE_PREVIEW_ENABLED_OPTION, [
@@ -595,102 +534,6 @@ class YeffoPrint_Admin_Menu {
 		return null !== YeffoPrint_Promo_Themes::get( $value ) ? $value : self::PROMO_THEME_DEFAULT;
 	}
 
-	public function render_surcharge_section_intro(): void {
-		echo '<p>' . wp_kses(
-			__( 'Adds a fee to the order total when the customer pays with a gateway given a rate below — direct request, to pass processing fees on to the customer, at whatever rate each gateway actually costs you (cards and Afterpay/BNPL gateways typically cost very different percentages). <strong>Before turning this on:</strong> credit card surcharging is banned outright in a few states (Connecticut, Massachusetts, Maine, and — as of a 2024 law — California, though its status has been challenged in court) and is capped by the card networks (currently 3% for Visa, 4% for Mastercard, or your actual processing cost if lower, whichever is less). It can never legally apply to a debit card — and this plugin has no way to tell a credit card from a debit card before checkout, since that only becomes known to your payment processor at the moment of payment, not to WooCommerce beforehand. Confirm with your payment processor or a lawyer that this is set up correctly for your state and card mix before relying on it.', 'yeffoprint-core' ),
-			[ 'strong' => [] ]
-		) . '</p>';
-	}
-
-	/** One row per currently-registered gateway: a rate (%) and an optional label override, defaulting blank/0 so nothing is surcharged until explicitly set. */
-	public function render_surcharge_gateway_rates_field(): void {
-		$saved    = YeffoPrint_Card_Surcharge::get_gateway_rates();
-		$gateways = function_exists( 'WC' ) && WC()->payment_gateways() ? WC()->payment_gateways()->payment_gateways() : [];
-
-		if ( ! $gateways ) {
-			esc_html_e( 'No payment gateways are registered yet.', 'yeffoprint-core' );
-			return;
-		}
-
-		$option = self::SURCHARGE_GATEWAY_RATES_OPTION;
-		?>
-		<table class="widefat" style="max-width:640px;">
-			<thead>
-				<tr>
-					<th><?php esc_html_e( 'Gateway', 'yeffoprint-core' ); ?></th>
-					<th style="width:110px;"><?php esc_html_e( 'Rate', 'yeffoprint-core' ); ?></th>
-					<th><?php esc_html_e( 'Label', 'yeffoprint-core' ); ?></th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php foreach ( $gateways as $gateway ) : ?>
-					<?php
-					$row   = $saved[ $gateway->id ] ?? [];
-					$rate  = $row['rate'] ?? '';
-					$label = $row['label'] ?? '';
-					?>
-					<tr>
-						<td>
-							<?php echo esc_html( $gateway->get_title() ); ?>
-							<br /><span class="description">(<?php echo esc_html( 'yes' === $gateway->enabled ? __( 'enabled', 'yeffoprint-core' ) : __( 'disabled', 'yeffoprint-core' ) ); ?>)</span>
-						</td>
-						<td>
-							<input
-								type="number"
-								step="0.01"
-								min="0"
-								max="10"
-								style="width:80px;"
-								name="<?php echo esc_attr( $option ); ?>[<?php echo esc_attr( $gateway->id ); ?>][rate]"
-								value="<?php echo esc_attr( $rate ); ?>"
-							/> %
-						</td>
-						<td>
-							<input
-								type="text"
-								class="regular-text"
-								placeholder="<?php echo esc_attr( self::SURCHARGE_LABEL_DEFAULT ); ?>"
-								name="<?php echo esc_attr( $option ); ?>[<?php echo esc_attr( $gateway->id ); ?>][label]"
-								value="<?php echo esc_attr( $label ); ?>"
-							/>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</tbody>
-		</table>
-		<p class="description"><?php esc_html_e( 'Blank or 0 turns the surcharge off for that gateway — leave every gateway except your actual credit card gateway(s) at 0, never a debit-only, bank-transfer, or manual gateway like Venmo/Zelle. Label is shown in the cart, checkout, and order emails as "Label (rate%)" — e.g. "Card Processing Fee (2.9%)" — and defaults to "Processing Fee" if left blank. Card network rules require this fee to be clearly disclosed before payment, not folded into another line item.', 'yeffoprint-core' ); ?></p>
-		<?php
-	}
-
-	/**
-	 * @return array<string, array{rate:float, label:string}> Only gateway
-	 *   ids that actually exist right now (a stale id from a since-
-	 *   removed/renamed gateway is dropped) and only rows with a positive
-	 *   rate (a blanked-out row shouldn't linger as a 0-rate no-op entry).
-	 */
-	public function sanitize_surcharge_gateway_rates( $raw ): array {
-		$known_ids = function_exists( 'WC' ) && WC()->payment_gateways()
-			? array_keys( WC()->payment_gateways()->payment_gateways() )
-			: [];
-
-		$result = [];
-		foreach ( (array) $raw as $gateway_id => $row ) {
-			$gateway_id = sanitize_key( (string) $gateway_id );
-			$rate       = max( 0, (float) ( $row['rate'] ?? 0 ) );
-
-			if ( ! in_array( $gateway_id, $known_ids, true ) || $rate <= 0 ) {
-				continue;
-			}
-
-			$result[ $gateway_id ] = [
-				'rate'  => $rate,
-				'label' => sanitize_text_field( (string) ( $row['label'] ?? '' ) ),
-			];
-		}
-
-		return $result;
-	}
-
 	public function render_tracking_section_intro(): void {
 		echo '<p>' . wp_kses(
 			sprintf(
@@ -732,15 +575,6 @@ class YeffoPrint_Admin_Menu {
 		<?php
 	}
 
-	/**
-	 * Both rewards fields are positive rates, not free text — a
-	 * negative or non-numeric value would let a customer earn negative
-	 * points or redeem for an unbounded discount.
-	 */
-	public function sanitize_positive_number( $value ): float {
-		return max( 0, (float) $value );
-	}
-
 	public function render_announcement_bar_field(): void {
 		$value = get_option( self::ANNOUNCEMENT_BAR_OPTION, self::ANNOUNCEMENT_BAR_DEFAULT );
 		?>
@@ -751,48 +585,6 @@ class YeffoPrint_Admin_Menu {
 			value="<?php echo esc_attr( $value ); ?>"
 		/>
 		<p class="description"><?php esc_html_e( 'Shown in the thin bar above the header, on every page. Leave blank to hide the bar entirely.', 'yeffoprint-core' ); ?></p>
-		<?php
-	}
-
-	public function render_rewards_points_per_dollar_field(): void {
-		$value = get_option( self::REWARDS_POINTS_PER_DOLLAR_OPTION, self::REWARDS_POINTS_PER_DOLLAR_DEFAULT );
-		?>
-		<input
-			type="number"
-			step="0.01"
-			min="0"
-			name="<?php echo esc_attr( self::REWARDS_POINTS_PER_DOLLAR_OPTION ); ?>"
-			value="<?php echo esc_attr( $value ); ?>"
-		/>
-		<p class="description"><?php esc_html_e( 'How many points a customer earns for every $1 of merchandise (shipping and tax excluded), awarded once an order is paid.', 'yeffoprint-core' ); ?></p>
-		<?php
-	}
-
-	public function render_rewards_dollars_per_point_field(): void {
-		$value = get_option( self::REWARDS_DOLLARS_PER_POINT_OPTION, self::REWARDS_DOLLARS_PER_POINT_DEFAULT );
-		?>
-		<input
-			type="number"
-			step="0.001"
-			min="0"
-			name="<?php echo esc_attr( self::REWARDS_DOLLARS_PER_POINT_OPTION ); ?>"
-			value="<?php echo esc_attr( $value ); ?>"
-		/>
-		<p class="description"><?php esc_html_e( 'Dollar discount each point is worth when a customer redeems their balance. Default 0.01 means 100 points = $1.', 'yeffoprint-core' ); ?></p>
-		<?php
-	}
-
-	public function render_referral_points_field(): void {
-		$value = get_option( self::REFERRAL_POINTS_OPTION, self::REFERRAL_POINTS_DEFAULT );
-		?>
-		<input
-			type="number"
-			step="1"
-			min="0"
-			name="<?php echo esc_attr( self::REFERRAL_POINTS_OPTION ); ?>"
-			value="<?php echo esc_attr( $value ); ?>"
-		/>
-		<p class="description"><?php esc_html_e( 'Awarded to the referring customer once the person they referred places their first paid order. 0 turns referral rewards off entirely.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 

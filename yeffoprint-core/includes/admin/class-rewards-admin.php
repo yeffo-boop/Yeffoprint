@@ -15,8 +15,13 @@ class YeffoPrint_Rewards_Admin {
 	private const NONCE_ACTION  = 'yeffoprint_rewards_adjust';
 	private const NONCE_NAME    = 'yeffoprint_rewards_adjust_nonce';
 
+	/** Settings API group/page for the points-and-referral rates below — moved here (direct request) from the general Settings page. */
+	private const SETTINGS_GROUP = 'yeffoprint_rewards_settings';
+	private const SETTINGS_PAGE  = 'yeffoprint-rewards-settings';
+
 	public function __construct() {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
+		add_action( 'admin_init', [ $this, 'register_settings' ] );
 		add_action( 'admin_post_yeffoprint_rewards_adjust', [ $this, 'handle_adjust' ] );
 	}
 
@@ -31,6 +36,103 @@ class YeffoPrint_Rewards_Admin {
 		);
 	}
 
+	public function register_settings(): void {
+		register_setting( self::SETTINGS_GROUP, YeffoPrint_Admin_Menu::REWARDS_POINTS_PER_DOLLAR_OPTION, [
+			'type'              => 'number',
+			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
+			'default'           => YeffoPrint_Admin_Menu::REWARDS_POINTS_PER_DOLLAR_DEFAULT,
+		] );
+
+		register_setting( self::SETTINGS_GROUP, YeffoPrint_Admin_Menu::REWARDS_DOLLARS_PER_POINT_OPTION, [
+			'type'              => 'number',
+			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
+			'default'           => YeffoPrint_Admin_Menu::REWARDS_DOLLARS_PER_POINT_DEFAULT,
+		] );
+
+		register_setting( self::SETTINGS_GROUP, YeffoPrint_Admin_Menu::REFERRAL_POINTS_OPTION, [
+			'type'              => 'number',
+			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
+			'default'           => YeffoPrint_Admin_Menu::REFERRAL_POINTS_DEFAULT,
+		] );
+
+		add_settings_section( 'yeffoprint_rewards_rates', '', '__return_false', self::SETTINGS_PAGE );
+
+		add_settings_field(
+			YeffoPrint_Admin_Menu::REWARDS_POINTS_PER_DOLLAR_OPTION,
+			__( 'Points earned per $1 spent', 'yeffoprint-core' ),
+			[ $this, 'render_points_per_dollar_field' ],
+			self::SETTINGS_PAGE,
+			'yeffoprint_rewards_rates'
+		);
+
+		add_settings_field(
+			YeffoPrint_Admin_Menu::REWARDS_DOLLARS_PER_POINT_OPTION,
+			__( 'Redemption value per point', 'yeffoprint-core' ),
+			[ $this, 'render_dollars_per_point_field' ],
+			self::SETTINGS_PAGE,
+			'yeffoprint_rewards_rates'
+		);
+
+		add_settings_field(
+			YeffoPrint_Admin_Menu::REFERRAL_POINTS_OPTION,
+			__( 'Points per successful referral', 'yeffoprint-core' ),
+			[ $this, 'render_referral_points_field' ],
+			self::SETTINGS_PAGE,
+			'yeffoprint_rewards_rates'
+		);
+	}
+
+	/**
+	 * All three rates are positive numbers, not free text — a negative
+	 * or non-numeric value would let a customer earn negative points or
+	 * redeem for an unbounded discount.
+	 */
+	public function sanitize_positive_number( $value ): float {
+		return max( 0, (float) $value );
+	}
+
+	public function render_points_per_dollar_field(): void {
+		$value = get_option( YeffoPrint_Admin_Menu::REWARDS_POINTS_PER_DOLLAR_OPTION, YeffoPrint_Admin_Menu::REWARDS_POINTS_PER_DOLLAR_DEFAULT );
+		?>
+		<input
+			type="number"
+			step="0.01"
+			min="0"
+			name="<?php echo esc_attr( YeffoPrint_Admin_Menu::REWARDS_POINTS_PER_DOLLAR_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'How many points a customer earns for every $1 of merchandise (shipping and tax excluded), awarded once an order is paid.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_dollars_per_point_field(): void {
+		$value = get_option( YeffoPrint_Admin_Menu::REWARDS_DOLLARS_PER_POINT_OPTION, YeffoPrint_Admin_Menu::REWARDS_DOLLARS_PER_POINT_DEFAULT );
+		?>
+		<input
+			type="number"
+			step="0.001"
+			min="0"
+			name="<?php echo esc_attr( YeffoPrint_Admin_Menu::REWARDS_DOLLARS_PER_POINT_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Dollar discount each point is worth when a customer redeems their balance. Default 0.01 means 100 points = $1.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_referral_points_field(): void {
+		$value = get_option( YeffoPrint_Admin_Menu::REFERRAL_POINTS_OPTION, YeffoPrint_Admin_Menu::REFERRAL_POINTS_DEFAULT );
+		?>
+		<input
+			type="number"
+			step="1"
+			min="0"
+			name="<?php echo esc_attr( YeffoPrint_Admin_Menu::REFERRAL_POINTS_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Awarded to the referring customer once the person they referred places their first paid order. 0 turns referral rewards off entirely.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
 	public function render_page(): void {
 		if ( ! current_user_can( self::CAP ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'yeffoprint-core' ) );
@@ -40,6 +142,15 @@ class YeffoPrint_Rewards_Admin {
 			<h1><?php esc_html_e( 'Rewards', 'yeffoprint-core' ); ?></h1>
 
 			<?php $this->render_notice(); ?>
+
+			<h2><?php esc_html_e( 'Points & referral rates', 'yeffoprint-core' ); ?></h2>
+			<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
+				<?php
+				settings_fields( self::SETTINGS_GROUP );
+				do_settings_sections( self::SETTINGS_PAGE );
+				submit_button( __( 'Save Rates', 'yeffoprint-core' ) );
+				?>
+			</form>
 
 			<h2><?php esc_html_e( 'Award or adjust points', 'yeffoprint-core' ); ?></h2>
 			<p class="description">
