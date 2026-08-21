@@ -65,6 +65,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-proof-approval-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-endpoints.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rewards/class-rewards.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rewards/class-referrals.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-item-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-saved-design-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
@@ -104,6 +105,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Proof_Approval_Controller();
 		new YeffoPrint_Account_Endpoints();
 		new YeffoPrint_Rewards();
+		new YeffoPrint_Referrals();
 		new YeffoPrint_Order_Item_Controller();
 		new YeffoPrint_Saved_Design_Controller();
 		new YeffoPrint_Reorder();

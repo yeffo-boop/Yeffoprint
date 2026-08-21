@@ -178,6 +178,26 @@
 		} );
 	}
 
+	/* ---------- Referral link copy (My Account → Rewards) ---------- */
+
+	function initReferralCopy() {
+		var button = document.querySelector( '[data-yp-copy-referral-link]' );
+		var input = document.querySelector( '.yp-referrals__link' );
+		if ( ! button || ! input || ! navigator.clipboard ) {
+			return;
+		}
+
+		button.addEventListener( 'click', function () {
+			navigator.clipboard.writeText( input.value ).then( function () {
+				var original = button.textContent;
+				button.textContent = 'Copied!';
+				setTimeout( function () {
+					button.textContent = original;
+				}, 1500 );
+			} ).catch( function () {} );
+		} );
+	}
+
 	/* ---------- Cart drawer ---------- */
 
 	/**
@@ -290,5 +310,6 @@
 		initGalleryToolbar();
 		initCartDrawer();
 		initSplashScreen();
+		initReferralCopy();
 	} );
 } )();

@@ -579,6 +579,36 @@
 	color: var(--wp--preset--color--magenta-deep);
 }
 
+/* ---------- Refer a Friend (part of the Rewards tab) ---------- */
+
+.yp-referrals {
+	margin-bottom: 2rem;
+}
+
+.yp-referrals__link-row {
+	display: flex;
+	gap: 0.6rem;
+	margin-top: 0.6rem;
+}
+
+.yp-referrals__link {
+	flex: 1;
+	min-width: 0;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--small);
+	border-radius: var(--wp--custom--radius--input);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	padding: 0.6rem 0.75rem;
+	background: var(--wp--preset--color--warm-white);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-referrals__stats {
+	margin-top: 0.75rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
 /* ---------- Proofs tab ---------- */
 
 .yp-proofs-list {

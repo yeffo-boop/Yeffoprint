@@ -35,6 +35,17 @@ class YeffoPrint_Admin_Menu {
 	const REWARDS_DOLLARS_PER_POINT_DEFAULT = 0.01;
 
 	/**
+	 * Also read by YeffoPrint_Referrals (includes/rewards/class-
+	 * referrals.php) — same reasoning as the options above. Flat points
+	 * per successful referral (a referred customer's first paid order),
+	 * not a percentage of that order — simpler to advertise ("refer a
+	 * friend, earn 500 points") than a cut of a purchase size the
+	 * referrer has no control over.
+	 */
+	const REFERRAL_POINTS_OPTION  = 'yeffoprint_referral_points';
+	const REFERRAL_POINTS_DEFAULT = 500;
+
+	/**
 	 * Also read by the tracking-providers/ classes — same reasoning as
 	 * the rewards options above. Empty until an admin actually signs up
 	 * for each carrier's developer program and pastes these in; the
@@ -183,6 +194,12 @@ class YeffoPrint_Admin_Menu {
 			'default'           => self::REWARDS_DOLLARS_PER_POINT_DEFAULT,
 		] );
 
+		register_setting( 'yeffoprint_settings', self::REFERRAL_POINTS_OPTION, [
+			'type'              => 'number',
+			'sanitize_callback' => [ $this, 'sanitize_positive_number' ],
+			'default'           => self::REFERRAL_POINTS_DEFAULT,
+		] );
+
 		add_settings_section(
 			'yeffoprint_rewards',
 			__( 'Rewards', 'yeffoprint-core' ),
@@ -202,6 +219,14 @@ class YeffoPrint_Admin_Menu {
 			self::REWARDS_DOLLARS_PER_POINT_OPTION,
 			__( 'Redemption value per point', 'yeffoprint-core' ),
 			[ $this, 'render_rewards_dollars_per_point_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_rewards'
+		);
+
+		add_settings_field(
+			self::REFERRAL_POINTS_OPTION,
+			__( 'Points per successful referral', 'yeffoprint-core' ),
+			[ $this, 'render_referral_points_field' ],
 			'yeffoprint-settings',
 			'yeffoprint_rewards'
 		);
@@ -609,6 +634,20 @@ class YeffoPrint_Admin_Menu {
 			value="<?php echo esc_attr( $value ); ?>"
 		/>
 		<p class="description"><?php esc_html_e( 'Dollar discount each point is worth when a customer redeems their balance. Default 0.01 means 100 points = $1.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_referral_points_field(): void {
+		$value = get_option( self::REFERRAL_POINTS_OPTION, self::REFERRAL_POINTS_DEFAULT );
+		?>
+		<input
+			type="number"
+			step="1"
+			min="0"
+			name="<?php echo esc_attr( self::REFERRAL_POINTS_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/>
+		<p class="description"><?php esc_html_e( 'Awarded to the referring customer once the person they referred places their first paid order. 0 turns referral rewards off entirely.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 
