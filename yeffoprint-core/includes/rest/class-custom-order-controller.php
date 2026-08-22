@@ -58,6 +58,32 @@ class YeffoPrint_Custom_Order_Controller {
 			'callback'            => [ $this, 'get_custom_order' ],
 			'permission_callback' => [ $this, 'check_ownership' ],
 		] );
+
+		// A literal-string path — never collides with the /(?P<id>\d+)
+		// route above, since "eligible-reorders" can never match \d+.
+		// Direct request: reorder a past design without the $25 fee, once
+		// it's actually finished (YeffoPrint_Custom_Order_Meta::
+		// is_eligible_for_fee_free_reorder()) — this is what the Custom
+		// Design form's "Reorder a past design" picker lists.
+		register_rest_route( self::NAMESPACE, '/custom-orders/eligible-reorders', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'eligible_reorders' ],
+			'permission_callback' => static function () {
+				return is_user_logged_in();
+			},
+		] );
+
+		// Batch-aware pricing preview — direct request (batching). Can't
+		// reuse /pricing/calculate as-is: that endpoint prices one
+		// size/material/quantity against the cart's own existing
+		// quantity, but a not-yet-submitted batch's rows need to count
+		// toward *each other's* shared bulk-discount tier too, or the
+		// preview would understate the real total once submitted.
+		register_rest_route( self::NAMESPACE, '/custom-orders/pricing-preview', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'pricing_preview' ],
+			'permission_callback' => '__return_true',
+		] );
 	}
 
 	public function check_ownership( \WP_REST_Request $request ) {
@@ -98,6 +124,84 @@ class YeffoPrint_Custom_Order_Controller {
 			'style_notes'       => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::STYLE_NOTES, true ),
 			'instructions'      => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, true ),
 			'uploads'           => $upload_data,
+		] );
+	}
+
+	/** Every one of the current customer's past custom label orders eligible to reorder without the design fee — the "Reorder a past design" picker's own data source. */
+	public function eligible_reorders(): \WP_REST_Response {
+		$customer_id = get_current_user_id();
+
+		$posts = get_posts( [
+			'post_type'      => 'yp_custom_order',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				[
+					'key'   => YeffoPrint_Custom_Order_Meta::CUSTOMER_ID,
+					'value' => $customer_id,
+				],
+			],
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		] );
+
+		$eligible = [];
+		foreach ( $posts as $post ) {
+			if ( ! YeffoPrint_Custom_Order_Meta::is_eligible_for_fee_free_reorder( $post->ID, $customer_id ) ) {
+				continue;
+			}
+
+			$status = (string) get_post_meta( $post->ID, YeffoPrint_Custom_Order_Meta::STATUS, true );
+
+			$eligible[] = [
+				'id'           => $post->ID,
+				'brand_name'   => (string) get_post_meta( $post->ID, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true ),
+				'status_label' => YeffoPrint_Custom_Order_Meta::get_status_label( $status ),
+				'date'         => get_the_date( 'Y-m-d', $post ),
+			];
+		}
+
+		return rest_ensure_response( $eligible );
+	}
+
+	public function pricing_preview( \WP_REST_Request $request ) {
+		if ( function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart(); // So the shared tier quantity below reflects this session's actual cart, not an empty/uninitialized one.
+		}
+
+		$mode  = $this->parse_mode( $request );
+		$batch = $this->validate_batch_rows( $request->get_param( 'batch' ) );
+		if ( is_wp_error( $batch ) ) {
+			return $batch;
+		}
+
+		// Every row in a not-yet-submitted batch counts toward the same
+		// shared bulk-discount tier as each other, same as they will once
+		// actually added to the cart as separate labels items (class-
+		// cart-pricing.php's apply_price()) — otherwise this preview
+		// would understate the real total.
+		$tier_quantity = array_sum( array_column( $batch, 'quantity' ) ) + YeffoPrint_Cart_Pricing::combined_label_quantity();
+
+		$rows     = [];
+		$subtotal = 0.0;
+
+		foreach ( $batch as $row ) {
+			$material_adjustment = $this->record_adjustment( 'yp_material', $row['material_id'] );
+			$size_adjustment      = $this->record_adjustment( 'yp_size', $row['size_id'] );
+			$breakdown            = YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $row['quantity'], $tier_quantity );
+
+			$rows[]    = $breakdown;
+			$subtotal += $breakdown['unit_price_after_discount'] * $row['quantity'];
+		}
+
+		// Skipped for 'own_design' and 'reorder' — see YeffoPrint_Custom_Order_Meta::is_fee_skipped().
+		$design_fee = 'new_design' === $mode ? YeffoPrint_Pricing_Rule::get_custom_design_fee() : 0.0;
+
+		return rest_ensure_response( [
+			'rows'            => $rows,
+			'design_fee'      => $design_fee,
+			'labels_subtotal' => round( $subtotal, 2 ),
+			'total'           => round( $subtotal + $design_fee, 2 ),
 		] );
 	}
 
@@ -225,19 +329,11 @@ class YeffoPrint_Custom_Order_Controller {
 			wc_load_cart();
 		}
 
-		$size_id = absint( $request->get_param( 'size_id' ) );
-		if ( ! $size_id || ! $this->is_published( 'yp_size', $size_id ) ) {
-			return new \WP_Error( 'yeffoprint_invalid_size', __( 'Please choose a valid size.', 'yeffoprint-core' ), [ 'status' => 400 ] );
-		}
+		$mode = $this->parse_mode( $request );
 
-		$material_id = absint( $request->get_param( 'material_id' ) );
-		if ( ! $material_id || ! $this->is_published( 'yp_material', $material_id ) ) {
-			return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material.', 'yeffoprint-core' ), [ 'status' => 400 ] );
-		}
-
-		$quantity = absint( $request->get_param( 'quantity' ) );
-		if ( $quantity < 1 ) {
-			return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Quantity must be at least 1.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		$batch = $this->validate_batch_rows( $request->get_param( 'batch' ) );
+		if ( is_wp_error( $batch ) ) {
+			return $batch;
 		}
 
 		$brand_name = sanitize_text_field( (string) $request->get_param( 'brand_name' ) );
@@ -245,15 +341,43 @@ class YeffoPrint_Custom_Order_Controller {
 			return new \WP_Error( 'yeffoprint_missing_brand_name', __( 'Brand name is required.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$compound_strength = sanitize_text_field( (string) $request->get_param( 'compound_strength' ) );
-		$style_notes        = sanitize_textarea_field( (string) $request->get_param( 'style_notes' ) );
-		$instructions        = sanitize_textarea_field( (string) $request->get_param( 'instructions' ) );
+		$style_notes  = sanitize_textarea_field( (string) $request->get_param( 'style_notes' ) );
+		$instructions = sanitize_textarea_field( (string) $request->get_param( 'instructions' ) );
+		$uploads      = $this->sanitize_upload_ids( $request->get_param( 'uploads' ) );
 
-		$uploads = $this->sanitize_upload_ids( $request->get_param( 'uploads' ) );
+		// Direct request: reorder a past, already-finished design without
+		// paying the fee again.
+		$source_custom_order_id = 0;
+		if ( 'reorder' === $mode ) {
+			if ( ! is_user_logged_in() ) {
+				return new \WP_Error( 'yeffoprint_login_required', __( 'Please log in to reorder a past custom design.', 'yeffoprint-core' ), [ 'status' => 403 ] );
+			}
+
+			$source_custom_order_id = absint( $request->get_param( 'source_custom_order_id' ) );
+			if ( ! $source_custom_order_id || ! YeffoPrint_Custom_Order_Meta::is_eligible_for_fee_free_reorder( $source_custom_order_id, get_current_user_id() ) ) {
+				return new \WP_Error(
+					'yeffoprint_ineligible_reorder',
+					__( "That design isn't eligible to reorder without the design fee — it may still be in progress, or may not belong to you.", 'yeffoprint-core' ),
+					[ 'status' => 403 ]
+				);
+			}
+		}
+
+		// Direct request: a customer who already has their own completed,
+		// print-ready design needs no design work, so no fee — but they
+		// do need to actually attach it, or there's nothing to print.
+		if ( 'own_design' === $mode && ! $uploads ) {
+			return new \WP_Error( 'yeffoprint_own_design_upload_required', __( 'Please attach your print-ready design file(s).', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		// Row 0 also populates the legacy single-row fields, so anything
+		// still reading only SIZE_ID/MATERIAL_ID/QUANTITY/COMPOUND_STRENGTH
+		// (rather than BATCH) keeps working on an order created here.
+		$first_row = $batch[0];
 
 		$custom_order_id = wp_insert_post( [
 			'post_type'   => 'yp_custom_order',
-			'post_status' => 'draft', // Publishes once the $25 fee is paid — see class-custom-order-payment.php.
+			'post_status' => 'draft', // Publishes once the $25 fee is paid (or immediately eligible once paid, for a fee-skipped order) — see class-custom-order-payment.php.
 			'post_title'  => sprintf( '%s — %s', $brand_name, current_time( 'Y-m-d H:i' ) ),
 		], true );
 
@@ -261,14 +385,27 @@ class YeffoPrint_Custom_Order_Controller {
 			return new \WP_Error( 'yeffoprint_custom_order_failed', __( "Couldn't submit your request. Please try again.", 'yeffoprint-core' ), [ 'status' => 500 ] );
 		}
 
-		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SIZE_ID, $size_id );
-		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, $material_id );
-		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::QUANTITY, $quantity );
-		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH, $compound_strength );
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SIZE_ID, $first_row['size_id'] );
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, $first_row['material_id'] );
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::QUANTITY, $first_row['quantity'] );
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH, $first_row['compound_strength'] );
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BATCH, wp_json_encode( $batch ) );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, $brand_name );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STYLE_NOTES, $style_notes );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $instructions );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, $uploads );
+
+		if ( 'own_design' === $mode ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_PROVIDED_DESIGN, '1' );
+			// Same files, also under ARTWORK_UPLOADS — that's the field
+			// staff/the admin editor treat as "the actual print file(s)",
+			// distinct from INSPIRATION_UPLOADS' "reference only" meaning.
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, $uploads );
+		}
+
+		if ( 'reorder' === $mode ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SOURCE_CUSTOM_ORDER_ID, $source_custom_order_id );
+		}
 
 		// Generated up front, not lazily when a proof first exists — a
 		// guest customer has no account to log back into, so the same
@@ -276,53 +413,139 @@ class YeffoPrint_Custom_Order_Controller {
 		// keep working for this request's entire lifetime.
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ACCESS_TOKEN, wp_generate_password( 40, false ) );
 
-		$fee_product_id = YeffoPrint_Custom_Design_Fee_Product::get_product_id();
-		if ( ! $fee_product_id ) {
-			return new \WP_Error( 'yeffoprint_no_fee_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
-		}
-
 		$labels_product_id = YeffoPrint_Custom_Order_Labels_Product::get_product_id();
 		if ( ! $labels_product_id ) {
+			wp_delete_post( $custom_order_id, true );
 			return new \WP_Error( 'yeffoprint_no_labels_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 
-		YeffoPrint_Cart_Pricing::allow_next_add( true );
-		$cart_item_key = WC()->cart->add_to_cart( $fee_product_id, 1, 0, [], [
-			YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID => $custom_order_id,
-		] );
-		YeffoPrint_Cart_Pricing::allow_next_add( false );
+		$added_cart_item_keys = [];
 
-		if ( ! $cart_item_key ) {
-			wp_delete_post( $custom_order_id, true );
-			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add the design fee to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+		// Fee item — only for a normal new-design submission. Added
+		// first, same order as before this change, so a fee-item-add
+		// failure never leaves any labels items behind either.
+		if ( 'new_design' === $mode ) {
+			$fee_product_id = YeffoPrint_Custom_Design_Fee_Product::get_product_id();
+			if ( ! $fee_product_id ) {
+				wp_delete_post( $custom_order_id, true );
+				return new \WP_Error( 'yeffoprint_no_fee_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
+			}
+
+			YeffoPrint_Cart_Pricing::allow_next_add( true );
+			$fee_cart_item_key = WC()->cart->add_to_cart( $fee_product_id, 1, 0, [], [
+				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID => $custom_order_id,
+			] );
+			YeffoPrint_Cart_Pricing::allow_next_add( false );
+
+			if ( ! $fee_cart_item_key ) {
+				wp_delete_post( $custom_order_id, true );
+				return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add the design fee to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			$added_cart_item_keys[] = $fee_cart_item_key;
 		}
 
-		// The customer's own print run — priced per-unit from the same
-		// size/material adjustments and bulk tiers as a Template batch
-		// (class-cart-pricing.php's apply_price()), on top of the flat
-		// design fee added above. CUSTOM_ORDER_ID links it back to the
-		// same record; TOTAL_QTY (present here, absent on the fee item)
-		// is what tells apply_price() this item prices per-unit instead.
-		YeffoPrint_Cart_Pricing::allow_next_add( true );
-		$labels_cart_item_key = WC()->cart->add_to_cart( $labels_product_id, $quantity, 0, [], [
-			YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID => $custom_order_id,
-			YeffoPrint_Cart_Item_Keys::SIZE_ID         => $size_id,
-			YeffoPrint_Cart_Item_Keys::MATERIAL_ID     => $material_id,
-			YeffoPrint_Cart_Item_Keys::TOTAL_QTY       => $quantity,
-		] );
-		YeffoPrint_Cart_Pricing::allow_next_add( false );
+		// One labels line item per batch row — priced per-unit from the
+		// same size/material adjustments and bulk tiers as a Template
+		// batch (class-cart-pricing.php's apply_price()). CUSTOM_ORDER_ID
+		// links every row back to the same record; CUSTOM_ORDER_ROW_INDEX
+		// is required, not informational — see its own doc comment in
+		// class-cart-item-keys.php for why two rows with identical data
+		// would otherwise silently merge into one WooCommerce line item.
+		foreach ( $batch as $row_index => $row ) {
+			YeffoPrint_Cart_Pricing::allow_next_add( true );
+			$row_cart_item_key = WC()->cart->add_to_cart( $labels_product_id, $row['quantity'], 0, [], [
+				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID        => $custom_order_id,
+				YeffoPrint_Cart_Item_Keys::SIZE_ID                => $row['size_id'],
+				YeffoPrint_Cart_Item_Keys::MATERIAL_ID            => $row['material_id'],
+				YeffoPrint_Cart_Item_Keys::TOTAL_QTY              => $row['quantity'],
+				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ROW_INDEX => $row_index,
+				YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH      => $row['compound_strength'],
+			] );
+			YeffoPrint_Cart_Pricing::allow_next_add( false );
 
-		if ( ! $labels_cart_item_key ) {
-			WC()->cart->remove_cart_item( $cart_item_key );
-			wp_delete_post( $custom_order_id, true );
-			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add your labels to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+			if ( ! $row_cart_item_key ) {
+				foreach ( $added_cart_item_keys as $added_key ) {
+					WC()->cart->remove_cart_item( $added_key );
+				}
+				wp_delete_post( $custom_order_id, true );
+				return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add your labels to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			$added_cart_item_keys[] = $row_cart_item_key;
 		}
 
 		return rest_ensure_response( [
-			'success'       => true,
-			'checkout_url'  => wc_get_checkout_url(),
-			'cart_count'    => WC()->cart->get_cart_contents_count(),
+			'success'      => true,
+			'checkout_url' => wc_get_checkout_url(),
+			'cart_count'   => WC()->cart->get_cart_contents_count(),
 		] );
+	}
+
+	/** 'new_design' (default) / 'own_design' / 'reorder' — anything else falls back to 'new_design' rather than erroring, same as an unrecognized sort value elsewhere in this plugin (class-template-query.php). */
+	private function parse_mode( \WP_REST_Request $request ): string {
+		$mode = sanitize_key( (string) $request->get_param( 'mode' ) );
+		return in_array( $mode, [ 'own_design', 'reorder' ], true ) ? $mode : 'new_design';
+	}
+
+	/**
+	 * Validates and sanitizes the batch[] payload shared by submit() and
+	 * pricing_preview() — direct request (batching): more than one
+	 * compound/strength/size under one custom design order, each row its
+	 * own size + material + quantity + compound/strength.
+	 *
+	 * @return array<int, array{size_id:int, material_id:int, quantity:int, compound_strength:string}>|\WP_Error
+	 */
+	private function validate_batch_rows( $raw ) {
+		if ( ! is_array( $raw ) || ! $raw ) {
+			return new \WP_Error( 'yeffoprint_empty_batch', __( 'Please add at least one label to your order.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$rows = [];
+
+		foreach ( $raw as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$size_id = absint( $row['size_id'] ?? 0 );
+			if ( ! $size_id || ! $this->is_published( 'yp_size', $size_id ) ) {
+				return new \WP_Error( 'yeffoprint_invalid_size', __( 'Please choose a valid size for every label.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			$material_id = absint( $row['material_id'] ?? 0 );
+			if ( ! $material_id || ! $this->is_published( 'yp_material', $material_id ) ) {
+				return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material for every label.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			$quantity = absint( $row['quantity'] ?? 0 );
+			if ( $quantity < 1 ) {
+				return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Quantity must be at least 1 for every label.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			$rows[] = [
+				'size_id'           => $size_id,
+				'material_id'       => $material_id,
+				'quantity'          => $quantity,
+				'compound_strength' => sanitize_text_field( (string) ( $row['compound_strength'] ?? '' ) ),
+			];
+		}
+
+		if ( ! $rows ) {
+			return new \WP_Error( 'yeffoprint_empty_batch', __( 'Please add at least one label to your order.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return $rows;
+	}
+
+	/** Same shape as class-pricing-controller.php's own private helper of the same name — kept local rather than shared, matching this plugin's existing per-controller convention (e.g. is_published()/published() below are also not shared). */
+	private function record_adjustment( string $post_type, int $post_id ): float {
+		$post = get_post( $post_id );
+		if ( ! $post || $post_type !== $post->post_type || 'publish' !== $post->post_status ) {
+			return 0.0;
+		}
+
+		return (float) get_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true );
 	}
 
 	/** @return int[] */

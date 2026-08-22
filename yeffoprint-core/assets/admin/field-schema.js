@@ -96,7 +96,10 @@
 						labeled( 'Field ID (leave blank to auto-generate)', inputHtml( 'text', index, 'id', field.id ) ) +
 						labeled( 'Type', selectHtml( index, 'type', config.types, field.type ) ) +
 						labeled( 'Default value', inputHtml( 'text', index, 'default', field.default ) ) +
-						labeled( 'Max characters', inputHtml( 'number', index, 'max_chars', field.max_chars, { min: 1 } ) ) +
+						labeled(
+							'qr_code' === field.type ? 'Max characters (a URL — up to ' + config.qrMaxChars + ')' : 'Max characters',
+							inputHtml( 'number', index, 'max_chars', field.max_chars, 'qr_code' === field.type ? { min: 1, max: config.qrMaxChars } : { min: 1 } )
+						) +
 						labeled( 'Alignment', selectHtml( index, 'alignment', config.alignments, field.alignment ) ) +
 						labeled( 'Min font size (px)', inputHtml( 'number', index, 'font_size_min', field.font_size_min, { min: 1 } ) ) +
 						labeled( 'Max font size (px)', inputHtml( 'number', index, 'font_size_max', field.font_size_max, { min: 1 } ) ) +
@@ -374,6 +377,27 @@
 			}
 
 			setValue( parseInt( index, 10 ), key, target.value );
+
+			// A URL routinely runs well past the 40-char default every
+			// other field type starts at (createDefaultField() below) —
+			// bump it up automatically on switching into this type, same
+			// as an admin manually raising it, rather than leaving a
+			// freshly-added QR field silently too short until someone
+			// notices labels aren't scanning right. Only nudges a value
+			// still at/below the generic default; never overrides one an
+			// admin already deliberately raised. render() (which also
+			// re-syncs the hidden input) picks up the new max_chars in
+			// that row's own number input and its max="" bound above.
+			if ( 'type' === key && 'qr_code' === target.value ) {
+				var fieldIndex = parseInt( index, 10 );
+				var current = parseInt( state[ fieldIndex ].max_chars, 10 ) || 0;
+				if ( current < config.qrMinMaxChars ) {
+					state[ fieldIndex ].max_chars = config.qrMinMaxChars;
+					render();
+					return;
+				}
+			}
+
 			syncHiddenInput();
 		} );
 

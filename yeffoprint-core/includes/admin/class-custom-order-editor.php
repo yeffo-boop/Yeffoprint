@@ -60,6 +60,13 @@ class YeffoPrint_Custom_Order_Editor {
 		$change_request = $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES );
 		$order_type  = YeffoPrint_Custom_Order_Meta::get_order_type( $post->ID );
 		$is_sticker  = 'sticker' === $order_type;
+
+		// Direct request: two ways to skip the $25 design fee — see
+		// YeffoPrint_Custom_Order_Meta's own doc comments. Neither ever
+		// applies to a sticker order (that flow has no flat fee to skip
+		// in the first place), so both stay false there.
+		$customer_provided_design = ! $is_sticker && (bool) $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_PROVIDED_DESIGN );
+		$source_custom_order_id   = $is_sticker ? 0 : (int) $m( YeffoPrint_Custom_Order_Meta::SOURCE_CUSTOM_ORDER_ID );
 		?>
 		<?php if ( $change_request && 'design_in_progress' === $m( YeffoPrint_Custom_Order_Meta::STATUS ) ) : ?>
 			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
@@ -67,9 +74,39 @@ class YeffoPrint_Custom_Order_Editor {
 				<p style="margin: 0;"><?php echo nl2br( esc_html( $change_request ) ); ?></p>
 			</div>
 		<?php endif; ?>
+		<?php if ( $customer_provided_design ) : ?>
+			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
+				<p style="margin: 0;"><strong><?php esc_html_e( 'Customer provided their own print-ready design — no design work needed.', 'yeffoprint-core' ); ?></strong> <?php esc_html_e( "Check the attached file(s) below are print-ready, then move this straight to a proof/status update.", 'yeffoprint-core' ); ?></p>
+			</div>
+		<?php endif; ?>
 		<table class="widefat striped">
 			<tbody>
 				<tr><th><?php esc_html_e( 'Type', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ $order_type ] ); ?></td></tr>
+				<?php if ( ! $is_sticker ) : ?>
+					<tr><th><?php esc_html_e( 'Submission', 'yeffoprint-core' ); ?></th><td>
+						<?php if ( $customer_provided_design ) : ?>
+							<?php esc_html_e( 'Customer-provided design (no design work needed)', 'yeffoprint-core' ); ?>
+						<?php elseif ( $source_custom_order_id ) : ?>
+							<?php
+							printf(
+								/* translators: %s: link to the original custom design order */
+								wp_kses(
+									/* translators: %s: link to the original custom design order */
+									__( 'Reorder of %s (fee skipped)', 'yeffoprint-core' ),
+									[ 'a' => [ 'href' => [] ] ]
+								),
+								sprintf(
+									'<a href="%s">%s</a>',
+									esc_url( admin_url( 'post.php?post=' . $source_custom_order_id . '&action=edit' ) ),
+									esc_html( sprintf( /* translators: %d: order id */ __( 'Order #%d', 'yeffoprint-core' ), $source_custom_order_id ) )
+								)
+							);
+							?>
+						<?php else : ?>
+							<?php esc_html_e( 'New design', 'yeffoprint-core' ); ?>
+						<?php endif; ?>
+					</td></tr>
+				<?php endif; ?>
 				<tr><th><?php esc_html_e( 'Customer', 'yeffoprint-core' ); ?></th><td>
 					<?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME ) ); ?>
 					<?php if ( $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ) ) : ?>
@@ -107,14 +144,38 @@ class YeffoPrint_Custom_Order_Editor {
 					</td></tr>
 				<?php else : ?>
 					<tr><th><?php esc_html_e( 'Brand Name', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::BRAND_NAME ) ); ?></td></tr>
-					<tr><th><?php esc_html_e( 'Compound / Strength', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $m( YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH ) ?: '—' ); ?></td></tr>
-					<tr><th><?php esc_html_e( 'Size', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $size_id ? get_the_title( $size_id ) : '—' ); ?></td></tr>
-					<tr><th><?php esc_html_e( 'Material', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( $material_id ? get_the_title( $material_id ) : '—' ); ?></td></tr>
-					<tr><th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th><td><?php echo esc_html( (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ) ); ?></td></tr>
+					<tr><th><?php esc_html_e( 'Batch', 'yeffoprint-core' ); ?></th><td>
+						<?php
+						$batch_rows = YeffoPrint_Custom_Order_Meta::get_batch_rows( $post->ID );
+						?>
+						<table class="widefat striped" style="margin: 0;">
+							<thead>
+								<tr>
+									<th><?php esc_html_e( 'Size', 'yeffoprint-core' ); ?></th>
+									<th><?php esc_html_e( 'Material', 'yeffoprint-core' ); ?></th>
+									<th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th>
+									<th><?php esc_html_e( 'Compound / Strength', 'yeffoprint-core' ); ?></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ( $batch_rows as $row ) : ?>
+									<tr>
+										<td><?php echo esc_html( ! empty( $row['size_id'] ) ? get_the_title( (int) $row['size_id'] ) : '—' ); ?></td>
+										<td><?php echo esc_html( ! empty( $row['material_id'] ) ? get_the_title( (int) $row['material_id'] ) : '—' ); ?></td>
+										<td><?php echo esc_html( (int) ( $row['quantity'] ?? 0 ) ); ?></td>
+										<td><?php echo esc_html( $row['compound_strength'] ?? '' ?: '—' ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+					</td></tr>
 					<tr><th><?php esc_html_e( 'Style / Colors', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::STYLE_NOTES ) ?: '—' ) ); ?></td></tr>
 					<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
-					<tr><th><?php esc_html_e( 'Inspiration Files', 'yeffoprint-core' ); ?></th><td>
-						<?php echo $this->render_upload_list( $uploads ); ?>
+					<tr><th><?php echo esc_html( $customer_provided_design ? __( 'Print-Ready Design File(s)', 'yeffoprint-core' ) : __( 'Inspiration Files', 'yeffoprint-core' ) ); ?></th><td>
+						<?php
+						$label_files = $customer_provided_design ? (array) $m( YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS ) : $uploads;
+						echo $this->render_upload_list( $label_files );
+						?>
 					</td></tr>
 				<?php endif; ?>
 				<tr><th>
@@ -129,7 +190,19 @@ class YeffoPrint_Custom_Order_Editor {
 				</th><td>
 					<?php
 					$fee = $m( YeffoPrint_Custom_Order_Meta::DESIGN_FEE );
-					echo $fee ? esc_html( '$' . number_format_i18n( (float) $fee, 2 ) . ' — paid' ) : esc_html__( 'Awaiting payment', 'yeffoprint-core' );
+					if ( $customer_provided_design ) {
+						esc_html_e( '$0.00 — fee skipped (customer-provided design)', 'yeffoprint-core' );
+					} elseif ( $source_custom_order_id ) {
+						printf(
+							/* translators: %d: order id */
+							esc_html__( '$0.00 — fee skipped (reorder of Order #%d)', 'yeffoprint-core' ),
+							$source_custom_order_id
+						);
+					} elseif ( $fee ) {
+						echo esc_html( '$' . number_format_i18n( (float) $fee, 2 ) . ' — paid' );
+					} else {
+						esc_html_e( 'Awaiting payment', 'yeffoprint-core' );
+					}
 					?>
 				</td></tr>
 				<?php if ( $wc_order_id ) : ?>

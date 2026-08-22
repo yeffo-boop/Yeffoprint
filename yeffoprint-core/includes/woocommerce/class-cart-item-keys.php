@@ -9,6 +9,17 @@
  * its yp_custom_order record (PROJECT_SPEC §13). Used by the cart/
  * custom-order REST controllers (write these into $cart_item_data),
  * the pricing/display hooks, and the order-item snapshot on checkout.
+ *
+ * One deliberate exception to "a batch never splits across multiple
+ * line items": Custom Design's own batching (direct request — more
+ * than one compound/strength/size under one custom design order) adds
+ * one "labels" line item per batch row instead, since each row can have
+ * its own size/material and this store's line-item model has no way to
+ * represent that within a single item. All of a custom order's rows
+ * (plus its fee item, when one exists) share the same CUSTOM_ORDER_ID.
+ * See CUSTOM_ORDER_ROW_INDEX below. The regular Template flow
+ * (class-cart-controller.php) is untouched by this — its batches still
+ * never split.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -35,4 +46,21 @@ class YeffoPrint_Cart_Item_Keys {
 	public const SHAPE            = 'yp_shape';
 	public const CUSTOM_WIDTH_IN  = 'yp_custom_width_in';
 	public const CUSTOM_HEIGHT_IN = 'yp_custom_height_in';
+
+	/**
+	 * Custom Design batching only — this row's 0-based index within its
+	 * order's batch. Required on every one of a batch's add_to_cart()
+	 * calls, not just informational: WooCommerce's own cart-item-key
+	 * hashing (WC_Cart::generate_cart_id()) treats two add_to_cart() calls
+	 * with byte-identical $cart_item_data as the same line item and
+	 * silently merges them (bumping only its internal quantity, never
+	 * touching our own TOTAL_QTY already baked into that item's data) —
+	 * a real case here, since two rows can easily share the same size/
+	 * material/quantity/compound. Including the row index guarantees
+	 * every row's $cart_item_data is unique.
+	 */
+	public const CUSTOM_ORDER_ROW_INDEX = 'yp_custom_order_row_index';
+
+	/** Custom Design batching only — this row's compound/strength text. Display-only, carried through to the order-item snapshot; never affects pricing. */
+	public const COMPOUND_STRENGTH = 'yp_compound_strength';
 }

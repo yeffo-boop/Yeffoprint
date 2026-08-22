@@ -85,6 +85,13 @@ class YeffoPrint_Template_Editor {
 			'alignments' => YeffoPrint_Field_Schema::ALIGNMENTS,
 			'formattingRules' => YeffoPrint_Field_Schema::FORMATTING_RULES,
 			'previewBehaviors' => YeffoPrint_Field_Schema::PREVIEW_BEHAVIORS,
+			// Drives field-schema.js's auto-bump of max_chars when a field's
+			// Type is switched to "QR code (URL)" — kept server-side rather
+			// than duplicated as a literal in JS, since YeffoPrint_Field_
+			// Schema::sanitize()/get() already enforce these same two
+			// numbers as the real floor/ceiling.
+			'qrMinMaxChars' => YeffoPrint_Field_Schema::QR_MIN_MAX_CHARS,
+			'qrMaxChars'    => YeffoPrint_Field_Schema::QR_MAX_CHARS,
 			// The Template's own artwork — lets the position picker show
 			// fields on the actual label instead of leaving x/y as blind
 			// percentage guesses (Architecture §9: deferred from Phase 4
