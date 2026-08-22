@@ -92,6 +92,21 @@
 	cursor: not-allowed;
 }
 
+.yp-radio-option__text {
+	display: block;
+}
+
+/* The disabled-reorder-for-guests reason (custom-order-form.js) — a
+   `title` attribute alone only surfaces on hover, which doesn't exist
+   on a touch device, so this is the note's one real home: shown
+   inline, always, rather than relying on hover at all. */
+.yp-radio-option__note {
+	display: block;
+	margin-top: 0.25rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
 /* Always-expanded batch rows (Custom Design) — same numbered-badge
    language as .yp-variant-card in configurator.css, but every row
    shows its fields inline rather than switching one active card, since
