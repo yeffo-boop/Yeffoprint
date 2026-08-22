@@ -350,14 +350,21 @@
 	// Reorder mode has no guest path (class-custom-order-controller.php's
 	// /custom-orders/eligible-reorders is logged-in only) — disabled up
 	// front rather than letting a guest pick it and only then discovering
-	// the picker has nothing to show.
+	// the picker has nothing to show. The reason is shown as an always-
+	// visible note (data-yp-co-reorder-login-note), not a `title`
+	// attribute — `title` only ever surfaces on hover, which doesn't
+	// exist on a touch device, so a phone would show no explanation at
+	// all for why the option won't select.
 	var reorderModeRadio = form.querySelector( 'input[name="mode"][value="reorder"]' );
 	if ( reorderModeRadio && ! yeffoprintCustomOrder.isLoggedIn ) {
 		reorderModeRadio.disabled = true;
 		var reorderOption = reorderModeRadio.closest( '.yp-radio-option' );
 		if ( reorderOption ) {
 			reorderOption.classList.add( 'is-disabled' );
-			reorderOption.title = 'Log in to your account to reorder a past design.';
+			var loginNote = reorderOption.querySelector( '[data-yp-co-reorder-login-note]' );
+			if ( loginNote ) {
+				loginNote.hidden = false;
+			}
 		}
 	}
 
