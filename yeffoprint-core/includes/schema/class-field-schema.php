@@ -67,6 +67,23 @@ class YeffoPrint_Field_Schema {
 		'fixed'        => 'Fixed size (no auto-scaling)',
 	];
 
+	/**
+	 * DEFAULT_FIELD's generic 40-char max_chars is sized for a short
+	 * label-printed value (a compound name, a strength) — a qr_code
+	 * field's value is a URL instead, which routinely runs well past
+	 * that. QR_MIN_MAX_CHARS is the floor sanitize() raises a qr_code
+	 * field's max_chars to whenever it's at or below the generic
+	 * default (covers both a freshly-added field, still holding
+	 * field-schema.js's createDefaultField() default, and a Template
+	 * saved before this fix existed) — never a value an admin could have
+	 * deliberately chosen for a URL field. QR_MAX_CHARS is the ceiling,
+	 * matching YeffoPrint_Qr_Controller::MAX_TEXT_LENGTH exactly, so
+	 * this class can never accept a value the renderer's own limit
+	 * would then turn around and 400 on.
+	 */
+	public const QR_MIN_MAX_CHARS = 300;
+	public const QR_MAX_CHARS     = 500;
+
 	private const DEFAULT_FIELD = [
 		'id'                => '',
 		'label'             => '',
@@ -141,6 +158,7 @@ class YeffoPrint_Field_Schema {
 
 			$max_chars = isset( $field['max_chars'] ) ? absint( $field['max_chars'] ) : self::DEFAULT_FIELD['max_chars'];
 			$max_chars = max( 1, $max_chars );
+			$max_chars = self::normalize_qr_max_chars( $type, $max_chars );
 
 			$font_size_min = isset( $field['font_size_min'] ) ? (float) $field['font_size_min'] : self::DEFAULT_FIELD['font_size_min'];
 			$font_size_max = isset( $field['font_size_max'] ) ? (float) $field['font_size_max'] : self::DEFAULT_FIELD['font_size_max'];
@@ -201,11 +219,38 @@ class YeffoPrint_Field_Schema {
 		return $clean;
 	}
 
+	/**
+	 * A qr_code field's max_chars is never allowed below QR_MIN_MAX_CHARS
+	 * or above QR_MAX_CHARS — see those constants' own doc comment.
+	 * Applied both here (sanitize(), the write path) and in get() below
+	 * (the read path), so a Template saved before this floor/ceiling
+	 * existed gets fixed the moment it's next read, not just the next
+	 * time someone happens to re-save it.
+	 */
+	private static function normalize_qr_max_chars( string $type, int $max_chars ): int {
+		if ( 'qr_code' !== $type ) {
+			return $max_chars;
+		}
+
+		return min( self::QR_MAX_CHARS, max( $max_chars, self::QR_MIN_MAX_CHARS ) );
+	}
+
 	public static function get( int $template_id ): array {
 		$stored = get_post_meta( $template_id, self::META_KEY, true );
 		$decoded = is_string( $stored ) && '' !== $stored ? json_decode( $stored, true ) : [];
 
-		return is_array( $decoded ) ? $decoded : [];
+		if ( ! is_array( $decoded ) ) {
+			return [];
+		}
+
+		foreach ( $decoded as &$field ) {
+			if ( is_array( $field ) && isset( $field['type'], $field['max_chars'] ) ) {
+				$field['max_chars'] = self::normalize_qr_max_chars( (string) $field['type'], (int) $field['max_chars'] );
+			}
+		}
+		unset( $field );
+
+		return $decoded;
 	}
 
 	/**

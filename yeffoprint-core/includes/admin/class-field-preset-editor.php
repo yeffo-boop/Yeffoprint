@@ -63,6 +63,10 @@ class YeffoPrint_Field_Preset_Editor {
 			'alignments'       => YeffoPrint_Field_Schema::ALIGNMENTS,
 			'formattingRules'  => YeffoPrint_Field_Schema::FORMATTING_RULES,
 			'previewBehaviors' => YeffoPrint_Field_Schema::PREVIEW_BEHAVIORS,
+			// Same reasoning as class-template-editor.php's own copy of
+			// these two keys — see the comment there.
+			'qrMinMaxChars'    => YeffoPrint_Field_Schema::QR_MIN_MAX_CHARS,
+			'qrMaxChars'       => YeffoPrint_Field_Schema::QR_MAX_CHARS,
 			// No artwork to preview/drag-position fields against here —
 			// this screen only ever shows field-schema.js's existing
 			// "Set a featured image..." empty state, which is close
