@@ -231,7 +231,7 @@
 
 		return {
 			id: nextVariantId++,
-			quantity: schema.quantity_presets && schema.quantity_presets.length ? schema.quantity_presets[ 0 ] : 25,
+			quantity: schema.quantity_presets && schema.quantity_presets.length ? schema.quantity_presets[ 0 ] : 10,
 			values: values
 		};
 	}
