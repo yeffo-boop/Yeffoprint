@@ -86,7 +86,7 @@
 			id: nextRowId++,
 			size_id: sizesData.length ? sizesData[ 0 ].id : 0,
 			material_id: materialsData.length ? materialsData[ 0 ].id : 0,
-			quantity: quantityPresets[ 0 ] || 25,
+			quantity: quantityPresets[ 0 ] || 10,
 			compound_strength: ''
 		}, overrides || {} );
 	}
@@ -506,7 +506,7 @@
 				materialsData = data.materials || [];
 				feeEl.textContent = data.design_fee || '$25.00';
 
-				quantityPresets = data.quantity_presets && data.quantity_presets.length ? data.quantity_presets : [ 25 ];
+				quantityPresets = data.quantity_presets && data.quantity_presets.length ? data.quantity_presets : [ 10 ];
 
 				batchRows = [ createRow() ];
 				renderBatch();

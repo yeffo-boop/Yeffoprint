@@ -41,7 +41,7 @@
 
 	var sizes = [];
 	var quantityPresets = [];
-	var quantity = 25;
+	var quantity = 10;
 	var uploadedFiles = []; // { name, id, error }
 	var formErrorEl = null;
 	var pricingRequestId = 0;
@@ -175,7 +175,7 @@
 				sizeSelect.innerHTML = optionsHtml( sizes );
 				materialSelect.innerHTML = optionsHtml( data.materials || [] );
 
-				quantityPresets = data.quantity_presets && data.quantity_presets.length ? data.quantity_presets : [ 25 ];
+				quantityPresets = data.quantity_presets && data.quantity_presets.length ? data.quantity_presets : [ 10 ];
 				quantity = quantityPresets[ 0 ];
 				renderQuantity();
 				onSizeChange();
