@@ -113,6 +113,7 @@ class YeffoPrint_Proof_Approval_Controller {
 		}
 
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'approved' );
+		$this->notify_admin_of_approval( $custom_order_id );
 
 		return rest_ensure_response( [
 			'success'      => true,
@@ -137,11 +138,60 @@ class YeffoPrint_Proof_Approval_Controller {
 		// §13's six states, no separate "changes requested" state).
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'design_in_progress' );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES, $notes );
+		$this->notify_admin_of_change_request( $custom_order_id, $notes );
 
 		return rest_ensure_response( [
 			'success'      => true,
 			'status'       => 'design_in_progress',
 			'status_label' => YeffoPrint_Custom_Order_Meta::get_status_label( 'design_in_progress' ),
 		] );
+	}
+
+	/**
+	 * Both admin notifications below are the one thing this controller
+	 * was missing — approve()/request_changes() previously only ever
+	 * updated post meta, so staff had no way to learn a customer had
+	 * responded short of noticing the "Design in progress"/"Custom
+	 * Orders" admin-menu bubble count (class-admin-menu.php) on their
+	 * own next visit to wp-admin. `get_option( 'admin_email' )`, not a
+	 * dedicated recipient setting like the contact form's — same
+	 * reasoning as class-payment-webhook-controller.php's own
+	 * `notify_admin()`: this is an internal "something needs your
+	 * attention" alert, not customer-facing correspondence with its own
+	 * configurable inbox.
+	 */
+	private function notify_admin_of_approval( int $custom_order_id ): void {
+		$this->notify_admin(
+			sprintf(
+				/* translators: %s: the custom order's title (brand name + submission date, or "Custom Stickers — date") */
+				__( 'Proof approved — %s', 'yeffoprint-core' ),
+				get_the_title( $custom_order_id )
+			),
+			sprintf(
+				/* translators: %s: link to the custom order's admin edit screen */
+				__( "The customer approved their proof — ready to move to printing.\n\n%s", 'yeffoprint-core' ),
+				admin_url( 'post.php?post=' . $custom_order_id . '&action=edit' )
+			)
+		);
+	}
+
+	private function notify_admin_of_change_request( int $custom_order_id, string $notes ): void {
+		$this->notify_admin(
+			sprintf(
+				/* translators: %s: the custom order's title */
+				__( 'Changes requested on proof — %s', 'yeffoprint-core' ),
+				get_the_title( $custom_order_id )
+			),
+			sprintf(
+				/* translators: 1: the customer's change-request notes, 2: link to the custom order's admin edit screen */
+				__( "The customer requested changes to their proof:\n\n%1\$s\n\n%2\$s", 'yeffoprint-core' ),
+				'' !== $notes ? $notes : __( '(No additional notes provided.)', 'yeffoprint-core' ),
+				admin_url( 'post.php?post=' . $custom_order_id . '&action=edit' )
+			)
+		);
+	}
+
+	private function notify_admin( string $subject, string $body ): void {
+		wp_mail( get_option( 'admin_email' ), $subject, $body );
 	}
 }
