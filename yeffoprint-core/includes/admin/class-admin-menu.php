@@ -149,7 +149,7 @@ class YeffoPrint_Admin_Menu {
 	}
 
 	public function register_menu(): void {
-		add_menu_page(
+		$dashboard_hook = (string) add_menu_page(
 			__( 'YeffoPrint', 'yeffoprint-core' ),
 			__( 'YeffoPrint', 'yeffoprint-core' ),
 			'manage_options',
@@ -167,6 +167,12 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			[ $this, 'render_settings_page' ]
 		);
+
+		// Neither page is a CPT screen, so class-admin-shell.php can't
+		// recognize either one via its own POST_TYPES list — this is
+		// what actually gets the reskin's shared stylesheet loading here.
+		YeffoPrint_Admin_Shell::register_page_hook( $dashboard_hook );
+		YeffoPrint_Admin_Shell::register_page_hook( $this->settings_page_hook );
 	}
 
 	/** wp.media, for the splash screenshot picker below — only on the Settings screen itself, not every wp-admin page. */
@@ -588,9 +594,87 @@ class YeffoPrint_Admin_Menu {
 		<?php
 	}
 
+	/**
+	 * Real landing page (was a single placeholder paragraph) — quick
+	 * links into every section plus the same "needs a proof" count
+	 * add_needs_attention_badge() already puts on the sidebar, surfaced
+	 * here too since a badge on a collapsed sidebar item is easy to
+	 * miss on first landing on this exact page.
+	 */
 	public function render_dashboard(): void {
-		echo '<div class="wrap"><h1>' . esc_html__( 'YeffoPrint', 'yeffoprint-core' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Templates, Materials, Sizes, Pricing Rules, Custom Orders, and Proofs are managed from this menu.', 'yeffoprint-core' ) . '</p></div>';
+		$needs_attention = $this->count_needing_a_proof();
+		?>
+		<div class="wrap yp-dashboard">
+			<h1><?php esc_html_e( 'YeffoPrint', 'yeffoprint-core' ); ?></h1>
+
+			<?php if ( $needs_attention ) : ?>
+				<a class="yp-dashboard__attention" href="<?php echo esc_url( admin_url( 'edit.php?post_type=yp_custom_order' ) ); ?>">
+					<?php
+					printf(
+						/* translators: %d: number of custom orders needing a proof */
+						esc_html( _n( '%d custom order needs a proof', '%d custom orders need a proof', $needs_attention, 'yeffoprint-core' ) ),
+						$needs_attention
+					);
+					?>
+				</a>
+			<?php endif; ?>
+
+			<div class="yp-dashboard__grid">
+				<?php foreach ( $this->quick_links() as $link ) : ?>
+					<a class="yp-dashboard__card" href="<?php echo esc_url( $link['url'] ); ?>">
+						<span class="yp-dashboard__card-title"><?php echo esc_html( $link['title'] ); ?></span>
+						<span class="yp-dashboard__card-desc"><?php echo esc_html( $link['description'] ); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+	}
+
+	/** @return array<int, array{title:string, description:string, url:string}> */
+	private function quick_links(): array {
+		return [
+			[
+				'title'       => __( 'Design Setup', 'yeffoprint-core' ),
+				'description' => __( 'Templates, Sizes, Materials, Sticker Sizes', 'yeffoprint-core' ),
+				'url'         => admin_url( 'edit.php?post_type=yp_template' ),
+			],
+			[
+				'title'       => __( 'Pricing Rules', 'yeffoprint-core' ),
+				'description' => __( 'Base price, design fee, bulk discount tiers', 'yeffoprint-core' ),
+				'url'         => admin_url( 'edit.php?post_type=yp_pricing_rule' ),
+			],
+			[
+				'title'       => __( 'Field Presets', 'yeffoprint-core' ),
+				'description' => __( 'Reusable customization field sets for Templates', 'yeffoprint-core' ),
+				'url'         => admin_url( 'edit.php?post_type=yp_field_preset' ),
+			],
+			[
+				'title'       => __( 'Custom Orders', 'yeffoprint-core' ),
+				'description' => __( 'Fully custom design and sticker requests', 'yeffoprint-core' ),
+				'url'         => admin_url( 'edit.php?post_type=yp_custom_order' ),
+			],
+			[
+				'title'       => __( 'Proofs', 'yeffoprint-core' ),
+				'description' => __( 'Upload a proof against a custom order', 'yeffoprint-core' ),
+				'url'         => admin_url( 'edit.php?post_type=yp_proof' ),
+			],
+			[
+				'title'       => __( 'Rewards', 'yeffoprint-core' ),
+				'description' => __( 'Points/referral rates, manual balance adjustments', 'yeffoprint-core' ),
+				'url'         => admin_url( 'admin.php?page=yeffoprint-rewards' ),
+			],
+			[
+				'title'       => __( 'Card Surcharge', 'yeffoprint-core' ),
+				'description' => __( 'Per-gateway card processing fee rates', 'yeffoprint-core' ),
+				'url'         => admin_url( 'admin.php?page=yeffoprint-surcharge' ),
+			],
+			[
+				'title'       => __( 'Settings', 'yeffoprint-core' ),
+				'description' => __( 'Announcement bar, promo banner, tracking, contact form', 'yeffoprint-core' ),
+				'url'         => admin_url( 'admin.php?page=yeffoprint-settings' ),
+			],
+		];
 	}
 
 	public function render_settings_page(): void {

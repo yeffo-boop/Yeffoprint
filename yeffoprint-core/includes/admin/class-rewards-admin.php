@@ -26,7 +26,7 @@ class YeffoPrint_Rewards_Admin {
 	}
 
 	public function register_menu(): void {
-		add_submenu_page(
+		$hook = (string) add_submenu_page(
 			'yeffoprint',
 			__( 'Rewards', 'yeffoprint-core' ),
 			__( 'Rewards', 'yeffoprint-core' ),
@@ -34,6 +34,9 @@ class YeffoPrint_Rewards_Admin {
 			'yeffoprint-rewards',
 			[ $this, 'render_page' ]
 		);
+
+		// Not a CPT screen — see class-admin-shell.php's own docblock on register_page_hook().
+		YeffoPrint_Admin_Shell::register_page_hook( $hook );
 	}
 
 	public function register_settings(): void {
@@ -272,7 +275,7 @@ class YeffoPrint_Rewards_Admin {
 					<tr>
 						<td><?php echo esc_html( wp_date( 'Y-m-d H:i', strtotime( (string) ( $entry['date'] ?? '' ) ) ?: null ) ); ?></td>
 						<td><?php echo esc_html( $user ? $user->user_email : __( '(deleted user)', 'yeffoprint-core' ) ); ?></td>
-						<td style="color:<?php echo $delta >= 0 ? '#00a32a' : '#d63638'; ?>; font-weight:600;">
+						<td style="color:<?php echo $delta >= 0 ? '#0078A4' : '#C2007A'; /* cyan-deep / magenta-deep — same positive/attention split as admin-shell.css's own notice colors */ ?>; font-weight:600;">
 							<?php echo esc_html( ( $delta >= 0 ? '+' : '' ) . number_format_i18n( $delta ) ); ?>
 						</td>
 						<td><?php echo esc_html( (string) ( $entry['reason'] ?? '' ) ); ?></td>

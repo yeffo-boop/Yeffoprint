@@ -23,7 +23,7 @@ class YeffoPrint_Surcharge_Admin {
 	}
 
 	public function register_menu(): void {
-		add_submenu_page(
+		$hook = (string) add_submenu_page(
 			'yeffoprint',
 			__( 'Card Surcharge', 'yeffoprint-core' ),
 			__( 'Card Surcharge', 'yeffoprint-core' ),
@@ -31,6 +31,9 @@ class YeffoPrint_Surcharge_Admin {
 			self::SETTINGS_PAGE,
 			[ $this, 'render_page' ]
 		);
+
+		// Not a CPT screen — see class-admin-shell.php's own docblock on register_page_hook().
+		YeffoPrint_Admin_Shell::register_page_hook( $hook );
 	}
 
 	public function register_settings(): void {

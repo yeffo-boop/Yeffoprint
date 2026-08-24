@@ -10,9 +10,10 @@
  * only ever touches chrome, never save/validation logic.
  *
  * Three jobs, all screen-agnostic so a later phase (Pricing Rules,
- * Custom Orders, Proofs, Field Presets, the Settings/Card Surcharge
- * pages) only ever needs to add itself to is_yeffoprint_post_type()
- * or is_yeffoprint_admin_page(), never touch this class's logic:
+ * Custom Orders, Proofs, Field Presets, the Settings/Card Surcharge/
+ * Rewards pages) only ever needs to add its own post type to
+ * POST_TYPES, or call register_page_hook() for a plain admin page,
+ * never touch this class's logic:
  *  1. Turn off the block editor for every YeffoPrint CPT — none of
  *     them need more than a short plain-text description (Templates'/
  *     Materials' own 'editor' support), so the block canvas/toolbar is
@@ -50,6 +51,30 @@ class YeffoPrint_Admin_Shell {
 		'yp_proof',
 		'yp_field_preset',
 	];
+
+	/**
+	 * Hook suffixes for YeffoPrint's own plain admin pages (Dashboard,
+	 * Settings, Card Surcharge, Rewards) — none of these are tied to a
+	 * post type, so is_yeffoprint_screen() can't recognize them via
+	 * POST_TYPES the way every CPT editor is recognized. Populated by
+	 * register_page_hook(), called by each page's own registration
+	 * class with the exact string add_menu_page()/add_submenu_page()
+	 * returned — that return value *is* what get_current_screen()->id
+	 * resolves to for that page, so there's no pattern to guess or keep
+	 * in sync by hand.
+	 *
+	 * Static, not instance state: each page's `admin_menu` callback
+	 * fires independently of this class's own constructor running
+	 * first, and all of them still complete before `admin_body_class`/
+	 * `admin_enqueue_scripts` ever fire on the actual request.
+	 */
+	private static array $page_hooks = [];
+
+	public static function register_page_hook( string $hook_suffix ): void {
+		if ( $hook_suffix ) {
+			self::$page_hooks[] = $hook_suffix;
+		}
+	}
 
 	public function __construct() {
 		add_filter( 'use_block_editor_for_post_type', [ $this, 'disable_block_editor' ], 10, 2 );
@@ -101,6 +126,11 @@ class YeffoPrint_Admin_Shell {
 
 	private function is_yeffoprint_screen(): bool {
 		$screen = get_current_screen();
-		return $screen && in_array( $screen->post_type, self::POST_TYPES, true );
+		if ( ! $screen ) {
+			return false;
+		}
+
+		return in_array( $screen->post_type, self::POST_TYPES, true )
+			|| in_array( $screen->id, self::$page_hooks, true );
 	}
 }
