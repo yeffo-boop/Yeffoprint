@@ -126,12 +126,12 @@ class YeffoPrint_Pricing_Rule_Editor {
 		?>
 		<p>
 			<label for="yp-base-unit-price"><?php esc_html_e( 'Base price per label ($)', 'yeffoprint-core' ); ?></label><br />
-			<input type="number" step="0.01" min="0" id="yp-base-unit-price" name="yp_base_unit_price" value="<?php echo esc_attr( $base_price !== '' ? $base_price : '0.35' ); ?>" />
+			<input type="number" step="0.01" min="0" id="yp-base-unit-price" name="yp_base_unit_price" value="<?php echo esc_attr( $base_price !== '' ? $base_price : '0.35' ); ?>" class="widefat" />
 			<p class="description"><?php esc_html_e( 'Material and size price adjustments are set on each Material/Size record.', 'yeffoprint-core' ); ?></p>
 		</p>
 		<p>
 			<label for="yp-custom-design-fee"><?php esc_html_e( 'Custom design fee ($)', 'yeffoprint-core' ); ?></label><br />
-			<input type="number" step="0.01" min="0" id="yp-custom-design-fee" name="yp_custom_design_fee" value="<?php echo esc_attr( $design_fee !== '' ? $design_fee : '25.00' ); ?>" />
+			<input type="number" step="0.01" min="0" id="yp-custom-design-fee" name="yp_custom_design_fee" value="<?php echo esc_attr( $design_fee !== '' ? $design_fee : '25.00' ); ?>" class="widefat" />
 			<p class="description"><?php esc_html_e( 'One-time fee for the Fully Custom Design flow (shown separately from per-label price).', 'yeffoprint-core' ); ?></p>
 		</p>
 		<?php
@@ -157,25 +157,29 @@ class YeffoPrint_Pricing_Rule_Editor {
 		?>
 		<p>
 			<label for="yp-sticker-custom-rate"><?php esc_html_e( 'Custom size rate ($ per sq. inch)', 'yeffoprint-core' ); ?></label><br />
-			<input type="number" step="0.01" min="0" id="yp-sticker-custom-rate" name="yp_sticker_custom_rate_per_sq_in" value="<?php echo esc_attr( $rate !== '' ? $rate : '0.75' ); ?>" />
+			<input type="number" step="0.01" min="0" id="yp-sticker-custom-rate" name="yp_sticker_custom_rate_per_sq_in" value="<?php echo esc_attr( $rate !== '' ? $rate : '0.75' ); ?>" class="widefat" />
 			<p class="description"><?php esc_html_e( 'Used only for the Sticker Size marked "Custom size" — price = this rate × the width × height the customer enters. Every other size tier uses its own fixed price instead (Sticker Sizes screen).', 'yeffoprint-core' ); ?></p>
 		</p>
 		<hr />
 		<p><strong><?php esc_html_e( 'Sticker type adjustment ($, added to size price)', 'yeffoprint-core' ); ?></strong></p>
-		<?php foreach ( YeffoPrint_Sticker_Pricing::TYPES as $key => $label ) : ?>
-			<p>
-				<label for="yp-sticker-type-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label><br />
-				<input type="number" step="0.01" id="yp-sticker-type-<?php echo esc_attr( $key ); ?>" name="yp_sticker_type_adjustments[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $type_adjustments[ $key ] ); ?>" />
-			</p>
-		<?php endforeach; ?>
+		<div class="yp-admin-field-grid">
+			<?php foreach ( YeffoPrint_Sticker_Pricing::TYPES as $key => $label ) : ?>
+				<p>
+					<label for="yp-sticker-type-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label><br />
+					<input type="number" step="0.01" id="yp-sticker-type-<?php echo esc_attr( $key ); ?>" name="yp_sticker_type_adjustments[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $type_adjustments[ $key ] ); ?>" class="widefat" />
+				</p>
+			<?php endforeach; ?>
+		</div>
 		<hr />
 		<p><strong><?php esc_html_e( 'Shape adjustment ($, added to size price)', 'yeffoprint-core' ); ?></strong></p>
-		<?php foreach ( YeffoPrint_Sticker_Pricing::SHAPES as $key => $label ) : ?>
-			<p>
-				<label for="yp-sticker-shape-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label><br />
-				<input type="number" step="0.01" id="yp-sticker-shape-<?php echo esc_attr( $key ); ?>" name="yp_sticker_shape_adjustments[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $shape_adjustments[ $key ] ); ?>" />
-			</p>
-		<?php endforeach; ?>
+		<div class="yp-admin-field-grid">
+			<?php foreach ( YeffoPrint_Sticker_Pricing::SHAPES as $key => $label ) : ?>
+				<p>
+					<label for="yp-sticker-shape-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label><br />
+					<input type="number" step="0.01" id="yp-sticker-shape-<?php echo esc_attr( $key ); ?>" name="yp_sticker_shape_adjustments[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $shape_adjustments[ $key ] ); ?>" class="widefat" />
+				</p>
+			<?php endforeach; ?>
+		</div>
 		<?php
 	}
 
