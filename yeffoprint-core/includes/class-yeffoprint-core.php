@@ -182,6 +182,7 @@ final class YeffoPrint_Core {
 		if ( is_admin() ) {
 			new YeffoPrint_Admin_Menu();
 
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-shell.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-template-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-field-preset-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-material-size-editor.php';
@@ -193,6 +194,7 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-design-setup-menu.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-surcharge-admin.php';
 
+			new YeffoPrint_Admin_Shell();
 			new YeffoPrint_Template_Editor();
 			new YeffoPrint_Field_Preset_Editor();
 			new YeffoPrint_Material_Size_Editor();

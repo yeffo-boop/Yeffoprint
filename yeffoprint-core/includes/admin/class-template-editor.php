@@ -57,7 +57,11 @@ class YeffoPrint_Template_Editor {
 		wp_enqueue_style(
 			'yeffoprint-core-admin',
 			YEFFOPRINT_CORE_URL . 'assets/admin/admin.css',
-			[],
+			// Loads after the shared reskin foundation (class-admin-
+			// shell.php) so this file's own more specific widget rules
+			// (the field-schema repeater, etc.) can still win without a
+			// specificity fight.
+			[ 'yeffoprint-core-admin-shell' ],
 			yeffoprint_core_asset_version( 'assets/admin/admin.css' )
 		);
 
@@ -201,26 +205,32 @@ class YeffoPrint_Template_Editor {
 		</p>
 		<hr />
 		<p>
-			<strong><?php esc_html_e( 'Compatible Sizes', 'yeffoprint-core' ); ?></strong><br />
-			<?php foreach ( $this->published_records( 'yp_size' ) as $size ) : ?>
-				<label style="display:block;">
-					<input type="checkbox" name="yp_compatible_sizes[]" value="<?php echo esc_attr( $size->ID ); ?>" <?php checked( in_array( $size->ID, $compat_sizes, true ) ); ?> />
-					<?php echo esc_html( $size->post_title ); ?>
-				</label>
-			<?php endforeach; ?>
-			<?php if ( empty( $this->published_records( 'yp_size' ) ) ) : ?>
+			<strong><?php esc_html_e( 'Compatible Sizes', 'yeffoprint-core' ); ?></strong>
+			<?php if ( $this->published_records( 'yp_size' ) ) : ?>
+				<span class="yp-admin-checklist">
+					<?php foreach ( $this->published_records( 'yp_size' ) as $size ) : ?>
+						<label>
+							<input type="checkbox" name="yp_compatible_sizes[]" value="<?php echo esc_attr( $size->ID ); ?>" <?php checked( in_array( $size->ID, $compat_sizes, true ) ); ?> />
+							<?php echo esc_html( $size->post_title ); ?>
+						</label>
+					<?php endforeach; ?>
+				</span>
+			<?php else : ?>
 				<span class="description"><?php echo wp_kses_post( sprintf( __( 'No sizes yet — <a href="%s">add one</a>.', 'yeffoprint-core' ), esc_url( admin_url( 'post-new.php?post_type=yp_size' ) ) ) ); ?></span>
 			<?php endif; ?>
 		</p>
 		<p>
-			<strong><?php esc_html_e( 'Compatible Materials', 'yeffoprint-core' ); ?></strong><br />
-			<?php foreach ( $this->published_records( 'yp_material' ) as $material ) : ?>
-				<label style="display:block;">
-					<input type="checkbox" name="yp_compatible_materials[]" value="<?php echo esc_attr( $material->ID ); ?>" <?php checked( in_array( $material->ID, $compat_materials, true ) ); ?> />
-					<?php echo esc_html( $material->post_title ); ?>
-				</label>
-			<?php endforeach; ?>
-			<?php if ( empty( $this->published_records( 'yp_material' ) ) ) : ?>
+			<strong><?php esc_html_e( 'Compatible Materials', 'yeffoprint-core' ); ?></strong>
+			<?php if ( $this->published_records( 'yp_material' ) ) : ?>
+				<span class="yp-admin-checklist">
+					<?php foreach ( $this->published_records( 'yp_material' ) as $material ) : ?>
+						<label>
+							<input type="checkbox" name="yp_compatible_materials[]" value="<?php echo esc_attr( $material->ID ); ?>" <?php checked( in_array( $material->ID, $compat_materials, true ) ); ?> />
+							<?php echo esc_html( $material->post_title ); ?>
+						</label>
+					<?php endforeach; ?>
+				</span>
+			<?php else : ?>
 				<span class="description"><?php echo wp_kses_post( sprintf( __( 'No materials yet — <a href="%s">add one</a>.', 'yeffoprint-core' ), esc_url( admin_url( 'post-new.php?post_type=yp_material' ) ) ) ); ?></span>
 			<?php endif; ?>
 		</p>
