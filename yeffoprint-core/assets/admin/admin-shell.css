@@ -1,10 +1,12 @@
 /*
  * The admin reskin's shared foundation — scoped entirely under
  * `body.yeffoprint-admin` (class-admin-shell.php), which is only ever
- * added on a YeffoPrint CPT screen, so nothing here touches Posts,
- * Pages, Plugins, or any other part of wp-admin. Deliberately never
- * touches #adminmenu/#wpadminbar either, even on a YeffoPrint screen —
- * see class-admin-shell.php's own docblock for why.
+ * added on a YeffoPrint screen (every CPT editor, plus the plain
+ * Dashboard/Settings/Card Surcharge/Rewards pages via
+ * register_page_hook()), so nothing here touches Posts, Pages,
+ * Plugins, or any other part of wp-admin. Deliberately never touches
+ * #adminmenu/#wpadminbar either, even on a YeffoPrint screen — see
+ * class-admin-shell.php's own docblock for why.
  *
  * Same reasoning as assets/css/login.css (the theme's existing
  * wp-login.php reskin, the only prior art for "take a native WP
@@ -45,6 +47,21 @@ body.yeffoprint-admin .wrap > h1 {
 	color: #141414;
 	font-size: 1.75rem;
 	margin-bottom: 1.25rem;
+}
+
+/* Section headings on the Settings-style pages (do_settings_sections()'s
+   own section titles, plus Rewards' hand-built "Award or adjust
+   points"/"Recent adjustments" headings) — these pages have no
+   postboxes to carry that visual weight instead, so the heading itself
+   needs to read as a real section break. */
+body.yeffoprint-admin .wrap h2 {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 700;
+	font-size: 1.15rem;
+	color: #141414;
+	margin: 2rem 0 1rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1.5px solid #E7E5E1; /* light-gray */
 }
 
 body.yeffoprint-admin .wrap .page-title-action {
@@ -187,7 +204,8 @@ body.yeffoprint-admin .postbox .inside hr {
 	margin: 1.1rem 0;
 }
 
-body.yeffoprint-admin .postbox .inside .description {
+body.yeffoprint-admin .postbox .inside .description,
+body.yeffoprint-admin .wrap .description {
 	color: #3A3A3C; /* charcoal */
 	font-size: 0.8125rem;
 }
@@ -297,32 +315,40 @@ body.yeffoprint-admin #submitdiv #minor-publishing-actions .button {
 	color: #C2007A !important;
 }
 
-/* ---------- Detail tables (class-custom-order-editor.php's key/value
-   Request Details table and its nested per-row Batch table — both
-   `table.widefat.striped`, but never `.wp-list-table`, so the List
-   tables rules below don't reach them) ---------- */
+/* ---------- Detail tables — class-custom-order-editor.php's key/value
+   Request Details table and its nested per-row Batch table (inside a
+   postbox), and class-rewards-admin.php's adjustment-history table
+   (a Settings-style page, no postbox at all) — all `table.widefat`,
+   but never `.wp-list-table`, so the List tables rules below don't
+   reach any of them. ---------- */
 
-body.yeffoprint-admin .postbox table.widefat {
+body.yeffoprint-admin .postbox table.widefat,
+body.yeffoprint-admin .wrap > table.widefat {
 	border: 1.5px solid #E7E5E1;
 	border-radius: 12px;
 	overflow: hidden;
 }
 
 body.yeffoprint-admin .postbox table.widefat th,
-body.yeffoprint-admin .postbox table.widefat td {
+body.yeffoprint-admin .postbox table.widefat td,
+body.yeffoprint-admin .wrap > table.widefat th,
+body.yeffoprint-admin .wrap > table.widefat td {
 	padding: 0.65rem 0.9rem;
 	border-bottom: 1px solid #E7E5E1;
 	font-size: 0.9375rem;
 }
 
 body.yeffoprint-admin .postbox table.widefat tbody tr:last-child th,
-body.yeffoprint-admin .postbox table.widefat tbody tr:last-child td {
+body.yeffoprint-admin .postbox table.widefat tbody tr:last-child td,
+body.yeffoprint-admin .wrap > table.widefat tbody tr:last-child th,
+body.yeffoprint-admin .wrap > table.widefat tbody tr:last-child td {
 	border-bottom: none;
 }
 
 /* A key/value row's own <th> (e.g. "Type", "Customer") — distinct from
    a column-header <th> inside a real <thead>, like the nested Batch
-   table's Size/Material/Quantity row below. */
+   table's Size/Material/Quantity row, or the Rewards history table's
+   Date/Customer/Points/Reason/By row below. */
 body.yeffoprint-admin .postbox table.widefat tbody > tr > th {
 	font-family: 'Geist', 'Inter', sans-serif;
 	font-weight: 600;
@@ -332,6 +358,45 @@ body.yeffoprint-admin .postbox table.widefat tbody > tr > th {
 	background: #FAF9F6; /* warm-white */
 	color: #141414;
 	vertical-align: top;
+}
+
+body.yeffoprint-admin .wrap > table.widefat thead th {
+	background: #FAF9F6; /* warm-white */
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 700;
+	font-size: 0.8125rem;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	color: #3A3A3C; /* charcoal */
+}
+
+body.yeffoprint-admin .wrap > table.widefat.striped tbody tr:nth-child(odd) {
+	background: #FAF9F6; /* warm-white — overrides WP core's own stock striping tint */
+}
+
+/* ---------- form-table (do_settings_sections()'s own auto-rendered
+   layout, and class-rewards-admin.php's hand-built manual-adjustment
+   form — both th[scope=row]/td key/value pairs, a different WP core
+   table pattern from table.widefat above) ---------- */
+
+body.yeffoprint-admin .form-table th {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	color: #141414;
+	padding: 1rem 1.5rem 1rem 0;
+	width: 220px;
+}
+
+body.yeffoprint-admin .form-table td {
+	padding: 0.85rem 0;
+}
+
+body.yeffoprint-admin .form-table tr {
+	border-bottom: 1px solid #E7E5E1; /* light-gray */
+}
+
+body.yeffoprint-admin .form-table > tbody > tr:last-child {
+	border-bottom: none;
 }
 
 body.yeffoprint-admin .postbox table.widefat thead th {
@@ -348,14 +413,22 @@ body.yeffoprint-admin .postbox table.widefat.striped tbody tr:nth-child(odd) {
 	background: #FAF9F6; /* warm-white — overrides WP core's own stock striping tint */
 }
 
-/* ---------- Notices (the change-request / customer-provided-design
-   callouts at the top of Request Details) ---------- */
+/* ---------- Notices — the change-request/customer-provided-design
+   callouts inside a postbox (Custom Order editor), and the plain
+   .wrap-level dismissible notices the Settings-style pages use
+   instead (Rewards' success/error messages after a manual adjustment) ---------- */
 
-body.yeffoprint-admin .postbox .notice {
-	border-left: 4px solid #C2007A !important; /* magenta-deep — same "needs your attention" accent as .button-link-delete */
+body.yeffoprint-admin .postbox .notice,
+body.yeffoprint-admin .wrap > .notice {
+	border-left: 4px solid #C2007A !important; /* magenta-deep — default: same "needs your attention" accent as .button-link-delete */
 	border-radius: 10px;
 	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04); /* shadow-elevation--low */
 	background: #FFFFFF;
+	margin: 1rem 0;
+}
+
+body.yeffoprint-admin .wrap > .notice-success {
+	border-left-color: #0078A4 !important; /* cyan-deep — same positive/success accent as class-rewards-admin.php's own delta coloring */
 }
 
 /* ---------- Plain lists (Proofs box's proof list, Request Details'
@@ -452,4 +525,69 @@ body.yeffoprint-admin :where(.postbox, .wp-list-table, .nav-tab) a:focus-visible
 body.yeffoprint-admin :where(.postbox, .wp-list-table, .nav-tab) button:focus-visible {
 	outline: 2px solid #00AEEF;
 	outline-offset: 2px;
+}
+
+/* ---------- Dashboard (class-admin-menu.php's render_dashboard()) ---------- */
+
+body.yeffoprint-admin .yp-dashboard__attention {
+	display: block;
+	margin: 0 0 1.5rem;
+	padding: 0.85rem 1.1rem;
+	background: #FFFFFF;
+	border: 1.5px solid #E7E5E1; /* light-gray */
+	border-left: 4px solid #C2007A; /* magenta-deep — same "needs your attention" accent used throughout this file */
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04); /* shadow-elevation--low */
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	color: #141414;
+	text-decoration: none;
+}
+
+body.yeffoprint-admin .yp-dashboard__attention:hover,
+body.yeffoprint-admin .yp-dashboard__attention:focus {
+	border-left-color: #EC008C; /* magenta */
+	color: #141414;
+}
+
+body.yeffoprint-admin .yp-dashboard__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	gap: 1rem;
+}
+
+body.yeffoprint-admin .yp-dashboard__card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	padding: 1.1rem 1.25rem;
+	background: #FFFFFF;
+	border: 1.5px solid #E7E5E1; /* light-gray */
+	border-top: 3px solid transparent;
+	background-image: linear-gradient(135deg, #EC008C 0%, #00AEEF 100%); /* gradient-brand */
+	background-repeat: no-repeat;
+	background-size: 100% 3px;
+	background-position: top left;
+	border-radius: 16px;
+	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04); /* shadow-elevation--low */
+	text-decoration: none;
+	transition: box-shadow 200ms ease, transform 150ms ease;
+}
+
+body.yeffoprint-admin .yp-dashboard__card:hover,
+body.yeffoprint-admin .yp-dashboard__card:focus {
+	box-shadow: 0 6px 20px rgba(20, 20, 20, 0.08), 0 2px 6px rgba(20, 20, 20, 0.05); /* shadow-elevation--medium */
+	transform: translateY(-2px);
+}
+
+body.yeffoprint-admin .yp-dashboard__card-title {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 700;
+	font-size: 1rem;
+	color: #141414;
+}
+
+body.yeffoprint-admin .yp-dashboard__card-desc {
+	font-size: 0.8125rem;
+	color: #3A3A3C; /* charcoal */
 }
