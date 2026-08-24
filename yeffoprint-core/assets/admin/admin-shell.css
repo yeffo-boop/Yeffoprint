@@ -226,6 +226,16 @@ body.yeffoprint-admin input[type="radio"] {
 	accent-color: #00AEEF;
 }
 
+/* A readonly field (the Proofs box's "Customer approval link") is
+   meant to be clicked-to-copy, not edited — a plain white box with
+   the same focus ring as every editable field gave no visual hint of
+   that difference. */
+body.yeffoprint-admin input[readonly] {
+	background: #FAF9F6 !important; /* warm-white */
+	color: #3A3A3C !important; /* charcoal */
+	cursor: pointer;
+}
+
 /* ---------- Buttons ---------- */
 
 body.yeffoprint-admin .button-primary,
@@ -285,6 +295,86 @@ body.yeffoprint-admin #submitdiv .misc-pub-section {
 
 body.yeffoprint-admin #submitdiv #minor-publishing-actions .button {
 	color: #C2007A !important;
+}
+
+/* ---------- Detail tables (class-custom-order-editor.php's key/value
+   Request Details table and its nested per-row Batch table — both
+   `table.widefat.striped`, but never `.wp-list-table`, so the List
+   tables rules below don't reach them) ---------- */
+
+body.yeffoprint-admin .postbox table.widefat {
+	border: 1.5px solid #E7E5E1;
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+body.yeffoprint-admin .postbox table.widefat th,
+body.yeffoprint-admin .postbox table.widefat td {
+	padding: 0.65rem 0.9rem;
+	border-bottom: 1px solid #E7E5E1;
+	font-size: 0.9375rem;
+}
+
+body.yeffoprint-admin .postbox table.widefat tbody tr:last-child th,
+body.yeffoprint-admin .postbox table.widefat tbody tr:last-child td {
+	border-bottom: none;
+}
+
+/* A key/value row's own <th> (e.g. "Type", "Customer") — distinct from
+   a column-header <th> inside a real <thead>, like the nested Batch
+   table's Size/Material/Quantity row below. */
+body.yeffoprint-admin .postbox table.widefat tbody > tr > th {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	text-align: left;
+	white-space: nowrap;
+	width: 1%;
+	background: #FAF9F6; /* warm-white */
+	color: #141414;
+	vertical-align: top;
+}
+
+body.yeffoprint-admin .postbox table.widefat thead th {
+	background: #FAF9F6; /* warm-white */
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 700;
+	font-size: 0.8125rem;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	color: #3A3A3C; /* charcoal */
+}
+
+body.yeffoprint-admin .postbox table.widefat.striped tbody tr:nth-child(odd) {
+	background: #FAF9F6; /* warm-white — overrides WP core's own stock striping tint */
+}
+
+/* ---------- Notices (the change-request / customer-provided-design
+   callouts at the top of Request Details) ---------- */
+
+body.yeffoprint-admin .postbox .notice {
+	border-left: 4px solid #C2007A !important; /* magenta-deep — same "needs your attention" accent as .button-link-delete */
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04); /* shadow-elevation--low */
+	background: #FFFFFF;
+}
+
+/* ---------- Plain lists (Proofs box's proof list, Request Details'
+   uploaded-file list — both plain <ul>s with no class of their own) ---------- */
+
+body.yeffoprint-admin .postbox .inside ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+body.yeffoprint-admin .postbox .inside ul li {
+	padding: 0.5rem 0;
+	border-bottom: 1px solid #E7E5E1;
+	font-size: 0.9375rem;
+}
+
+body.yeffoprint-admin .postbox .inside ul li:last-child {
+	border-bottom: none;
 }
 
 /* ---------- List tables ---------- */
