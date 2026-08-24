@@ -1,0 +1,365 @@
+/*
+ * The admin reskin's shared foundation — scoped entirely under
+ * `body.yeffoprint-admin` (class-admin-shell.php), which is only ever
+ * added on a YeffoPrint CPT screen, so nothing here touches Posts,
+ * Pages, Plugins, or any other part of wp-admin. Deliberately never
+ * touches #adminmenu/#wpadminbar either, even on a YeffoPrint screen —
+ * see class-admin-shell.php's own docblock for why.
+ *
+ * Same reasoning as assets/css/login.css (the theme's existing
+ * wp-login.php reskin, the only prior art for "take a native WP
+ * screen and make it look like the rest of the site"): wp-admin never
+ * loads theme.json's generated stylesheet, so every token below is
+ * the same value theme.json declares, hardcoded with a `/* token
+ * name * /` comment rather than read from a --wp--preset/--wp--custom
+ * custom property. `!important` shows up wherever it's needed to beat
+ * wp-admin's own ID/class-level specificity (postbox headers, button
+ * classes, list-table chrome) — same justification login.css already
+ * documents for the same class of problem.
+ *
+ * This file is the shared skin only: generic postboxes, buttons,
+ * inputs, list tables, tabs. A record type's own specific widgets
+ * (the field-schema repeater, pricing-tier rows, the drag-position
+ * picker) keep their existing rules in admin.css, loaded *after* this
+ * file (see each editor class's own enqueue — `deps: ['yeffoprint-
+ * core-admin-shell']`) so those more specific rules can still override
+ * anything generic here without a specificity fight.
+ */
+
+body.yeffoprint-admin {
+	background: #FAF9F6; /* warm-white */
+}
+
+body.yeffoprint-admin #wpbody-content {
+	font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	color: #141414; /* near-black */
+	padding-bottom: 4rem;
+}
+
+/* ---------- Page heading ---------- */
+
+body.yeffoprint-admin .wrap > h1.wp-heading-inline,
+body.yeffoprint-admin .wrap > h1 {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 700;
+	color: #141414;
+	font-size: 1.75rem;
+	margin-bottom: 1.25rem;
+}
+
+body.yeffoprint-admin .wrap .page-title-action {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	background: linear-gradient(135deg, #C2007A 0%, #0078A4 100%) !important; /* gradient-brand-deep */
+	background-size: 160% 160%;
+	background-position: 0% 50%;
+	border: none !important;
+	border-radius: 10px !important; /* radius--control */
+	color: #FFFFFF !important;
+	text-shadow: none !important;
+	box-shadow: 0 6px 16px rgba(194, 0, 122, 0.24) !important;
+	transition: background-position 200ms ease, box-shadow 200ms ease;
+}
+
+body.yeffoprint-admin .wrap .page-title-action:hover,
+body.yeffoprint-admin .wrap .page-title-action:focus {
+	background-position: 100% 50%;
+	box-shadow: 0 8px 20px rgba(0, 120, 164, 0.3) !important;
+	color: #FFFFFF !important;
+}
+
+/* ---------- Title field ---------- */
+/* The field itself is real data (a record's name) — kept, not hidden,
+   just restyled into the same rounded-input language as everything
+   else instead of WordPress's own bare, oversized serif box. */
+
+body.yeffoprint-admin #titlediv #title {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	font-size: 1.3rem;
+	border: 1.5px solid #E7E5E1 !important; /* light-gray */
+	border-radius: 12px !important; /* radius--input */
+	padding: 0.7rem 0.9rem !important;
+	background: #FFFFFF;
+}
+
+body.yeffoprint-admin #titlediv #title:focus {
+	border-color: #00AEEF !important; /* cyan */
+	box-shadow: 0 0 0 2px rgba(0, 174, 239, 0.22) !important;
+	outline: none;
+}
+
+/* ---------- Postboxes (meta boxes + Publish box) ---------- */
+
+body.yeffoprint-admin .postbox {
+	border: 1.5px solid #E7E5E1 !important; /* light-gray */
+	border-radius: 16px !important;
+	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04) !important; /* shadow-elevation--low */
+	background: #FFFFFF;
+	overflow: hidden;
+}
+
+body.yeffoprint-admin .postbox .postbox-header {
+	border-bottom: 1.5px solid #E7E5E1 !important;
+	min-height: auto;
+}
+
+body.yeffoprint-admin .postbox .postbox-header h2.hndle,
+body.yeffoprint-admin .postbox .postbox-header .hndle {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 700;
+	font-size: 0.95rem;
+	color: #141414;
+	padding: 0.9rem 1.1rem;
+}
+
+/* The brand gradient as a thin top accent instead of restating it on
+   every heading — same restrained "one bold device, quiet everywhere
+   else" rule the storefront's own card treatment already follows
+   (docs/ARCHITECTURE.md's homepage-redesign entry). */
+body.yeffoprint-admin .postbox {
+	border-top: 3px solid transparent !important;
+	background-image: linear-gradient(135deg, #EC008C 0%, #00AEEF 100%); /* gradient-brand */
+	background-repeat: no-repeat;
+	background-size: 100% 3px;
+	background-position: top left;
+}
+
+body.yeffoprint-admin .postbox .inside {
+	padding: 1.1rem;
+	margin: 0;
+}
+
+body.yeffoprint-admin .postbox .inside > p,
+body.yeffoprint-admin .postbox .inside > div > p {
+	margin: 0 0 1.1rem;
+}
+
+body.yeffoprint-admin .postbox .inside > p:last-child,
+body.yeffoprint-admin .postbox .inside > hr:last-child {
+	margin-bottom: 0;
+}
+
+body.yeffoprint-admin .postbox .inside label {
+	display: block;
+	font-weight: 600;
+	font-size: 0.875rem;
+	margin-bottom: 0.35rem;
+}
+
+/* A checkbox's own inline label ("Featured", "This is the 'Custom
+   size' tier") reads better sitting on the same line as its box than
+   forced to the block treatment above. */
+body.yeffoprint-admin .postbox .inside label:has(input[type="checkbox"]) {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-weight: 500;
+}
+
+/* Compatible Sizes/Materials (class-template-editor.php) — a plain
+   stacked checkbox list reads as a wall of text once there are more
+   than a handful of records; a bordered, scrollable box with each
+   option as its own row gives it a real edge instead. */
+body.yeffoprint-admin .yp-admin-checklist {
+	display: block;
+	max-height: 12rem;
+	overflow-y: auto;
+	border: 1.5px solid #E7E5E1;
+	border-radius: 12px;
+	padding: 0.5rem 0.75rem;
+	margin-top: 0.4rem;
+	background: #FAF9F6;
+}
+
+body.yeffoprint-admin .yp-admin-checklist label {
+	display: flex !important;
+	align-items: center;
+	gap: 0.5rem;
+	font-weight: 400 !important;
+	padding: 0.3rem 0;
+	margin: 0 !important;
+}
+
+body.yeffoprint-admin .postbox .inside hr {
+	border: none;
+	border-top: 1px solid #E7E5E1;
+	margin: 1.1rem 0;
+}
+
+body.yeffoprint-admin .postbox .inside .description {
+	color: #3A3A3C; /* charcoal */
+	font-size: 0.8125rem;
+}
+
+/* ---------- Form controls ---------- */
+
+body.yeffoprint-admin input[type="text"],
+body.yeffoprint-admin input[type="number"],
+body.yeffoprint-admin input[type="email"],
+body.yeffoprint-admin input[type="url"],
+body.yeffoprint-admin input[type="search"],
+body.yeffoprint-admin input[type="password"],
+body.yeffoprint-admin textarea,
+body.yeffoprint-admin select {
+	border: 1.5px solid #E7E5E1 !important;
+	border-radius: 12px !important;
+	padding: 0.55rem 0.75rem !important;
+	box-shadow: none !important;
+	font-size: 0.9375rem;
+}
+
+body.yeffoprint-admin input[type="text"]:focus,
+body.yeffoprint-admin input[type="number"]:focus,
+body.yeffoprint-admin input[type="email"]:focus,
+body.yeffoprint-admin input[type="url"]:focus,
+body.yeffoprint-admin input[type="search"]:focus,
+body.yeffoprint-admin input[type="password"]:focus,
+body.yeffoprint-admin textarea:focus,
+body.yeffoprint-admin select:focus {
+	border-color: #00AEEF !important;
+	box-shadow: 0 0 0 2px rgba(0, 174, 239, 0.22) !important;
+}
+
+body.yeffoprint-admin input[type="checkbox"],
+body.yeffoprint-admin input[type="radio"] {
+	accent-color: #00AEEF;
+}
+
+/* ---------- Buttons ---------- */
+
+body.yeffoprint-admin .button-primary,
+body.yeffoprint-admin #publish {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	background: linear-gradient(135deg, #C2007A 0%, #0078A4 100%) !important; /* gradient-brand-deep */
+	background-size: 160% 160%;
+	background-position: 0% 50%;
+	border: none !important;
+	border-radius: 10px !important;
+	color: #FFFFFF !important;
+	text-shadow: none !important;
+	box-shadow: 0 6px 16px rgba(194, 0, 122, 0.24) !important;
+	transition: background-position 200ms ease, box-shadow 200ms ease;
+}
+
+body.yeffoprint-admin .button-primary:hover,
+body.yeffoprint-admin .button-primary:focus,
+body.yeffoprint-admin #publish:hover,
+body.yeffoprint-admin #publish:focus {
+	background-position: 100% 50%;
+	box-shadow: 0 8px 20px rgba(0, 120, 164, 0.3) !important;
+	color: #FFFFFF !important;
+}
+
+body.yeffoprint-admin .button:not(.button-primary) {
+	font-family: 'Inter', sans-serif;
+	font-weight: 500;
+	background: #FFFFFF !important;
+	border: 1.5px solid #E7E5E1 !important;
+	border-radius: 10px !important;
+	color: #141414 !important;
+	box-shadow: none !important;
+}
+
+body.yeffoprint-admin .button:not(.button-primary):hover,
+body.yeffoprint-admin .button:not(.button-primary):focus {
+	border-color: #141414 !important;
+}
+
+body.yeffoprint-admin .button-link {
+	color: #0078A4 !important; /* cyan-deep, text-safe */
+}
+
+body.yeffoprint-admin .button-link-delete {
+	color: #C2007A !important; /* magenta-deep, text-safe */
+}
+
+/* ---------- Publish box's own status/visibility rows ---------- */
+/* Restyled, not removed — Draft/Publish is real functional data
+   (active/inactive, storefront visibility), see class-admin-shell.php. */
+
+body.yeffoprint-admin #submitdiv .misc-pub-section {
+	border-bottom: 1px solid #E7E5E1;
+}
+
+body.yeffoprint-admin #submitdiv #minor-publishing-actions .button {
+	color: #C2007A !important;
+}
+
+/* ---------- List tables ---------- */
+
+body.yeffoprint-admin .wp-list-table {
+	border: 1.5px solid #E7E5E1;
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+body.yeffoprint-admin .wp-list-table thead th,
+body.yeffoprint-admin .wp-list-table thead td {
+	background: #FAF9F6; /* warm-white */
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 700;
+	font-size: 0.8125rem;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	color: #3A3A3C; /* charcoal */
+	border-bottom: 1.5px solid #E7E5E1;
+}
+
+body.yeffoprint-admin .wp-list-table tbody tr {
+	background: #FFFFFF;
+}
+
+body.yeffoprint-admin .wp-list-table tbody tr:hover {
+	background: #FAF9F6;
+}
+
+body.yeffoprint-admin .wp-list-table .row-title {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+}
+
+/* ---------- Tabs (class-design-setup-menu.php's Templates/Sizes/
+   Materials/Sticker Sizes strip) — same active/inactive pill language
+   as .yp-quantity-preset on the storefront, reused rather than
+   inventing a second "selected state" pattern. */
+
+body.yeffoprint-admin .nav-tab-wrapper {
+	border-bottom: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	padding-bottom: 0.25rem;
+}
+
+body.yeffoprint-admin .nav-tab {
+	font-family: 'Geist', 'Inter', sans-serif;
+	font-weight: 600;
+	background: #FFFFFF;
+	border: 1.5px solid #E7E5E1;
+	border-radius: 10px;
+	margin: 0;
+	padding: 0.55rem 1rem;
+	color: #141414;
+}
+
+body.yeffoprint-admin .nav-tab:hover {
+	border-color: #141414;
+	color: #141414;
+}
+
+body.yeffoprint-admin .nav-tab-active,
+body.yeffoprint-admin .nav-tab-active:hover {
+	background: #141414; /* near-black */
+	border-color: #141414;
+	color: #FAF9F6 !important; /* warm-white */
+}
+
+/* ---------- Focus visibility (matches the storefront's own a11y baseline) ---------- */
+
+body.yeffoprint-admin :where(.postbox, .wp-list-table, .nav-tab) a:focus-visible,
+body.yeffoprint-admin :where(.postbox, .wp-list-table, .nav-tab) button:focus-visible {
+	outline: 2px solid #00AEEF;
+	outline-offset: 2px;
+}

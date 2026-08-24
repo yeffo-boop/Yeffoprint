@@ -33,7 +33,9 @@ class YeffoPrint_Pricing_Rule_Editor {
 		wp_enqueue_style(
 			'yeffoprint-core-admin',
 			YEFFOPRINT_CORE_URL . 'assets/admin/admin.css',
-			[],
+			// Same load-order reasoning as class-template-editor.php's
+			// own copy of this call — see there.
+			[ 'yeffoprint-core-admin-shell' ],
 			yeffoprint_core_asset_version( 'assets/admin/admin.css' )
 		);
 
