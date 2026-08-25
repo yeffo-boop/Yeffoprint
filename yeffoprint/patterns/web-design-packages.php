@@ -10,16 +10,19 @@
  * much per client for a fixed price — so every card's CTA goes to
  * /contact/, not a cart/checkout flow.
  *
- * Confirmed with the owner: draft realistic placeholder tiers/pricing now
- * rather than waiting on final numbers. Every price below is a hardcoded
- * PLACEHOLDER, deliberately impossible to mistake for a real price both
- * in code (see the array below) and on the rendered page (each card
- * shows an explicit "Placeholder" flag above the dollar amount) — edit
- * the $packages array directly to set real pricing/features before this
- * page goes live. Same "hardcoded content array, easy to hand-edit"
- * convention material-guide.php's own $materials array already
- * established for business copy that isn't computationally load-bearing
- * elsewhere.
+ * Tiers are real, admin-editable yp_web_design_package records now
+ * (direct follow-up: "I'd like to make it future proof and be able to
+ * adjust prices from the YeffoPrint admin panel") — see
+ * class-web-design-package-editor.php. Originally a hardcoded array
+ * (material-guide.php's own $materials array established that
+ * convention for business copy that isn't computationally load-bearing
+ * elsewhere), moved to a real CPT once the request was specifically to
+ * make it admin-editable. `wp yeffoprint setup-web-design-packages`
+ * seeds the three placeholder tiers that array used to hold, so a fresh
+ * deploy isn't blank before the owner has edited anything. A price that
+ * still reads exactly "$X,XXX" (that seeded placeholder, untouched) gets
+ * an explicit "Placeholder" flag above it on the rendered page — edited
+ * to any other value, the flag stops showing on its own.
  *
  * The maintenance-subscription badge above the grid (direct follow-up:
  * "I don't like where the monthly maintenance and monitoring is. Maybe
@@ -37,46 +40,22 @@ defined( 'ABSPATH' ) || exit;
 $maintenance_payment_link = get_option( 'yeffoprint_maintenance_payment_link', '' );
 $maintenance_url          = $maintenance_payment_link ? $maintenance_payment_link : home_url( '/contact/' );
 
-$packages = [
-	[
-		'name'     => 'Starter',
-		'price'    => '$X,XXX',
-		'tagline'  => 'A focused, single-line storefront to get selling fast.',
-		'features' => [
-			'Up to 5 pages, built on a proven template',
-			'WooCommerce set up for your product catalog',
-			'Domain connected',
-			'Launch checklist & handoff walkthrough',
-		],
-		'featured' => false,
-	],
-	[
-		'name'     => 'Growth',
-		'price'    => '$X,XXX',
-		'tagline'  => 'A fully custom storefront designed around your brand.',
-		'features' => [
-			'Custom design, not a template',
-			'WooCommerce configured for your full catalog',
-			'Domain + business email set up',
-			'Basic on-page SEO setup',
-			'Two rounds of revisions before launch',
-		],
-		'featured' => true,
-	],
-	[
-		'name'     => 'Full-Service',
-		'price'    => '$X,XXX',
-		'tagline'  => 'Everything in Growth, plus we run the entire launch.',
-		'features' => [
-			'Everything in Growth',
-			'Payment processing & shipping setup',
-			'Product photography guidance',
-			'Priority launch support',
-			'30 days of post-launch support included',
-		],
-		'featured' => false,
-	],
-];
+// The seed command's own starting value — still exactly this means the
+// owner hasn't edited this tier's price yet. A local variable, not a
+// top-level const: this file can run more than once per request (every
+// page that includes this pattern), and a const would fatal the second
+// time.
+$placeholder_price = '$X,XXX';
+
+$packages = array_map( static function ( $post ) {
+	return [
+		'name'     => get_the_title( $post ),
+		'price'    => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::PRICE, true ),
+		'tagline'  => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::TAGLINE, true ),
+		'features' => (array) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURES, true ),
+		'featured' => (bool) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURED, true ),
+	];
+}, YeffoPrint_Web_Design_Package_Meta::get_published() );
 ?>
 <!-- wp:group {"tagName":"section","className":"yp-section","layout":{"type":"constrained","contentSize":"1200px"}} -->
 <section class="wp-block-group yp-section" id="yp-web-design-packages">
@@ -105,34 +84,44 @@ $packages = [
 	</a>
 	<!-- /wp:html -->
 
-	<!-- wp:html -->
-	<div class="yp-web-design-packages">
-		<?php foreach ( $packages as $package ) : ?>
-			<div class="yp-web-design-package<?php echo $package['featured'] ? ' yp-web-design-package--featured' : ''; ?>">
-				<?php if ( $package['featured'] ) : ?>
-					<span class="yp-web-design-package__badge">Most Popular</span>
-				<?php endif; ?>
-				<h3 class="yp-web-design-package__name"><?php echo esc_html( $package['name'] ); ?></h3>
-				<p class="yp-web-design-package__tagline"><?php echo esc_html( $package['tagline'] ); ?></p>
-				<div class="yp-web-design-package__price">
-					<span class="yp-web-design-package__price-flag">Placeholder — edit before launch</span>
-					<span class="yp-web-design-package__price-amount"><?php echo esc_html( $package['price'] ); ?></span>
+	<?php if ( $packages ) : ?>
+		<!-- wp:html -->
+		<div class="yp-web-design-packages">
+			<?php foreach ( $packages as $package ) :
+				$is_placeholder_price = $placeholder_price === trim( $package['price'] );
+				?>
+				<div class="yp-web-design-package<?php echo $package['featured'] ? ' yp-web-design-package--featured' : ''; ?>">
+					<?php if ( $package['featured'] ) : ?>
+						<span class="yp-web-design-package__badge">Most Popular</span>
+					<?php endif; ?>
+					<h3 class="yp-web-design-package__name"><?php echo esc_html( $package['name'] ); ?></h3>
+					<p class="yp-web-design-package__tagline"><?php echo esc_html( $package['tagline'] ); ?></p>
+					<div class="yp-web-design-package__price">
+						<?php if ( $is_placeholder_price ) : ?>
+							<span class="yp-web-design-package__price-flag">Placeholder — edit before launch</span>
+						<?php endif; ?>
+						<span class="yp-web-design-package__price-amount"><?php echo esc_html( $package['price'] ); ?></span>
+					</div>
+					<ul class="yp-web-design-package__features">
+						<?php foreach ( $package['features'] as $feature ) : ?>
+							<li>
+								<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+									<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+								<?php echo esc_html( $feature ); ?>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+					<a class="wp-block-button__link wp-element-button yp-web-design-package__cta" href="/contact/">Get a Quote</a>
 				</div>
-				<ul class="yp-web-design-package__features">
-					<?php foreach ( $package['features'] as $feature ) : ?>
-						<li>
-							<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-								<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-							</svg>
-							<?php echo esc_html( $feature ); ?>
-						</li>
-					<?php endforeach; ?>
-				</ul>
-				<a class="wp-block-button__link wp-element-button yp-web-design-package__cta" href="/contact/">Get a Quote</a>
-			</div>
-		<?php endforeach; ?>
-	</div>
-	<!-- /wp:html -->
+			<?php endforeach; ?>
+		</div>
+		<!-- /wp:html -->
+	<?php else : ?>
+		<!-- wp:paragraph {"align":"center"} -->
+		<p class="has-text-align-center">Packages coming soon — <a href="/contact/">contact us</a> in the meantime.</p>
+		<!-- /wp:paragraph -->
+	<?php endif; ?>
 
 </section>
 <!-- /wp:group -->

@@ -139,6 +139,20 @@ class YeffoPrint_Post_Type_Registry {
 			[ 'title', 'custom-fields' ],
 			false
 		) );
+
+		// One record per tier on the Web Design page's pricing table
+		// (yeffoprint theme, patterns/web-design-packages.php) — direct
+		// request: make the placeholder pricing editable from the admin
+		// panel instead of a code deploy. 'page-attributes' gives the
+		// same native drag-orderable sort (menu_order) Material/Size
+		// already use; active/inactive reuses post_status like they do
+		// too, rather than a redundant meta flag.
+		register_post_type( 'yp_web_design_package', $this->args(
+			__( 'Web Design Packages', 'yeffoprint-core' ),
+			__( 'Web Design Package', 'yeffoprint-core' ),
+			[ 'title', 'page-attributes', 'custom-fields' ],
+			false
+		) );
 	}
 
 	/**
