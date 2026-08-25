@@ -223,3 +223,14 @@
 	color: #2c3338;
 	word-break: break-word;
 }
+
+/* A color-picker field's own swatch, next to its hex value — see class-order-item-meta.php's color_swatch_html(). */
+.yp-order-field__swatch {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
+	border: 1px solid #dcdcde;
+	vertical-align: middle;
+	margin-right: 2px;
+}
