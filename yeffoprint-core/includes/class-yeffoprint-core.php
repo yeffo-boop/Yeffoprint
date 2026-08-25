@@ -30,6 +30,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-taxonomies.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-commerce-record-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-web-design-package-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-saved-design-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-sticker-size-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/schema/class-field-schema.php';
@@ -90,6 +91,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Template_Taxonomies();
 		new YeffoPrint_Template_Meta();
 		new YeffoPrint_Commerce_Record_Meta();
+		new YeffoPrint_Web_Design_Package_Meta();
 		new YeffoPrint_Sticker_Size_Meta();
 		new YeffoPrint_Template_Query();
 		new YeffoPrint_Template_Search();
@@ -202,6 +204,7 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-rewards-order-box.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-design-setup-menu.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-surcharge-admin.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-web-design-package-editor.php';
 
 			new YeffoPrint_Admin_Shell();
 			new YeffoPrint_Template_Editor();
@@ -215,15 +218,18 @@ final class YeffoPrint_Core {
 			new YeffoPrint_Rewards_Order_Box();
 			new YeffoPrint_Design_Setup_Menu();
 			new YeffoPrint_Surcharge_Admin();
+			new YeffoPrint_Web_Design_Package_Editor();
 		}
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-seed-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-shipping-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-pages-setup-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-web-design-packages-setup-command.php';
 			( new YeffoPrint_Seed_Command() )->register();
 			( new YeffoPrint_Shipping_Setup_Command() )->register();
 			( new YeffoPrint_Pages_Setup_Command() )->register();
+			( new YeffoPrint_Web_Design_Packages_Setup_Command() )->register();
 		}
 	}
 }
