@@ -71,6 +71,9 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-payment-webhook-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/maintenance/class-maintenance-sub-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/maintenance/class-stripe-webhook-secret.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/maintenance/class-stripe-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/promotions/class-promo-themes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-menu.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/class-tracking-exception.php';
@@ -112,6 +115,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Saved_Design_Controller();
 		new YeffoPrint_Reorder();
 		new YeffoPrint_Payment_Webhook_Controller();
+		new YeffoPrint_Maintenance_Sub_Meta();
+		new YeffoPrint_Stripe_Webhook_Controller();
 		new YeffoPrint_Order_Tracking();
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Tracking_Controller();

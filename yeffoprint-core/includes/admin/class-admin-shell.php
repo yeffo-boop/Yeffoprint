@@ -50,6 +50,7 @@ class YeffoPrint_Admin_Shell {
 		'yp_custom_order',
 		'yp_proof',
 		'yp_field_preset',
+		'yp_maintenance_sub',
 	];
 
 	/**

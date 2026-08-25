@@ -8,8 +8,8 @@
  *
  * Rendered from class-admin-menu.php's own render_dashboard(), which
  * still owns the page itself (menu registration, the existing quick-
- * links grid) — this class only owns the three data tables, kept
- * separate since it needs its own WC-order/CustomOrder queries and
+ * links grid) — this class only owns the data tables, kept separate
+ * since it needs its own WC-order/CustomOrder/subscriber queries and
  * due-date math that don't belong mixed into that already
  * multi-purpose class.
  *
@@ -21,6 +21,12 @@
  * request, since a stalled custom design needs staff action just as
  * much as an unshipped order does. Both are read-only "what needs
  * attention" views; nothing here changes order/proof state.
+ *
+ * A fourth section, Active Maintenance Subscribers, is a third and
+ * genuinely separate system again (includes/maintenance/) — a Stripe
+ * subscription synced in by webhook, not a WooCommerce order or a
+ * yp_custom_order at all. See render_maintenance_section()'s own
+ * docblock for why it isn't built on the shared render_section() below.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -47,7 +53,56 @@ class YeffoPrint_Dashboard_Widgets {
 				'awaiting_approval',
 				$due_date_days
 			); ?>
+			<?php $this->render_maintenance_section(); ?>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Active Stripe maintenance-plan subscribers (includes/maintenance/).
+	 * Deliberately not built on render_section() above — that method's
+	 * fourth column is "how overdue," which has no equivalent meaning
+	 * for a healthy, ongoing subscription (there's no due date a
+	 * subscriber can be "late" against), so forcing this data through it
+	 * would show a confusing overdue/days-ago label on every row. Same
+	 * section/table styling classes, own column set instead.
+	 */
+	private function render_maintenance_section(): void {
+		$subscribers = YeffoPrint_Maintenance_Sub_Meta::get_active();
+		?>
+		<section class="yp-dashboard__section">
+			<div class="yp-dashboard__section-header">
+				<h2><?php esc_html_e( 'Active Maintenance Subscribers', 'yeffoprint-core' ); ?></h2>
+				<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=yp_maintenance_sub' ) ); ?>"><?php esc_html_e( 'View all', 'yeffoprint-core' ); ?> &rarr;</a>
+			</div>
+			<p class="description"><?php esc_html_e( 'Customers currently paying for ongoing site maintenance & monitoring.', 'yeffoprint-core' ); ?></p>
+
+			<?php if ( ! $subscribers ) : ?>
+				<p class="description"><?php esc_html_e( 'Nothing here right now.', 'yeffoprint-core' ); ?></p>
+			<?php else : ?>
+				<table class="widefat striped">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Customer', 'yeffoprint-core' ); ?></th>
+							<th><?php esc_html_e( 'Plan', 'yeffoprint-core' ); ?></th>
+							<th><?php esc_html_e( 'Renews', 'yeffoprint-core' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $subscribers as $post ) :
+							$plan    = get_post_meta( $post->ID, YeffoPrint_Maintenance_Sub_Meta::PLAN_LABEL, true );
+							$renews  = (int) get_post_meta( $post->ID, YeffoPrint_Maintenance_Sub_Meta::CURRENT_PERIOD_END, true );
+							?>
+							<tr>
+								<td><a href="<?php echo esc_url( (string) get_edit_post_link( $post->ID, 'raw' ) ); ?>"><?php echo esc_html( get_the_title( $post ) ); ?></a></td>
+								<td><?php echo esc_html( $plan ?: '—' ); ?></td>
+								<td><?php echo $renews ? esc_html( wp_date( get_option( 'date_format' ), $renews ) ) : '&#8212;'; ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</section>
 		<?php
 	}
 
