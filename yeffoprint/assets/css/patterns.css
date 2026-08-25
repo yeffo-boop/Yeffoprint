@@ -771,6 +771,64 @@
 	margin: 0;
 }
 
+/* ---------- Material guide (How It Works page — material-guide.php) ---------- */
+
+.yp-material-guide {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--sm);
+	margin-top: var(--wp--preset--spacing--md);
+}
+
+.yp-material-guide__item {
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: var(--wp--preset--spacing--md);
+}
+
+.yp-material-guide__header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	margin-bottom: 0.5rem;
+}
+
+.yp-material-guide__header h3 {
+	margin: 0;
+}
+
+.yp-material-guide__spec {
+	flex-shrink: 0;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wp--preset--color--cyan-deep);
+	background: rgba(0, 174, 239, 0.1);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.2rem 0.65rem;
+}
+
+.yp-material-guide__item p {
+	margin: 0 0 0.5rem;
+}
+
+.yp-material-guide__item p:last-child {
+	margin-bottom: 0;
+}
+
+.yp-material-guide__note {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	background: var(--wp--preset--color--warm-white);
+	border-left: 3px solid var(--wp--preset--color--magenta-deep);
+	border-radius: 0 var(--wp--custom--radius--control) var(--wp--custom--radius--control) 0;
+	padding: 0.65rem 0.9rem;
+}
+
 /* ---------- Rewards promo ---------- */
 
 .yp-rewards-promo {
