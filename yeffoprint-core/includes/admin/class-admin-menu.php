@@ -133,6 +133,19 @@ class YeffoPrint_Admin_Menu {
 	const SPLASH_ENABLED_OPTION  = 'yeffoprint_splash_enabled';
 	const SPLASH_IMAGE_ID_OPTION = 'yeffoprint_splash_image_id';
 
+	/**
+	 * Also read by YeffoPrint_Dashboard_Widgets (includes/admin/class-
+	 * dashboard-widgets.php) — same reasoning as the options above.
+	 * Direct request: how many days after an order/custom-order-request
+	 * date the dashboard's Pending Orders/Pending Proofs/Awaiting
+	 * Approval tables flag a row as overdue. Registered and edited here
+	 * since it's a general operational setting, not specific enough to
+	 * any one section to warrant its own dedicated page the way Rewards/
+	 * Card Surcharge got.
+	 */
+	const DASHBOARD_DUE_DATE_DAYS_OPTION  = 'yeffoprint_dashboard_due_date_days';
+	const DASHBOARD_DUE_DATE_DAYS_DEFAULT = 7;
+
 	/** Hook suffix for the Settings screen, captured from add_submenu_page()'s own return value — see enqueue_settings_assets(). */
 	private $settings_page_hook = '';
 
@@ -397,6 +410,47 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_splash'
 		);
+
+		register_setting( 'yeffoprint_settings', self::DASHBOARD_DUE_DATE_DAYS_OPTION, [
+			'type'              => 'integer',
+			'sanitize_callback' => [ $this, 'sanitize_due_date_days' ],
+			'default'           => self::DASHBOARD_DUE_DATE_DAYS_DEFAULT,
+		] );
+
+		add_settings_section(
+			'yeffoprint_dashboard',
+			__( 'Dashboard', 'yeffoprint-core' ),
+			'__return_false',
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::DASHBOARD_DUE_DATE_DAYS_OPTION,
+			__( 'Order due date', 'yeffoprint-core' ),
+			[ $this, 'render_dashboard_due_date_days_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_dashboard'
+		);
+	}
+
+	/** Never below 1 — a same-day due date would flag every fresh order/request as overdue immediately. */
+	public function sanitize_due_date_days( $value ): int {
+		return max( 1, (int) $value );
+	}
+
+	public function render_dashboard_due_date_days_field(): void {
+		$value = get_option( self::DASHBOARD_DUE_DATE_DAYS_OPTION, self::DASHBOARD_DUE_DATE_DAYS_DEFAULT );
+		?>
+		<input
+			type="number"
+			min="1"
+			step="1"
+			style="width:80px;"
+			name="<?php echo esc_attr( self::DASHBOARD_DUE_DATE_DAYS_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+		/> <?php esc_html_e( 'days', 'yeffoprint-core' ); ?>
+		<p class="description"><?php esc_html_e( 'How long after an order or custom design request comes in before the dashboard flags it as overdue. Applies to Pending Orders, Pending Proofs, and Awaiting Customer Approval alike.', 'yeffoprint-core' ); ?></p>
+		<?php
 	}
 
 	public function render_contact_recipient_email_field(): void {
@@ -595,30 +649,24 @@ class YeffoPrint_Admin_Menu {
 	}
 
 	/**
-	 * Real landing page (was a single placeholder paragraph) — quick
-	 * links into every section plus the same "needs a proof" count
-	 * add_needs_attention_badge() already puts on the sidebar, surfaced
-	 * here too since a badge on a collapsed sidebar item is easy to
-	 * miss on first landing on this exact page.
+	 * Real landing page (was a single placeholder paragraph, then just a
+	 * quick-links grid) — now leads with YeffoPrint_Dashboard_Widgets'
+	 * own Pending Orders/Pending Proofs/Awaiting Approval tables (direct
+	 * request: "in one screen"), with the quick-links grid still below
+	 * as secondary navigation. The old single "N custom orders need a
+	 * proof" banner is gone — the new Pending Proofs table below is a
+	 * strict superset of what it told you (every one of those orders,
+	 * with customer/date, not just a count), and add_needs_attention_
+	 * badge() still puts that same count on the sidebar independently.
 	 */
 	public function render_dashboard(): void {
-		$needs_attention = $this->count_needing_a_proof();
 		?>
 		<div class="wrap yp-dashboard">
 			<h1><?php esc_html_e( 'YeffoPrint', 'yeffoprint-core' ); ?></h1>
 
-			<?php if ( $needs_attention ) : ?>
-				<a class="yp-dashboard__attention" href="<?php echo esc_url( admin_url( 'edit.php?post_type=yp_custom_order' ) ); ?>">
-					<?php
-					printf(
-						/* translators: %d: number of custom orders needing a proof */
-						esc_html( _n( '%d custom order needs a proof', '%d custom orders need a proof', $needs_attention, 'yeffoprint-core' ) ),
-						$needs_attention
-					);
-					?>
-				</a>
-			<?php endif; ?>
+			<?php ( new YeffoPrint_Dashboard_Widgets() )->render(); ?>
 
+			<h2><?php esc_html_e( 'Quick Links', 'yeffoprint-core' ); ?></h2>
 			<div class="yp-dashboard__grid">
 				<?php foreach ( $this->quick_links() as $link ) : ?>
 					<a class="yp-dashboard__card" href="<?php echo esc_url( $link['url'] ); ?>">

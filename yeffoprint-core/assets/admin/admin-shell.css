@@ -323,7 +323,8 @@ body.yeffoprint-admin #submitdiv #minor-publishing-actions .button {
    reach any of them. ---------- */
 
 body.yeffoprint-admin .postbox table.widefat,
-body.yeffoprint-admin .wrap > table.widefat {
+body.yeffoprint-admin .wrap > table.widefat,
+body.yeffoprint-admin .yp-dashboard__section table.widefat {
 	border: 1.5px solid #E7E5E1;
 	border-radius: 12px;
 	overflow: hidden;
@@ -332,7 +333,9 @@ body.yeffoprint-admin .wrap > table.widefat {
 body.yeffoprint-admin .postbox table.widefat th,
 body.yeffoprint-admin .postbox table.widefat td,
 body.yeffoprint-admin .wrap > table.widefat th,
-body.yeffoprint-admin .wrap > table.widefat td {
+body.yeffoprint-admin .wrap > table.widefat td,
+body.yeffoprint-admin .yp-dashboard__section table.widefat th,
+body.yeffoprint-admin .yp-dashboard__section table.widefat td {
 	padding: 0.65rem 0.9rem;
 	border-bottom: 1px solid #E7E5E1;
 	font-size: 0.9375rem;
@@ -341,7 +344,9 @@ body.yeffoprint-admin .wrap > table.widefat td {
 body.yeffoprint-admin .postbox table.widefat tbody tr:last-child th,
 body.yeffoprint-admin .postbox table.widefat tbody tr:last-child td,
 body.yeffoprint-admin .wrap > table.widefat tbody tr:last-child th,
-body.yeffoprint-admin .wrap > table.widefat tbody tr:last-child td {
+body.yeffoprint-admin .wrap > table.widefat tbody tr:last-child td,
+body.yeffoprint-admin .yp-dashboard__section table.widefat tbody tr:last-child th,
+body.yeffoprint-admin .yp-dashboard__section table.widefat tbody tr:last-child td {
 	border-bottom: none;
 }
 
@@ -360,7 +365,8 @@ body.yeffoprint-admin .postbox table.widefat tbody > tr > th {
 	vertical-align: top;
 }
 
-body.yeffoprint-admin .wrap > table.widefat thead th {
+body.yeffoprint-admin .wrap > table.widefat thead th,
+body.yeffoprint-admin .yp-dashboard__section table.widefat thead th {
 	background: #FAF9F6; /* warm-white */
 	font-family: 'Geist', 'Inter', sans-serif;
 	font-weight: 700;
@@ -370,7 +376,8 @@ body.yeffoprint-admin .wrap > table.widefat thead th {
 	color: #3A3A3C; /* charcoal */
 }
 
-body.yeffoprint-admin .wrap > table.widefat.striped tbody tr:nth-child(odd) {
+body.yeffoprint-admin .wrap > table.widefat.striped tbody tr:nth-child(odd),
+body.yeffoprint-admin .yp-dashboard__section table.widefat.striped tbody tr:nth-child(odd) {
 	background: #FAF9F6; /* warm-white — overrides WP core's own stock striping tint */
 }
 
@@ -527,27 +534,52 @@ body.yeffoprint-admin :where(.postbox, .wp-list-table, .nav-tab) button:focus-vi
 	outline-offset: 2px;
 }
 
-/* ---------- Dashboard (class-admin-menu.php's render_dashboard()) ---------- */
+/* ---------- Dashboard (class-admin-menu.php's render_dashboard(), class-dashboard-widgets.php's YeffoPrint_Dashboard_Widgets) ---------- */
 
-body.yeffoprint-admin .yp-dashboard__attention {
-	display: block;
-	margin: 0 0 1.5rem;
-	padding: 0.85rem 1.1rem;
-	background: #FFFFFF;
-	border: 1.5px solid #E7E5E1; /* light-gray */
-	border-left: 4px solid #C2007A; /* magenta-deep — same "needs your attention" accent used throughout this file */
-	border-radius: 10px;
-	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 1px 1px rgba(20, 20, 20, 0.04); /* shadow-elevation--low */
-	font-family: 'Geist', 'Inter', sans-serif;
-	font-weight: 600;
-	color: #141414;
-	text-decoration: none;
+body.yeffoprint-admin .yp-dashboard__widgets {
+	display: flex;
+	flex-direction: column;
+	gap: 1.75rem;
+	margin: 0 0 2rem;
 }
 
-body.yeffoprint-admin .yp-dashboard__attention:hover,
-body.yeffoprint-admin .yp-dashboard__attention:focus {
-	border-left-color: #EC008C; /* magenta */
-	color: #141414;
+body.yeffoprint-admin .yp-dashboard__section-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.15rem;
+}
+
+body.yeffoprint-admin .yp-dashboard__section-header h2 {
+	margin: 0;
+}
+
+body.yeffoprint-admin .yp-dashboard__section-header a {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: #C2007A; /* magenta-deep */
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+body.yeffoprint-admin .yp-dashboard__section-header a:hover,
+body.yeffoprint-admin .yp-dashboard__section-header a:focus {
+	color: #EC008C; /* magenta */
+}
+
+body.yeffoprint-admin .yp-dashboard__row--overdue {
+	background: rgba(236, 0, 140, 0.06) !important; /* magenta, faint — same "needs your attention" family as the tag below, not the row-striping's own gray */
+}
+
+body.yeffoprint-admin .yp-dashboard__overdue-tag {
+	display: inline-block;
+	font-weight: 700;
+	font-size: 0.8125rem;
+	color: #C2007A; /* magenta-deep */
+	background: rgba(236, 0, 140, 0.12);
+	border-radius: 999px;
+	padding: 0.15rem 0.65rem;
 }
 
 body.yeffoprint-admin .yp-dashboard__grid {
