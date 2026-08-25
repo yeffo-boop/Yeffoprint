@@ -35,6 +35,16 @@ class YeffoPrint_Commerce_Record_Meta {
 	public const HOVER_IMAGE = '_yp_hover_image_id';
 
 	/**
+	 * Material only — thickness in mil, shown alongside the material's
+	 * finish on the How It Works page's material guide (site owner
+	 * request: "add that field to the material form... you can pull
+	 * that data and display it"). 0 doubles as "not set" — no real
+	 * material is 0mil thick, so the guide falls back to its own
+	 * hardcoded spec text for any material without a value here yet.
+	 */
+	public const THICKNESS_MIL = '_yp_thickness_mil';
+
+	/**
 	 * Material only — which product line(s) this material is offered
 	 * for (Custom Stickers reuses the Material CPT rather than a
 	 * parallel record type, per docs/ARCHITECTURE.md §8's "generic
@@ -69,6 +79,14 @@ class YeffoPrint_Commerce_Record_Meta {
 
 		register_post_meta( 'yp_material', self::HOVER_IMAGE, [
 			'type'          => 'integer',
+			'single'        => true,
+			'default'       => 0,
+			'show_in_rest'  => true,
+			'auth_callback' => [ $this, 'can_edit' ],
+		] );
+
+		register_post_meta( 'yp_material', self::THICKNESS_MIL, [
+			'type'          => 'number',
 			'single'        => true,
 			'default'       => 0,
 			'show_in_rest'  => true,
