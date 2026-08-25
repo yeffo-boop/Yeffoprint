@@ -185,6 +185,7 @@ final class YeffoPrint_Core {
 			new YeffoPrint_Admin_Menu();
 
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-shell.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-dashboard-widgets.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-template-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-field-preset-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-material-size-editor.php';
