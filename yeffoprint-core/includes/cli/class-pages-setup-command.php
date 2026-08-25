@@ -71,6 +71,13 @@ class YeffoPrint_Pages_Setup_Command {
 			'',
 			'how-it-works.html'
 		);
+
+		$this->create_page(
+			'web-design',
+			__( 'Web Design for Peptide Resellers', 'yeffoprint-core' ),
+			'',
+			'web-design.html'
+		);
 	}
 
 	private function create_page( string $slug, string $title, string $content, string $template = '' ): void {
