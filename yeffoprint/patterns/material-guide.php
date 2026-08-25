@@ -4,13 +4,22 @@
  * Slug: yeffoprint/material-guide
  * Categories: yeffoprint
  *
- * Direct request: real customer-facing copy for each material type,
- * to sit right below the swatch grid (materials.php) as a deeper
- * "which one should I pick" guide. The copy itself is deliberately
- * hardcoded, not data-driven like materials.php — this is verbatim
- * business copy the site owner supplied (lightly copyedited for
- * grammar only, facts untouched), not something to derive from a
- * Material record's own short blurb field.
+ * Direct request: real customer-facing copy for each material type, a
+ * deeper "which one should I pick" guide. The copy itself is
+ * deliberately hardcoded, not data-driven like materials.php's own
+ * swatch grid (still used on the homepage, see front-page.html) — this
+ * is verbatim business copy the site owner supplied (lightly
+ * copyedited for grammar only, facts untouched), not something to
+ * derive from a Material record's own short blurb field.
+ *
+ * Originally sat directly below that swatch grid on this page too, but
+ * the two were dropped right on top of each other with real photos in
+ * both once this guide grew its own photo circles (V2, below) — direct
+ * follow-up request to remove the redundancy: the grid's own
+ * `wp:pattern` reference was removed from templates/how-it-works.html,
+ * leaving this as the page's one materials section. materials.php
+ * itself is untouched (and unremoved) since the homepage still uses
+ * it.
  *
  * The photo next to each entry is real, though (V2, direct follow-up
  * request: "pull the picture assigned to the material") — looked up by
