@@ -146,6 +146,8 @@ class YeffoPrint_Rewards_Admin {
 
 			<?php $this->render_notice(); ?>
 
+			<?php $looked_up = $this->render_lookup(); ?>
+
 			<h2><?php esc_html_e( 'Points & referral rates', 'yeffoprint-core' ); ?></h2>
 			<form method="post" action="<?php echo esc_url( admin_url( 'options.php' ) ); ?>">
 				<?php
@@ -166,7 +168,7 @@ class YeffoPrint_Rewards_Admin {
 					<tr>
 						<th scope="row"><label for="yp-rewards-user"><?php esc_html_e( 'Customer', 'yeffoprint-core' ); ?></label></th>
 						<td>
-							<input type="text" id="yp-rewards-user" name="user" class="regular-text" required placeholder="<?php esc_attr_e( 'Email or username', 'yeffoprint-core' ); ?>" />
+							<input type="text" id="yp-rewards-user" name="user" class="regular-text" required placeholder="<?php esc_attr_e( 'Email or username', 'yeffoprint-core' ); ?>" value="<?php echo esc_attr( $looked_up ? $looked_up->user_email : '' ); ?>" />
 						</td>
 					</tr>
 					<tr>
@@ -204,7 +206,7 @@ class YeffoPrint_Rewards_Admin {
 		$reason     = sanitize_text_field( wp_unslash( $_POST['reason'] ?? '' ) );
 
 		$redirect = admin_url( 'admin.php?page=yeffoprint-rewards' );
-		$user     = is_email( $identifier ) ? get_user_by( 'email', $identifier ) : get_user_by( 'login', $identifier );
+		$user     = self::resolve_user( $identifier );
 
 		if ( ! $user ) {
 			wp_safe_redirect( add_query_arg( 'yp_rewards_error', rawurlencode( __( 'No customer found with that email or username.', 'yeffoprint-core' ) ), $redirect ) );
@@ -224,6 +226,114 @@ class YeffoPrint_Rewards_Admin {
 			'yp_rewards_balance' => $new_balance,
 		], $redirect ) );
 		exit;
+	}
+
+	/** Shared by handle_adjust() and render_lookup() below — an email looks up by email, anything else is tried as a login/username. */
+	private static function resolve_user( string $identifier ): ?\WP_User {
+		if ( '' === $identifier ) {
+			return null;
+		}
+
+		$user = is_email( $identifier ) ? get_user_by( 'email', $identifier ) : get_user_by( 'login', $identifier );
+
+		return $user ?: null;
+	}
+
+	/**
+	 * "Look up a customer" — direct report: staff had no way to see a
+	 * specific customer's rewards standing, only the flat, unfiltered
+	 * "Recent adjustments" log render_history() below already shows.
+	 * GET, not POST: this is read-only, so unlike the adjust form above
+	 * it needs no nonce.
+	 *
+	 * @return \WP_User|null The looked-up customer, if any — reused by
+	 *   render_page() to pre-fill the adjust form's Customer field, so
+	 *   staff can search, review, then immediately act on the same
+	 *   customer without retyping.
+	 */
+	private function render_lookup(): ?\WP_User {
+		$identifier = isset( $_GET['lookup_user'] ) ? sanitize_text_field( wp_unslash( $_GET['lookup_user'] ) ) : '';
+		?>
+		<h2><?php esc_html_e( 'Look up a customer', 'yeffoprint-core' ); ?></h2>
+		<form method="get">
+			<input type="hidden" name="page" value="yeffoprint-rewards" />
+			<p>
+				<input type="text" name="lookup_user" class="regular-text" value="<?php echo esc_attr( $identifier ); ?>" placeholder="<?php esc_attr_e( 'Email or username', 'yeffoprint-core' ); ?>" />
+				<?php submit_button( __( 'Look up', 'yeffoprint-core' ), 'secondary', '', false ); ?>
+			</p>
+		</form>
+		<?php
+
+		if ( '' === $identifier ) {
+			return null;
+		}
+
+		$user = self::resolve_user( $identifier );
+
+		if ( ! $user ) {
+			echo '<p class="description">' . esc_html__( 'No customer found with that email or username.', 'yeffoprint-core' ) . '</p>';
+			return null;
+		}
+
+		$balance = YeffoPrint_Rewards::get_balance( $user->ID );
+		$history = YeffoPrint_Rewards::get_history_for_user( $user->ID, 50 );
+		?>
+		<p>
+			<?php
+			printf(
+				/* translators: 1: customer display name, 2: customer email, 3: current points balance */
+				esc_html__( '%1$s (%2$s) — current balance: %3$s points.', 'yeffoprint-core' ),
+				esc_html( $user->display_name ),
+				esc_html( $user->user_email ),
+				'<strong>' . esc_html( number_format_i18n( $balance ) ) . '</strong>'
+			);
+			?>
+		</p>
+		<?php if ( ! $history ) : ?>
+			<p class="description"><?php esc_html_e( 'No rewards activity yet.', 'yeffoprint-core' ); ?></p>
+		<?php else : ?>
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Date', 'yeffoprint-core' ); ?></th>
+						<th><?php esc_html_e( 'Activity', 'yeffoprint-core' ); ?></th>
+						<th><?php esc_html_e( 'Points', 'yeffoprint-core' ); ?></th>
+						<th><?php esc_html_e( 'By', 'yeffoprint-core' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $history as $entry ) :
+						$net   = $entry['earned'] - $entry['redeemed'];
+						$order = $entry['order_id'] ? wc_get_order( $entry['order_id'] ) : null;
+						$parts = [];
+						if ( $entry['earned'] > 0 ) {
+							$parts[] = '+' . number_format_i18n( $entry['earned'] );
+						}
+						if ( $entry['redeemed'] > 0 ) {
+							$parts[] = '&minus;' . number_format_i18n( $entry['redeemed'] );
+						}
+						?>
+						<tr>
+							<td><?php echo esc_html( wp_date( 'Y-m-d H:i', $entry['timestamp'] ) ); ?></td>
+							<td>
+								<?php if ( $order ) : ?>
+									<a href="<?php echo esc_url( $order->get_edit_order_url() ); ?>"><?php echo esc_html( $entry['label'] ); ?></a>
+								<?php else : ?>
+									<?php echo esc_html( $entry['label'] ); ?>
+								<?php endif; ?>
+							</td>
+							<td style="color:<?php echo $net >= 0 ? '#0078A4' : '#C2007A'; /* cyan-deep / magenta-deep — same split as render_history()'s own delta color below */ ?>; font-weight:600;">
+								<?php echo wp_kses_post( implode( ' / ', $parts ) ); ?>
+							</td>
+							<td><?php echo esc_html( $entry['by'] ?? '—' ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
+		<?php
+
+		return $user;
 	}
 
 	private function render_notice(): void {

@@ -21,12 +21,36 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Order_Item_Meta {
 
+	/**
+	 * True only while WC is actually building the HTML variant of a
+	 * transactional email (set on woocommerce_email_header, cleared on
+	 * woocommerce_email_footer — WC's plain-text templates never call
+	 * either, so this stays false for the whole of a plain-text send).
+	 * format_customization_display() below reads this because, unlike
+	 * render_customization_email_fields()'s woocommerce_email_after_
+	 * order_table hook, the woocommerce_order_item_get_formatted_meta_data
+	 * filter it runs on isn't handed any html-vs-plain-text context of
+	 * its own.
+	 */
+	private bool $rendering_html_email = false;
+
 	public function __construct() {
 		add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'snapshot' ], 10, 4 );
 		add_filter( 'woocommerce_hidden_order_itemmeta', [ $this, 'hide_internal_keys' ] );
 		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'add_qr_download_links' ], 10, 2 );
 		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'format_customization_display' ], 10, 2 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_order_screen_assets' ] );
+		add_action( 'woocommerce_email_header', [ $this, 'mark_html_email' ] );
+		add_action( 'woocommerce_email_footer', [ $this, 'unmark_html_email' ] );
+		add_action( 'woocommerce_email_after_order_table', [ $this, 'render_customization_email_fields' ], 10, 4 );
+	}
+
+	public function mark_html_email(): void {
+		$this->rendering_html_email = true;
+	}
+
+	public function unmark_html_email(): void {
+		$this->rendering_html_email = false;
 	}
 
 	public function snapshot( \WC_Order_Item_Product $item, string $cart_item_key, array $values, \WC_Order $order ): void {
@@ -213,27 +237,23 @@ class YeffoPrint_Order_Item_Meta {
 			return $formatted_meta;
 		}
 
-		$variants_json = $item->get_meta( '_yp_variants' );
-		$snapshot_json = $item->get_meta( '_yp_template_snapshot' );
-		if ( ! $variants_json || ! $snapshot_json ) {
+		$batch = $this->get_batch_data( $item );
+		if ( ! $batch ) {
 			return $formatted_meta;
 		}
 
-		$variants = json_decode( $variants_json, true );
-		$snapshot = json_decode( $snapshot_json, true );
-		$field_schema = is_array( $snapshot['field_schema'] ?? null ) ? $snapshot['field_schema'] : [];
-		$qr_fields    = array_filter( $field_schema, static function ( $field ) {
+		$qr_fields = array_filter( $batch['field_schema'], static function ( $field ) {
 			return 'qr_code' === ( $field['type'] ?? '' );
 		} );
 
-		if ( ! $qr_fields || ! is_array( $variants ) ) {
+		if ( ! $qr_fields ) {
 			return $formatted_meta;
 		}
 
-		$multiple = count( $variants ) > 1;
+		$multiple = count( $batch['variants'] ) > 1;
 		$suffix   = 0;
 
-		foreach ( $variants as $index => $variant ) {
+		foreach ( $batch['variants'] as $index => $variant ) {
 			foreach ( $qr_fields as $field ) {
 				$url = trim( (string) ( $variant['values'][ $field['id'] ] ?? '' ) );
 				if ( '' === $url ) {
@@ -291,29 +311,30 @@ class YeffoPrint_Order_Item_Meta {
 	 * the joined string back apart also sidesteps a real ambiguity a
 	 * regex split would hit: nothing stops a field's own value from
 	 * containing " — " or ": " itself.
+	 *
+	 * In an HTML email, the row is dropped instead of reformatted — WC
+	 * core's own email-order-items.php runs display_value through
+	 * wp_kses() with a whitelist of only <br>/<span>(no attrs)/<a>, so
+	 * nothing built here would survive it anyway. The real replacement
+	 * is rendered separately, unconstrained, by
+	 * render_customization_email_fields() below.
 	 */
 	public function format_customization_display( array $formatted_meta, \WC_Order_Item $item ): array {
-		if ( ! $this->is_order_edit_screen() ) {
+		$is_order_screen = $this->is_order_edit_screen();
+		$is_html_email   = $this->rendering_html_email;
+
+		if ( ! $is_order_screen && ! $is_html_email ) {
 			return $formatted_meta;
 		}
 
-		$variants_json = $item->get_meta( '_yp_variants' );
-		$snapshot_json = $item->get_meta( '_yp_template_snapshot' );
-		if ( ! $variants_json || ! $snapshot_json ) {
+		$batch = $this->get_batch_data( $item );
+		if ( ! $batch ) {
 			return $formatted_meta;
 		}
 
-		$variants     = json_decode( $variants_json, true );
-		$snapshot     = json_decode( $snapshot_json, true );
-		$field_schema = is_array( $snapshot['field_schema'] ?? null ) ? $snapshot['field_schema'] : [];
+		$multiple = count( $batch['variants'] ) > 1;
 
-		if ( ! is_array( $variants ) || ! $field_schema ) {
-			return $formatted_meta;
-		}
-
-		$multiple = count( $variants ) > 1;
-
-		foreach ( $variants as $index => $variant ) {
+		foreach ( $batch['variants'] as $index => $variant ) {
 			// Same label add_variant_rows() computed when it originally
 			// wrote this meta row — matching on it (rather than a new,
 			// separately-tracked key) finds the right entry without
@@ -327,14 +348,18 @@ class YeffoPrint_Order_Item_Meta {
 				)
 				: __( 'Customization', 'yeffoprint-core' );
 
-			foreach ( $formatted_meta as $entry ) {
+			foreach ( $formatted_meta as $key => $entry ) {
 				if ( $entry->key !== $row_label ) {
 					continue;
 				}
 
-				$html = $this->variant_fields_html( $variant, $field_schema );
-				if ( '' !== $html ) {
-					$entry->display_value = $html;
+				if ( $is_html_email ) {
+					unset( $formatted_meta[ $key ] );
+				} else {
+					$html = $this->variant_fields_html( $variant, $batch['field_schema'] );
+					if ( '' !== $html ) {
+						$entry->display_value = $html;
+					}
 				}
 				break;
 			}
@@ -343,10 +368,108 @@ class YeffoPrint_Order_Item_Meta {
 		return $formatted_meta;
 	}
 
+	/**
+	 * The HTML-email counterpart of format_customization_display() above
+	 * — same "Customization"/"Label N (qty M)" field-by-field detail, but
+	 * printed as fresh, richly-styled markup straight into the email
+	 * template rather than through WC's wp_kses()-constrained meta-row
+	 * pipeline. Uses the same woocommerce_email_after_order_table hook
+	 * class-order-tracking.php's "Track your order" button already relies
+	 * on for exactly this reason. Skipped for plain-text (the joined-
+	 * string meta row format_customization_display() leaves untouched
+	 * there is still what shows, unchanged on purpose).
+	 */
+	public function render_customization_email_fields( \WC_Order $order, bool $sent_to_admin, bool $plain_text, \WC_Email $email ): void {
+		if ( $plain_text ) {
+			return;
+		}
+
+		foreach ( $order->get_items() as $item ) {
+			if ( ! $item instanceof \WC_Order_Item_Product ) {
+				continue;
+			}
+
+			$html = $this->variant_fields_email_html( $item );
+			if ( '' !== $html ) {
+				echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built entirely from esc_html()'d pieces, see variant_field_pairs().
+			}
+		}
+	}
+
+	/** email-styles.php's .yp-email-fields* rules — same visual language as its .yp-email-callout, table-based for Outlook. */
+	private function variant_fields_email_html( \WC_Order_Item_Product $item ): string {
+		$batch = $this->get_batch_data( $item );
+		if ( ! $batch ) {
+			return '';
+		}
+
+		$multiple = count( $batch['variants'] ) > 1;
+		$sections = '';
+
+		foreach ( $batch['variants'] as $index => $variant ) {
+			$rows = $this->variant_fields_email_rows( $variant, $batch['field_schema'] );
+			if ( '' === $rows ) {
+				continue;
+			}
+
+			$heading = $multiple
+				? sprintf(
+					/* translators: 1: label number within the batch, 2: that label's own quantity */
+					__( 'Label %1$d (qty %2$d)', 'yeffoprint-core' ),
+					$index + 1,
+					(int) ( $variant['quantity'] ?? 0 )
+				)
+				: __( 'Customization', 'yeffoprint-core' );
+
+			$sections .= sprintf(
+				'<tr><td class="yp-email-fields-box"><span class="yp-email-fields-heading">%s</span><table class="yp-email-fields-rows" cellspacing="0" cellpadding="0" width="100%%">%s</table></td></tr>',
+				esc_html( $heading ),
+				$rows
+			);
+		}
+
+		if ( '' === $sections ) {
+			return '';
+		}
+
+		return '<table class="yp-email-fields" cellspacing="0" cellpadding="0" width="100%">' . $sections . '</table>';
+	}
+
+	private function variant_fields_email_rows( array $variant, array $field_schema ): string {
+		$rows = array_map(
+			static function ( array $pair ): string {
+				return sprintf(
+					'<tr><td class="yp-email-field-label">%s</td><td class="yp-email-field-value">%s</td></tr>',
+					esc_html( $pair['label'] ),
+					esc_html( $pair['value'] )
+				);
+			},
+			$this->variant_field_pairs( $variant, $field_schema )
+		);
+
+		return implode( '', $rows );
+	}
+
 	/** One row per field, label above value — see format_customization_display() above for why this is built from the variant/field_schema directly rather than reformatting the joined summary string. */
 	private function variant_fields_html( array $variant, array $field_schema ): string {
+		$rows = array_map(
+			static function ( array $pair ): string {
+				return sprintf(
+					'<div class="yp-order-field"><span class="yp-order-field__label">%s</span><span class="yp-order-field__value">%s</span></div>',
+					esc_html( $pair['label'] ),
+					esc_html( $pair['value'] )
+				);
+			},
+			$this->variant_field_pairs( $variant, $field_schema )
+		);
+
+		return $rows ? '<div class="yp-order-fields">' . implode( '', $rows ) . '</div>' : '';
+	}
+
+	/** @return array<int, array{label:string, value:string}> Non-empty fields only, in field_schema order — shared by variant_fields_html() (admin div markup) and variant_fields_email_rows() (email table markup) above. */
+	private function variant_field_pairs( array $variant, array $field_schema ): array {
 		$values = (array) ( $variant['values'] ?? [] );
-		$rows   = [];
+		$pairs  = [];
 
 		foreach ( $field_schema as $field ) {
 			$value = trim( (string) ( $values[ $field['id'] ] ?? '' ) );
@@ -354,14 +477,45 @@ class YeffoPrint_Order_Item_Meta {
 				continue;
 			}
 
-			$rows[] = sprintf(
-				'<div class="yp-order-field"><span class="yp-order-field__label">%s</span><span class="yp-order-field__value">%s</span></div>',
-				esc_html( (string) ( $field['label'] ?? '' ) ),
-				esc_html( $value )
-			);
+			$pairs[] = [
+				'label' => (string) ( $field['label'] ?? '' ),
+				'value' => $value,
+			];
 		}
 
-		return $rows ? '<div class="yp-order-fields">' . implode( '', $rows ) . '</div>' : '';
+		return $pairs;
+	}
+
+	/**
+	 * Decodes the _yp_variants/_yp_template_snapshot pair a Template-flow
+	 * batch line item carries — shared by add_qr_download_links(),
+	 * format_customization_display(), and variant_fields_email_html()
+	 * above, all three of which need the same "is this a batch item, and
+	 * if so what are its variants/field_schema" answer.
+	 *
+	 * @return array{variants: array, field_schema: array}|null Null if
+	 *   this item isn't a Template-flow batch item at all, or its data
+	 *   doesn't decode.
+	 */
+	private function get_batch_data( \WC_Order_Item $item ): ?array {
+		$variants_json = $item->get_meta( '_yp_variants' );
+		$snapshot_json = $item->get_meta( '_yp_template_snapshot' );
+		if ( ! $variants_json || ! $snapshot_json ) {
+			return null;
+		}
+
+		$variants     = json_decode( $variants_json, true );
+		$snapshot     = json_decode( $snapshot_json, true );
+		$field_schema = is_array( $snapshot['field_schema'] ?? null ) ? $snapshot['field_schema'] : [];
+
+		if ( ! is_array( $variants ) || ! $field_schema ) {
+			return null;
+		}
+
+		return [
+			'variants'     => $variants,
+			'field_schema' => $field_schema,
+		];
 	}
 
 	/** admin.css's .yp-order-field* rules above — order-edit screen only, same screen-id check as is_order_edit_screen(). */
