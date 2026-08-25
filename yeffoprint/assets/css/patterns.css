@@ -844,6 +844,59 @@
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 }
 
+/* Click-to-enlarge (direct request: "hover or click... to see a bigger
+   image"). The button wraps the same .yp-material-guide__photo circle
+   unchanged; a small always-visible badge signals it's tappable (touch
+   devices never get a :hover state, so the affordance can't depend on
+   one), and hovering/focusing scales the circle up as tactile feedback
+   before the click opens the real enlarged photo in a modal. Only
+   rendered at all when there's a larger image to show — see this
+   pattern's own docblock. */
+.yp-material-guide__photo-btn {
+	flex-shrink: 0;
+	position: relative;
+	display: block;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: none;
+	cursor: pointer;
+	transition: transform 200ms ease;
+}
+
+.yp-material-guide__photo-btn:hover,
+.yp-material-guide__photo-btn:focus-visible {
+	transform: scale(1.06);
+}
+
+.yp-material-guide__photo-btn:focus-visible {
+	outline: 2px solid var(--wp--preset--color--cyan-deep);
+	outline-offset: 2px;
+}
+
+.yp-material-guide__zoom-badge {
+	position: absolute;
+	right: -2px;
+	bottom: -2px;
+	width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--wp--preset--color--charcoal);
+	color: var(--wp--preset--color--white);
+	border-radius: 50%;
+	border: 2px solid var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-material-guide__zoom-body img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: var(--wp--custom--radius--card);
+}
+
 .yp-material-guide__body {
 	flex-grow: 1;
 	min-width: 0;
