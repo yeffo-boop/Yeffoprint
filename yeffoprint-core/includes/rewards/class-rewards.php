@@ -216,4 +216,116 @@ class YeffoPrint_Rewards {
 	public static function get_recent_adjustments( int $limit = 50 ): array {
 		return array_slice( (array) get_option( self::ADJUSTMENTS_OPTION, [] ), 0, max( 1, $limit ) );
 	}
+
+	/**
+	 * One customer's full points history, order-based earn/redeem and
+	 * manual/referral adjustments merged into a single chronological
+	 * list — the only place either surface needs to answer "what changed
+	 * this customer's balance, and when" (class-account-endpoints.php's
+	 * own Rewards tab, and class-rewards-admin.php's admin lookup), so
+	 * both stay in agreement about what that means.
+	 *
+	 * An order row can carry both a nonzero earned and redeemed amount
+	 * (the same order both earned points and was partly paid for with
+	 * points) — one row per order, matching the shape the account tab's
+	 * existing <li> markup already expects. A manual/referral adjustment
+	 * row is always one or the other, never both.
+	 *
+	 * @return array<int, array{timestamp:int, label:string, earned:int, redeemed:int, order_id:?int, by:?string}> Newest first.
+	 */
+	public static function get_history_for_user( int $user_id, int $limit = 20 ): array {
+		$rows = [];
+
+		// Fetching the newest $limit orders (rather than every order this
+		// customer has) is still enough to guarantee correctness: an order
+		// can only land in the final top-$limit merged list if fewer than
+		// $limit rows overall are newer than it, so fewer than $limit
+		// orders specifically are newer than it too.
+		$orders = wc_get_orders( [
+			'customer_id' => $user_id,
+			'limit'       => $limit,
+			'orderby'     => 'date',
+			'order'       => 'DESC',
+			'meta_query'  => [
+				[
+					'key'     => self::ORDER_POINTS_EARNED_META,
+					'compare' => 'EXISTS',
+				],
+			],
+		] );
+
+		foreach ( $orders as $order ) {
+			$earned   = (int) $order->get_meta( self::ORDER_POINTS_EARNED_META );
+			$redeemed = (int) $order->get_meta( self::ORDER_POINTS_REDEEMED_META );
+
+			if ( ! $earned && ! $redeemed ) {
+				continue; // A guest order, or one with nothing to show either direction.
+			}
+
+			$date = $order->get_date_created();
+
+			$rows[] = [
+				'timestamp' => $date ? $date->getTimestamp() : 0,
+				/* translators: %s: order number */
+				'label'     => sprintf( __( 'Order #%s', 'yeffoprint-core' ), $order->get_order_number() ),
+				'earned'    => $earned,
+				'redeemed'  => $redeemed,
+				'order_id'  => $order->get_id(),
+				'by'        => null,
+			];
+		}
+
+		foreach ( self::get_adjustments_for_user( $user_id ) as $adjustment ) {
+			$delta = (int) ( $adjustment['delta'] ?? 0 );
+			if ( ! $delta ) {
+				continue;
+			}
+
+			// Same three-way admin_id resolution class-rewards-admin.php's
+			// own history table already uses: a real (still-existing) user
+			// gets their name, admin_id 0 means system-triggered (e.g. a
+			// referral bonus — see class-referrals.php), anything else is a
+			// deleted admin account.
+			$admin_id = (int) ( $adjustment['admin_id'] ?? 0 );
+			$admin    = $admin_id ? get_userdata( $admin_id ) : null;
+			if ( $admin ) {
+				$by = $admin->display_name;
+			} elseif ( 0 === $admin_id ) {
+				$by = __( 'System', 'yeffoprint-core' );
+			} else {
+				$by = null;
+			}
+
+			$rows[] = [
+				'timestamp' => strtotime( (string) ( $adjustment['date'] ?? '' ) ) ?: 0,
+				'label'     => (string) ( $adjustment['reason'] ?: __( 'Manual adjustment', 'yeffoprint-core' ) ),
+				'earned'    => $delta > 0 ? $delta : 0,
+				'redeemed'  => $delta < 0 ? abs( $delta ) : 0,
+				'order_id'  => null,
+				'by'        => $by,
+			];
+		}
+
+		usort( $rows, static function ( array $a, array $b ): int {
+			return $b['timestamp'] <=> $a['timestamp'];
+		} );
+
+		return array_slice( $rows, 0, max( 1, $limit ) );
+	}
+
+	/**
+	 * @return array<int, array{user_id:int, delta:int, reason:string, admin_id:int, date:string}>
+	 *   This user's own entries from ADJUSTMENTS_OPTION, in stored
+	 *   (newest-first) order. Deliberately not get_recent_adjustments()'s
+	 *   system-wide-recency slice, which would favor other customers'
+	 *   more-recent entries over this one's own older ones.
+	 */
+	private static function get_adjustments_for_user( int $user_id ): array {
+		return array_values( array_filter(
+			(array) get_option( self::ADJUSTMENTS_OPTION, [] ),
+			static function ( array $adjustment ) use ( $user_id ): bool {
+				return (int) ( $adjustment['user_id'] ?? 0 ) === $user_id;
+			}
+		) );
+	}
 }

@@ -313,52 +313,39 @@ class YeffoPrint_Account_Endpoints {
 		<?php
 	}
 
+	/**
+	 * Pulls from YeffoPrint_Rewards::get_history_for_user() — direct
+	 * report: a manual admin adjustment or a referral bonus changes a
+	 * customer's balance but, when this only queried orders, never
+	 * showed up in their own history here. Same markup/CSS classes as
+	 * before (the theme's own woocommerce.css already styles these), just fed
+	 * from the unified list so an order row and an adjustment row both
+	 * render — an adjustment row's "order" span shows its reason instead
+	 * of an order number, and has no date-independent order link.
+	 */
 	private function render_rewards_history( int $user_id ): void {
-		$orders = wc_get_orders( [
-			'customer_id' => $user_id,
-			'limit'       => 10,
-			'orderby'     => 'date',
-			'order'       => 'DESC',
-			'meta_query'  => [
-				[
-					'key'     => YeffoPrint_Rewards::ORDER_POINTS_EARNED_META,
-					'compare' => 'EXISTS',
-				],
-			],
-		] );
+		$entries = YeffoPrint_Rewards::get_history_for_user( $user_id, 15 );
 
-		if ( ! $orders ) {
+		if ( ! $entries ) {
 			return;
 		}
 
 		echo '<h3>' . esc_html__( 'Recent activity', 'yeffoprint-core' ) . '</h3>';
 		echo '<ul class="yp-rewards-history">';
 
-		foreach ( $orders as $order ) {
-			$earned   = (int) $order->get_meta( YeffoPrint_Rewards::ORDER_POINTS_EARNED_META );
-			$redeemed = (int) $order->get_meta( YeffoPrint_Rewards::ORDER_POINTS_REDEEMED_META );
-
-			if ( ! $earned && ! $redeemed ) {
-				continue; // A guest order, or one with nothing to show either direction.
-			}
+		foreach ( $entries as $entry ) {
 			?>
 			<li class="yp-rewards-history__row">
 				<span class="yp-rewards-history__order">
-					<?php
-					printf(
-						/* translators: %s: order number */
-						esc_html__( 'Order #%s', 'yeffoprint-core' ),
-						esc_html( $order->get_order_number() )
-					);
-					?>
-					<span class="yp-rewards-history__date"><?php echo esc_html( wc_format_datetime( $order->get_date_created() ) ); ?></span>
+					<?php echo esc_html( $entry['label'] ); ?>
+					<span class="yp-rewards-history__date"><?php echo esc_html( wp_date( wc_date_format(), $entry['timestamp'] ) ); ?></span>
 				</span>
 				<span class="yp-rewards-history__amounts">
-					<?php if ( $earned > 0 ) : ?>
-						<span class="yp-rewards-history__earned">+<?php echo esc_html( number_format_i18n( $earned ) ); ?></span>
+					<?php if ( $entry['earned'] > 0 ) : ?>
+						<span class="yp-rewards-history__earned">+<?php echo esc_html( number_format_i18n( $entry['earned'] ) ); ?></span>
 					<?php endif; ?>
-					<?php if ( $redeemed > 0 ) : ?>
-						<span class="yp-rewards-history__redeemed">&minus;<?php echo esc_html( number_format_i18n( $redeemed ) ); ?></span>
+					<?php if ( $entry['redeemed'] > 0 ) : ?>
+						<span class="yp-rewards-history__redeemed">&minus;<?php echo esc_html( number_format_i18n( $entry['redeemed'] ) ); ?></span>
 					<?php endif; ?>
 				</span>
 			</li>

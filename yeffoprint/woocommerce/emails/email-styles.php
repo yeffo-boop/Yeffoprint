@@ -396,6 +396,57 @@ table.yp-email-callout p {
 	color: <?php echo esc_attr( $text ); ?>;
 }
 
+/* Per-label customization detail (class-order-item-meta.php's
+   render_customization_email_fields()) — one box per "Customization"/
+   "Label N (qty M)" variant, replacing the dense joined-string row WC's
+   own item-meta rendering would otherwise show. Same visual language as
+   .yp-email-callout above, just a neutral warm-white box instead of pink
+   so it doesn't compete with the payment-instructions callout. */
+table.yp-email-fields {
+	margin: 4px 0 18px;
+}
+
+table.yp-email-fields td.yp-email-fields-box {
+	background-color: <?php echo esc_attr( $bg ); ?>;
+	border: 1px solid <?php echo esc_attr( $border ); ?>;
+	border-radius: 8px;
+	padding: 14px 16px;
+	text-align: <?php echo is_rtl() ? 'right' : 'left'; ?>;
+}
+
+table.yp-email-fields tr + tr td.yp-email-fields-box {
+	margin-top: 10px;
+}
+
+.yp-email-fields-heading {
+	display: block;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: <?php echo esc_attr( $link_color ); ?>;
+	font-weight: 700;
+	margin-bottom: 8px;
+}
+
+table.yp-email-fields-rows td {
+	padding: 3px 0;
+	font-size: 13.5px;
+	line-height: 140%;
+	vertical-align: top;
+}
+
+table.yp-email-fields-rows .yp-email-field-label {
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	padding-<?php echo is_rtl() ? 'left' : 'right'; ?>: 12px;
+	white-space: nowrap;
+	width: 1%;
+}
+
+table.yp-email-fields-rows .yp-email-field-value {
+	color: <?php echo esc_attr( $text ); ?>;
+	font-weight: 600;
+}
+
 /* ---- Footer band ---- */
 #template_footer td {
 	padding: 0;
