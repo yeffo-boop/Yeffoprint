@@ -64,6 +64,13 @@ class YeffoPrint_Pages_Setup_Command {
 			'',
 			'contact-form.html'
 		);
+
+		$this->create_page(
+			'how-it-works',
+			__( 'How It Works', 'yeffoprint-core' ),
+			'',
+			'how-it-works.html'
+		);
 	}
 
 	private function create_page( string $slug, string $title, string $content, string $template = '' ): void {

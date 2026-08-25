@@ -602,9 +602,14 @@
 	height: 4px;
 }
 
-.yp-step:nth-child(1)::before { background: var(--wp--preset--color--cyan); }
-.yp-step:nth-child(2)::before { background: var(--wp--preset--color--magenta-deep); }
-.yp-step:nth-child(3)::before { background: var(--wp--preset--color--yellow); }
+/* :nth-child(3n+1/2/3), not the literal 1/2/3 this started as — the
+   How It Works page's own process-steps pattern reuses .yp-steps with
+   6 cards, and this cycle needs to repeat every 3 rather than stopping
+   after the first three. Matches the homepage's 3-card case exactly
+   (3n+1 = child 1, 4, 7…, so nothing changes there). */
+.yp-step:nth-child(3n+1)::before { background: var(--wp--preset--color--cyan); }
+.yp-step:nth-child(3n+2)::before { background: var(--wp--preset--color--magenta-deep); }
+.yp-step:nth-child(3n)::before { background: var(--wp--preset--color--yellow); }
 
 .yp-step__index {
 	display: inline-flex;
@@ -619,22 +624,42 @@
 	margin-bottom: 1rem;
 }
 
-.yp-step:nth-child(1) .yp-step__index {
+.yp-step:nth-child(3n+1) .yp-step__index {
 	background: var(--wp--preset--color--cyan);
 	color: var(--wp--preset--color--near-black);
 	box-shadow: 0 6px 16px rgba(0, 174, 239, 0.35);
 }
 
-.yp-step:nth-child(2) .yp-step__index {
+.yp-step:nth-child(3n+2) .yp-step__index {
 	background: var(--wp--preset--color--magenta-deep);
 	color: var(--wp--preset--color--white);
 	box-shadow: 0 6px 16px rgba(236, 0, 140, 0.35);
 }
 
-.yp-step:nth-child(3) .yp-step__index {
+.yp-step:nth-child(3n) .yp-step__index {
 	background: var(--wp--preset--color--yellow);
 	color: var(--wp--preset--color--near-black);
 	box-shadow: 0 6px 16px rgba(255, 242, 0, 0.4);
+}
+
+/* ---------- Turnaround Time (How It Works page) ---------- */
+
+.yp-turnaround {
+	max-width: 480px;
+	margin-inline: auto;
+	text-align: center;
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+	padding: var(--wp--preset--spacing--lg) var(--wp--preset--spacing--md);
+}
+
+.yp-turnaround__stat {
+	font-size: var(--wp--preset--font-size--xx-large);
+	font-weight: 700;
+	color: var(--wp--preset--color--magenta-deep);
+	margin: 0 0 0.5rem;
+	line-height: 1;
 }
 
 /* ---------- Materials ---------- */
