@@ -154,6 +154,32 @@ class YeffoPrint_Rewards {
 			return; // Guest checkout — no account to credit/debit.
 		}
 
+		$points = self::calculate_points( $order );
+
+		$balance = self::get_balance( $user_id ) - $points['redeemed'] + $points['earned'];
+		update_user_meta( $user_id, self::BALANCE_META, max( 0, $balance ) );
+		update_user_meta( $user_id, self::PENDING_REDEEM_META, 0 );
+
+		$order->update_meta_data( self::ORDER_POINTS_EARNED_META, $points['earned'] );
+		$order->update_meta_data( self::ORDER_POINTS_REDEEMED_META, $points['redeemed'] );
+		$order->save();
+	}
+
+	/**
+	 * The earned/redeemed points math finalize_order() actually applies
+	 * — pulled out so class-rewards-order-box.php's admin order-screen
+	 * meta box can show the same numbers as a live "will earn" estimate
+	 * before an order is processed, without duplicating this
+	 * calculation (and risking the two drifting apart later).
+	 *
+	 * Read-only: never touches order/user meta itself, so it's safe to
+	 * call on an already-processed order too (the box uses the stored
+	 * ORDER_POINTS_EARNED_META/ORDER_POINTS_REDEEMED_META values then,
+	 * not this).
+	 *
+	 * @return array{earned:int, redeemed:int}
+	 */
+	public static function calculate_points( \WC_Order $order ): array {
 		// Redeemed: whatever the Rewards Credit fee actually landed on
 		// this order at, converted back to points — may be less than
 		// what was pending if the cart changed after the fee was added.
@@ -178,13 +204,10 @@ class YeffoPrint_Rewards {
 		}
 		$points_earned = (int) floor( $subtotal * self::points_per_dollar() );
 
-		$balance = self::get_balance( $user_id ) - $points_redeemed + $points_earned;
-		update_user_meta( $user_id, self::BALANCE_META, max( 0, $balance ) );
-		update_user_meta( $user_id, self::PENDING_REDEEM_META, 0 );
-
-		$order->update_meta_data( self::ORDER_POINTS_EARNED_META, $points_earned );
-		$order->update_meta_data( self::ORDER_POINTS_REDEEMED_META, $points_redeemed );
-		$order->save();
+		return [
+			'earned'   => $points_earned,
+			'redeemed' => $points_redeemed,
+		];
 	}
 
 	/**
