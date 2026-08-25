@@ -1320,3 +1320,266 @@
 		height: 170px;
 	}
 }
+
+/* ---------- Web Design page ---------- */
+
+.yp-browser-mock {
+	width: 100%;
+	max-width: 420px;
+	filter: drop-shadow(0 14px 24px rgba(20, 20, 20, 0.14));
+}
+
+.yp-browser-mock__frame {
+	fill: var(--wp--preset--color--white);
+	stroke: var(--wp--preset--color--light-gray);
+	stroke-width: 1.5;
+}
+
+.yp-browser-mock__chrome {
+	fill: var(--wp--preset--color--warm-white);
+}
+
+.yp-browser-mock__dot--c { fill: var(--wp--preset--color--cyan); }
+.yp-browser-mock__dot--m { fill: var(--wp--preset--color--magenta); }
+.yp-browser-mock__dot--y { fill: var(--wp--preset--color--yellow); }
+
+.yp-browser-mock__address {
+	fill: var(--wp--preset--color--light-gray);
+}
+
+.yp-browser-mock__banner {
+	fill: url(#ypWebDesignBannerGradient);
+}
+
+.yp-browser-mock__banner-line {
+	fill: var(--wp--preset--color--white);
+	opacity: 0.9;
+}
+
+.yp-browser-mock__banner-line--soft {
+	opacity: 0.6;
+}
+
+.yp-browser-mock__card rect:first-child {
+	fill: var(--wp--preset--color--white);
+	stroke: var(--wp--preset--color--light-gray);
+	stroke-width: 1.2;
+}
+
+.yp-browser-mock__swatch {
+	opacity: 0.85;
+}
+
+.yp-browser-mock__swatch--c { fill: var(--wp--preset--color--cyan-deep); }
+.yp-browser-mock__swatch--m { fill: var(--wp--preset--color--magenta-deep); }
+.yp-browser-mock__swatch--y { fill: var(--wp--preset--color--yellow); }
+
+.yp-browser-mock__text {
+	fill: var(--wp--preset--color--charcoal);
+	opacity: 0.5;
+}
+
+.yp-browser-mock__text--soft {
+	opacity: 0.28;
+}
+
+.yp-browser-mock__cart {
+	fill: var(--wp--preset--color--near-black);
+}
+
+.yp-browser-mock__cart-icon {
+	stroke: var(--wp--preset--color--warm-white);
+	stroke-width: 1.5;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* Package tier cards — same 3-column grid + margin-block-start reset as
+   .yp-steps above (a Group block with layout:"default" auto-injects a
+   top margin on every child but the first, which fights a grid's own
+   `gap` and makes the first card look taller; see .yp-steps' own
+   comment for the full explanation). */
+.yp-web-design-packages {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: var(--wp--preset--spacing--md);
+	align-items: stretch;
+	margin-top: var(--wp--preset--spacing--md);
+}
+
+.yp-web-design-packages > * {
+	margin-block-start: 0 !important;
+	margin-block-end: 0 !important;
+}
+
+@media (max-width: 781px) {
+	.yp-web-design-packages {
+		grid-template-columns: 1fr;
+	}
+}
+
+.yp-web-design-package {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	background: var(--wp--preset--color--white);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: var(--wp--preset--spacing--md);
+}
+
+.yp-web-design-package--featured {
+	border-color: var(--wp--preset--color--magenta-deep);
+	box-shadow: var(--wp--custom--shadow-elevation--high);
+}
+
+.yp-web-design-package__badge {
+	position: absolute;
+	top: -0.7rem;
+	left: 50%;
+	transform: translateX(-50%);
+	background: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--white);
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 0.3rem 0.85rem;
+	border-radius: 999px;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-web-design-package__name {
+	margin: 0 0 0.35rem;
+}
+
+.yp-web-design-package__tagline {
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+	margin: 0 0 1rem;
+}
+
+.yp-web-design-package__price {
+	margin-bottom: 1rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-web-design-package__price-flag {
+	display: block;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wp--preset--color--magenta-deep);
+	margin-bottom: 0.25rem;
+}
+
+.yp-web-design-package__price-amount {
+	display: block;
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 2rem;
+	font-weight: 700;
+	color: var(--wp--preset--color--near-black);
+	border-bottom: 1.5px dashed var(--wp--preset--color--magenta-deep);
+	width: fit-content;
+}
+
+.yp-web-design-package__features {
+	list-style: none;
+	margin: 0 0 1.25rem;
+	padding: 0;
+	flex-grow: 1;
+}
+
+.yp-web-design-package__features li {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	font-size: var(--wp--preset--font-size--small);
+	margin-bottom: 0.6rem;
+}
+
+.yp-web-design-package__features li svg {
+	flex-shrink: 0;
+	margin-top: 0.15rem;
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-web-design-package__cta {
+	display: block;
+	text-align: center;
+}
+
+/* "What's Included" icon grid */
+.yp-included-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: var(--wp--preset--spacing--md);
+	margin-top: var(--wp--preset--spacing--md);
+}
+
+@media (max-width: 781px) {
+	.yp-included-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 500px) {
+	.yp-included-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.yp-included-item {
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: var(--wp--preset--spacing--md);
+}
+
+.yp-included-item__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 999px;
+	margin-bottom: 1rem;
+}
+
+.yp-included-item:nth-child(3n+1) .yp-included-item__icon {
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-included-item:nth-child(3n+2) .yp-included-item__icon {
+	background: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-included-item:nth-child(3n) .yp-included-item__icon {
+	background: var(--wp--preset--color--yellow);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-included-item h3 {
+	margin: 0 0 0.35rem;
+	font-size: var(--wp--preset--font-size--medium);
+}
+
+.yp-included-item p {
+	margin: 0;
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* Maintenance subscription teaser */
+.yp-maintenance-teaser {
+	background: var(--wp--preset--color--warm-white);
+	border: 1.5px solid rgba(0, 174, 239, 0.25);
+	border-radius: var(--wp--custom--radius--container);
+	padding: var(--wp--preset--spacing--lg);
+	text-align: center;
+}

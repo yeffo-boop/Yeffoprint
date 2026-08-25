@@ -162,6 +162,11 @@
 			"name": "how-it-works",
 			"title": "How It Works",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "web-design",
+			"title": "Web Design",
+			"postTypes": [ "page" ]
 		}
 	]
 }
