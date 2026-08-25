@@ -6,18 +6,75 @@
  *
  * Direct request: real customer-facing copy for each material type,
  * to sit right below the swatch grid (materials.php) as a deeper
- * "which one should I pick" guide. Deliberately hardcoded, not
- * data-driven like materials.php — this is verbatim business copy the
- * site owner supplied (lightly copyedited for grammar only, facts
- * untouched), not something to derive from a Material record's own
- * short blurb field.
+ * "which one should I pick" guide. The copy itself is deliberately
+ * hardcoded, not data-driven like materials.php — this is verbatim
+ * business copy the site owner supplied (lightly copyedited for
+ * grammar only, facts untouched), not something to derive from a
+ * Material record's own short blurb field.
  *
- * Includes Prism, which materials.php's swatch grid won't show unless
- * a published `yp_material` record for it exists yet — see this
- * pattern's own note in docs/ARCHITECTURE.md.
+ * The photo next to each entry is real, though (V2, direct follow-up
+ * request: "pull the picture assigned to the material") — looked up by
+ * matching each entry's own `slug` below against a published
+ * `yp_material` record's post_name, the same swatch image
+ * materials.php's own grid already reads via get_the_post_thumbnail_url().
+ * A material with no matching record yet, or a record with no photo
+ * uploaded, falls back to the same per-material gradient "chip" look
+ * materials.php's own swatch grid already falls back to — same
+ * `--{slug}` modifier classes, shared CSS rule (see patterns.css).
  */
 
 defined( 'ABSPATH' ) || exit;
+
+// One entry per material this guide describes. `slug` must match the
+// yp_material record's own post_name for the real photo to be found —
+// this project's own established slugs (glossy-white, matte-white,
+// holographic, clear, metallic) for the five that already exist from
+// initial seeding; `prism` is a guess for if/when that one is added,
+// since it doesn't exist yet (see this pattern's own docblock above).
+$materials = [
+	[
+		'slug'  => 'glossy-white',
+		'name'  => 'Standard White Glossy',
+		'spec'  => '2.75mil · Glossy',
+		'body'  => "Our standard material, recommended for most projects. A bright white base with a slight shine, and very easy to apply.",
+		'note'  => '',
+	],
+	[
+		'slug'  => 'matte-white',
+		'name'  => 'Standard White Matte',
+		'spec'  => '2.75mil · Matte',
+		'body'  => 'Our standard material, recommended for most projects. The same bright white base as our glossy option, without the shine, and very easy to apply.',
+		'note'  => '',
+	],
+	[
+		'slug'  => 'holographic',
+		'name'  => 'Holographic',
+		'spec'  => 'Rainbow Sheen',
+		'body'  => 'Our most popular holographic option, slightly thicker than our standard labels. Anywhere your design shows white, it takes on a rainbow, holographic sheen in the light.',
+		'note'  => "Designs with highly saturated solid colors can occasionally cause holographic sheets to curl slightly during shipping. This never affects a label's print quality or stickiness, but it does mean holographic orders ship about 24 hours later than usual to account for it.",
+	],
+	[
+		'slug'  => 'prism',
+		'name'  => 'Prism',
+		'spec'  => 'Prism Pattern',
+		'body'  => 'One of the newest additions to our lineup, slightly thicker than our standard labels. Anywhere your design shows white, it takes on our prism pattern — best suited to simpler designs, since a busier design can make the effect feel overwhelming.',
+		'note'  => '',
+	],
+	[
+		'slug'  => 'metallic',
+		'name'  => 'Metallic',
+		'spec'  => '4mil · Chrome',
+		'body'  => 'A newer addition with a true chrome finish. Anywhere your design shows white, it takes on a metallic shine.',
+		'note'  => '',
+	],
+	[
+		'slug'  => 'clear',
+		'name'  => 'Transparent (Clear)',
+		'spec'  => 'Clear',
+		'body'  => 'Exactly what it sounds like — a fully clear label. Works best with simpler designs and less image detail, since fine detail can oversaturate during printing and edges can appear slightly blurred.',
+		'note'  => '',
+	],
+];
 ?>
 <!-- wp:group {"tagName":"section","className":"yp-section","layout":{"type":"constrained","contentSize":"760px"}} -->
 <section class="wp-block-group yp-section">
@@ -37,54 +94,36 @@ defined( 'ABSPATH' ) || exit;
 	<!-- wp:html -->
 	<div class="yp-material-guide">
 
-		<div class="yp-material-guide__item">
-			<div class="yp-material-guide__header">
-				<h3>Standard White Glossy</h3>
-				<span class="yp-material-guide__spec">2.75mil &middot; Glossy</span>
-			</div>
-			<p>Our standard material, recommended for most projects. A bright white base with a slight shine, and very easy to apply.</p>
-		</div>
+		<?php foreach ( $materials as $material ) :
+			$record     = get_posts( [
+				'name'           => $material['slug'],
+				'post_type'      => 'yp_material',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+			] );
+			$photo_url  = $record ? get_the_post_thumbnail_url( $record[0], 'thumbnail' ) : '';
+			?>
+			<div class="yp-material-guide__item">
 
-		<div class="yp-material-guide__item">
-			<div class="yp-material-guide__header">
-				<h3>Standard White Matte</h3>
-				<span class="yp-material-guide__spec">2.75mil &middot; Matte</span>
-			</div>
-			<p>Our standard material, recommended for most projects. The same bright white base as our glossy option, without the shine, and very easy to apply.</p>
-		</div>
+				<?php if ( $photo_url ) : ?>
+					<img class="yp-material-guide__photo" src="<?php echo esc_url( $photo_url ); ?>" alt="" width="88" height="88" />
+				<?php else : ?>
+					<div class="yp-material-guide__photo yp-material-guide__photo--<?php echo esc_attr( $material['slug'] ); ?>" aria-hidden="true"></div>
+				<?php endif; ?>
 
-		<div class="yp-material-guide__item">
-			<div class="yp-material-guide__header">
-				<h3>Holographic</h3>
-				<span class="yp-material-guide__spec">Rainbow Sheen</span>
-			</div>
-			<p>Our most popular holographic option, slightly thicker than our standard labels. Anywhere your design shows white, it takes on a rainbow, holographic sheen in the light.</p>
-			<p class="yp-material-guide__note">Designs with highly saturated solid colors can occasionally cause holographic sheets to curl slightly during shipping. This never affects a label's print quality or stickiness, but it does mean holographic orders ship about 24 hours later than usual to account for it.</p>
-		</div>
+				<div class="yp-material-guide__body">
+					<div class="yp-material-guide__header">
+						<h3><?php echo esc_html( $material['name'] ); ?></h3>
+						<span class="yp-material-guide__spec"><?php echo esc_html( $material['spec'] ); ?></span>
+					</div>
+					<p><?php echo esc_html( $material['body'] ); ?></p>
+					<?php if ( $material['note'] ) : ?>
+						<p class="yp-material-guide__note"><?php echo esc_html( $material['note'] ); ?></p>
+					<?php endif; ?>
+				</div>
 
-		<div class="yp-material-guide__item">
-			<div class="yp-material-guide__header">
-				<h3>Prism</h3>
-				<span class="yp-material-guide__spec">Prism Pattern</span>
 			</div>
-			<p>One of the newest additions to our lineup, slightly thicker than our standard labels. Anywhere your design shows white, it takes on our prism pattern — best suited to simpler designs, since a busier design can make the effect feel overwhelming.</p>
-		</div>
-
-		<div class="yp-material-guide__item">
-			<div class="yp-material-guide__header">
-				<h3>Metallic</h3>
-				<span class="yp-material-guide__spec">4mil &middot; Chrome</span>
-			</div>
-			<p>A newer addition with a true chrome finish. Anywhere your design shows white, it takes on a metallic shine.</p>
-		</div>
-
-		<div class="yp-material-guide__item">
-			<div class="yp-material-guide__header">
-				<h3>Transparent (Clear)</h3>
-				<span class="yp-material-guide__spec">Clear</span>
-			</div>
-			<p>Exactly what it sounds like — a fully clear label. Works best with simpler designs and less image detail, since fine detail can oversaturate during printing and edges can appear slightly blurred.</p>
-		</div>
+		<?php endforeach; ?>
 
 	</div>
 	<!-- /wp:html -->

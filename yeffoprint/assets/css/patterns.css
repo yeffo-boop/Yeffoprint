@@ -726,13 +726,22 @@
 	}
 }
 
-.yp-material-swatch__chip--glossy-white {
+/* Each fallback here is shared with material-guide.php's own photo
+   circles (.yp-material-guide__photo--{slug}) via the same selector
+   list, not duplicated — one "what does this material look like
+   without a real photo yet" definition per material, used by both the
+   swatch grid and the guide below it. */
+
+.yp-material-swatch__chip--glossy-white,
+.yp-material-guide__photo--glossy-white {
 	background: linear-gradient(135deg, #ffffff 0%, #f2f1ee 55%, #ffffff 100%);
 }
 
 .yp-material-swatch__chip--glossy-white::after {
 	/* A soft diagonal highlight band reads as "glossy/reflective" rather
-	   than flat, without needing a real photo. */
+	   than flat, without needing a real photo. Swatch-grid only (its
+	   square chip has room for this); the guide's own small circle
+	   skips it rather than fighting for space with border-radius:50%. */
 	content: "";
 	position: absolute;
 	inset: -60% -10%;
@@ -740,23 +749,41 @@
 	transform: rotate(3deg);
 }
 
-.yp-material-swatch__chip--matte-white {
+.yp-material-swatch__chip--matte-white,
+.yp-material-guide__photo--matte-white {
 	background: linear-gradient(160deg, #f5f4f0 0%, #e9e7e1 100%);
 }
 
-.yp-material-swatch__chip--holographic {
+.yp-material-swatch__chip--holographic,
+.yp-material-guide__photo--holographic {
 	background: linear-gradient(120deg, #00aeef 0%, #ec008c 33%, #fff200 66%, #00aeef 100%);
 	background-size: 220% 220%;
 }
 
-.yp-material-swatch__chip--clear {
+.yp-material-swatch__chip--prism,
+.yp-material-guide__photo--prism {
+	/* Narrow repeating bands, distinct from holographic's broad diagonal
+	   wash above — reads as a fine prism/light-split pattern rather than
+	   a second holographic look. */
+	background: repeating-linear-gradient(
+		100deg,
+		#00aeef 0%, #00aeef 8%,
+		#ec008c 8%, #ec008c 16%,
+		#fff200 16%, #fff200 24%,
+		#ffffff 24%, #ffffff 32%
+	);
+}
+
+.yp-material-swatch__chip--clear,
+.yp-material-guide__photo--clear {
 	background:
 		repeating-linear-gradient(45deg, rgba(20, 20, 20, 0.05) 0 2px, transparent 2px 10px),
 		linear-gradient(160deg, rgba(0, 174, 239, 0.12), rgba(236, 0, 140, 0.1));
 	border: 1.5px solid rgba(20, 20, 20, 0.12);
 }
 
-.yp-material-swatch__chip--metallic {
+.yp-material-swatch__chip--metallic,
+.yp-material-guide__photo--metallic {
 	background: linear-gradient(135deg, #d8dbe0 0%, #9a9fa8 40%, #eef0f2 55%, #7d828c 100%);
 }
 
@@ -781,10 +808,45 @@
 }
 
 .yp-material-guide__item {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--sm);
 	background: var(--wp--preset--color--white);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	padding: var(--wp--preset--spacing--md);
+}
+
+@media (max-width: 600px) {
+	/* A circle competing with a card's own padding for space reads as
+	   cramped at this width — centered above the text instead. */
+	.yp-material-guide__item {
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+	}
+
+	.yp-material-guide__header {
+		justify-content: center;
+	}
+}
+
+/* Circle so it reads as a material sample, not a product photo —
+   .yp-material-swatch above already establishes photo = square chip,
+   so a circle here keeps this section visually distinct from that one
+   despite reusing its same fallback-gradient definitions. */
+.yp-material-guide__photo {
+	flex-shrink: 0;
+	width: 88px;
+	height: 88px;
+	border-radius: 50%;
+	object-fit: cover;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-material-guide__body {
+	flex-grow: 1;
+	min-width: 0;
 }
 
 .yp-material-guide__header {
