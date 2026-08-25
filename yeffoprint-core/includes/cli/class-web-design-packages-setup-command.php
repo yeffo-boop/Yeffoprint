@@ -1,7 +1,7 @@
 <?php
 /**
  * Dev-only setup: creates the three Web Design Package records
- * (patterns/web-design-packages.php now reads yp_web_design_package
+ * (patterns/web-design-packages.php now reads yp_web_design_pkg
  * posts live instead of a hardcoded array) with the exact placeholder
  * copy that array used to hold, so the page isn't blank the moment
  * this ships — the owner then edits real pricing/features on each
@@ -26,7 +26,7 @@ class YeffoPrint_Web_Design_Packages_Setup_Command {
 	 */
 	public function setup(): void {
 		$existing = get_posts( [
-			'post_type'      => 'yp_web_design_package',
+			'post_type'      => 'yp_web_design_pkg',
 			'post_status'    => 'any',
 			'posts_per_page' => 1,
 		] );
@@ -79,7 +79,7 @@ class YeffoPrint_Web_Design_Packages_Setup_Command {
 
 		foreach ( $packages as $order => $package ) {
 			$post_id = wp_insert_post( [
-				'post_type'   => 'yp_web_design_package',
+				'post_type'   => 'yp_web_design_pkg',
 				'post_title'  => $package['name'],
 				'post_status' => 'publish',
 				'menu_order'  => $order,

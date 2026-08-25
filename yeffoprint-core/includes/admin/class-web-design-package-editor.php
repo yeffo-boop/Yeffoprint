@@ -23,10 +23,10 @@ class YeffoPrint_Web_Design_Package_Editor {
 
 	public function __construct() {
 		add_action( 'add_meta_boxes', [ $this, 'add_meta_boxes' ] );
-		add_action( 'save_post_yp_web_design_package', [ $this, 'save' ] );
+		add_action( 'save_post_yp_web_design_pkg', [ $this, 'save' ] );
 
-		add_filter( 'manage_yp_web_design_package_posts_columns', [ $this, 'columns' ] );
-		add_action( 'manage_yp_web_design_package_posts_custom_column', [ $this, 'render_column' ], 10, 2 );
+		add_filter( 'manage_yp_web_design_pkg_posts_columns', [ $this, 'columns' ] );
+		add_action( 'manage_yp_web_design_pkg_posts_custom_column', [ $this, 'render_column' ], 10, 2 );
 	}
 
 	public function add_meta_boxes(): void {
@@ -34,7 +34,7 @@ class YeffoPrint_Web_Design_Package_Editor {
 			'yp-web-design-package-details',
 			__( 'Package Details', 'yeffoprint-core' ),
 			[ $this, 'render_box' ],
-			'yp_web_design_package',
+			'yp_web_design_pkg',
 			'normal'
 		);
 	}
