@@ -126,6 +126,19 @@ class YeffoPrint_Post_Type_Registry {
 			[ 'title', 'custom-fields', 'author' ],
 			false
 		) );
+
+		// One record per Stripe maintenance-plan subscriber, kept in sync
+		// by class-stripe-webhook-controller.php — see
+		// includes/maintenance/class-maintenance-sub-meta.php. Not
+		// publicly queryable; admin-managed the same way every other
+		// record type here is, just written by a webhook instead of a
+		// human filling in a form.
+		register_post_type( 'yp_maintenance_sub', $this->args(
+			__( 'Maintenance Subscribers', 'yeffoprint-core' ),
+			__( 'Maintenance Subscriber', 'yeffoprint-core' ),
+			[ 'title', 'custom-fields' ],
+			false
+		) );
 	}
 
 	/**
