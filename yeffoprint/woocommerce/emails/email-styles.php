@@ -447,6 +447,20 @@ table.yp-email-fields-rows .yp-email-field-value {
 	font-weight: 600;
 }
 
+/* A color-picker field's own swatch, next to its hex value — same
+   class-plus-inline-background-color technique as the header wordmark's
+   own .yp-dot spans, since the color itself is per-order data and can't
+   live in this static stylesheet. */
+.yp-email-color-swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 3px;
+	border: 1px solid <?php echo esc_attr( $border ); ?>;
+	vertical-align: middle;
+	margin-right: 5px;
+}
+
 /* ---- Footer band ---- */
 #template_footer td {
 	padding: 0;

@@ -439,8 +439,9 @@ class YeffoPrint_Order_Item_Meta {
 		$rows = array_map(
 			static function ( array $pair ): string {
 				return sprintf(
-					'<tr><td class="yp-email-field-label">%s</td><td class="yp-email-field-value">%s</td></tr>',
+					'<tr><td class="yp-email-field-label">%s</td><td class="yp-email-field-value">%s%s</td></tr>',
 					esc_html( $pair['label'] ),
+					self::color_swatch_html( $pair, 'yp-email-color-swatch' ),
 					esc_html( $pair['value'] )
 				);
 			},
@@ -455,8 +456,9 @@ class YeffoPrint_Order_Item_Meta {
 		$rows = array_map(
 			static function ( array $pair ): string {
 				return sprintf(
-					'<div class="yp-order-field"><span class="yp-order-field__label">%s</span><span class="yp-order-field__value">%s</span></div>',
+					'<div class="yp-order-field"><span class="yp-order-field__label">%s</span><span class="yp-order-field__value">%s%s</span></div>',
 					esc_html( $pair['label'] ),
+					self::color_swatch_html( $pair, 'yp-order-field__swatch' ),
 					esc_html( $pair['value'] )
 				);
 			},
@@ -466,7 +468,32 @@ class YeffoPrint_Order_Item_Meta {
 		return $rows ? '<div class="yp-order-fields">' . implode( '', $rows ) . '</div>' : '';
 	}
 
-	/** @return array<int, array{label:string, value:string}> Non-empty fields only, in field_schema order — shared by variant_fields_html() (admin div markup) and variant_fields_email_rows() (email table markup) above. */
+	/**
+	 * A small colored square before a `color`-type field's own hex value
+	 * — direct report: staff/customers could read "#2F6FED" but not see
+	 * what it actually looks like without pasting it somewhere else.
+	 * Same class-plus-inline-background-color technique email-header.php's
+	 * own wordmark dots (`.yp-dot`) already use for exactly this reason:
+	 * a per-value color can't live in a static stylesheet rule, only the
+	 * swatch's static size/shape can.
+	 *
+	 * Re-validates the hex format here (class-field-schema.php's own
+	 * `sanitize_hex_color()` already guarantees this at save time) since
+	 * this value is about to go straight into a `style` attribute.
+	 */
+	private static function color_swatch_html( array $pair, string $class ): string {
+		if ( 'color' !== $pair['type'] || ! preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $pair['value'] ) ) {
+			return '';
+		}
+
+		return sprintf(
+			'<span class="%s" style="background-color:%s;"></span>',
+			esc_attr( $class ),
+			esc_attr( $pair['value'] )
+		);
+	}
+
+	/** @return array<int, array{label:string, value:string, type:string}> Non-empty fields only, in field_schema order — shared by variant_fields_html() (admin div markup) and variant_fields_email_rows() (email table markup) above. */
 	private function variant_field_pairs( array $variant, array $field_schema ): array {
 		$values = (array) ( $variant['values'] ?? [] );
 		$pairs  = [];
@@ -480,6 +507,7 @@ class YeffoPrint_Order_Item_Meta {
 			$pairs[] = [
 				'label' => (string) ( $field['label'] ?? '' ),
 				'value' => $value,
+				'type'  => (string) ( $field['type'] ?? '' ),
 			];
 		}
 
