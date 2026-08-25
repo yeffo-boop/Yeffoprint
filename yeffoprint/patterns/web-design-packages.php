@@ -20,9 +20,22 @@
  * convention material-guide.php's own $materials array already
  * established for business copy that isn't computationally load-bearing
  * elsewhere.
+ *
+ * The maintenance-subscription badge above the grid (direct follow-up:
+ * "I don't like where the monthly maintenance and monitoring is. Maybe
+ * move it towards the top on some badge on the pricing table?") replaces
+ * what used to be its own full section further down the page
+ * (web-design-maintenance-teaser.php, now deleted — this pattern owns
+ * that link now). Same payment-link-with-fallback logic that pattern
+ * had: reads 'yeffoprint_maintenance_payment_link' directly, falling
+ * back to /contact/ until that Stripe setup is done — see
+ * docs/ARCHITECTURE.md.
  */
 
 defined( 'ABSPATH' ) || exit;
+
+$maintenance_payment_link = get_option( 'yeffoprint_maintenance_payment_link', '' );
+$maintenance_url          = $maintenance_payment_link ? $maintenance_payment_link : home_url( '/contact/' );
 
 $packages = [
 	[
@@ -79,6 +92,18 @@ $packages = [
 	<!-- wp:paragraph {"align":"center"} -->
 	<p class="has-text-align-center">Every project is scoped to what you're actually building — these are starting points, not a fixed menu. <a href="/contact/">Tell us about your store</a> and we'll put together a real quote.</p>
 	<!-- /wp:paragraph -->
+
+	<!-- wp:html -->
+	<a class="yp-web-design-maintenance-badge" href="<?php echo esc_url( $maintenance_url ); ?>">
+		<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+			<path d="M12.5 3.5a4 4 0 0 0-5.4 4.9L2.5 13a1.8 1.8 0 0 0 2.5 2.5l4.6-4.6a4 4 0 0 0 4.9-5.4l-2.6 2.6-2-2 2.6-2.6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
+		</svg>
+		<span>Every package can add <strong>ongoing maintenance &amp; monitoring</strong> after launch</span>
+		<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+			<path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+		</svg>
+	</a>
+	<!-- /wp:html -->
 
 	<!-- wp:html -->
 	<div class="yp-web-design-packages">

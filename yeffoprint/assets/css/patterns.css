@@ -1575,11 +1575,50 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
-/* Maintenance subscription teaser */
-.yp-maintenance-teaser {
-	background: var(--wp--preset--color--warm-white);
-	border: 1.5px solid rgba(0, 174, 239, 0.25);
-	border-radius: var(--wp--custom--radius--container);
-	padding: var(--wp--preset--spacing--lg);
-	text-align: center;
+/* Maintenance subscription badge — direct follow-up: "move it towards
+   the top on some badge on the pricing table." Sits between the
+   packages section's intro paragraph and the grid itself (both a real
+   `.yp-web-design-packages` grid); width:fit-content + margin:auto
+   centers the pill regardless of the parent's own text-align. */
+.yp-web-design-maintenance-badge {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.6rem;
+	width: fit-content;
+	margin: 1.25rem auto 0;
+	padding: 0.65rem 1.35rem;
+	background: var(--wp--custom--gradient-brand-deep);
+	color: var(--wp--preset--color--white);
+	border-radius: 999px;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	text-decoration: none;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-web-design-maintenance-badge:hover,
+.yp-web-design-maintenance-badge:focus-visible {
+	transform: translateY(-1px);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-web-design-maintenance-badge svg {
+	flex-shrink: 0;
+}
+
+@media (max-width: 500px) {
+	/* A pill sized to fit-content can't shrink below its own content's
+	   natural width — at this width that content (icon + full sentence +
+	   icon, all one line) is wider than the viewport itself. Switching to
+	   a full-width, less-rounded banner that wraps lets the same content
+	   fit without ever overflowing horizontally. */
+	.yp-web-design-maintenance-badge {
+		width: 100%;
+		flex-wrap: wrap;
+		border-radius: var(--wp--custom--radius--control);
+		text-align: center;
+	}
 }
