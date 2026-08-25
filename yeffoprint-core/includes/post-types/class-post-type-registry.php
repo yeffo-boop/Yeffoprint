@@ -147,7 +147,7 @@ class YeffoPrint_Post_Type_Registry {
 		// same native drag-orderable sort (menu_order) Material/Size
 		// already use; active/inactive reuses post_status like they do
 		// too, rather than a redundant meta flag.
-		register_post_type( 'yp_web_design_package', $this->args(
+		register_post_type( 'yp_web_design_pkg', $this->args(
 			__( 'Web Design Packages', 'yeffoprint-core' ),
 			__( 'Web Design Package', 'yeffoprint-core' ),
 			[ 'title', 'page-attributes', 'custom-fields' ],

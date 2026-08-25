@@ -1,6 +1,6 @@
 <?php
 /**
- * Post meta for the yp_web_design_package record — one per tier on the
+ * Post meta for the yp_web_design_pkg record — one per tier on the
  * Web Design page's pricing table (yeffoprint theme,
  * patterns/web-design-packages.php). Direct follow-up request: "I'd
  * like to make it future proof and be able to adjust prices from the
@@ -34,7 +34,7 @@ class YeffoPrint_Web_Design_Package_Meta {
 	}
 
 	public function register_meta(): void {
-		register_post_meta( 'yp_web_design_package', self::PRICE, [
+		register_post_meta( 'yp_web_design_pkg', self::PRICE, [
 			'type'          => 'string',
 			'single'        => true,
 			'default'       => '',
@@ -42,7 +42,7 @@ class YeffoPrint_Web_Design_Package_Meta {
 			'auth_callback' => [ $this, 'can_edit' ],
 		] );
 
-		register_post_meta( 'yp_web_design_package', self::TAGLINE, [
+		register_post_meta( 'yp_web_design_pkg', self::TAGLINE, [
 			'type'          => 'string',
 			'single'        => true,
 			'default'       => '',
@@ -50,7 +50,7 @@ class YeffoPrint_Web_Design_Package_Meta {
 			'auth_callback' => [ $this, 'can_edit' ],
 		] );
 
-		register_post_meta( 'yp_web_design_package', self::FEATURED, [
+		register_post_meta( 'yp_web_design_pkg', self::FEATURED, [
 			'type'          => 'boolean',
 			'single'        => true,
 			'default'       => false,
@@ -66,7 +66,7 @@ class YeffoPrint_Web_Design_Package_Meta {
 	/** Every published tier, in the admin's own drag-order — what the pricing table itself renders. */
 	public static function get_published(): array {
 		return get_posts( [
-			'post_type'      => 'yp_web_design_package',
+			'post_type'      => 'yp_web_design_pkg',
 			'post_status'    => 'publish',
 			'posts_per_page' => -1,
 			'orderby'        => 'menu_order',

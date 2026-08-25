@@ -10,7 +10,7 @@
  * much per client for a fixed price — so every card's CTA goes to
  * /contact/, not a cart/checkout flow.
  *
- * Tiers are real, admin-editable yp_web_design_package records now
+ * Tiers are real, admin-editable yp_web_design_pkg records now
  * (direct follow-up: "I'd like to make it future proof and be able to
  * adjust prices from the YeffoPrint admin panel") — see
  * class-web-design-package-editor.php. Originally a hardcoded array

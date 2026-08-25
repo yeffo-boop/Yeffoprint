@@ -51,7 +51,7 @@ class YeffoPrint_Admin_Shell {
 		'yp_proof',
 		'yp_field_preset',
 		'yp_maintenance_sub',
-		'yp_web_design_package',
+		'yp_web_design_pkg',
 	];
 
 	/**
