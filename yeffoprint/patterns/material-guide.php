@@ -21,6 +21,15 @@
  * uploaded, falls back to the same per-material gradient "chip" look
  * materials.php's own swatch grid already falls back to — same
  * `--{slug}` modifier classes, shared CSS rule (see patterns.css).
+ *
+ * The thickness figure in each entry's spec pill (V3, direct follow-up
+ * request: "add that field to the material form so I can indicate
+ * thickness there and you can pull that data and display it here") is
+ * live where the matched record has one set (Material editor's
+ * Thickness (mil) field, class-material-size-editor.php) — built from
+ * that value plus the entry's own hardcoded `finish` label below. A
+ * material with no matching record, or a record with no thickness set
+ * yet, falls back to this entry's own hardcoded `spec` string.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -33,46 +42,52 @@ defined( 'ABSPATH' ) || exit;
 // since it doesn't exist yet (see this pattern's own docblock above).
 $materials = [
 	[
-		'slug'  => 'glossy-white',
-		'name'  => 'Standard White Glossy',
-		'spec'  => '2.75mil · Glossy',
-		'body'  => "Our standard material, recommended for most projects. A bright white base with a slight shine, and very easy to apply.",
-		'note'  => '',
+		'slug'   => 'glossy-white',
+		'name'   => 'Standard White Glossy',
+		'spec'   => '2.75mil · Glossy',
+		'finish' => 'Glossy',
+		'body'   => "Our standard material, recommended for most projects. A bright white base with a slight shine, and very easy to apply.",
+		'note'   => '',
 	],
 	[
-		'slug'  => 'matte-white',
-		'name'  => 'Standard White Matte',
-		'spec'  => '2.75mil · Matte',
-		'body'  => 'Our standard material, recommended for most projects. The same bright white base as our glossy option, without the shine, and very easy to apply.',
-		'note'  => '',
+		'slug'   => 'matte-white',
+		'name'   => 'Standard White Matte',
+		'spec'   => '2.75mil · Matte',
+		'finish' => 'Matte',
+		'body'   => 'Our standard material, recommended for most projects. The same bright white base as our glossy option, without the shine, and very easy to apply.',
+		'note'   => '',
 	],
 	[
-		'slug'  => 'holographic',
-		'name'  => 'Holographic',
-		'spec'  => 'Rainbow Sheen',
-		'body'  => 'Our most popular holographic option, slightly thicker than our standard labels. Anywhere your design shows white, it takes on a rainbow, holographic sheen in the light.',
-		'note'  => "Designs with highly saturated solid colors can occasionally cause holographic sheets to curl slightly during shipping. This never affects a label's print quality or stickiness, but it does mean holographic orders ship about 24 hours later than usual to account for it.",
+		'slug'   => 'holographic',
+		'name'   => 'Holographic',
+		'spec'   => 'Rainbow Sheen',
+		'finish' => 'Rainbow Sheen',
+		'body'   => 'Our most popular holographic option, slightly thicker than our standard labels. Anywhere your design shows white, it takes on a rainbow, holographic sheen in the light.',
+		'note'   => "Designs with highly saturated solid colors can occasionally cause holographic sheets to curl slightly during shipping. This never affects a label's print quality or stickiness, but it does mean holographic orders ship about 24 hours later than usual to account for it.",
 	],
 	[
-		'slug'  => 'prism',
-		'name'  => 'Prism',
-		'spec'  => 'Prism Pattern',
-		'body'  => 'One of the newest additions to our lineup, slightly thicker than our standard labels. Anywhere your design shows white, it takes on our prism pattern — best suited to simpler designs, since a busier design can make the effect feel overwhelming.',
-		'note'  => '',
+		'slug'   => 'prism',
+		'name'   => 'Prism',
+		'spec'   => 'Prism Pattern',
+		'finish' => 'Prism Pattern',
+		'body'   => 'One of the newest additions to our lineup, slightly thicker than our standard labels. Anywhere your design shows white, it takes on our prism pattern — best suited to simpler designs, since a busier design can make the effect feel overwhelming.',
+		'note'   => '',
 	],
 	[
-		'slug'  => 'metallic',
-		'name'  => 'Metallic',
-		'spec'  => '4mil · Chrome',
-		'body'  => 'A newer addition with a true chrome finish. Anywhere your design shows white, it takes on a metallic shine.',
-		'note'  => '',
+		'slug'   => 'metallic',
+		'name'   => 'Metallic',
+		'spec'   => '4mil · Chrome',
+		'finish' => 'Chrome',
+		'body'   => 'A newer addition with a true chrome finish. Anywhere your design shows white, it takes on a metallic shine.',
+		'note'   => '',
 	],
 	[
-		'slug'  => 'clear',
-		'name'  => 'Transparent (Clear)',
-		'spec'  => 'Clear',
-		'body'  => 'Exactly what it sounds like — a fully clear label. Works best with simpler designs and less image detail, since fine detail can oversaturate during printing and edges can appear slightly blurred.',
-		'note'  => '',
+		'slug'   => 'clear',
+		'name'   => 'Transparent (Clear)',
+		'spec'   => 'Clear',
+		'finish' => 'Clear',
+		'body'   => 'Exactly what it sounds like — a fully clear label. Works best with simpler designs and less image detail, since fine detail can oversaturate during printing and edges can appear slightly blurred.',
+		'note'   => '',
 	],
 ];
 ?>
@@ -101,7 +116,13 @@ $materials = [
 				'post_status'    => 'publish',
 				'posts_per_page' => 1,
 			] );
-			$photo_url  = $record ? get_the_post_thumbnail_url( $record[0], 'thumbnail' ) : '';
+			$photo_url = $record ? get_the_post_thumbnail_url( $record[0], 'thumbnail' ) : '';
+			$thickness = $record ? (float) get_post_meta( $record[0]->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ) : 0;
+			$spec      = $material['spec'];
+			if ( $thickness > 0 ) {
+				$thickness_display = rtrim( rtrim( number_format( $thickness, 2, '.', '' ), '0' ), '.' );
+				$spec              = $thickness_display . 'mil · ' . $material['finish'];
+			}
 			?>
 			<div class="yp-material-guide__item">
 
@@ -114,7 +135,7 @@ $materials = [
 				<div class="yp-material-guide__body">
 					<div class="yp-material-guide__header">
 						<h3><?php echo esc_html( $material['name'] ); ?></h3>
-						<span class="yp-material-guide__spec"><?php echo esc_html( $material['spec'] ); ?></span>
+						<span class="yp-material-guide__spec"><?php echo esc_html( $spec ); ?></span>
 					</div>
 					<p><?php echo esc_html( $material['body'] ); ?></p>
 					<?php if ( $material['note'] ) : ?>

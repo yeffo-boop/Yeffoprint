@@ -73,12 +73,19 @@ class YeffoPrint_Material_Size_Editor {
 		$adjustment = get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true );
 		$hover_id   = (int) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true );
 		$hover_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'thumbnail' ) : '';
+		$thickness  = (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true );
 		?>
 		<p>
 			<label for="yp-price-adjustment"><?php esc_html_e( 'Price adjustment per label ($)', 'yeffoprint-core' ); ?></label><br />
 			<input type="number" step="0.01" id="yp-price-adjustment" name="yp_price_adjustment" value="<?php echo esc_attr( $adjustment !== '' ? $adjustment : '0' ); ?>" class="widefat" />
 		</p>
 		<p class="description"><?php esc_html_e( 'Added to the base unit price when this material is selected. The swatch image is this post\'s featured image (Set Featured Image, below); sort order is set by dragging on the list screen.', 'yeffoprint-core' ); ?></p>
+		<hr />
+		<p>
+			<label for="yp-thickness-mil"><?php esc_html_e( 'Thickness (mil)', 'yeffoprint-core' ); ?></label><br />
+			<input type="number" step="0.01" min="0" id="yp-thickness-mil" name="yp_thickness_mil" value="<?php echo esc_attr( $thickness > 0 ? $thickness : '' ); ?>" class="widefat" />
+		</p>
+		<p class="description"><?php esc_html_e( 'Shown on the How It Works page\'s material guide (e.g. "2.75mil · Glossy"). Leave blank to omit.', 'yeffoprint-core' ); ?></p>
 		<hr />
 		<?php
 		$scope = get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::SCOPE, true );
@@ -149,6 +156,10 @@ class YeffoPrint_Material_Size_Editor {
 
 		if ( 'yp_material' === get_post_type( $post_id ) && isset( $_POST['yp_hover_image_id'] ) ) {
 			update_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, absint( $_POST['yp_hover_image_id'] ) );
+		}
+
+		if ( 'yp_material' === get_post_type( $post_id ) && isset( $_POST['yp_thickness_mil'] ) ) {
+			update_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, (float) wp_unslash( $_POST['yp_thickness_mil'] ) );
 		}
 
 		if ( 'yp_material' === get_post_type( $post_id ) && isset( $_POST['yp_material_scope'] ) ) {
