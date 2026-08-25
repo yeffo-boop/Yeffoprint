@@ -172,6 +172,27 @@ class YeffoPrint_Admin_Menu {
 			25
 		);
 
+		// Left implicit before, this is WordPress's own well-known trap:
+		// with no submenu registered at the parent's own slug, WP quietly
+		// inserts one labeled the same as the parent ("YeffoPrint" again)
+		// — clicking the top-level sidebar item itself just expands/
+		// collapses the flyout, and only that *duplicate-labeled* entry
+		// inside it actually navigates anywhere. Harmless when this page
+		// was a placeholder; confusing now that real "what needs your
+		// attention today" content (YeffoPrint_Dashboard_Widgets) lives
+		// here — direct report: a click that "just toggles the submenu."
+		// Registering it explicitly, at this same 'yeffoprint' slug,
+		// replaces WP's auto-inserted duplicate with a distinctly-labeled
+		// one instead.
+		add_submenu_page(
+			'yeffoprint',
+			__( 'Dashboard', 'yeffoprint-core' ),
+			__( 'Dashboard', 'yeffoprint-core' ),
+			'manage_options',
+			'yeffoprint',
+			[ $this, 'render_dashboard' ]
+		);
+
 		$this->settings_page_hook = (string) add_submenu_page(
 			'yeffoprint',
 			__( 'Settings', 'yeffoprint-core' ),
