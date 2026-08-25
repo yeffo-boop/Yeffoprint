@@ -157,6 +157,11 @@
 			"name": "proof-approval",
 			"title": "Proof Approval",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "how-it-works",
+			"title": "How It Works",
+			"postTypes": [ "page" ]
 		}
 	]
 }
