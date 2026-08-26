@@ -66,6 +66,18 @@
  * on every WC login form regardless of which template rendered it) and
  * appends it directly — a duplicate-append guard means this is a no-op
  * wherever the hook *does* fire normally.
+ *
+ * Follow-up direct report: this store's own login flow actually funnels
+ * everyone through WordPress's native `wp-login.php`, not the
+ * WooCommerce account page — a different screen entirely, built into
+ * WP core itself rather than a theme-overridable template, so
+ * `render_wp_login_buttons()` targets it separately via WordPress's own
+ * `login_form` action (the hook every login/SSO plugin uses for exactly
+ * this, fired inside `wp-login.php`'s own `<form id="loginform">` —
+ * not overridable by a theme the way a WooCommerce template is).
+ * `enqueue_wp_login_styles()` loads a small, self-contained stylesheet
+ * there instead of the storefront's own `woocommerce.css`, since
+ * wp-login.php never loads the active theme's assets at all.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -79,6 +91,8 @@ class YeffoPrint_Social_Login {
 		add_action( 'template_redirect', [ $this, 'maybe_handle_request' ] );
 		add_action( 'woocommerce_login_form_end', [ $this, 'render_login_buttons' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_fallback_script' ] );
+		add_action( 'login_form', [ $this, 'render_wp_login_buttons' ] );
+		add_action( 'login_enqueue_scripts', [ $this, 'enqueue_wp_login_styles' ] );
 	}
 
 	/** The fixed URL each provider redirects back to — register this exact value as the app's Redirect URI in its developer console. Static + public: class-admin-menu.php's Settings screen shows it without needing an instance. */
@@ -376,20 +390,29 @@ class YeffoPrint_Social_Login {
 		echo $this->buttons_html(); // phpcs:ignore WordPress.Security.EscapeOutput -- buttons_html() already escapes every value it interpolates.
 	}
 
-	/** Returns '' when no provider is configured — both callers (the hook above, and enqueue_fallback_script() below) treat that as "nothing to show." */
-	private function buttons_html(): string {
+	/**
+	 * Returns '' when no provider is configured — every caller treats
+	 * that as "nothing to show." `$redirect_to`, when passed explicitly
+	 * (render_wp_login_buttons() passes wp-login.php's own `redirect_to`
+	 * query arg), always wins; left null, it falls back to the
+	 * WooCommerce-context guess below.
+	 */
+	private function buttons_html( ?string $redirect_to = null ): string {
 		$providers = $this->configured_providers();
 		if ( ! $providers ) {
 			return '';
 		}
 
-		// A guest who opened this form from checkout's "returning customer?"
-		// toggle should land back on checkout, not My Account, once logged
-		// in — otherwise they'd have to re-navigate to finish the order
-		// they were already partway through.
-		$redirect_to = ( function_exists( 'is_checkout' ) && is_checkout() && function_exists( 'wc_get_checkout_url' ) )
-			? wc_get_checkout_url()
-			: '';
+		if ( null === $redirect_to ) {
+			// A guest who opened this form from checkout's "returning
+			// customer?" toggle should land back on checkout, not My
+			// Account, once logged in — otherwise they'd have to
+			// re-navigate to finish the order they were already partway
+			// through.
+			$redirect_to = ( function_exists( 'is_checkout' ) && is_checkout() && function_exists( 'wc_get_checkout_url' ) )
+				? wc_get_checkout_url()
+				: '';
+		}
 
 		ob_start();
 		?>
@@ -449,6 +472,39 @@ class YeffoPrint_Social_Login {
 		wp_localize_script( 'yeffoprint-social-login-inject', 'yeffoprintSocialLogin', [
 			'html' => $html,
 		] );
+	}
+
+	/**
+	 * WordPress core's own `wp-login.php` — this store's actual login
+	 * flow (direct report), and a different screen entirely from
+	 * WooCommerce's account page: built into WP core rather than a
+	 * theme-overridable template, so `login_form` fires reliably
+	 * regardless of any WooCommerce template quirks on this install.
+	 * Reuses wp-login.php's own `redirect_to` query arg (the same one
+	 * every normal username/password login on this page already
+	 * respects) rather than guessing at a WooCommerce context that
+	 * doesn't apply here.
+	 */
+	public function render_wp_login_buttons(): void {
+		$redirect_to = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
+		$redirect_to = wp_validate_redirect( $redirect_to, '' );
+
+		echo $this->buttons_html( $redirect_to ); // phpcs:ignore WordPress.Security.EscapeOutput -- buttons_html() already escapes every value it interpolates.
+	}
+
+	/** wp-login.php never loads the active theme's stylesheets, so this is a small, self-contained stylesheet rather than reusing woocommerce.css's design tokens. */
+	public function enqueue_wp_login_styles(): void {
+		if ( ! $this->configured_providers() ) {
+			return;
+		}
+
+		$path = 'assets/frontend/social-login-wp-login.css';
+		wp_enqueue_style(
+			'yeffoprint-social-login-wp-login',
+			YEFFOPRINT_CORE_URL . $path,
+			[],
+			yeffoprint_core_asset_version( $path )
+		);
 	}
 
 	/** Fixed, hand-authored glyphs — no external icon font/CDN, same reasoning as every other inline SVG in this plugin (e.g. class-account-endpoints.php's proof-card icon). */
