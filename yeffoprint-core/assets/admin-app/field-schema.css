@@ -1,0 +1,173 @@
+/*
+ * Templates' compatible-sizes/materials checklist and the shared
+ * drag-to-position "Customization Fields" repeater (field-schema-editor.js,
+ * docs/ARCHITECTURE.md Phase 5) — used by the Templates and Field
+ * Presets screens only, so kept separate from records.css's more
+ * general CRUD list/form styles.
+ */
+
+/* A Template's drawer has considerably more in it than any other
+   record's (artwork/vial pickers, two checklists, the whole field
+   repeater) — this widens just that variant rather than the default
+   right-side drawer every other screen uses. */
+.yp-drawer--wide .yp-drawer__panel {
+	width: min(880px, 100%);
+}
+
+/* ---------- Compatible Sizes / Compatible Materials checklist ---------- */
+
+.yp-admin-checklist {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 1.25rem;
+}
+
+.yp-admin-checklist label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.85rem;
+}
+
+/* ---------- Field repeater ---------- */
+
+.yp-field-schema-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin-bottom: 0.75rem;
+}
+
+.yp-field-schema-empty {
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.85rem;
+	margin: 0;
+}
+
+.yp-field-schema-row {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.9rem 1rem 1rem;
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-field-schema-row legend {
+	font-weight: 600;
+	font-size: 0.85rem;
+	padding: 0 0.4rem;
+}
+
+.yp-field-schema-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 0.6rem 0.9rem;
+	margin-top: 0.4rem;
+}
+
+.yp-field-schema-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	font-size: 0.78rem;
+	font-weight: 600;
+}
+
+.yp-field-schema-field input,
+.yp-field-schema-field select,
+.yp-field-schema-field textarea {
+	font-family: var(--wp--preset--font-family--body);
+	font-weight: 400;
+	font-size: 0.85rem;
+	padding: 0.5rem 0.65rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-field-schema-field input[type="color"] {
+	padding: 0.2rem;
+	height: 2.4rem;
+}
+
+.yp-field-schema-checkbox {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.82rem;
+	font-weight: 500;
+	align-self: end;
+}
+
+.yp-field-schema-row-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.25rem;
+	margin-top: 0.6rem;
+	padding-top: 0.6rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-field-preset-insert {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}
+
+.yp-field-preset-insert select {
+	font-family: var(--wp--preset--font-family--body);
+	font-size: 0.85rem;
+	padding: 0.5rem 0.65rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+}
+
+/* ---------- Drag-to-position preview ---------- */
+
+.yp-field-position-stage {
+	position: relative;
+	width: 100%;
+	max-width: 480px;
+	border-radius: var(--wp--custom--radius--control);
+	overflow: hidden;
+	background: var(--wp--preset--color--light-gray);
+	margin-bottom: 0.75rem;
+}
+
+.yp-field-position-stage img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.yp-field-position-marker {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	border: none;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.7rem;
+	font-weight: 600;
+	white-space: nowrap;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: 0.25rem 0.55rem;
+	cursor: grab;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-field-position-marker:focus-visible {
+	outline: 2px solid var(--wp--preset--color--magenta-deep);
+	outline-offset: 2px;
+}
+
+.yp-field-position-marker.is-dragging {
+	cursor: grabbing;
+	background: var(--wp--preset--color--magenta-deep);
+}
