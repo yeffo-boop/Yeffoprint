@@ -1,0 +1,316 @@
+/*
+ * The new custom admin dashboard's shell (docs/ARCHITECTURE.md). Scoped
+ * entirely under `body.yeffoprint-app` — added server-side via
+ * YeffoPrint_Admin_App::add_body_class() only on the one `yeffoprint`
+ * top-level page, so nothing here ever touches Posts/Plugins/any other
+ * wp-admin screen, or the CPT editors YeffoPrint_Admin_Shell still
+ * reskins for now (Materials, Pricing Rules, Custom Orders, …) until
+ * each has a real replacement screen in a later phase.
+ *
+ * Unlike that existing reskin (a CSS-only skin *over* wp-admin's own
+ * chrome — list tables, postboxes, the WP sidebar), this page hides the
+ * WP sidebar/toolbar/footer entirely and replaces them with the app
+ * shell below. Token values themselves are never hardcoded here — every
+ * `var(--wp--…)` this file uses is supplied at runtime by
+ * YeffoPrint_Admin_Token_Bridge (reading the theme's real theme.json)
+ * plus the theme's own global.css, both enqueued alongside this file
+ * (see class-admin-app.php) — so buttons, the drawer primitive, and
+ * every color/spacing/radius value automatically stay identical to the
+ * storefront's, not a second copy that can drift.
+ */
+
+/* ---------- Hide WordPress's own chrome on this one screen ---------- */
+
+body.yeffoprint-app #wpadminbar,
+body.yeffoprint-app #adminmenumain,
+body.yeffoprint-app #wpfooter,
+body.yeffoprint-app #screen-meta-links,
+body.yeffoprint-app .notice,
+body.yeffoprint-app .update-nag,
+body.yeffoprint-app .updated,
+body.yeffoprint-app .error {
+	display: none !important;
+}
+
+body.yeffoprint-app.wp-toolbar {
+	padding-top: 0 !important;
+}
+
+body.yeffoprint-app #wpcontent,
+body.yeffoprint-app #wpbody,
+body.yeffoprint-app #wpbody-content {
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+body.yeffoprint-app #wpbody-content .wrap {
+	margin: 0;
+}
+
+/* ---------- Base ---------- */
+
+body.yeffoprint-app {
+	background: var(--wp--preset--color--warm-white);
+	color: var(--wp--preset--color--near-black);
+	font-family: var(--wp--preset--font-family--body);
+	font-size: 15px;
+	line-height: 1.5;
+}
+
+body.yeffoprint-app h1,
+body.yeffoprint-app h2,
+body.yeffoprint-app h3 {
+	font-family: var(--wp--preset--font-family--heading);
+	margin: 0;
+}
+
+.yp-app {
+	display: grid;
+	grid-template-columns: 248px 1fr;
+	min-height: 100vh;
+}
+
+/* ---------- Nav ---------- */
+
+.yp-app__nav {
+	background: var(--wp--custom--gradient-navy);
+	color: rgba(255, 255, 255, 0.86);
+	padding: var(--wp--preset--spacing--md) var(--wp--preset--spacing--sm);
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--lg);
+	position: sticky;
+	top: 0;
+	height: 100vh;
+	overflow-y: auto;
+}
+
+.yp-app__brand {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0 0.4rem;
+}
+
+.yp-app__mark {
+	width: 30px;
+	height: 30px;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--custom--gradient-brand);
+	flex-shrink: 0;
+}
+
+.yp-app__wordmark {
+	font-family: var(--wp--preset--font-family--heading);
+	font-weight: 700;
+	font-size: 1.05rem;
+	color: #fff;
+	letter-spacing: -0.01em;
+}
+
+.yp-app__groups {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--md);
+	flex: 1;
+}
+
+.yp-app__group-label {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.68rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: rgba(255, 255, 255, 0.4);
+	padding: 0 0.6rem;
+	margin-bottom: 0.4rem;
+}
+
+.yp-app__items {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.yp-nav-item {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	width: 100%;
+	border: none;
+	background: none;
+	color: rgba(255, 255, 255, 0.72);
+	font-family: inherit;
+	font-size: 0.9rem;
+	font-weight: 500;
+	text-align: left;
+	padding: 0.55rem 0.6rem;
+	border-radius: var(--wp--custom--radius--control);
+	cursor: pointer;
+	transition: background 120ms ease, color 120ms ease;
+}
+
+.yp-nav-item:hover {
+	background: rgba(255, 255, 255, 0.06);
+	color: #fff;
+}
+
+.yp-nav-item.is-active {
+	background: rgba(255, 255, 255, 0.1);
+	color: #fff;
+}
+
+.yp-nav-item__dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: transparent;
+	flex-shrink: 0;
+}
+
+.yp-nav-item.is-active .yp-nav-item__dot {
+	background: var(--wp--preset--color--cyan);
+}
+
+.yp-app__foot {
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	padding-top: var(--wp--preset--spacing--sm);
+}
+
+.yp-app__exit {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: rgba(255, 255, 255, 0.5);
+	font-size: 0.8rem;
+	text-decoration: none;
+	padding: 0.4rem 0.6rem;
+}
+
+.yp-app__exit:hover {
+	color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---------- Main ---------- */
+
+.yp-app__main {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.yp-app__topbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1.1rem var(--wp--preset--spacing--lg);
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+	background: var(--wp--preset--color--warm-white);
+	position: sticky;
+	top: 0;
+	z-index: 5;
+}
+
+.yp-app__title {
+	font-size: 1.35rem;
+	font-weight: 700;
+}
+
+.yp-app__status {
+	display: flex;
+	align-items: center;
+	gap: 0.45rem;
+	font-size: 0.82rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-app__status-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--charcoal);
+	transition: background 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-app__status[data-state="connected"] .yp-app__status-dot {
+	background: #1e8a5f;
+	box-shadow: 0 0 0 3px rgba(30, 138, 95, 0.1);
+}
+
+.yp-app__status[data-state="error"] .yp-app__status-dot {
+	background: var(--wp--preset--color--magenta-deep);
+	box-shadow: 0 0 0 3px rgba(194, 0, 122, 0.1);
+}
+
+.yp-app__view {
+	padding: var(--wp--preset--spacing--lg);
+	flex: 1;
+}
+
+.yp-app__intro {
+	color: var(--wp--preset--color--charcoal);
+	margin: 0.35rem 0 var(--wp--preset--spacing--md);
+	max-width: 62ch;
+}
+
+/* ---------- Dashboard status card ---------- */
+
+.yp-status-card {
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: var(--wp--preset--spacing--md);
+	max-width: 32rem;
+	position: relative;
+	overflow: hidden;
+}
+
+.yp-status-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: var(--wp--custom--gradient-brand);
+}
+
+.yp-status-card p {
+	margin: 0.4rem 0 0;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-status-card__retry {
+	margin-top: var(--wp--preset--spacing--sm);
+}
+
+/* ---------- Placeholder view (every section not yet built) ---------- */
+
+.yp-placeholder {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: var(--wp--preset--spacing--lg);
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	border: 1.5px dashed var(--wp--preset--color--light-gray);
+	color: var(--wp--preset--color--charcoal);
+	max-width: 46ch;
+}
+
+.yp-placeholder strong {
+	color: var(--wp--preset--color--near-black);
+	font-family: var(--wp--preset--font-family--heading);
+}
+
+@media (max-width: 860px) {
+	.yp-app {
+		grid-template-columns: 1fr;
+	}
+
+	.yp-app__nav {
+		position: static;
+		height: auto;
+	}
+}
