@@ -71,6 +71,8 @@ body.login #login {
 }
 
 body.login #loginform {
+	display: flex; /* lets .yp-social-login below be pinned to the visual end via `order`, regardless of where login_form fires in the DOM — see that rule's comment — and means no sibling margin here ever collapses with another's again. */
+	flex-direction: column;
 	background: #FFFFFF !important;
 	border: none !important;
 	border-radius: 20px !important; /* radius--card */
@@ -106,11 +108,18 @@ body.login #loginform input[type="email"]:focus {
 	outline: none;
 }
 
-/* ---------- Social login (class-social-login.php's .yp-social-login markup, appended via WordPress's own login_form action) — this page's actual brand tokens, not a generic fallback: the buttons live in the plugin, but styling any front-end surface is this theme's job, same division already used for the storefront/checkout version of these same buttons in woocommerce.css. ---------- */
+/* ---------- Social login (class-social-login.php's .yp-social-login markup, appended via WordPress's own login_form action — which core fires right after the password field, well ahead of Remember Me/Log In) — this page's actual brand tokens, not a generic fallback: the buttons live in the plugin, but styling any front-end surface is this theme's job, same division already used for the storefront/checkout version of these same buttons in woocommerce.css. ---------- */
 
 body.login .yp-social-login {
+	/* Direct request: this block should read as the last thing in the
+	 * form, below Remember Me and Log In — but there's no WordPress hook
+	 * that fires after the submit button while still inside #loginform,
+	 * so its DOM position can't move. `order` re-sequences it visually
+	 * instead: #loginform is a flex column above, every other child
+	 * keeps the default order (0) and so keeps its natural DOM order,
+	 * and this one jumps to the end. */
+	order: 10;
 	margin-top: 1.5rem;
-	margin-bottom: 1.5rem;
 }
 
 body.login .yp-social-login__divider {
@@ -174,7 +183,10 @@ body.login .yp-social-login__button svg {
 }
 
 body.login .forgetmenot {
-	float: none; /* WordPress core floats this left; overridden since #wp-submit below is already full-width, so the float did no real layout work — it just meant .submit needed clear:both, and (found live) meant a new block inserted before this one skips it entirely for margin-collapsing purposes, silently eating the gap below the social login buttons. */
+	/* WordPress core floats this left by default; #loginform's flex
+	 * layout (above) already neutralizes float entirely on its children
+	 * — same reason no clear:both is needed on .submit below either — so
+	 * there's nothing left to override here. */
 	font-size: 0.875rem;
 	color: #3A3A3C;
 	margin-bottom: 0.75rem;
