@@ -108,6 +108,7 @@
 
 .yp-social-login {
 	margin-top: var(--wp--preset--spacing--md);
+	margin-bottom: var(--wp--preset--spacing--md);
 }
 
 .yp-social-login__divider {
