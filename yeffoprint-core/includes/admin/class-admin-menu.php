@@ -180,11 +180,10 @@ class YeffoPrint_Admin_Menu {
 	/**
 	 * Also read by includes/accounts/class-social-login.php — same
 	 * reasoning as the options above. Direct request: "allow users to
-	 * login with Google/Apple/Discord" — built for Google and Discord
-	 * now; Apple is a deliberately separate follow-up (paid Apple
-	 * Developer Program membership, domain verification, and a private
-	 * key that has to be re-signed into a new client secret every 6
-	 * months — a meaningfully bigger lift than the other two). Each
+	 * login with Google/Apple/Discord" — Google and Discord shipped
+	 * first (free, few-minutes developer-app registration each); Apple
+	 * followed once the owner was ready for its bigger setup lift (paid
+	 * Apple Developer Program membership, domain verification). Each
 	 * provider stays off (and its button hidden) until an admin both
 	 * checks its box and pastes in a real Client ID/Secret.
 	 */
@@ -194,6 +193,26 @@ class YeffoPrint_Admin_Menu {
 	const DISCORD_LOGIN_ENABLED_OPTION = 'yeffoprint_discord_login_enabled';
 	const DISCORD_CLIENT_ID_OPTION     = 'yeffoprint_discord_client_id';
 	const DISCORD_CLIENT_SECRET_OPTION = 'yeffoprint_discord_client_secret';
+
+	/**
+	 * Also read by includes/accounts/class-social-login.php — same
+	 * reasoning as the options above. Apple's own OAuth flow needs more
+	 * than a client id/secret pair: a Services ID (the "client id" Apple
+	 * actually calls it), a 10-character Team ID, a Key ID naming which
+	 * of that team's private keys to use, and the private key itself
+	 * (the .p8 file's contents, downloaded once from Apple and never
+	 * shown again). There's no ENABLED_KEY_SECRET option here the way
+	 * Google/Discord have one — class-social-login.php's
+	 * generate_apple_client_secret() signs a fresh, short-lived JWT from
+	 * these four values on every token exchange instead of storing a
+	 * long-lived secret, which is what sidesteps Apple's usual "rotate
+	 * the client secret every 6 months" operational burden entirely.
+	 */
+	const APPLE_LOGIN_ENABLED_OPTION = 'yeffoprint_apple_login_enabled';
+	const APPLE_CLIENT_ID_OPTION     = 'yeffoprint_apple_client_id';
+	const APPLE_TEAM_ID_OPTION       = 'yeffoprint_apple_team_id';
+	const APPLE_KEY_ID_OPTION        = 'yeffoprint_apple_key_id';
+	const APPLE_PRIVATE_KEY_OPTION   = 'yeffoprint_apple_private_key';
 
 	/** Hook suffix for the Settings screen, captured from add_submenu_page()'s own return value — see enqueue_settings_assets(). */
 	private $settings_page_hook = '';
@@ -598,6 +617,13 @@ class YeffoPrint_Admin_Menu {
 		register_setting( 'yeffoprint_settings', self::DISCORD_CLIENT_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
 		register_setting( 'yeffoprint_settings', self::DISCORD_CLIENT_SECRET_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
 
+		register_setting( 'yeffoprint_settings', self::APPLE_LOGIN_ENABLED_OPTION, [ 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => false ] );
+		register_setting( 'yeffoprint_settings', self::APPLE_CLIENT_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+		register_setting( 'yeffoprint_settings', self::APPLE_TEAM_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+		register_setting( 'yeffoprint_settings', self::APPLE_KEY_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+		// sanitize_textarea_field, not sanitize_text_field — a PEM private key's line breaks are meaningful; sanitize_text_field would collapse them.
+		register_setting( 'yeffoprint_settings', self::APPLE_PRIVATE_KEY_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field', 'default' => '' ] );
+
 		add_settings_section(
 			'yeffoprint_social_login',
 			__( 'Social Login', 'yeffoprint-core' ),
@@ -611,6 +637,11 @@ class YeffoPrint_Admin_Menu {
 		add_settings_field( self::DISCORD_LOGIN_ENABLED_OPTION, __( 'Discord', 'yeffoprint-core' ), [ $this, 'render_discord_enabled_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
 		add_settings_field( self::DISCORD_CLIENT_ID_OPTION, __( 'Discord Client ID', 'yeffoprint-core' ), [ $this, 'render_discord_client_id_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
 		add_settings_field( self::DISCORD_CLIENT_SECRET_OPTION, __( 'Discord Client Secret', 'yeffoprint-core' ), [ $this, 'render_discord_client_secret_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::APPLE_LOGIN_ENABLED_OPTION, __( 'Apple', 'yeffoprint-core' ), [ $this, 'render_apple_enabled_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::APPLE_CLIENT_ID_OPTION, __( 'Apple Services ID', 'yeffoprint-core' ), [ $this, 'render_apple_client_id_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::APPLE_TEAM_ID_OPTION, __( 'Apple Team ID', 'yeffoprint-core' ), [ $this, 'render_apple_team_id_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::APPLE_KEY_ID_OPTION, __( 'Apple Key ID', 'yeffoprint-core' ), [ $this, 'render_apple_key_id_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::APPLE_PRIVATE_KEY_OPTION, __( 'Apple Private Key (.p8 contents)', 'yeffoprint-core' ), [ $this, 'render_apple_private_key_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
 	}
 
 	public function render_maintenance_section_intro(): void {
@@ -725,10 +756,11 @@ class YeffoPrint_Admin_Menu {
 		<p><?php
 			echo wp_kses(
 				sprintf(
-					/* translators: 1: Google redirect URI, 2: Discord redirect URI */
-					__( 'Lets customers sign up/log in with an existing Google or Discord account instead of a password. For each provider you enable, register a developer app and set its redirect URI to the exact URL shown below, then paste the Client ID/Secret it gives you here. Google: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console</a>, redirect URI <code>%1$s</code>. Discord: <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Discord Developer Portal</a>, redirect URI <code>%2$s</code>.', 'yeffoprint-core' ),
+					/* translators: 1: Google redirect URI, 2: Discord redirect URI, 3: Apple redirect URI */
+					__( 'Lets customers sign up/log in with an existing Google, Discord, or Apple account instead of a password. For each provider you enable, register a developer app and set its redirect/return URL to the exact URL shown below, then paste in the credentials it gives you. Google: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console</a>, redirect URI <code>%1$s</code>. Discord: <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Discord Developer Portal</a>, redirect URI <code>%2$s</code>. Apple: <a href="https://developer.apple.com/account/resources/identifiers/list/serviceId" target="_blank" rel="noopener noreferrer">Apple Developer — Identifiers</a>, return URL <code>%3$s</code> (requires a paid Apple Developer Program membership and verifying this domain).', 'yeffoprint-core' ),
 					esc_html( YeffoPrint_Social_Login::callback_url( 'google' ) ),
-					esc_html( YeffoPrint_Social_Login::callback_url( 'discord' ) )
+					esc_html( YeffoPrint_Social_Login::callback_url( 'discord' ) ),
+					esc_html( YeffoPrint_Social_Login::callback_url( 'apple' ) )
 				),
 				[ 'a' => [ 'href' => [], 'target' => [], 'rel' => [] ], 'code' => [] ]
 			);
@@ -770,6 +802,38 @@ class YeffoPrint_Admin_Menu {
 
 	public function render_discord_client_secret_field(): void {
 		$this->render_secret_field( self::DISCORD_CLIENT_SECRET_OPTION );
+	}
+
+	public function render_apple_enabled_field(): void {
+		$this->render_provider_enabled_field( self::APPLE_LOGIN_ENABLED_OPTION );
+	}
+
+	public function render_apple_client_id_field(): void {
+		$this->render_secret_field( self::APPLE_CLIENT_ID_OPTION, 'com.yeffoprint.web' );
+	}
+
+	public function render_apple_team_id_field(): void {
+		$this->render_secret_field( self::APPLE_TEAM_ID_OPTION );
+	}
+
+	public function render_apple_key_id_field(): void {
+		$this->render_secret_field( self::APPLE_KEY_ID_OPTION );
+	}
+
+	/** A multi-line PEM key, not a single-line secret — its own field rather than render_secret_field()'s single-line <input>. */
+	public function render_apple_private_key_field(): void {
+		$value = get_option( self::APPLE_PRIVATE_KEY_OPTION, '' );
+		?>
+		<textarea
+			class="large-text code"
+			rows="8"
+			autocomplete="off"
+			spellcheck="false"
+			name="<?php echo esc_attr( self::APPLE_PRIVATE_KEY_OPTION ); ?>"
+			placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
+		><?php echo esc_textarea( $value ); ?></textarea>
+		<p class="description"><?php esc_html_e( 'The full contents of the .p8 file Apple gives you when you create the key — downloadable only once, so keep a copy somewhere safe.', 'yeffoprint-core' ); ?></p>
+		<?php
 	}
 
 	/** Never below 1 — a same-day due date would flag every fresh order/request as overdue immediately. */
@@ -962,7 +1026,7 @@ class YeffoPrint_Admin_Menu {
 	}
 
 	/** Shared renderer for the four carrier-credential fields above — same field, just a different option name each time. */
-	private function render_secret_field( string $option ): void {
+	private function render_secret_field( string $option, string $placeholder = '' ): void {
 		?>
 		<input
 			type="password"
@@ -970,6 +1034,7 @@ class YeffoPrint_Admin_Menu {
 			autocomplete="off"
 			name="<?php echo esc_attr( $option ); ?>"
 			value="<?php echo esc_attr( get_option( $option ) ); ?>"
+			<?php if ( '' !== $placeholder ) : ?>placeholder="<?php echo esc_attr( $placeholder ); ?>"<?php endif; ?>
 		/>
 		<?php
 	}

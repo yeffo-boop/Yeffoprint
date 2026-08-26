@@ -1,12 +1,49 @@
 <?php
 /**
- * "Continue with Google" / "Continue with Discord" on the storefront's
- * login form. Direct request: "allow users to login with Google/Apple/
- * Discord" — built for Google and Discord now (a free, few-minutes
- * developer-app registration each); Apple is a deliberately separate
- * follow-up (paid Apple Developer Program membership, domain
- * verification, and a private key that has to be re-signed into a new
- * client secret every 6 months — a meaningfully bigger lift).
+ * "Continue with Google" / "Continue with Discord" / "Continue with
+ * Apple" on the storefront's login form. Direct request: "allow users
+ * to login with Google/Apple/Discord" — Google and Discord shipped
+ * first (free, few-minutes developer-app registration each); Apple
+ * followed once the owner was ready for its bigger setup lift (paid
+ * Apple Developer Program membership, domain verification).
+ *
+ * Apple's own OAuth/OIDC flow differs from Google's and Discord's in
+ * two structural ways this class has to account for everywhere, not
+ * just in provider_config():
+ *
+ *  1. **No static client secret.** Apple wants a JWT, signed with an
+ *     ES256 (elliptic-curve) private key downloaded once from Apple
+ *     Developer, as the "client_secret" on every token exchange —
+ *     conventionally generated once and reused until it expires (Apple
+ *     caps it at 6 months, so most implementations end up needing a
+ *     rotation reminder/cron). `generate_apple_client_secret()`
+ *     sidesteps that entirely by minting a fresh one, valid for just a
+ *     few minutes, right before every single token exchange — there is
+ *     no long-lived secret sitting anywhere to expire or rotate. PHP's
+ *     OpenSSL extension signs it directly (`openssl_sign()` with
+ *     `OPENSSL_ALGO_SHA256` over an EC key); the one non-obvious step
+ *     is `der_to_raw_signature()` — OpenSSL hands back an ASN.1
+ *     DER-encoded signature, but the JWS ES256 spec wants the raw
+ *     64-byte r‖s concatenation instead, so it has to be unwrapped by
+ *     hand (no JWT library in this project — same "minimal third-party
+ *     dependencies" stance as everywhere else in this plugin, and
+ *     there's no Composer/vendor setup here to hang one off of anyway).
+ *  2. **The callback can arrive as a POST, not just a GET.** Apple
+ *     requires `response_mode=form_post` whenever the requested scope
+ *     includes `name`/`email` (both of which this flow needs) — Apple's
+ *     own server returns an auto-submitting HTML form to the browser
+ *     that POSTs `code`/`state`/(on the very first authorization only)
+ *     `user` to the redirect URI, rather than a query-string GET
+ *     redirect. `request_param()` reads `$_POST` first, `$_GET` second,
+ *     so `callback()` doesn't need two separate implementations —
+ *     Google/Discord's GET-based callback keeps working unchanged.
+ *     Apple also has no separate userinfo endpoint the way Google/
+ *     Discord do — identity comes from decoding the `id_token` JWT the
+ *     token endpoint returns alongside the access token (trusted the
+ *     same way this class already trusts Google/Discord's userinfo
+ *     response: it arrived over a direct, server-to-server HTTPS call
+ *     this code itself just made to the provider's own token endpoint,
+ *     not something that passed through the browser).
  *
  * A hand-built OAuth 2.0 Authorization Code flow, not a third-party
  * social-login plugin — same "minimal third-party dependencies"
@@ -51,8 +88,8 @@
  * account linked itself the first time they signed in with the Google
  * account sharing that same address. Worth being explicit about since
  * it's a real, if expected, change to that account's security surface:
- * from that point on, whoever controls the matching Google (or Discord)
- * account can log into it too, alongside its normal password.
+ * from that point on, whoever controls the matching Google, Discord, or
+ * Apple account can log into it too, alongside its normal password.
  * `render_profile_section()` below surfaces which provider(s), if any,
  * are linked to a given user right on their native WordPress profile
  * screen, so this is never invisible after the fact.
@@ -117,11 +154,27 @@ class YeffoPrint_Social_Login {
 		if ( isset( $_GET['yp-oauth'] ) ) {
 			$this->start( sanitize_key( wp_unslash( $_GET['yp-oauth'] ) ) );
 		} elseif ( isset( $_GET['yp-oauth-callback'] ) ) {
+			// Present in $_GET regardless of HTTP method — it's part of
+			// the redirect URI's own query string, which PHP always
+			// parses into $_GET even on a POST request (Apple's
+			// form_post callback). See request_param() for how the
+			// callback's actual payload (code/state/error/user) is read.
 			$this->callback( sanitize_key( wp_unslash( $_GET['yp-oauth-callback'] ) ) );
 		}
 	}
 
-	/** @return array{label:string, enabled_opt:string, client_id_opt:string, client_secret_opt:string, authorize_url:string, token_url:string, userinfo_url:string, scope:string}|null */
+	/** Apple's form_post callback delivers code/state/error/user via $_POST; Google/Discord's via $_GET. Checking $_POST first, $_GET second, lets callback() read either without knowing which provider it's handling. */
+	private function request_param( string $key ): string {
+		if ( isset( $_POST[ $key ] ) ) {
+			return sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+		}
+		if ( isset( $_GET[ $key ] ) ) {
+			return sanitize_text_field( wp_unslash( $_GET[ $key ] ) );
+		}
+		return '';
+	}
+
+	/** @return array{label:string, enabled_opt:string, client_id_opt:string, client_secret_opt:?string, authorize_url:string, token_url:string, userinfo_url:?string, scope:string, form_post:bool}|null */
 	private function provider_config( string $provider ): ?array {
 		if ( 'google' === $provider ) {
 			return [
@@ -133,6 +186,7 @@ class YeffoPrint_Social_Login {
 				'token_url'         => 'https://oauth2.googleapis.com/token',
 				'userinfo_url'      => 'https://www.googleapis.com/oauth2/v3/userinfo',
 				'scope'             => 'openid email profile',
+				'form_post'         => false,
 			];
 		}
 
@@ -146,6 +200,21 @@ class YeffoPrint_Social_Login {
 				'token_url'         => 'https://discord.com/api/oauth2/token',
 				'userinfo_url'      => 'https://discord.com/api/users/@me',
 				'scope'             => 'identify email',
+				'form_post'         => false,
+			];
+		}
+
+		if ( 'apple' === $provider ) {
+			return [
+				'label'             => 'Apple',
+				'enabled_opt'       => YeffoPrint_Admin_Menu::APPLE_LOGIN_ENABLED_OPTION,
+				'client_id_opt'     => YeffoPrint_Admin_Menu::APPLE_CLIENT_ID_OPTION,
+				'client_secret_opt' => null, // No static secret — client_secret_for() signs a fresh short-lived JWT per exchange instead.
+				'authorize_url'     => 'https://appleid.apple.com/auth/authorize',
+				'token_url'         => 'https://appleid.apple.com/auth/token',
+				'userinfo_url'      => null, // No userinfo endpoint — identity comes from the token response's id_token (decode_id_token()).
+				'scope'             => 'name email',
+				'form_post'         => true,
 			];
 		}
 
@@ -166,13 +235,17 @@ class YeffoPrint_Social_Login {
 		$state = wp_generate_password( 32, false );
 		set_transient( self::STATE_TRANSIENT_PREFIX . $state, [ 'redirect_to' => $redirect_to ], self::STATE_TTL );
 
-		$authorize_url = add_query_arg( [
+		$authorize_url = add_query_arg( array_filter( [
 			'client_id'     => $client_id,
 			'redirect_uri'  => self::callback_url( $provider ),
 			'response_type' => 'code',
 			'scope'         => $config['scope'],
 			'state'         => $state,
-		], $config['authorize_url'] );
+			// Apple requires this whenever the requested scope includes
+			// name/email — without it Apple rejects the request outright
+			// rather than silently falling back to a query redirect.
+			'response_mode' => $config['form_post'] ? 'form_post' : null,
+		] ), $config['authorize_url'] );
 
 		wp_redirect( esc_url_raw( $authorize_url ) ); // phpcs:ignore WordPress.Security.SafeRedirect -- an external provider's own authorize URL, not user input.
 		exit;
@@ -184,37 +257,48 @@ class YeffoPrint_Social_Login {
 			$this->fail( __( 'This login option is not available right now.', 'yeffoprint-core' ) );
 		}
 
-		$state = isset( $_GET['state'] ) ? sanitize_text_field( wp_unslash( $_GET['state'] ) ) : '';
+		$state   = $this->request_param( 'state' );
 		$stashed = $state ? get_transient( self::STATE_TRANSIENT_PREFIX . $state ) : false;
 		if ( false === $stashed ) {
 			$this->fail( __( 'Your login attempt expired or was invalid — please try again.', 'yeffoprint-core' ) );
 		}
 		delete_transient( self::STATE_TRANSIENT_PREFIX . $state ); // One-time use, win or lose.
 
-		if ( isset( $_GET['error'] ) ) {
+		if ( '' !== $this->request_param( 'error' ) ) {
 			// Declined on the provider's own consent screen — not an error worth alarming the customer about.
 			wp_safe_redirect( $this->account_url() );
 			exit;
 		}
 
-		$code = isset( $_GET['code'] ) ? sanitize_text_field( wp_unslash( $_GET['code'] ) ) : '';
+		$code = $this->request_param( 'code' );
 		if ( '' === $code ) {
 			$this->fail( __( 'Something went wrong finishing that login — please try again.', 'yeffoprint-core' ) );
 		}
 
 		$client_id     = (string) get_option( $config['client_id_opt'] );
-		$client_secret = (string) get_option( $config['client_secret_opt'] );
-		if ( '' === $client_id || '' === $client_secret ) {
+		$client_secret = $this->client_secret_for( $provider, $config );
+		if ( '' === $client_id || ! $client_secret ) {
 			$this->fail( __( 'This login option is not fully set up yet.', 'yeffoprint-core' ) );
 		}
 
-		$access_token = $this->exchange_code( $provider, $config, $client_id, $client_secret, $code );
-		if ( ! $access_token ) {
+		$tokens = $this->exchange_tokens( $provider, $config, $client_id, $client_secret, $code );
+		if ( ! $tokens ) {
 			$this->fail( __( "We couldn't complete that login — please try again.", 'yeffoprint-core' ) );
 		}
 
-		$raw_profile = $this->fetch_userinfo( $config, $access_token );
-		$identity    = $raw_profile ? $this->normalize_userinfo( $provider, $raw_profile ) : null;
+		if ( null === $config['userinfo_url'] ) {
+			// Apple: no userinfo endpoint — identity comes from the
+			// id_token the token endpoint itself just returned, trusted
+			// the same way this class already trusts a userinfo
+			// response: both arrived over a direct, server-to-server
+			// HTTPS call this code just made to the provider, never
+			// having passed through the browser.
+			$claims = isset( $tokens['id_token'] ) ? $this->decode_id_token( (string) $tokens['id_token'] ) : null;
+		} else {
+			$claims = $this->fetch_userinfo( $config, (string) $tokens['access_token'] );
+		}
+
+		$identity = $claims ? $this->normalize_userinfo( $provider, $claims ) : null;
 
 		if ( ! $identity ) {
 			$this->fail(
@@ -224,6 +308,18 @@ class YeffoPrint_Social_Login {
 					$config['label']
 				)
 			);
+		}
+
+		// Apple only ever includes a name on the very first authorization
+		// (as a one-time `user` field alongside the code/state) — every
+		// later login carries nothing but the stable `sub` identifier,
+		// so this is the only chance to capture it. Never overwrites a
+		// name find_or_create_user() may already have on file.
+		if ( 'apple' === $provider ) {
+			$apple_user = json_decode( $this->request_param( 'user' ), true );
+			if ( is_array( $apple_user ) && isset( $apple_user['name'] ) ) {
+				$identity['name'] = trim( ( $apple_user['name']['firstName'] ?? '' ) . ' ' . ( $apple_user['name']['lastName'] ?? '' ) );
+			}
 		}
 
 		$user = $this->find_or_create_user( $provider, $identity );
@@ -237,7 +333,18 @@ class YeffoPrint_Social_Login {
 		exit;
 	}
 
-	private function exchange_code( string $provider, array $config, string $client_id, string $client_secret, string $code ): ?string {
+	/** Google/Discord: the saved static secret. Apple: a freshly signed short-lived JWT (see this class's own docblock) — regenerated on every call rather than cached, since signing one is cheap and it sidesteps ever needing to store or rotate a long-lived secret. */
+	private function client_secret_for( string $provider, array $config ): ?string {
+		if ( 'apple' === $provider ) {
+			return $this->generate_apple_client_secret();
+		}
+
+		$secret = (string) get_option( $config['client_secret_opt'] );
+		return '' !== $secret ? $secret : null;
+	}
+
+	/** @return array<string, mixed>|null The decoded token response (access_token, and for Apple id_token) — null on any failure. */
+	private function exchange_tokens( string $provider, array $config, string $client_id, string $client_secret, string $code ): ?array {
 		$response = wp_remote_post( $config['token_url'], [
 			'timeout' => 15,
 			'headers' => [ 'Accept' => 'application/json' ],
@@ -255,7 +362,7 @@ class YeffoPrint_Social_Login {
 		}
 
 		$body = json_decode( (string) wp_remote_retrieve_body( $response ), true );
-		return ( is_array( $body ) && ! empty( $body['access_token'] ) ) ? (string) $body['access_token'] : null;
+		return ( is_array( $body ) && ! empty( $body['access_token'] ) ) ? $body : null;
 	}
 
 	private function fetch_userinfo( array $config, string $access_token ): ?array {
@@ -273,6 +380,115 @@ class YeffoPrint_Social_Login {
 
 		$body = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 		return is_array( $body ) ? $body : null;
+	}
+
+	/**
+	 * Apple has no userinfo endpoint — this decodes the id_token JWT's
+	 * payload segment directly rather than verifying its signature
+	 * against Apple's published keys, since (as the class docblock
+	 * explains) the token itself already arrived over a direct HTTPS
+	 * call this code just made to Apple's own token endpoint.
+	 */
+	private function decode_id_token( string $id_token ): ?array {
+		$parts = explode( '.', $id_token );
+		if ( 3 !== count( $parts ) ) {
+			return null;
+		}
+
+		$payload = json_decode( self::base64url_decode( $parts[1] ), true );
+		return is_array( $payload ) ? $payload : null;
+	}
+
+	/**
+	 * Apple's "client_secret" is a JWT it wants signed with the ES256
+	 * (P-256 elliptic curve) private key from Apple Developer, carrying
+	 * the team/services/key ids as claims — not a value Apple ever
+	 * hands out directly the way Google/Discord's static secrets are.
+	 * A short `exp` (this is used within seconds of being minted, never
+	 * stored) rather than the 6-month maximum Apple allows is what lets
+	 * this be generated fresh every time instead of cached and rotated.
+	 */
+	private function generate_apple_client_secret(): ?string {
+		$team_id     = (string) get_option( YeffoPrint_Admin_Menu::APPLE_TEAM_ID_OPTION );
+		$key_id      = (string) get_option( YeffoPrint_Admin_Menu::APPLE_KEY_ID_OPTION );
+		$private_key = (string) get_option( YeffoPrint_Admin_Menu::APPLE_PRIVATE_KEY_OPTION );
+		$client_id   = (string) get_option( YeffoPrint_Admin_Menu::APPLE_CLIENT_ID_OPTION );
+
+		if ( '' === $team_id || '' === $key_id || '' === $private_key || '' === $client_id ) {
+			return null;
+		}
+
+		$pkey = openssl_pkey_get_private( $private_key );
+		if ( ! $pkey ) {
+			return null;
+		}
+
+		$now = time();
+		$segments = [
+			self::base64url_encode( (string) wp_json_encode( [ 'alg' => 'ES256', 'kid' => $key_id ] ) ),
+			self::base64url_encode( (string) wp_json_encode( [
+				'iss' => $team_id,
+				'iat' => $now,
+				'exp' => $now + 300,
+				'aud' => 'https://appleid.apple.com',
+				'sub' => $client_id,
+			] ) ),
+		];
+
+		$der_signature = '';
+		$signed = openssl_sign( implode( '.', $segments ), $der_signature, $pkey, OPENSSL_ALGO_SHA256 );
+		if ( ! $signed ) {
+			return null;
+		}
+
+		// P-256's coordinates are 32 bytes each — JWS ES256 wants the raw
+		// 64-byte r‖s concatenation, but openssl_sign() only ever hands
+		// back an ASN.1 DER-encoded SEQUENCE of the two INTEGERs.
+		$raw_signature = self::der_ecdsa_signature_to_raw( $der_signature, 32 );
+		if ( null === $raw_signature ) {
+			return null;
+		}
+
+		$segments[] = self::base64url_encode( $raw_signature );
+		return implode( '.', $segments );
+	}
+
+	/** Unwraps a DER `SEQUENCE { r INTEGER, s INTEGER }` into the fixed-width big-endian r‖s pair a JWS ES256 signature needs. Assumes short-form DER lengths throughout, always true for a P-256 (32-byte coordinate) signature. */
+	private static function der_ecdsa_signature_to_raw( string $der, int $part_length ): ?string {
+		if ( "\x30" !== ( $der[0] ?? '' ) || "\x02" !== ( $der[2] ?? '' ) ) {
+			return null;
+		}
+
+		$r_len = ord( $der[3] );
+		$r     = substr( $der, 4, $r_len );
+
+		$s_offset = 4 + $r_len;
+		if ( "\x02" !== ( $der[ $s_offset ] ?? '' ) ) {
+			return null;
+		}
+		$s_len = ord( $der[ $s_offset + 1 ] );
+		$s     = substr( $der, $s_offset + 2, $s_len );
+
+		// DER prepends a 0x00 to an integer whose natural high bit is set
+		// (so it isn't misread as negative); stripping every leading NUL
+		// and re-padding to a fixed width recovers the same big-endian
+		// unsigned value either way.
+		$r = str_pad( ltrim( $r, "\x00" ), $part_length, "\x00", STR_PAD_LEFT );
+		$s = str_pad( ltrim( $s, "\x00" ), $part_length, "\x00", STR_PAD_LEFT );
+
+		return ( strlen( $r ) === $part_length && strlen( $s ) === $part_length ) ? ( $r . $s ) : null;
+	}
+
+	private static function base64url_encode( string $data ): string {
+		return rtrim( strtr( base64_encode( $data ), '+/', '-_' ), '=' );
+	}
+
+	private static function base64url_decode( string $data ): string {
+		$remainder = strlen( $data ) % 4;
+		if ( $remainder ) {
+			$data .= str_repeat( '=', 4 - $remainder );
+		}
+		return (string) base64_decode( strtr( $data, '-_', '+/' ) );
 	}
 
 	/**
@@ -303,6 +519,21 @@ class YeffoPrint_Social_Login {
 				'external_id' => (string) $profile['id'],
 				'email'       => sanitize_email( (string) $profile['email'] ),
 				'name'        => (string) ( $profile['global_name'] ?? $profile['username'] ?? '' ),
+			];
+		}
+
+		if ( 'apple' === $provider ) {
+			// email_verified arrives as the literal string "true"/"false"
+			// on Apple's id_token, not a real boolean — checked as such
+			// rather than via empty()/(bool), which "false" would pass.
+			$email_verified = $profile['email_verified'] ?? false;
+			if ( empty( $profile['sub'] ) || empty( $profile['email'] ) || ( true !== $email_verified && 'true' !== $email_verified ) ) {
+				return null;
+			}
+			return [
+				'external_id' => (string) $profile['sub'],
+				'email'       => sanitize_email( (string) $profile['email'] ),
+				'name'        => '', // Only ever available via the one-time `user` POST field — filled in by callback() when present.
 			];
 		}
 
@@ -368,7 +599,7 @@ class YeffoPrint_Social_Login {
 	 */
 	public function render_profile_section( \WP_User $user ): void {
 		$connected = [];
-		foreach ( [ 'google', 'discord' ] as $provider ) {
+		foreach ( [ 'google', 'discord', 'apple' ] as $provider ) {
 			if ( get_user_meta( $user->ID, $this->identity_meta_key( $provider ), true ) ) {
 				$connected[] = $this->provider_config( $provider )['label'];
 			}
@@ -427,7 +658,7 @@ class YeffoPrint_Social_Login {
 	/** @return string[] Provider slugs both turned on and carrying a real Client ID — never a dead button pointing at an unconfigured provider. */
 	private function configured_providers(): array {
 		$providers = [];
-		foreach ( [ 'google', 'discord' ] as $provider ) {
+		foreach ( [ 'google', 'discord', 'apple' ] as $provider ) {
 			$config = $this->provider_config( $provider );
 			if ( get_option( $config['enabled_opt'] ) && '' !== (string) get_option( $config['client_id_opt'] ) ) {
 				$providers[] = $provider;
@@ -573,6 +804,11 @@ class YeffoPrint_Social_Login {
 
 		if ( 'discord' === $provider ) {
 			echo '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path fill="#5865F2" d="M15.24 3.6a13.7 13.7 0 0 0-3.38-1.05.05.05 0 0 0-.06.03c-.14.26-.31.6-.42.87a12.65 12.65 0 0 0-3.76 0 8.6 8.6 0 0 0-.43-.87.05.05 0 0 0-.06-.03c-1.17.2-2.3.55-3.38 1.05a.05.05 0 0 0-.02.02C1.6 6.86 1.06 10 1.32 13.1a.06.06 0 0 0 .02.04 13.8 13.8 0 0 0 4.15 2.1.05.05 0 0 0 .06-.02c.32-.44.6-.9.85-1.39a.05.05 0 0 0-.03-.08 9.1 9.1 0 0 1-1.3-.62.05.05 0 0 1 0-.09c.09-.07.17-.14.26-.2a.05.05 0 0 1 .05-.01c2.73 1.25 5.68 1.25 8.38 0a.05.05 0 0 1 .05 0c.09.07.17.14.26.21a.05.05 0 0 1 0 .09c-.42.24-.85.45-1.3.62a.05.05 0 0 0-.03.08c.25.49.54.95.85 1.39a.05.05 0 0 0 .06.02 13.75 13.75 0 0 0 4.16-2.1.05.05 0 0 0 .02-.03c.32-3.59-.53-6.7-2.22-9.47a.04.04 0 0 0-.02-.02ZM6.68 11.2c-.82 0-1.5-.76-1.5-1.68 0-.93.66-1.69 1.5-1.69.85 0 1.52.77 1.5 1.69 0 .92-.66 1.68-1.5 1.68Zm4.65 0c-.82 0-1.5-.76-1.5-1.68 0-.93.66-1.69 1.5-1.69.85 0 1.51.77 1.5 1.69 0 .92-.65 1.68-1.5 1.68Z"/></svg>';
+			return;
+		}
+
+		if ( 'apple' === $provider ) {
+			echo '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path fill="#000" d="M12.2 9.4c0-2.06 1.68-3.05 1.76-3.1-.96-1.4-2.45-1.6-2.98-1.62-1.27-.1-2.48.75-3.13.75-.65 0-1.65-.73-2.72-.71-1.4.02-2.7.82-3.42 2.08-1.46 2.53-.37 6.27 1.05 8.32.7 1 1.52 2.13 2.61 2.09 1.05-.04 1.44-.68 2.71-.68 1.26 0 1.61.68 2.72.65 1.13-.02 1.84-1.02 2.53-2.03.8-1.15 1.13-2.27 1.14-2.33-.02-.01-2.2-.84-2.22-3.35Zm-2.08-6.15c.58-.7.97-1.67.86-2.65-.83.04-1.83.56-2.43 1.25-.54.62-1 1.61-.88 2.56.92.07 1.87-.47 2.45-1.16Z"/></svg>';
 		}
 	}
 }
