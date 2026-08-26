@@ -757,3 +757,11 @@ Direct report, once the above landed: "Our code redirects all logins to wp-login
 - **`enqueue_wp_login_styles()`** loads a new, small, self-contained stylesheet (`assets/frontend/social-login-wp-login.css`) via WordPress's own `login_enqueue_scripts` hook — `wp-login.php` never loads the active theme's assets, so the storefront's `woocommerce.css` design tokens aren't available there; colors are picked to sit naturally in WordPress's own default login screen instead of forcing the storefront's branding onto what's really an administrative surface.
 
 Verify: log out and visit the store's normal login link (`wp-login.php?redirect_to=...`) — confirm both buttons appear, styled reasonably against WordPress's default login screen; click through and confirm you land back at the `redirect_to` URL, logged in, exactly like a normal password login on that same page would.
+
+### Follow-up: a "Connected Accounts" indicator on the user profile screen
+
+Direct report + question: the owner logged in with Google and landed in their own admin account, and asked whether that was because the Google account's email matched their admin email (it was — confirmed, and called out explicitly in this class's own docblock now, since email-match auto-linking applies to every WordPress user, administrators included, not just customers) and whether there's any indicator of which accounts have a social login connected.
+
+**`render_profile_section()`** answers that directly: a "Connected Accounts" section on the native WordPress Profile/Edit User screen (`show_user_profile`/`edit_user_profile` — WordPress fires whichever one applies, your own profile vs. an admin viewing someone else's), reading the same `_yp_social_{provider}_id` user meta `find_or_create_user()` already writes. Read-only, listing which provider(s) are linked (or a plain "logs in with a password only" when none are) — same "surface real status, don't hide it" reasoning as every other indicator already in this codebase (e.g. Materials' In Stock/Out of Stock pill).
+
+Verify: open your own Profile screen (and, as an admin, another user's Edit User screen) and confirm "Connected Accounts" shows "Signed in with: Google" for an account that's actually linked, and the no-connection message for one that isn't.
