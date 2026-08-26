@@ -46,6 +46,17 @@
  * generated and never surfaced anywhere; the customer simply never
  * needs one.
  *
+ * This email-match rule applies to *every* WordPress user, administrators
+ * included, not just customers — confirmed live: the owner's own admin
+ * account linked itself the first time they signed in with the Google
+ * account sharing that same address. Worth being explicit about since
+ * it's a real, if expected, change to that account's security surface:
+ * from that point on, whoever controls the matching Google (or Discord)
+ * account can log into it too, alongside its normal password.
+ * `render_profile_section()` below surfaces which provider(s), if any,
+ * are linked to a given user right on their native WordPress profile
+ * screen, so this is never invisible after the fact.
+ *
  * Direct report: on the live site, with a provider correctly turned on
  * and a real Client ID/Secret saved, the button never appeared —
  * ruled out (by the owner directly checking each) page caching, a
@@ -93,6 +104,8 @@ class YeffoPrint_Social_Login {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_fallback_script' ] );
 		add_action( 'login_form', [ $this, 'render_wp_login_buttons' ] );
 		add_action( 'login_enqueue_scripts', [ $this, 'enqueue_wp_login_styles' ] );
+		add_action( 'show_user_profile', [ $this, 'render_profile_section' ] );
+		add_action( 'edit_user_profile', [ $this, 'render_profile_section' ] );
 	}
 
 	/** The fixed URL each provider redirects back to — register this exact value as the app's Redirect URI in its developer console. Static + public: class-admin-menu.php's Settings screen shows it without needing an instance. */
@@ -340,6 +353,50 @@ class YeffoPrint_Social_Login {
 
 	private function identity_meta_key( string $provider ): string {
 		return '_yp_social_' . $provider . '_id';
+	}
+
+	/**
+	 * A read-only "Connected Accounts" section on the native WordPress
+	 * Profile/Edit User screen (direct request, after the owner logged
+	 * in via Google and asked how to tell) — reads the same
+	 * `_yp_social_{provider}_id` meta `find_or_create_user()` writes,
+	 * same idea as every other status indicator already in this
+	 * codebase (e.g. the Materials list's In Stock/Out of Stock pill).
+	 * Fires on both `show_user_profile` (your own profile) and
+	 * `edit_user_profile` (an admin viewing someone else's) — WordPress
+	 * only ever fires the one that applies to the screen being viewed.
+	 */
+	public function render_profile_section( \WP_User $user ): void {
+		$connected = [];
+		foreach ( [ 'google', 'discord' ] as $provider ) {
+			if ( get_user_meta( $user->ID, $this->identity_meta_key( $provider ), true ) ) {
+				$connected[] = $this->provider_config( $provider )['label'];
+			}
+		}
+		?>
+		<h2><?php esc_html_e( 'Connected Accounts', 'yeffoprint-core' ); ?></h2>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th><?php esc_html_e( 'Social Login', 'yeffoprint-core' ); ?></th>
+				<td>
+					<?php if ( $connected ) : ?>
+						<p>
+							<?php
+							echo esc_html( sprintf(
+								/* translators: %s: comma-separated provider names, e.g. "Google, Discord" */
+								__( 'Signed in with: %s', 'yeffoprint-core' ),
+								implode( ', ', $connected )
+							) );
+							?>
+						</p>
+						<p class="description"><?php esc_html_e( 'This account can be logged into with this password or any connected provider above.', 'yeffoprint-core' ); ?></p>
+					<?php else : ?>
+						<p class="description"><?php esc_html_e( 'No social account connected — this user logs in with a password only.', 'yeffoprint-core' ); ?></p>
+					<?php endif; ?>
+				</td>
+			</tr>
+		</table>
+		<?php
 	}
 
 	private function split_name( string $name ): array {
