@@ -604,3 +604,96 @@ add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $
 	return function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : $redirect_to;
 }, 10, 3 );
 
+/**
+ * The Material Guide's per-material copy plus its resolved live data
+ * (real photo, thickness-derived spec) — shared by the guide itself
+ * (patterns/material-guide.php, on the How It Works page) and the
+ * label configurator's Material info modal
+ * (patterns/material-info-modal.php), so "the material information"
+ * only exists in one place and the two surfaces can't drift apart.
+ *
+ * The business copy (name/body/note) is still deliberately hardcoded
+ * here rather than derived from a Material record's own post_content
+ * blurb — see material-guide.php's own docblock for why. Only the
+ * data-fetching (matching each entry's slug against a published
+ * yp_material record for its photo/thickness) moved here; both
+ * patterns' own rendering stayed where it was.
+ */
+function yeffoprint_material_guide_entries(): array {
+	$materials = [
+		[
+			'slug'   => 'glossy-white',
+			'name'   => 'Standard White Glossy',
+			'spec'   => '2.75mil · Glossy',
+			'finish' => 'Glossy',
+			'body'   => 'Our standard material, recommended for most projects. A bright white base with a slight shine, and very easy to apply.',
+			'note'   => '',
+		],
+		[
+			'slug'   => 'matte-white',
+			'name'   => 'Standard White Matte',
+			'spec'   => '2.75mil · Matte',
+			'finish' => 'Matte',
+			'body'   => 'Our standard material, recommended for most projects. The same bright white base as our glossy option, without the shine, and very easy to apply.',
+			'note'   => '',
+		],
+		[
+			'slug'   => 'holographic',
+			'name'   => 'Holographic',
+			'spec'   => 'Rainbow Sheen',
+			'finish' => 'Rainbow Sheen',
+			'body'   => 'Our most popular holographic option, slightly thicker than our standard labels. Anywhere your design shows white, it takes on a rainbow, holographic sheen in the light.',
+			'note'   => "Designs with highly saturated solid colors can occasionally cause holographic sheets to curl slightly during shipping. This never affects a label's print quality or stickiness, but it does mean holographic orders ship about 24 hours later than usual to account for it.",
+		],
+		[
+			'slug'   => 'prism',
+			'name'   => 'Prism',
+			'spec'   => 'Prism Pattern',
+			'finish' => 'Prism Pattern',
+			'body'   => 'One of the newest additions to our lineup, slightly thicker than our standard labels. Anywhere your design shows white, it takes on our prism pattern — best suited to simpler designs, since a busier design can make the effect feel overwhelming.',
+			'note'   => '',
+		],
+		[
+			'slug'   => 'metallic',
+			'name'   => 'Metallic',
+			'spec'   => '4mil · Chrome',
+			'finish' => 'Chrome',
+			'body'   => 'A newer addition with a true chrome finish. Anywhere your design shows white, it takes on a metallic shine.',
+			'note'   => '',
+		],
+		[
+			'slug'   => 'clear',
+			'name'   => 'Transparent (Clear)',
+			'spec'   => 'Clear',
+			'finish' => 'Clear',
+			'body'   => 'Exactly what it sounds like — a fully clear label. Works best with simpler designs and less image detail, since fine detail can oversaturate during printing and edges can appear slightly blurred.',
+			'note'   => '',
+		],
+	];
+
+	return array_map( function ( $material ) {
+		$record    = get_posts( [
+			'name'           => $material['slug'],
+			'post_type'      => 'yp_material',
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+		] );
+		$photo_url = $record ? get_the_post_thumbnail_url( $record[0], 'thumbnail' ) : '';
+		$hover_id  = $record ? (int) get_post_meta( $record[0]->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true ) : 0;
+		$zoom_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'large' ) : ( $record ? get_the_post_thumbnail_url( $record[0], 'large' ) : '' );
+		$thickness = $record ? (float) get_post_meta( $record[0]->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ) : 0;
+		$spec      = $material['spec'];
+
+		if ( $thickness > 0 ) {
+			$thickness_display = rtrim( rtrim( number_format( $thickness, 2, '.', '' ), '0' ), '.' );
+			$spec               = $thickness_display . 'mil · ' . $material['finish'];
+		}
+
+		return array_merge( $material, [
+			'photo_url' => $photo_url ?: '',
+			'zoom_url'  => $zoom_url ?: '',
+			'spec'      => $spec,
+		] );
+	}, $materials );
+}
+

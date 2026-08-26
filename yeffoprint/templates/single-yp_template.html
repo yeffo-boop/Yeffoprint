@@ -23,11 +23,17 @@
 			<div class="yp-configurator__controls">
 				<h1 class="yp-configurator__title" data-yp-title></h1>
 				<div class="yp-configurator__section" data-yp-section="size">
-					<h2 id="yp-size-heading">Size</h2>
+					<div class="yp-section-heading-row">
+						<h2 id="yp-size-heading">Size</h2>
+						<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-size-info-modal" aria-haspopup="dialog" aria-label="See label size dimensions">?</button>
+					</div>
 					<div class="yp-option-group" role="radiogroup" aria-labelledby="yp-size-heading" data-yp-size-options></div>
 				</div>
 				<div class="yp-configurator__section" data-yp-section="material">
-					<h2 id="yp-material-heading">Material</h2>
+					<div class="yp-section-heading-row">
+						<h2 id="yp-material-heading">Material</h2>
+						<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-material-info-modal" aria-haspopup="dialog" aria-label="Learn about each material">?</button>
+					</div>
 					<div class="yp-option-group" role="radiogroup" aria-labelledby="yp-material-heading" data-yp-material-options></div>
 				</div>
 				<div class="yp-configurator__section" data-yp-section="fields">
@@ -58,6 +64,10 @@
 
 </main>
 <!-- /wp:group -->
+
+<!-- wp:pattern {"slug":"yeffoprint/material-info-modal"} /-->
+
+<!-- wp:pattern {"slug":"yeffoprint/size-info-modal"} /-->
 
 <!-- wp:html -->
 <div class="yp-sticky-bar" data-yp-sticky-bar hidden>

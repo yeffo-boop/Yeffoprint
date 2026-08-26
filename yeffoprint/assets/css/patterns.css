@@ -844,6 +844,16 @@
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 }
 
+/* Configurator's Material info modal (patterns/material-info-modal.php)
+   reuses this exact component inside a 600px-wide drawer instead of
+   the How It Works page's full content width — a smaller circle keeps
+   six items comfortably scannable without shrinking the drawer's own
+   scroll area down to nothing. */
+.yp-material-guide--modal .yp-material-guide__photo {
+	width: 64px;
+	height: 64px;
+}
+
 /* Click-to-enlarge (direct request: "hover or click... to see a bigger
    image"). The button wraps the same .yp-material-guide__photo circle
    unchanged; a small always-visible badge signals it's tappable (touch
