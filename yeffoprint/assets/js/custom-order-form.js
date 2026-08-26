@@ -73,10 +73,21 @@
 		return div.innerHTML;
 	}
 
+	/** `record.in_stock` is only ever present on materials (direct request: out-of-stock materials stay visible but can't be picked) — a Size record has no such field, so this is a no-op there. */
 	function optionsHtml( records, selectedId ) {
 		return records.map( function ( record ) {
-			return '<option value="' + record.id + '"' + ( record.id === selectedId ? ' selected' : '' ) + '>' + escapeHtml( record.name ) + '</option>';
+			var outOfStock = false === record.in_stock;
+			return '<option value="' + record.id + '"' + ( record.id === selectedId ? ' selected' : '' ) + ( outOfStock ? ' disabled' : '' ) + '>' + escapeHtml( record.name ) + ( outOfStock ? ' (Out of Stock)' : '' ) + '</option>';
 		} ).join( '' );
+	}
+
+	/** First in-stock material, so a new/duplicated row never defaults to an unselectable option — falls back to the first material regardless of stock only if every single one is out. */
+	function firstAvailableMaterialId() {
+		if ( ! materialsData.length ) {
+			return 0;
+		}
+		var available = materialsData.filter( function ( m ) { return false !== m.in_stock; } );
+		return ( available.length ? available[ 0 ] : materialsData[ 0 ] ).id;
 	}
 
 	/* ---------- Batch rows ---------- */
@@ -85,7 +96,7 @@
 		return Object.assign( {
 			id: nextRowId++,
 			size_id: sizesData.length ? sizesData[ 0 ].id : 0,
-			material_id: materialsData.length ? materialsData[ 0 ].id : 0,
+			material_id: firstAvailableMaterialId(),
 			quantity: quantityPresets[ 0 ] || 10,
 			compound_strength: ''
 		}, overrides || {} );

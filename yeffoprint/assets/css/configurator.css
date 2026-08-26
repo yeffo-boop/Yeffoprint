@@ -268,6 +268,24 @@
 	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
 }
 
+/* Out-of-stock materials stay visible (direct request) but can't be
+   picked — a real `disabled` attribute on the button already blocks
+   the click/keyboard activation, this just makes that state readable
+   at a glance instead of looking like a normal, just-unselected pill. */
+.yp-option-pill--out-of-stock {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.yp-option-pill--out-of-stock .yp-swatch-chip {
+	filter: grayscale(1);
+}
+
+.yp-option-pill--out-of-stock .yp-option-pill__meta {
+	color: var(--wp--preset--color--magenta-deep);
+	font-weight: 600;
+}
+
 .yp-option-pill__name {
 	font-weight: 600;
 	font-size: var(--wp--preset--font-size--small);

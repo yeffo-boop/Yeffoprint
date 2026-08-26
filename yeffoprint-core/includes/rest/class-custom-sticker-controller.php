@@ -72,7 +72,11 @@ class YeffoPrint_Custom_Sticker_Controller {
 		}, $sizes );
 
 		$material_format = static function ( \WP_Post $post ) {
-			return [ 'id' => $post->ID, 'name' => $post->post_title ];
+			return [
+				'id'       => $post->ID,
+				'name'     => $post->post_title,
+				'in_stock' => (bool) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ),
+			];
 		};
 
 		return rest_ensure_response( [
@@ -101,6 +105,10 @@ class YeffoPrint_Custom_Sticker_Controller {
 		$material_id = absint( $request->get_param( 'material_id' ) );
 		if ( ! $material_id || ! $this->is_published( 'yp_material', $material_id ) ) {
 			return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		if ( ! (bool) get_post_meta( $material_id, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ) ) {
+			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
 		$sticker_type = sanitize_key( (string) $request->get_param( 'sticker_type' ) );

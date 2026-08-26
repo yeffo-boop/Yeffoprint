@@ -129,6 +129,7 @@ class YeffoPrint_Template_Schema_Controller {
 			'swatch_url'       => get_the_post_thumbnail_url( $material, 'thumbnail' ) ?: null,
 			'hover_image_url'  => $hover_id ? ( wp_get_attachment_image_url( $hover_id, 'thumbnail' ) ?: null ) : null,
 			'price_adjustment' => (float) get_post_meta( $material->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
+			'in_stock'         => (bool) get_post_meta( $material->ID, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ),
 		];
 	}
 }

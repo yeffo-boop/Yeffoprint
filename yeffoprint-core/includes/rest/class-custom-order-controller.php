@@ -309,12 +309,20 @@ class YeffoPrint_Custom_Order_Controller {
 			];
 		};
 
+		$material_format = static function ( \WP_Post $post ) {
+			return [
+				'id'       => $post->ID,
+				'name'     => $post->post_title,
+				'in_stock' => (bool) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ),
+			];
+		};
+
 		return rest_ensure_response( [
 			'sizes'            => array_map( $format, $this->published( 'yp_size' ) ),
 			// Scoped to 'label' — a Material an admin marks 'sticker'-only
 			// (Custom Stickers) shouldn't leak into this, the label form's
 			// picker. See YeffoPrint_Commerce_Record_Meta::get_materials_for().
-			'materials'        => array_map( $format, YeffoPrint_Commerce_Record_Meta::get_materials_for( 'label' ) ),
+			'materials'        => array_map( $material_format, YeffoPrint_Commerce_Record_Meta::get_materials_for( 'label' ) ),
 			'design_fee'       => function_exists( 'yeffoprint_core_custom_design_fee_label' ) ? yeffoprint_core_custom_design_fee_label() : '',
 			'quantity_presets' => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
 		] );
@@ -516,6 +524,10 @@ class YeffoPrint_Custom_Order_Controller {
 			$material_id = absint( $row['material_id'] ?? 0 );
 			if ( ! $material_id || ! $this->is_published( 'yp_material', $material_id ) ) {
 				return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material for every label.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			if ( ! (bool) get_post_meta( $material_id, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ) ) {
+				return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'One of the materials you chose is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 			}
 
 			$quantity = absint( $row['quantity'] ?? 0 );

@@ -58,9 +58,13 @@
 
 	function optionsHtml( entries ) {
 		// entries: [{id, name}] for sizes/materials, or a plain {key: label} map for types/shapes.
+		// `in_stock` only ever appears on a material entry (direct
+		// request: out-of-stock materials stay visible but can't be
+		// picked) — a Size has no such field, so this is a no-op there.
 		if ( Array.isArray( entries ) ) {
 			return entries.map( function ( entry ) {
-				return '<option value="' + entry.id + '">' + escapeHtml( entry.name ) + '</option>';
+				var outOfStock = false === entry.in_stock;
+				return '<option value="' + entry.id + '"' + ( outOfStock ? ' disabled' : '' ) + '>' + escapeHtml( entry.name ) + ( outOfStock ? ' (Out of Stock)' : '' ) + '</option>';
 			} ).join( '' );
 		}
 

@@ -62,6 +62,23 @@ class YeffoPrint_Commerce_Record_Meta {
 		'both'    => 'Labels & Stickers',
 	];
 
+	/**
+	 * Material only — direct request: mark a material out of stock
+	 * without removing it from the site entirely (still shows in the
+	 * configurator/forms so a returning customer can see it exists and
+	 * check back, it just can't be selected — see get()/format callers
+	 * in class-template-schema-controller.php, class-custom-order-
+	 * controller.php, and class-custom-sticker-controller.php, and the
+	 * matching server-side reject in each submission endpoint).
+	 * Deliberately separate from post_status (publish/draft, "Active"
+	 * in the admin app) — a material can be temporarily unavailable
+	 * without being unpublished, and unpublishing would hide it
+	 * entirely rather than showing the "back soon" state that was
+	 * actually asked for. Defaults to true so every existing material
+	 * predates this field without needing a migration.
+	 */
+	public const IN_STOCK = '_yp_in_stock';
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
 	}
@@ -97,6 +114,14 @@ class YeffoPrint_Commerce_Record_Meta {
 			'type'          => 'string',
 			'single'        => true,
 			'default'       => 'label',
+			'show_in_rest'  => true,
+			'auth_callback' => [ $this, 'can_edit' ],
+		] );
+
+		register_post_meta( 'yp_material', self::IN_STOCK, [
+			'type'          => 'boolean',
+			'single'        => true,
+			'default'       => true,
 			'show_in_rest'  => true,
 			'auth_callback' => [ $this, 'can_edit' ],
 		] );

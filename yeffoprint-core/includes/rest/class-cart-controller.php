@@ -96,6 +96,10 @@ class YeffoPrint_Cart_Controller {
 			return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
+		if ( $material_id && ! (bool) get_post_meta( $material_id, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ) ) {
+			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
 		$variants = YeffoPrint_Field_Schema::sanitize_variants( $request->get_param( 'variants' ), YeffoPrint_Field_Schema::get( $template_id ) );
 		if ( is_wp_error( $variants ) ) {
 			return $variants;
