@@ -202,6 +202,7 @@ body.yeffoprint-app h3 {
 .yp-app__topbar {
 	display: flex;
 	align-items: center;
+	gap: var(--wp--preset--spacing--sm);
 	justify-content: space-between;
 	padding: 1.1rem var(--wp--preset--spacing--lg);
 	border-bottom: 1px solid var(--wp--preset--color--light-gray);
@@ -211,9 +212,43 @@ body.yeffoprint-app h3 {
 	z-index: 5;
 }
 
+.yp-app__title-row {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--sm);
+	min-width: 0;
+}
+
 .yp-app__title {
 	font-size: 1.35rem;
 	font-weight: 700;
+}
+
+/* Hamburger toggle for the off-canvas nav below 860px — hidden above
+   that width, where the nav is always visible in its own column, so
+   there's nothing for it to toggle. */
+.yp-app__menu-toggle {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 40px;
+	height: 40px;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+	cursor: pointer;
+}
+
+.yp-app__nav-backdrop {
+	display: none;
+	position: fixed;
+	inset: 0;
+	background: rgba(20, 20, 20, 0.4);
+	z-index: 40;
+	opacity: 0;
+	transition: opacity 200ms ease;
 }
 
 .yp-app__status {
@@ -309,8 +344,37 @@ body.yeffoprint-app h3 {
 		grid-template-columns: 1fr;
 	}
 
+	.yp-app__menu-toggle {
+		display: inline-flex;
+	}
+
+	/* Off-canvas below this width, instead of stacking the full nav
+	   above the page content — a ~15-item list pushed the actual
+	   Dashboard content a full screen or more below the fold on a
+	   phone, direct report: "should the sidebar be loading above the
+	   content though?" Hidden by default (translateX(-100%)), slides
+	   in over the content on toggle rather than pushing it, same
+	   backdrop + slide-panel language as the site's own .yp-drawer
+	   primitive (assets/js/site.js) for a consistent feel even though
+	   this is the admin app's own lightweight equivalent, not that
+	   exact component. */
 	.yp-app__nav {
-		position: static;
-		height: auto;
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 100vh;
+		width: min(280px, 84vw);
+		z-index: 50;
+		transform: translateX(-100%);
+		transition: transform 250ms ease;
+	}
+
+	.yp-app__nav.is-open {
+		transform: translateX(0);
+	}
+
+	.yp-app__nav-backdrop.is-open {
+		display: block;
+		opacity: 1;
 	}
 }
