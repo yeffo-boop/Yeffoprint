@@ -104,6 +104,69 @@
 	color: var(--wp--preset--color--warm-white);
 }
 
+/* ---------- Social login (class-social-login.php, appended via woocommerce_login_form_end — shared by /my-account/ and checkout's "returning customer" toggle) ---------- */
+
+.yp-social-login {
+	margin-top: var(--wp--preset--spacing--md);
+}
+
+.yp-social-login__divider {
+	position: relative;
+	text-align: center;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.85rem;
+	margin: 0 0 var(--wp--preset--spacing--sm);
+}
+
+.yp-social-login__divider::before,
+.yp-social-login__divider::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	width: 38%;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-social-login__divider::before {
+	left: 0;
+}
+
+.yp-social-login__divider::after {
+	right: 0;
+}
+
+.yp-social-login__buttons {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--xs);
+}
+
+.yp-social-login__button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.6rem;
+	padding: 0.65rem 1rem;
+	border-radius: var(--wp--custom--radius--input);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+	text-decoration: none;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.yp-social-login__button:hover {
+	border-color: var(--wp--preset--color--near-black);
+	background: var(--wp--preset--color--warm-white);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-social-login__button svg {
+	flex: none;
+}
+
 /* ---------- Dashboard (woocommerce/myaccount/dashboard.php override) ---------- */
 
 .yp-account-welcome {

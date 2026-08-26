@@ -177,6 +177,24 @@ class YeffoPrint_Admin_Menu {
 	 */
 	const TELEGRAM_ADMIN_CHAT_ID_OPTION = 'yeffoprint_telegram_admin_chat_id';
 
+	/**
+	 * Also read by includes/accounts/class-social-login.php — same
+	 * reasoning as the options above. Direct request: "allow users to
+	 * login with Google/Apple/Discord" — built for Google and Discord
+	 * now; Apple is a deliberately separate follow-up (paid Apple
+	 * Developer Program membership, domain verification, and a private
+	 * key that has to be re-signed into a new client secret every 6
+	 * months — a meaningfully bigger lift than the other two). Each
+	 * provider stays off (and its button hidden) until an admin both
+	 * checks its box and pastes in a real Client ID/Secret.
+	 */
+	const GOOGLE_LOGIN_ENABLED_OPTION  = 'yeffoprint_google_login_enabled';
+	const GOOGLE_CLIENT_ID_OPTION      = 'yeffoprint_google_client_id';
+	const GOOGLE_CLIENT_SECRET_OPTION  = 'yeffoprint_google_client_secret';
+	const DISCORD_LOGIN_ENABLED_OPTION = 'yeffoprint_discord_login_enabled';
+	const DISCORD_CLIENT_ID_OPTION     = 'yeffoprint_discord_client_id';
+	const DISCORD_CLIENT_SECRET_OPTION = 'yeffoprint_discord_client_secret';
+
 	/** Hook suffix for the Settings screen, captured from add_submenu_page()'s own return value — see enqueue_settings_assets(). */
 	private $settings_page_hook = '';
 
@@ -572,6 +590,27 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_telegram'
 		);
+
+		register_setting( 'yeffoprint_settings', self::GOOGLE_LOGIN_ENABLED_OPTION, [ 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => false ] );
+		register_setting( 'yeffoprint_settings', self::GOOGLE_CLIENT_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+		register_setting( 'yeffoprint_settings', self::GOOGLE_CLIENT_SECRET_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+		register_setting( 'yeffoprint_settings', self::DISCORD_LOGIN_ENABLED_OPTION, [ 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => false ] );
+		register_setting( 'yeffoprint_settings', self::DISCORD_CLIENT_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+		register_setting( 'yeffoprint_settings', self::DISCORD_CLIENT_SECRET_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
+
+		add_settings_section(
+			'yeffoprint_social_login',
+			__( 'Social Login', 'yeffoprint-core' ),
+			[ $this, 'render_social_login_section_intro' ],
+			'yeffoprint-settings'
+		);
+
+		add_settings_field( self::GOOGLE_LOGIN_ENABLED_OPTION, __( 'Google', 'yeffoprint-core' ), [ $this, 'render_google_enabled_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::GOOGLE_CLIENT_ID_OPTION, __( 'Google Client ID', 'yeffoprint-core' ), [ $this, 'render_google_client_id_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::GOOGLE_CLIENT_SECRET_OPTION, __( 'Google Client Secret', 'yeffoprint-core' ), [ $this, 'render_google_client_secret_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::DISCORD_LOGIN_ENABLED_OPTION, __( 'Discord', 'yeffoprint-core' ), [ $this, 'render_discord_enabled_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::DISCORD_CLIENT_ID_OPTION, __( 'Discord Client ID', 'yeffoprint-core' ), [ $this, 'render_discord_client_id_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
+		add_settings_field( self::DISCORD_CLIENT_SECRET_OPTION, __( 'Discord Client Secret', 'yeffoprint-core' ), [ $this, 'render_discord_client_secret_field' ], 'yeffoprint-settings', 'yeffoprint_social_login' );
 	}
 
 	public function render_maintenance_section_intro(): void {
@@ -679,6 +718,58 @@ class YeffoPrint_Admin_Menu {
 		/>
 		<p class="description"><?php esc_html_e( 'Message /whoami to the bot from your own Telegram account to get this number. New paid orders, custom design requests, and Contact form messages get sent here.', 'yeffoprint-core' ); ?></p>
 		<?php
+	}
+
+	public function render_social_login_section_intro(): void {
+		?>
+		<p><?php
+			echo wp_kses(
+				sprintf(
+					/* translators: 1: Google redirect URI, 2: Discord redirect URI */
+					__( 'Lets customers sign up/log in with an existing Google or Discord account instead of a password. For each provider you enable, register a developer app and set its redirect URI to the exact URL shown below, then paste the Client ID/Secret it gives you here. Google: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console</a>, redirect URI <code>%1$s</code>. Discord: <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer">Discord Developer Portal</a>, redirect URI <code>%2$s</code>.', 'yeffoprint-core' ),
+					esc_html( YeffoPrint_Social_Login::callback_url( 'google' ) ),
+					esc_html( YeffoPrint_Social_Login::callback_url( 'discord' ) )
+				),
+				[ 'a' => [ 'href' => [], 'target' => [], 'rel' => [] ], 'code' => [] ]
+			);
+		?></p>
+		<?php
+	}
+
+	public function render_google_enabled_field(): void {
+		$this->render_provider_enabled_field( self::GOOGLE_LOGIN_ENABLED_OPTION );
+	}
+
+	public function render_discord_enabled_field(): void {
+		$this->render_provider_enabled_field( self::DISCORD_LOGIN_ENABLED_OPTION );
+	}
+
+	/** Shared checkbox renderer for the two provider "on" switches above — same field, different option name each time. */
+	private function render_provider_enabled_field( string $option ): void {
+		$enabled = (bool) get_option( $option, false );
+		?>
+		<input type="hidden" name="<?php echo esc_attr( $option ); ?>" value="0" />
+		<label>
+			<input type="checkbox" name="<?php echo esc_attr( $option ); ?>" value="1" <?php checked( $enabled ); ?> />
+			<?php esc_html_e( 'Show this button on the login form', 'yeffoprint-core' ); ?>
+		</label>
+		<?php
+	}
+
+	public function render_google_client_id_field(): void {
+		$this->render_secret_field( self::GOOGLE_CLIENT_ID_OPTION );
+	}
+
+	public function render_google_client_secret_field(): void {
+		$this->render_secret_field( self::GOOGLE_CLIENT_SECRET_OPTION );
+	}
+
+	public function render_discord_client_id_field(): void {
+		$this->render_secret_field( self::DISCORD_CLIENT_ID_OPTION );
+	}
+
+	public function render_discord_client_secret_field(): void {
+		$this->render_secret_field( self::DISCORD_CLIENT_SECRET_OPTION );
 	}
 
 	/** Never below 1 — a same-day due date would flag every fresh order/request as overdue immediately. */

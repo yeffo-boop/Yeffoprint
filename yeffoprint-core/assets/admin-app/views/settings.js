@@ -113,6 +113,29 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Social Login</h2></div>' +
+					'<p class="yp-panel__hint">Lets customers sign up/log in with Google or Discord instead of a password. For each provider, register a developer app with its redirect URI set to the exact URL shown below, then paste the Client ID/Secret it gives you.</p>' +
+					'<div class="yp-social-provider">' +
+						'<h3>Google</h3>' +
+						'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-google-enabled"' + ( settings.google_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-google-enabled">Show this button on the login form</label></div>' +
+						'<div class="yp-form__row">' +
+							'<div class="yp-field"><label for="yp-set-google-id">Client ID</label><input type="password" autocomplete="off" id="yp-set-google-id" value="' + YP.escapeAttr( settings.google_client_id ) + '" /></div>' +
+							'<div class="yp-field"><label for="yp-set-google-secret">Client Secret</label><input type="password" autocomplete="off" id="yp-set-google-secret" value="' + YP.escapeAttr( settings.google_client_secret ) + '" /></div>' +
+						'</div>' +
+						'<p class="yp-panel__hint">Redirect URI: <code>' + YP.escapeHtml( settings.google_redirect_uri ) + '</code> — set this in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>.</p>' +
+					'</div>' +
+					'<div class="yp-social-provider">' +
+						'<h3>Discord</h3>' +
+						'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-discord-enabled"' + ( settings.discord_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-discord-enabled">Show this button on the login form</label></div>' +
+						'<div class="yp-form__row">' +
+							'<div class="yp-field"><label for="yp-set-discord-id">Client ID</label><input type="password" autocomplete="off" id="yp-set-discord-id" value="' + YP.escapeAttr( settings.discord_client_id ) + '" /></div>' +
+							'<div class="yp-field"><label for="yp-set-discord-secret">Client Secret</label><input type="password" autocomplete="off" id="yp-set-discord-secret" value="' + YP.escapeAttr( settings.discord_client_secret ) + '" /></div>' +
+						'</div>' +
+						'<p class="yp-panel__hint">Redirect URI: <code>' + YP.escapeHtml( settings.discord_redirect_uri ) + '</code> — set this in the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a>.</p>' +
+					'</div>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Maintenance Subscription</h2></div>' +
 					'<p class="yp-panel__hint">Sold via a Stripe Payment Link, created directly in your Stripe Dashboard — paste that link and the webhook signing secret here once both are set up.</p>' +
 					'<div class="yp-field"><label for="yp-set-maint-link">Payment Link URL</label><input type="url" id="yp-set-maint-link" value="' + YP.escapeAttr( settings.maintenance_payment_link ) + '" placeholder="https://buy.stripe.com/..." /></div>' +
@@ -156,7 +179,13 @@
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,
-				telegram_admin_chat_id: viewEl.querySelector( '#yp-set-telegram-admin-chat-id' ).value
+				telegram_admin_chat_id: viewEl.querySelector( '#yp-set-telegram-admin-chat-id' ).value,
+				google_login_enabled: viewEl.querySelector( '#yp-set-google-enabled' ).checked,
+				google_client_id: viewEl.querySelector( '#yp-set-google-id' ).value,
+				google_client_secret: viewEl.querySelector( '#yp-set-google-secret' ).value,
+				discord_login_enabled: viewEl.querySelector( '#yp-set-discord-enabled' ).checked,
+				discord_client_id: viewEl.querySelector( '#yp-set-discord-id' ).value,
+				discord_client_secret: viewEl.querySelector( '#yp-set-discord-secret' ).value
 			};
 
 			saveButton.disabled = true;

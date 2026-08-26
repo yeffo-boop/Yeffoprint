@@ -328,6 +328,24 @@
 	margin: 0.5rem 0 0;
 }
 
+/* A named sub-section within one .yp-panel — e.g. Settings' Social Login panel, one block per provider. */
+.yp-social-provider {
+	padding-top: var(--wp--preset--spacing--sm);
+	margin-top: var(--wp--preset--spacing--sm);
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-social-provider:first-of-type {
+	border-top: none;
+	margin-top: 0;
+	padding-top: 0;
+}
+
+.yp-social-provider h3 {
+	font-size: 0.92rem;
+	margin: 0 0 0.5rem;
+}
+
 /* ---------- Editable repeater table (bulk-discount tiers) ---------- */
 
 .yp-tier-table {
