@@ -1,0 +1,71 @@
+/**
+ * "Continue with Google/Discord" on wp-login.php (class-social-login.php).
+ * wp-login.php never loads the active theme's stylesheets, so this is
+ * self-contained rather than reusing the storefront's design tokens —
+ * colors are picked to sit naturally in WordPress's own default login
+ * screen rather than force the storefront's branding onto an
+ * administrative surface.
+ */
+
+.yp-social-login {
+	margin-top: 16px;
+}
+
+.yp-social-login__divider {
+	position: relative;
+	text-align: center;
+	color: #646970;
+	font-size: 13px;
+	margin: 0 0 12px;
+}
+
+.yp-social-login__divider::before,
+.yp-social-login__divider::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	width: 38%;
+	border-top: 1px solid #dcdcde;
+}
+
+.yp-social-login__divider::before {
+	left: 0;
+}
+
+.yp-social-login__divider::after {
+	right: 0;
+}
+
+.yp-social-login__buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.yp-social-login__button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 16px;
+	border-radius: 4px;
+	border: 1px solid #dcdcde;
+	background: #fff;
+	color: #2c3338;
+	font-weight: 600;
+	font-size: 14px;
+	line-height: 1.4;
+	text-decoration: none;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.yp-social-login__button:hover,
+.yp-social-login__button:focus {
+	border-color: #8c8f94;
+	background: #f6f7f7;
+	color: #2c3338;
+}
+
+.yp-social-login__button svg {
+	flex: none;
+}
