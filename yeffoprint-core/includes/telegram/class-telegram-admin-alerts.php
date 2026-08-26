@@ -45,18 +45,24 @@ class YeffoPrint_Telegram_Admin_Alerts {
 			$item_lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), $item->get_quantity() );
 		}
 
+		// YeffoPrint_Telegram_Order_Lookup::plain_total() — not a bare
+		// wp_strip_all_tags() — decodes WooCommerce's HTML-entity
+		// currency symbol (e.g. USD's "&#36;") back into a real "$" for
+		// this plain-text message; see that method's own docblock.
+		$total = YeffoPrint_Telegram_Order_Lookup::plain_total( $order );
+
 		$heading = $is_custom_design
 			? sprintf(
 				/* translators: 1: order number, 2: formatted order total */
 				__( 'New custom design request paid: %1$s (%2$s)', 'yeffoprint-core' ),
 				$order->get_order_number(),
-				wp_strip_all_tags( $order->get_formatted_order_total() )
+				$total
 			)
 			: sprintf(
 				/* translators: 1: order number, 2: formatted order total */
 				__( 'New order paid: %1$s (%2$s)', 'yeffoprint-core' ),
 				$order->get_order_number(),
-				wp_strip_all_tags( $order->get_formatted_order_total() )
+				$total
 			);
 
 		$name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );

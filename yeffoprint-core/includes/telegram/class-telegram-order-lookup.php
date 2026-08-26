@@ -59,7 +59,7 @@ class YeffoPrint_Telegram_Order_Lookup {
 		}
 
 		$lines[] = '';
-		$lines[] = sprintf( /* translators: %s: formatted order total */ __( 'Total: %s', 'yeffoprint-core' ), wp_strip_all_tags( $order->get_formatted_order_total() ) );
+		$lines[] = sprintf( /* translators: %s: formatted order total */ __( 'Total: %s', 'yeffoprint-core' ), self::plain_total( $order ) );
 
 		$shipments = YeffoPrint_Order_Tracking::get_shipments( $order );
 		if ( $shipments ) {
@@ -80,6 +80,22 @@ class YeffoPrint_Telegram_Order_Lookup {
 		}
 
 		return implode( "\n", $lines );
+	}
+
+	/**
+	 * get_formatted_order_total() returns HTML meant for a browser to
+	 * render — WooCommerce's own currency symbols are literal HTML
+	 * entities internally (USD is the string "&#36;", not "$"), so a
+	 * browser decodes it but plain text never does. wp_strip_all_tags()
+	 * alone only removes the wrapping <span>/<bdi> markup and leaves
+	 * the entity itself as literal text (found live: a Telegram reply
+	 * showing "Total: &#36;74.60" instead of "Total: $74.60") —
+	 * html_entity_decode() afterward is what actually turns it back
+	 * into a real "$". Shared here since class-telegram-admin-alerts.php
+	 * needs the exact same plain-text total.
+	 */
+	public static function plain_total( \WC_Order $order ): string {
+		return html_entity_decode( wp_strip_all_tags( $order->get_formatted_order_total() ), ENT_QUOTES, 'UTF-8' );
 	}
 
 	/** The linked Custom Order (yp_custom_order) record's own production status, if this WC order came from that flow — separate pipeline from WooCommerce's order status, per PROJECT_SPEC §13. */
