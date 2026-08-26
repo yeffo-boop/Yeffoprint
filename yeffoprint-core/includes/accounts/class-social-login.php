@@ -123,9 +123,21 @@
  * `login_form` action (the hook every login/SSO plugin uses for exactly
  * this, fired inside `wp-login.php`'s own `<form id="loginform">` —
  * not overridable by a theme the way a WooCommerce template is).
- * `enqueue_wp_login_styles()` loads a small, self-contained stylesheet
- * there instead of the storefront's own `woocommerce.css`, since
- * wp-login.php never loads the active theme's assets at all.
+ * Styling `.yp-social-login` there is the theme's job, not this class's
+ * — same division already used for `/my-account/`'s version (styled in
+ * `woocommerce.css`): this class only ever outputs the markup. It turns
+ * out `yeffoprint/functions.php` already hooks `login_enqueue_scripts`
+ * itself, to brand wp-login.php entirely (`assets/css/login.css`) — an
+ * earlier assumption here that "wp-login.php never loads the active
+ * theme's assets" was simply wrong for this site; that file now styles
+ * `.yp-social-login` directly, using its own real brand tokens, rather
+ * than this class enqueueing a second, generic, uncoordinated
+ * stylesheet for the same page (which is also what caused a follow-up
+ * bug: inserting a new block ahead of the floated `.forgetmenot` row
+ * silently broke the margin collapsing `.submit`'s own spacing relied
+ * on — fixed in `login.css` by removing that float entirely, since the
+ * full-width submit button it was never actually needed for was already
+ * defeating its one purpose).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -140,7 +152,6 @@ class YeffoPrint_Social_Login {
 		add_action( 'woocommerce_login_form_end', [ $this, 'render_login_buttons' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_fallback_script' ] );
 		add_action( 'login_form', [ $this, 'render_wp_login_buttons' ] );
-		add_action( 'login_enqueue_scripts', [ $this, 'enqueue_wp_login_styles' ] );
 		add_action( 'show_user_profile', [ $this, 'render_profile_section' ] );
 		add_action( 'edit_user_profile', [ $this, 'render_profile_section' ] );
 	}
@@ -778,21 +789,6 @@ class YeffoPrint_Social_Login {
 		$redirect_to = wp_validate_redirect( $redirect_to, '' );
 
 		echo $this->buttons_html( $redirect_to ); // phpcs:ignore WordPress.Security.EscapeOutput -- buttons_html() already escapes every value it interpolates.
-	}
-
-	/** wp-login.php never loads the active theme's stylesheets, so this is a small, self-contained stylesheet rather than reusing woocommerce.css's design tokens. */
-	public function enqueue_wp_login_styles(): void {
-		if ( ! $this->configured_providers() ) {
-			return;
-		}
-
-		$path = 'assets/frontend/social-login-wp-login.css';
-		wp_enqueue_style(
-			'yeffoprint-social-login-wp-login',
-			YEFFOPRINT_CORE_URL . $path,
-			[],
-			yeffoprint_core_asset_version( $path )
-		);
 	}
 
 	/** Fixed, hand-authored glyphs — no external icon font/CDN, same reasoning as every other inline SVG in this plugin (e.g. class-account-endpoints.php's proof-card icon). */
