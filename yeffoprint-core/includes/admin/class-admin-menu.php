@@ -2,18 +2,16 @@
 /**
  * Top-level "YeffoPrint" wp-admin menu.
  *
- * Post types register with show_in_menu => 'yeffoprint' (see
- * class-post-type-registry.php) and attach as submenus here. Richer
- * dashboard content lands in a later phase — see PROJECT_SPEC.md §17.
- *
- * The announcement bar text (below) is the first real Site Setting,
- * on its own explicitly-labeled "Settings" submenu — not on the
- * top-level dashboard page itself, which is only reachable through
- * WordPress's own default same-labeled ("YeffoPrint") self-link
- * submenu item it adds automatically once other real submenus exist
- * (the CPT ones above), easy to miss/mistake for just a toggle rather
- * than a page. A distinctly-named submenu is worth it even for one
- * field.
+ * Through Phase 7 (docs/ARCHITECTURE.md), every YeffoPrint post type
+ * attached here as its own classic submenu (show_in_menu => 'yeffoprint',
+ * class-post-type-registry.php) and this class also registered a
+ * classic Settings-API page directly. Phase 8 retired all of that from
+ * the sidebar: the custom admin app now has a screen for every one of
+ * them, so this menu collapses to a single top-level link straight
+ * into that app (register_menu() below) — nothing left to expand into
+ * a flyout. The classic Settings page (render_settings_page() and
+ * friends) stays fully functional as an unlinked fallback, same as
+ * every classic CPT editor.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -176,9 +174,9 @@ class YeffoPrint_Admin_Menu {
 		// (YeffoPrint_Admin_App::render(), includes/admin-app/), not
 		// render_dashboard() below — see docs/ARCHITECTURE.md's admin-
 		// dashboard plan. render_dashboard()/quick_links() stay in place,
-		// unused for now: a real Dashboard home view lands inside the new
-		// app in a later phase, at which point this whole classic
-		// version is removed rather than kept as a fallback.
+		// unused: kept as dead code rather than deleted, same "safety net,
+		// not a dead end" reasoning as every classic editor class Phase 8
+		// unlinked but didn't remove.
 		$dashboard_hook = (string) add_menu_page(
 			__( 'YeffoPrint', 'yeffoprint-core' ),
 			__( 'YeffoPrint', 'yeffoprint-core' ),
@@ -189,29 +187,24 @@ class YeffoPrint_Admin_Menu {
 			25
 		);
 
-		// Left implicit before, this is WordPress's own well-known trap:
-		// with no submenu registered at the parent's own slug, WP quietly
-		// inserts one labeled the same as the parent ("YeffoPrint" again)
-		// — clicking the top-level sidebar item itself just expands/
-		// collapses the flyout, and only that *duplicate-labeled* entry
-		// inside it actually navigates anywhere. Harmless when this page
-		// was a placeholder; confusing now that real "what needs your
-		// attention today" content (YeffoPrint_Dashboard_Widgets) lives
-		// here — direct report: a click that "just toggles the submenu."
-		// Registering it explicitly, at this same 'yeffoprint' slug,
-		// replaces WP's auto-inserted duplicate with a distinctly-labeled
-		// one instead.
-		add_submenu_page(
-			'yeffoprint',
-			__( 'Dashboard', 'yeffoprint-core' ),
-			__( 'Dashboard', 'yeffoprint-core' ),
-			'manage_options',
-			'yeffoprint',
-			[ 'YeffoPrint_Admin_App', 'render' ]
-		);
-
+		// Phase 8 (docs/ARCHITECTURE.md): every other classic submenu that
+		// used to live under this one (Design Setup, Pricing Rules, Custom
+		// Orders, Proofs, Field Presets, Maintenance Subscribers, Web
+		// Design Packages, Settings below) is gone now that the custom
+		// admin app has a screen for all of them — see
+		// class-post-type-registry.php's own Phase 8 comments for the
+		// CPT side of this. With zero submenus left at the 'yeffoprint'
+		// parent slug, WordPress's top-level sidebar icon is just a plain
+		// link straight to add_menu_page()'s own callback above — no
+		// flyout, nothing to click through. That also means the
+		// duplicate-"YeffoPrint"-submenu quirk this class used to work
+		// around by registering an explicit "Dashboard" self-link
+		// (WP only auto-inserts that duplicate once *other* submenu
+		// siblings exist) can no longer trigger, so that explicit
+		// registration was removed rather than left as a pointless
+		// second route to the exact same callback.
 		$this->settings_page_hook = (string) add_submenu_page(
-			'yeffoprint',
+			null, // Reachable at its direct URL, deliberately not shown in any menu — same "unlinked fallback" treatment as every classic CPT screen.
 			__( 'Settings', 'yeffoprint-core' ),
 			__( 'Settings', 'yeffoprint-core' ),
 			'manage_options',
@@ -885,6 +878,12 @@ class YeffoPrint_Admin_Menu {
 			$count
 		);
 
+		// Phase 8: $submenu['yeffoprint'] no longer has a Custom Orders
+		// entry to find (or any entries at all) now that the classic CPT
+		// submenus are hidden — this block is a permanent no-op left in
+		// place rather than removed, since !empty() on an unset array key
+		// is notice-safe and the top-level badge below still works fine
+		// on its own.
 		if ( ! empty( $submenu['yeffoprint'] ) ) {
 			foreach ( $submenu['yeffoprint'] as &$item ) {
 				if ( isset( $item[2] ) && 'edit.php?post_type=yp_custom_order' === $item[2] ) {

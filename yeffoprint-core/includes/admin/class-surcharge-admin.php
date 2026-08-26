@@ -1,13 +1,18 @@
 <?php
 /**
- * Dedicated "Card Surcharge" admin page — Dashboard → YeffoPrint → Card
- * Surcharge. Split out of the general Settings page (direct request) so
- * the per-gateway rate table, which needed its own explanatory section
- * anyway, isn't buried among unrelated settings.
+ * Dedicated "Card Surcharge" admin page. Split out of the general
+ * Settings page (direct request) so the per-gateway rate table, which
+ * needed its own explanatory section anyway, isn't buried among
+ * unrelated settings.
  *
  * The option itself (YeffoPrint_Admin_Menu::SURCHARGE_GATEWAY_RATES_OPTION)
  * stays defined on YeffoPrint_Admin_Menu since class-card-surcharge.php
  * already reads it from there — only the registration UI moved here.
+ *
+ * Superseded as the primary UI by the custom admin app's own Card
+ * Surcharge screen (docs/ARCHITECTURE.md, Phase 7) — this classic page
+ * is kept fully functional but unlinked from any menu (Phase 8) as a
+ * fallback, not deleted.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -23,8 +28,12 @@ class YeffoPrint_Surcharge_Admin {
 	}
 
 	public function register_menu(): void {
+		// Phase 8 (docs/ARCHITECTURE.md): parent null — reachable at its
+		// direct URL, deliberately not shown in any menu, now that the
+		// custom admin app has its own Card Surcharge screen. Same
+		// unlinked-fallback treatment as every other classic YeffoPrint page.
 		$hook = (string) add_submenu_page(
-			'yeffoprint',
+			null,
 			__( 'Card Surcharge', 'yeffoprint-core' ),
 			__( 'Card Surcharge', 'yeffoprint-core' ),
 			'manage_options',

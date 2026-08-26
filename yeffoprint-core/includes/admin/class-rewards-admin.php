@@ -1,10 +1,14 @@
 <?php
 /**
- * Manual rewards-points adjustments — Dashboard → YeffoPrint → Rewards.
- * Direct request: migrating a customer's balance over from the old
- * site, or making a customer-service situation right, neither of which
- * has a real order behind it for the normal earn/redeem flow
- * (class-rewards.php) to hook into.
+ * Manual rewards-points adjustments. Direct request: migrating a
+ * customer's balance over from the old site, or making a customer-
+ * service situation right, neither of which has a real order behind
+ * it for the normal earn/redeem flow (class-rewards.php) to hook into.
+ *
+ * Superseded as the primary UI by the custom admin app's own Rewards
+ * screen (docs/ARCHITECTURE.md, Phase 7) — this classic page is kept
+ * fully functional but unlinked from any menu (Phase 8) as a fallback,
+ * not deleted.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -26,8 +30,12 @@ class YeffoPrint_Rewards_Admin {
 	}
 
 	public function register_menu(): void {
+		// Phase 8 (docs/ARCHITECTURE.md): parent null — reachable at its
+		// direct URL, deliberately not shown in any menu, now that the
+		// custom admin app has its own Rewards screen. Same unlinked-
+		// fallback treatment as every other classic YeffoPrint page.
 		$hook = (string) add_submenu_page(
-			'yeffoprint',
+			null,
 			__( 'Rewards', 'yeffoprint-core' ),
 			__( 'Rewards', 'yeffoprint-core' ),
 			self::CAP,
