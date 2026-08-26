@@ -29,10 +29,20 @@
  * move it towards the top on some badge on the pricing table?") replaces
  * what used to be its own full section further down the page
  * (web-design-maintenance-teaser.php, now deleted — this pattern owns
- * that link now). Same payment-link-with-fallback logic that pattern
- * had: reads 'yeffoprint_maintenance_payment_link' directly, falling
- * back to /contact/ until that Stripe setup is done — see
- * docs/ARCHITECTURE.md.
+ * that link now).
+ *
+ * The badge opens a modal rather than linking out directly (direct
+ * follow-up: "the badge doesn't do anything when clicked... show a
+ * modal window styled like the site with information on what's
+ * included") — reuses the site's existing accessible drawer primitive
+ * (assets/js/site.js's openDrawer/closeDrawer, the same one already
+ * driving the header's search/cart panels and the material guide's
+ * photo lightboxes) in its centered-modal variant, wired purely
+ * through data-yp-drawer-trigger/-close — no new JS. The Payment-Link-
+ * with-/contact/-fallback logic (reads
+ * 'yeffoprint_maintenance_payment_link' directly, falling back until
+ * that Stripe setup is done — see docs/ARCHITECTURE.md) now drives the
+ * modal's own CTA button instead of the badge's href.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -73,7 +83,7 @@ $packages = array_map( static function ( $post ) {
 	<!-- /wp:paragraph -->
 
 	<!-- wp:html -->
-	<a class="yp-web-design-maintenance-badge" href="<?php echo esc_url( $maintenance_url ); ?>">
+	<button type="button" class="yp-web-design-maintenance-badge" data-yp-drawer-trigger="yp-maintenance-modal" aria-haspopup="dialog">
 		<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 			<path d="M12.5 3.5a4 4 0 0 0-5.4 4.9L2.5 13a1.8 1.8 0 0 0 2.5 2.5l4.6-4.6a4 4 0 0 0 4.9-5.4l-2.6 2.6-2-2 2.6-2.6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
 		</svg>
@@ -81,7 +91,66 @@ $packages = array_map( static function ( $post ) {
 		<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
 			<path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
 		</svg>
-	</a>
+	</button>
+	<!-- /wp:html -->
+
+	<!-- wp:html -->
+	<div id="yp-maintenance-modal" class="yp-drawer yp-drawer--center" aria-hidden="true">
+		<div class="yp-drawer__backdrop"></div>
+		<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="yp-maintenance-modal-heading">
+			<div class="yp-drawer__header">
+				<span id="yp-maintenance-modal-heading">Ongoing Maintenance &amp; Monitoring</span>
+				<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">
+					<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+						<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+						<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					</svg>
+				</button>
+			</div>
+			<div class="yp-drawer__body">
+				<p>A launched site still needs attention — plugin and core updates, and someone watching for issues before your customers find them. Add this to any package and we'll keep your store current and monitored, month to month.</p>
+				<ul class="yp-web-design-package__features">
+					<li>
+						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						Core, theme, and plugin updates — applied and tested, not just installed blind
+					</li>
+					<li>
+						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						Uptime monitoring, so we know before your customers do
+					</li>
+					<li>
+						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						Regular backups
+					</li>
+					<li>
+						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						Security monitoring for common vulnerabilities
+					</li>
+					<li>
+						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						Priority support if something needs attention
+					</li>
+				</ul>
+				<div class="wp-block-buttons">
+					<div class="wp-block-button is-style-accent yp-maintenance-modal__cta">
+						<a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( $maintenance_url ); ?>">
+							<?php echo esc_html( $maintenance_payment_link ? 'Subscribe to Maintenance' : 'Ask About Maintenance' ); ?>
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 	<!-- /wp:html -->
 
 	<?php if ( $packages ) : ?>

@@ -1579,7 +1579,10 @@
    the top on some badge on the pricing table." Sits between the
    packages section's intro paragraph and the grid itself (both a real
    `.yp-web-design-packages` grid); width:fit-content + margin:auto
-   centers the pill regardless of the parent's own text-align. */
+   centers the pill regardless of the parent's own text-align. A real
+   <button> (opens the maintenance modal below), not a link — the
+   border/background/font/cursor resets undo default button chrome so
+   it still reads as the same pill it was as an <a>. */
 .yp-web-design-maintenance-badge {
 	display: flex;
 	align-items: center;
@@ -1588,12 +1591,15 @@
 	width: fit-content;
 	margin: 1.25rem auto 0;
 	padding: 0.65rem 1.35rem;
+	border: 0;
 	background: var(--wp--custom--gradient-brand-deep);
 	color: var(--wp--preset--color--white);
 	border-radius: 999px;
+	font-family: inherit;
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
 	text-decoration: none;
+	cursor: pointer;
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	transition: transform 150ms ease, box-shadow 150ms ease;
 }
@@ -1621,4 +1627,13 @@
 		border-radius: var(--wp--custom--radius--control);
 		text-align: center;
 	}
+}
+
+.yp-maintenance-modal__cta {
+	margin-top: 1.25rem;
+}
+
+.yp-maintenance-modal__cta .wp-block-button__link {
+	width: 100%;
+	text-align: center;
 }
