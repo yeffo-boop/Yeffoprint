@@ -20,12 +20,13 @@ class YeffoPrint_Web_Design_Package_Meta {
 	public const FEATURED = '_yp_featured';
 
 	/**
-	 * A plain array of bullet strings — deliberately NOT registered via
-	 * register_post_meta(). Nothing outside this record's own admin
-	 * editor (class-web-design-package-editor.php) ever reads or writes
-	 * this field, so there's no REST exposure to declare a schema for;
-	 * plain get_post_meta()/update_post_meta() already round-trips an
-	 * array just fine without registration.
+	 * A plain array of bullet strings. REST-registered (docs/ARCHITECTURE.md,
+	 * admin dashboard Phase 3) so the new admin app can read/write it
+	 * through WP core's own `/wp/v2/yp_web_design_pkg` route — until then
+	 * this was deliberately unregistered, since only the classic editor
+	 * (class-web-design-package-editor.php) ever touched it and plain
+	 * get_post_meta()/update_post_meta() round-trips an array fine either
+	 * way.
 	 */
 	public const FEATURES = '_yp_features';
 
@@ -55,6 +56,19 @@ class YeffoPrint_Web_Design_Package_Meta {
 			'single'        => true,
 			'default'       => false,
 			'show_in_rest'  => true,
+			'auth_callback' => [ $this, 'can_edit' ],
+		] );
+
+		register_post_meta( 'yp_web_design_pkg', self::FEATURES, [
+			'type'          => 'array',
+			'single'        => true,
+			'default'       => [],
+			'show_in_rest'  => [
+				'schema' => [
+					'type'  => 'array',
+					'items' => [ 'type' => 'string' ],
+				],
+			],
 			'auth_callback' => [ $this, 'can_edit' ],
 		] );
 	}
