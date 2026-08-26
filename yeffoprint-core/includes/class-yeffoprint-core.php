@@ -99,6 +99,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/class-ups-tracking-provider.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/class-tracking-provider-registry.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-tracking.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipment-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-contact-controller.php';
@@ -147,6 +148,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Maintenance_Sub_Meta();
 		new YeffoPrint_Stripe_Webhook_Controller();
 		new YeffoPrint_Order_Tracking();
+		new YeffoPrint_Order_Shipment_Status();
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Tracking_Controller();
 		new YeffoPrint_Web_Design_Page_Gate();

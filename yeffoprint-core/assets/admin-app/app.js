@@ -393,15 +393,18 @@
 	window.addEventListener( 'hashchange', route );
 
 	/* ---------- Dashboard home (Phase 6) ----------
-	   Four sections mirroring the classic reskin's own YeffoPrint_Dashboard_Widgets
+	   Five sections, all from one `/admin/dashboard-summary` call. Four
+	   mirror the classic reskin's own YeffoPrint_Dashboard_Widgets
 	   (includes/admin/class-dashboard-widgets.php): Pending Orders (native
 	   WooCommerce, still "Processing"), Pending Proofs and Awaiting Customer
 	   Approval (the two yp_custom_order pipeline stages that need staff
-	   action), and Active Maintenance Subscribers — all from one
-	   `/admin/dashboard-summary` call. A custom-order row jumps straight
-	   into its own detail via the router's subId (`#/orders/{id}`,
-	   app.js's currentSection()) rather than only ever landing on the
-	   Orders list. */
+	   action), and Active Maintenance Subscribers. The fifth, Shipped
+	   Packages, is new (package tracking, direct request) — every order
+	   currently in the "Shipped" status (class-order-shipment-status.php),
+	   one row per physical package/tracking number. A custom-order row
+	   jumps straight into its own detail via the router's subId
+	   (`#/orders/{id}`, app.js's currentSection()) rather than only ever
+	   landing on the Orders list. */
 
 	function setStatus( state, text ) {
 		statusEl.setAttribute( 'data-state', state );
@@ -486,6 +489,24 @@
 	function renderDashboardSummary( summary, el ) {
 		var dueDateDays = summary.due_date_days;
 
+		var shippedBody = summary.shipped_packages.length
+			? '<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Carrier</th><th>Tracking #</th></tr></thead><tbody>' +
+				summary.shipped_packages.map( function ( pkg ) {
+					var tracking = pkg.tracking_url
+						? '<a href="' + YP.escapeAttr( pkg.tracking_url ) + '" target="_blank" rel="noopener noreferrer">' + YP.escapeHtml( pkg.tracking_number ) + '</a>'
+						: YP.escapeHtml( pkg.tracking_number );
+					return (
+						'<tr>' +
+							'<td><a href="' + YP.escapeAttr( pkg.edit_url ) + '">' + YP.escapeHtml( pkg.order_label ) + '</a></td>' +
+							'<td>' + YP.escapeHtml( pkg.customer || '—' ) + '</td>' +
+							'<td><span class="yp-chip">' + YP.escapeHtml( pkg.carrier_label || '—' ) + '</span></td>' +
+							'<td>' + tracking + '</td>' +
+						'</tr>'
+					);
+				} ).join( '' ) +
+			'</tbody></table>'
+			: '<p class="yp-field__hint">Nothing here right now.</p>';
+
 		var maintenanceBody = summary.maintenance_subscribers.length
 			? '<table class="yp-record-table"><thead><tr><th>Customer</th><th>Plan</th><th>Renews</th></tr></thead><tbody>' +
 				summary.maintenance_subscribers.map( function ( sub ) {
@@ -496,6 +517,11 @@
 
 		el.innerHTML =
 			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped.', summary.pending_orders_url, summary.pending_orders, dueDateDays, false ) +
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Shipped Packages</h2></div>' +
+				'<p class="yp-panel__hint">Shipped, not yet delivered — every label with a tracking number currently in transit.</p>' +
+				shippedBody +
+			'</div>' +
 			dashboardSectionHtml( 'Pending Proofs', 'Custom orders staff still owes a proof — brand new, or the customer just requested changes.', '#/orders', summary.pending_proofs, dueDateDays, true ) +
 			dashboardSectionHtml( 'Awaiting Customer Approval', 'A proof has been sent — waiting on the customer to approve it or request changes.', '#/orders', summary.awaiting_approval, dueDateDays, true ) +
 			'<div class="yp-panel">' +
