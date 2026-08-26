@@ -154,6 +154,20 @@ class YeffoPrint_Admin_Menu {
 	 */
 	const MAINTENANCE_PAYMENT_LINK_OPTION = 'yeffoprint_maintenance_payment_link';
 
+	/**
+	 * Also read by includes/telegram/* — same reasoning as the options
+	 * above. The bot token can also be set via a
+	 * YEFFOPRINT_TELEGRAM_BOT_TOKEN wp-config.php constant instead
+	 * (checked first, see YeffoPrint_Telegram_Settings::get_bot_token())
+	 * for admins who'd rather keep it out of the database; this option
+	 * stays the default path so the bot can be turned on entirely from
+	 * Settings, no code access required. Saving either option here
+	 * re-registers (or tears down) the Telegram webhook automatically —
+	 * see class-telegram-webhook-sync.php.
+	 */
+	const TELEGRAM_BOT_TOKEN_OPTION = 'yeffoprint_telegram_bot_token';
+	const TELEGRAM_ENABLED_OPTION   = 'yeffoprint_telegram_enabled';
+
 	/** Hook suffix for the Settings screen, captured from add_submenu_page()'s own return value — see enqueue_settings_assets(). */
 	private $settings_page_hook = '';
 
@@ -500,6 +514,41 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_maintenance'
 		);
+
+		register_setting( 'yeffoprint_settings', self::TELEGRAM_BOT_TOKEN_OPTION, [
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => '',
+		] );
+
+		register_setting( 'yeffoprint_settings', self::TELEGRAM_ENABLED_OPTION, [
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		] );
+
+		add_settings_section(
+			'yeffoprint_telegram',
+			__( 'Telegram Bot', 'yeffoprint-core' ),
+			[ $this, 'render_telegram_section_intro' ],
+			'yeffoprint-settings'
+		);
+
+		add_settings_field(
+			self::TELEGRAM_ENABLED_OPTION,
+			__( 'Bot is active', 'yeffoprint-core' ),
+			[ $this, 'render_telegram_enabled_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_telegram'
+		);
+
+		add_settings_field(
+			self::TELEGRAM_BOT_TOKEN_OPTION,
+			__( 'Bot token', 'yeffoprint-core' ),
+			[ $this, 'render_telegram_bot_token_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_telegram'
+		);
 	}
 
 	public function render_maintenance_section_intro(): void {
@@ -543,6 +592,55 @@ class YeffoPrint_Admin_Menu {
 				[ 'code' => [] ]
 			); ?>
 		</p>
+		<?php
+	}
+
+	public function render_telegram_section_intro(): void {
+		?>
+		<p><?php
+			echo wp_kses(
+				sprintf(
+					/* translators: %s: the webhook endpoint URL Telegram is pointed at */
+					__( 'Answers FAQs and order-status questions for customers on Telegram. Create a bot with @BotFather, paste its token below, and check "Bot is active" — saving this page registers the webhook automatically (<code>%s</code>). Run <code>wp yeffoprint telegram sync-webhook</code> to retry it manually.', 'yeffoprint-core' ),
+					esc_html( YeffoPrint_Telegram_Webhook_Secret::webhook_url() )
+				),
+				[ 'code' => [] ]
+			);
+			$status = YeffoPrint_Telegram_Webhook_Sync::last_message();
+			if ( $status ) {
+				echo ' ' . esc_html( $status );
+			}
+		?></p>
+		<?php
+	}
+
+	public function render_telegram_enabled_field(): void {
+		$enabled = (bool) get_option( self::TELEGRAM_ENABLED_OPTION, false );
+		?>
+		<input type="hidden" name="<?php echo esc_attr( self::TELEGRAM_ENABLED_OPTION ); ?>" value="0" />
+		<label>
+			<input
+				type="checkbox"
+				name="<?php echo esc_attr( self::TELEGRAM_ENABLED_OPTION ); ?>"
+				value="1"
+				<?php checked( $enabled ); ?>
+			/> <?php esc_html_e( 'Respond to messages sent to the bot', 'yeffoprint-core' ); ?>
+		</label>
+		<?php
+	}
+
+	public function render_telegram_bot_token_field(): void {
+		$value = get_option( self::TELEGRAM_BOT_TOKEN_OPTION, '' );
+		?>
+		<input
+			type="password"
+			class="regular-text"
+			autocomplete="off"
+			name="<?php echo esc_attr( self::TELEGRAM_BOT_TOKEN_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+			placeholder="123456789:AA..."
+		/>
+		<p class="description"><?php esc_html_e( 'From @BotFather on Telegram. Can also be set via a YEFFOPRINT_TELEGRAM_BOT_TOKEN constant in wp-config.php instead.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 

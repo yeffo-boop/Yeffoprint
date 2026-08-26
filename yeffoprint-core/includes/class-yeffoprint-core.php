@@ -104,6 +104,14 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-contact-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/access/class-web-design-page-gate.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-webhook-secret.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-settings.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-client.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-webhook-sync.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-faq.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-order-lookup.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-message-handler.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-telegram-webhook-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -153,6 +161,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Tracking_Controller();
 		new YeffoPrint_Web_Design_Page_Gate();
 		new YeffoPrint_Contact_Controller();
+		new YeffoPrint_Telegram_Webhook_Sync();
+		new YeffoPrint_Telegram_Webhook_Controller();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)
@@ -259,10 +269,12 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-shipping-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-pages-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-web-design-packages-setup-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-telegram-setup-command.php';
 			( new YeffoPrint_Seed_Command() )->register();
 			( new YeffoPrint_Shipping_Setup_Command() )->register();
 			( new YeffoPrint_Pages_Setup_Command() )->register();
 			( new YeffoPrint_Web_Design_Packages_Setup_Command() )->register();
+			( new YeffoPrint_Telegram_Setup_Command() )->register();
 		}
 	}
 }

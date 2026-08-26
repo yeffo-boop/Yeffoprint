@@ -103,6 +103,14 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Telegram Bot</h2></div>' +
+					'<p class="yp-panel__hint">Answers FAQs and order-status questions for customers on Telegram. Create a bot with <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>, paste its token below, and turn it on — the webhook connects automatically when you save.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-enabled"' + ( settings.telegram_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-enabled">Bot is active</label></div>' +
+					'<div class="yp-field"><label for="yp-set-telegram-token">Bot token</label><input type="password" autocomplete="off" id="yp-set-telegram-token" value="' + YP.escapeAttr( settings.telegram_bot_token ) + '" placeholder="123456789:AA..." /></div>' +
+					( settings.telegram_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.telegram_status ) + '</p>' : '' ) +
+				'</div>' +
+
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Maintenance Subscription</h2></div>' +
 					'<p class="yp-panel__hint">Sold via a Stripe Payment Link, created directly in your Stripe Dashboard — paste that link and the webhook signing secret here once both are set up.</p>' +
 					'<div class="yp-field"><label for="yp-set-maint-link">Payment Link URL</label><input type="url" id="yp-set-maint-link" value="' + YP.escapeAttr( settings.maintenance_payment_link ) + '" placeholder="https://buy.stripe.com/..." /></div>' +
@@ -143,7 +151,9 @@
 				splash_image_id: parseInt( viewEl.querySelector( '[data-yp-splash-id]' ).value, 10 ) || 0,
 				dashboard_due_date_days: parseInt( viewEl.querySelector( '#yp-set-due-date' ).value, 10 ) || 7,
 				maintenance_payment_link: viewEl.querySelector( '#yp-set-maint-link' ).value,
-				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value
+				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
+				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
+				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked
 			};
 
 			saveButton.disabled = true;
