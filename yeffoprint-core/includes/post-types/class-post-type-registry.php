@@ -22,11 +22,17 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Templates', 'yeffoprint-core' ),
 			__( 'Template', 'yeffoprint-core' ),
 			[ 'title', 'editor', 'thumbnail', 'custom-fields' ],
-			true // publicly queryable: the storefront gallery reads these.
+			true, // publicly queryable: the storefront gallery reads these.
+			// Phase 8 (docs/ARCHITECTURE.md): the custom admin app's own
+			// Templates screen is the primary path now — classic post.php/
+			// edit.php still work fine at their direct URLs (data, meta,
+			// and save logic are all untouched, see class-template-editor.php),
+			// they're just no longer linked from the sidebar.
+			false
 		);
-		// Renamed in the sidebar since this is also the landing tab of the
-		// consolidated Templates/Sizes/Materials/Sticker Sizes page — see
-		// class-design-setup-menu.php.
+		// Never shown now that show_in_menu is false above, but harmless
+		// to leave — see the old class-design-setup-menu.php tab strip,
+		// itself likewise unlinked but still functional at its direct URLs.
 		$template_args['labels']['menu_name'] = __( 'Design Setup', 'yeffoprint-core' );
 
 		register_post_type( 'yp_template', array_merge(
@@ -77,10 +83,14 @@ class YeffoPrint_Post_Type_Registry {
 			false // Consolidated onto the "Design Setup" tabbed page — see class-design-setup-menu.php.
 		) );
 
+		// Phase 8 (docs/ARCHITECTURE.md): show_in_menu false on all three
+		// below, same reasoning as Templates above — each has a full
+		// replacement in the custom admin app now.
 		register_post_type( 'yp_pricing_rule', $this->args(
 			__( 'Pricing Rules', 'yeffoprint-core' ),
 			__( 'Pricing Rule', 'yeffoprint-core' ),
 			[ 'title', 'custom-fields' ],
+			false,
 			false
 		) );
 
@@ -88,6 +98,7 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Custom Orders', 'yeffoprint-core' ),
 			__( 'Custom Order', 'yeffoprint-core' ),
 			[ 'title', 'custom-fields' ],
+			false,
 			false
 		) );
 
@@ -95,6 +106,7 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Proofs', 'yeffoprint-core' ),
 			__( 'Proof', 'yeffoprint-core' ),
 			[ 'title', 'custom-fields' ],
+			false,
 			false
 		) );
 
@@ -112,7 +124,8 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Field Presets', 'yeffoprint-core' ),
 			__( 'Field Preset', 'yeffoprint-core' ),
 			[ 'title', 'custom-fields' ],
-			false
+			false,
+			false // Phase 8: replaced by the custom admin app's own Field Presets screen.
 		) );
 
 		// Customer-owned, not admin-managed content — created/read/
@@ -124,6 +137,13 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Saved Designs', 'yeffoprint-core' ),
 			__( 'Saved Design', 'yeffoprint-core' ),
 			[ 'title', 'custom-fields', 'author' ],
+			false,
+			// Phase 8: hidden along with everything else — this is
+			// customer-owned data with no admin workflow of its own
+			// (created/read/deleted entirely through REST by the owning
+			// customer), so it never got a custom admin app screen and
+			// isn't planned to. Still directly reachable at edit.php?
+			// post_type=yp_saved_design if a look is ever needed.
 			false
 		) );
 
@@ -137,7 +157,8 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Maintenance Subscribers', 'yeffoprint-core' ),
 			__( 'Maintenance Subscriber', 'yeffoprint-core' ),
 			[ 'title', 'custom-fields' ],
-			false
+			false,
+			false // Phase 8: replaced by the custom admin app's own Maintenance Subscribers screen.
 		) );
 
 		// One record per tier on the Web Design page's pricing table
@@ -151,27 +172,31 @@ class YeffoPrint_Post_Type_Registry {
 			__( 'Web Design Packages', 'yeffoprint-core' ),
 			__( 'Web Design Package', 'yeffoprint-core' ),
 			[ 'title', 'page-attributes', 'custom-fields' ],
-			false
+			false,
+			false // Phase 8: replaced by the custom admin app's own Web Design Packages screen.
 		) );
 	}
 
 	/**
 	 * Shared register_post_type() args for a YeffoPrint data record.
 	 *
-	 * All records are admin-managed (not author-facing content), grouped
-	 * under the top-level "YeffoPrint" admin menu, and internal by
-	 * default — only Templates are publicly queryable, since the
-	 * storefront gallery and configurator read them directly.
+	 * All records are admin-managed (not author-facing content), and
+	 * internal by default — only Templates are publicly queryable, since
+	 * the storefront gallery and configurator read them directly.
 	 *
 	 * $show_in_menu defaults to attaching as its own "YeffoPrint" submenu
-	 * item. Sizes/Materials/Sticker Sizes instead pass false — direct
-	 * request, to fold them into Templates' own submenu item (relabeled
-	 * "Design Setup" below) with tabs between the four, rather than four
-	 * separate sidebar entries (class-design-setup-menu.php adds the tab
-	 * strip). show_ui stays true regardless, so each one's post.php/
-	 * post-new.php/edit.php still work fine at their direct URLs — the
-	 * tabs just link straight to them — they're just not duplicated in
-	 * the sidebar.
+	 * item, but every call site above now passes `false` explicitly —
+	 * the custom admin app (docs/ARCHITECTURE.md) has its own screen for
+	 * every one of these record types as of Phase 7, so Phase 8 hides
+	 * all of them from the classic wp-admin sidebar rather than leaving
+	 * two working paths to the same data. `show_ui` stays `true`
+	 * regardless, so each type's post.php/post-new.php/edit.php (and its
+	 * classic editor class's meta boxes/save logic) still work fine at
+	 * their direct URLs — a deliberately-kept, unlinked fallback, not a
+	 * dead end — they're just no longer linked from anywhere. The
+	 * now-unused `'yeffoprint'` default is left in place only so a
+	 * future record type can still opt into the classic pattern if it
+	 * genuinely needs to.
 	 */
 	private function args( string $plural, string $singular, array $supports, bool $public, $show_in_menu = 'yeffoprint' ): array {
 		return [
