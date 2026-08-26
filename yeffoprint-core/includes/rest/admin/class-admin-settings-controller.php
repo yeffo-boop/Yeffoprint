@@ -86,6 +86,13 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::DISCORD_CLIENT_ID_OPTION, sanitize_text_field( (string) ( $params['discord_client_id'] ?? '' ) ) );
 		update_option( $M::DISCORD_CLIENT_SECRET_OPTION, sanitize_text_field( (string) ( $params['discord_client_secret'] ?? '' ) ) );
 
+		update_option( $M::APPLE_LOGIN_ENABLED_OPTION, (bool) ( $params['apple_login_enabled'] ?? false ) );
+		update_option( $M::APPLE_CLIENT_ID_OPTION, sanitize_text_field( (string) ( $params['apple_client_id'] ?? '' ) ) );
+		update_option( $M::APPLE_TEAM_ID_OPTION, sanitize_text_field( (string) ( $params['apple_team_id'] ?? '' ) ) );
+		update_option( $M::APPLE_KEY_ID_OPTION, sanitize_text_field( (string) ( $params['apple_key_id'] ?? '' ) ) );
+		// sanitize_textarea_field, not sanitize_text_field — a PEM private key's line breaks are meaningful.
+		update_option( $M::APPLE_PRIVATE_KEY_OPTION, sanitize_textarea_field( (string) ( $params['apple_private_key'] ?? '' ) ) );
+
 		return rest_ensure_response( $this->payload() );
 	}
 
@@ -132,6 +139,12 @@ class YeffoPrint_Admin_Settings_Controller {
 			'discord_client_id'          => (string) get_option( $M::DISCORD_CLIENT_ID_OPTION, '' ),
 			'discord_client_secret'      => (string) get_option( $M::DISCORD_CLIENT_SECRET_OPTION, '' ),
 			'discord_redirect_uri'       => esc_url_raw( YeffoPrint_Social_Login::callback_url( 'discord' ) ),
+			'apple_login_enabled'        => (bool) get_option( $M::APPLE_LOGIN_ENABLED_OPTION, false ),
+			'apple_client_id'            => (string) get_option( $M::APPLE_CLIENT_ID_OPTION, '' ),
+			'apple_team_id'              => (string) get_option( $M::APPLE_TEAM_ID_OPTION, '' ),
+			'apple_key_id'               => (string) get_option( $M::APPLE_KEY_ID_OPTION, '' ),
+			'apple_private_key'          => (string) get_option( $M::APPLE_PRIVATE_KEY_OPTION, '' ),
+			'apple_redirect_uri'         => esc_url_raw( YeffoPrint_Social_Login::callback_url( 'apple' ) ),
 		];
 	}
 }

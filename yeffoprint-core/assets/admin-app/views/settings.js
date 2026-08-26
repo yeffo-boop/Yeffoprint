@@ -114,7 +114,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Social Login</h2></div>' +
-					'<p class="yp-panel__hint">Lets customers sign up/log in with Google or Discord instead of a password. For each provider, register a developer app with its redirect URI set to the exact URL shown below, then paste the Client ID/Secret it gives you.</p>' +
+					'<p class="yp-panel__hint">Lets customers sign up/log in with Google, Discord, or Apple instead of a password. For each provider, register a developer app with its redirect/return URL set to the exact URL shown below, then paste in the credentials it gives you.</p>' +
 					'<div class="yp-social-provider">' +
 						'<h3>Google</h3>' +
 						'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-google-enabled"' + ( settings.google_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-google-enabled">Show this button on the login form</label></div>' +
@@ -132,6 +132,17 @@
 							'<div class="yp-field"><label for="yp-set-discord-secret">Client Secret</label><input type="password" autocomplete="off" id="yp-set-discord-secret" value="' + YP.escapeAttr( settings.discord_client_secret ) + '" /></div>' +
 						'</div>' +
 						'<p class="yp-panel__hint">Redirect URI: <code>' + YP.escapeHtml( settings.discord_redirect_uri ) + '</code> — set this in the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a>.</p>' +
+					'</div>' +
+					'<div class="yp-social-provider">' +
+						'<h3>Apple</h3>' +
+						'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-apple-enabled"' + ( settings.apple_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-apple-enabled">Show this button on the login form</label></div>' +
+						'<div class="yp-form__row">' +
+							'<div class="yp-field"><label for="yp-set-apple-id">Services ID</label><input type="password" autocomplete="off" id="yp-set-apple-id" value="' + YP.escapeAttr( settings.apple_client_id ) + '" placeholder="com.yeffoprint.web" /></div>' +
+							'<div class="yp-field"><label for="yp-set-apple-team">Team ID</label><input type="password" autocomplete="off" id="yp-set-apple-team" value="' + YP.escapeAttr( settings.apple_team_id ) + '" /></div>' +
+							'<div class="yp-field"><label for="yp-set-apple-key-id">Key ID</label><input type="password" autocomplete="off" id="yp-set-apple-key-id" value="' + YP.escapeAttr( settings.apple_key_id ) + '" /></div>' +
+						'</div>' +
+						'<div class="yp-field"><label for="yp-set-apple-key">Private Key (.p8 contents)</label><textarea id="yp-set-apple-key" autocomplete="off" spellcheck="false" rows="6" style="font-family:monospace;font-size:12px;" placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----">' + YP.escapeHtml( settings.apple_private_key ) + '</textarea></div>' +
+						'<p class="yp-panel__hint">Downloadable only once from Apple when you create the key — keep a copy somewhere safe. Return URL: <code>' + YP.escapeHtml( settings.apple_redirect_uri ) + '</code> — set this (and verify this domain) in <a href="https://developer.apple.com/account/resources/identifiers/list/serviceId" target="_blank" rel="noopener">Apple Developer — Identifiers</a>.</p>' +
 					'</div>' +
 				'</div>' +
 
@@ -185,7 +196,12 @@
 				google_client_secret: viewEl.querySelector( '#yp-set-google-secret' ).value,
 				discord_login_enabled: viewEl.querySelector( '#yp-set-discord-enabled' ).checked,
 				discord_client_id: viewEl.querySelector( '#yp-set-discord-id' ).value,
-				discord_client_secret: viewEl.querySelector( '#yp-set-discord-secret' ).value
+				discord_client_secret: viewEl.querySelector( '#yp-set-discord-secret' ).value,
+				apple_login_enabled: viewEl.querySelector( '#yp-set-apple-enabled' ).checked,
+				apple_client_id: viewEl.querySelector( '#yp-set-apple-id' ).value,
+				apple_team_id: viewEl.querySelector( '#yp-set-apple-team' ).value,
+				apple_key_id: viewEl.querySelector( '#yp-set-apple-key-id' ).value,
+				apple_private_key: viewEl.querySelector( '#yp-set-apple-key' ).value
 			};
 
 			saveButton.disabled = true;
