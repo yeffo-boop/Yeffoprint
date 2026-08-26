@@ -58,13 +58,18 @@ class YeffoPrint_Order_Shipment_Status {
 		] );
 	}
 
-	/** Slots "Shipped" right after "Processing" in every status dropdown/list — the same place it sits in the real production pipeline. */
+	/**
+	 * Slots "Shipped" right after "In Production" (falling back to right
+	 * after "Processing" if that status is somehow missing) — the real
+	 * pipeline is Processing → In Production → Shipped → Completed.
+	 */
 	public function add_to_status_list( array $order_statuses ): array {
-		$new_statuses = [];
+		$anchor_key = isset( $order_statuses['wc-in-production'] ) ? 'wc-in-production' : 'wc-processing';
 
+		$new_statuses = [];
 		foreach ( $order_statuses as $key => $label ) {
 			$new_statuses[ $key ] = $label;
-			if ( 'wc-processing' === $key ) {
+			if ( $anchor_key === $key ) {
 				$new_statuses[ 'wc-' . self::STATUS ] = _x( 'Shipped', 'Order status', 'yeffoprint-core' );
 			}
 		}

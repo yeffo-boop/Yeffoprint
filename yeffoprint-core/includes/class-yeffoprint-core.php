@@ -53,6 +53,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-field-preset-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-custom-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-proof-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-dashboard-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-settings-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-surcharge-controller.php';
@@ -99,6 +100,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/class-ups-tracking-provider.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/tracking-providers/class-tracking-provider-registry.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-tracking.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-production-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipment-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
@@ -137,6 +139,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Field_Preset_Controller();
 		new YeffoPrint_Admin_Custom_Order_Controller();
 		new YeffoPrint_Admin_Proof_Controller();
+		new YeffoPrint_Admin_Order_Controller();
 		new YeffoPrint_Admin_Dashboard_Controller();
 		new YeffoPrint_Admin_Settings_Controller();
 		new YeffoPrint_Admin_Surcharge_Controller();
@@ -156,6 +159,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Maintenance_Sub_Meta();
 		new YeffoPrint_Stripe_Webhook_Controller();
 		new YeffoPrint_Order_Tracking();
+		new YeffoPrint_Order_Production_Status();
 		new YeffoPrint_Order_Shipment_Status();
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Tracking_Controller();

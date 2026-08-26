@@ -75,6 +75,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		return array_map( function ( \WC_Order $order ) {
 			$date = $order->get_date_created();
 			return [
+				'id'       => $order->get_id(),
 				/* translators: %s: order number */
 				'label'    => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
 				'customer' => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
