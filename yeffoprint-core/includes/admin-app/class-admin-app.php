@@ -149,6 +149,13 @@ class YeffoPrint_Admin_App {
 			],
 			'badges'                  => $badges,
 			'previewFontSuggestions' => YeffoPrint_Template_Meta::PREVIEW_FONT_SUGGESTIONS,
+			// Custom Orders' status filter dropdown (Phase 6) needs this
+			// before any order has loaded — same "list screen needs it
+			// before the first detail response could carry it" reasoning
+			// as fieldSchema above; the detail endpoint still sends its
+			// own copy back too (class-admin-custom-order-controller.php),
+			// used to build that one order's own Status <select>.
+			'customOrderStatuses'    => YeffoPrint_Custom_Order_Meta::STATUSES,
 		] );
 
 		// Shared repeater widget (Phase 5) — depended on by both
@@ -167,7 +174,7 @@ class YeffoPrint_Admin_App {
 		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
 		// always finish loading (and registering) before app.js's own
 		// DOMContentLoaded-triggered first route() call needs them.
-		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'maintenance', 'pricing' ] as $view ) {
+		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'maintenance', 'pricing', 'orders', 'proofs' ] as $view ) {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',
