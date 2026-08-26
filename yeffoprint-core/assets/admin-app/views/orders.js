@@ -227,7 +227,7 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Proofs</h2>' + ( order.paid ? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-proof">+ Add Proof</button>' : '' ) + '</div>' +
+					'<div class="yp-panel__head"><h2>Proofs</h2>' + ( order.paid ? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-proof>+ Add Proof</button>' : '' ) + '</div>' +
 					'<div data-yp-proofs-list>' + proofsListHtml( order.proofs ) + '</div>' +
 					( order.approval_url
 						? '<p class="yp-field__hint"><strong>Customer approval link:</strong> <input type="text" readonly onclick="this.select();" value="' + YP.escapeAttr( order.approval_url ) + '" style="width:100%;margin-top:0.35rem;padding:0.4rem 0.6rem;font-family:var(--wp--preset--font-family--mono);font-size:0.78rem;border:1.5px solid var(--wp--preset--color--light-gray);border-radius:var(--wp--custom--radius--control);" /></p>'
