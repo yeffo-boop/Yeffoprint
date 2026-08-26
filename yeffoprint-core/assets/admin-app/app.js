@@ -102,6 +102,12 @@
 	 * bind once at DOMContentLoaded. Same wp.media usage otherwise
 	 * (single image, "Use this image" button) for a consistent picker
 	 * feel with the rest of wp-admin.
+	 *
+	 * `onSelect`/`onRemove` (optional) — views/templates.js uses these
+	 * to keep the field-schema drag-position preview (a separate piece
+	 * of the same drawer) in sync with whichever image is currently the
+	 * Template's artwork, without this generic helper needing to know
+	 * that caller-specific concern exists.
 	 */
 	YP.bindMediaPicker = function ( config ) {
 		if ( typeof wp === 'undefined' || ! wp.media ) {
@@ -132,6 +138,9 @@
 				if ( config.removeButton ) {
 					config.removeButton.hidden = false;
 				}
+				if ( config.onSelect ) {
+					config.onSelect( attachment );
+				}
 			} );
 
 			frame.open();
@@ -143,6 +152,9 @@
 				config.idInput.value = '';
 				config.preview.innerHTML = '';
 				config.removeButton.hidden = true;
+				if ( config.onRemove ) {
+					config.onRemove();
+				}
 			} );
 		}
 	};

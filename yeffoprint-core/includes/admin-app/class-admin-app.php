@@ -96,6 +96,16 @@ class YeffoPrint_Admin_App {
 			yeffoprint_core_asset_version( 'assets/admin-app/records.css' )
 		);
 
+		// Templates' compatible-sizes/materials checklists and the
+		// drag-to-position field-schema editor (Phase 5) — kept out of
+		// records.css since nothing else uses these components.
+		wp_enqueue_style(
+			'yeffoprint-admin-app-field-schema',
+			YEFFOPRINT_CORE_URL . 'assets/admin-app/field-schema.css',
+			[ 'yeffoprint-admin-app-records' ],
+			yeffoprint_core_asset_version( 'assets/admin-app/field-schema.css' )
+		);
+
 		// wp.media() — Materials' swatch/hover image pickers (Phase 2)
 		// and every future screen with an image field. Same call every
 		// other editor with a picker already makes (e.g.
@@ -111,24 +121,59 @@ class YeffoPrint_Admin_App {
 			[ 'strategy' => 'defer' ]
 		);
 
+		$badges = [];
+		foreach ( YeffoPrint_Template_Meta::BADGES as $badge ) {
+			$badges[ $badge ] = '' === $badge ? __( 'None', 'yeffoprint-core' ) : yeffoprint_core_badge_label( $badge );
+		}
+
 		wp_localize_script( 'yeffoprint-admin-app', 'yeffoprintAdminApp', [
 			'restUrl'         => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'wpApiUrl'        => esc_url_raw( rest_url( 'wp/v2/' ) ),
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
 			'exitUrl'         => esc_url_raw( admin_url() ),
 			'currentUserName' => wp_get_current_user()->display_name,
+			// Static constants the Templates/Field Presets screens need
+			// (Phase 5) before any record/id exists yet — an "Add" drawer
+			// must render its full field-schema editor and Badge/etc
+			// selects before the first Save creates the post, so these
+			// can't ride along on a per-record REST response the way
+			// Pricing Rules' tier_types does (see
+			// class-admin-template-controller.php's own docblock).
+			'fieldSchema'     => [
+				'types'                => YeffoPrint_Field_Schema::TYPES,
+				'alignments'           => YeffoPrint_Field_Schema::ALIGNMENTS,
+				'formattingRules'      => YeffoPrint_Field_Schema::FORMATTING_RULES,
+				'previewBehaviors'     => YeffoPrint_Field_Schema::PREVIEW_BEHAVIORS,
+				'qrMinMaxChars'        => YeffoPrint_Field_Schema::QR_MIN_MAX_CHARS,
+				'qrMaxChars'           => YeffoPrint_Field_Schema::QR_MAX_CHARS,
+			],
+			'badges'                  => $badges,
+			'previewFontSuggestions' => YeffoPrint_Template_Meta::PREVIEW_FONT_SUGGESTIONS,
 		] );
+
+		// Shared repeater widget (Phase 5) — depended on by both
+		// views/templates.js and views/field-presets.js, so it must load
+		// (and be ready) before either. See its own docblock.
+		wp_enqueue_script(
+			'yeffoprint-admin-app-field-schema-editor',
+			YEFFOPRINT_CORE_URL . 'assets/admin-app/field-schema-editor.js',
+			[ 'yeffoprint-admin-app' ],
+			yeffoprint_core_asset_version( 'assets/admin-app/field-schema-editor.js' ),
+			[ 'strategy' => 'defer' ]
+		);
 
 		// Each view script registers itself into YPAdminApp.views (see
 		// app.js's own docblock) — every one of them depends on
 		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
 		// always finish loading (and registering) before app.js's own
 		// DOMContentLoaded-triggered first route() call needs them.
-		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'web-design-packages', 'maintenance', 'pricing' ] as $view ) {
+		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'maintenance', 'pricing' ] as $view ) {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',
-				[ 'yeffoprint-admin-app' ],
+				in_array( $view, [ 'templates', 'field-presets' ], true )
+					? [ 'yeffoprint-admin-app', 'yeffoprint-admin-app-field-schema-editor' ]
+					: [ 'yeffoprint-admin-app' ],
 				yeffoprint_core_asset_version( 'assets/admin-app/views/' . $view . '.js' ),
 				[ 'strategy' => 'defer' ]
 			);
