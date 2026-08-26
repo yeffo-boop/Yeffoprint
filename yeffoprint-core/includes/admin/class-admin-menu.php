@@ -168,6 +168,15 @@ class YeffoPrint_Admin_Menu {
 	const TELEGRAM_BOT_TOKEN_OPTION = 'yeffoprint_telegram_bot_token';
 	const TELEGRAM_ENABLED_OPTION   = 'yeffoprint_telegram_enabled';
 
+	/**
+	 * Also read by class-telegram-admin-alerts.php — same reasoning as
+	 * the Telegram options above. A new paid order (or custom design
+	 * request) and a Contact form submission get pushed here. Message
+	 * /whoami to the bot from your own Telegram account to get this
+	 * number.
+	 */
+	const TELEGRAM_ADMIN_CHAT_ID_OPTION = 'yeffoprint_telegram_admin_chat_id';
+
 	/** Hook suffix for the Settings screen, captured from add_submenu_page()'s own return value — see enqueue_settings_assets(). */
 	private $settings_page_hook = '';
 
@@ -549,6 +558,20 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint-settings',
 			'yeffoprint_telegram'
 		);
+
+		register_setting( 'yeffoprint_settings', self::TELEGRAM_ADMIN_CHAT_ID_OPTION, [
+			'type'              => 'string',
+			'sanitize_callback' => 'sanitize_text_field',
+			'default'           => '',
+		] );
+
+		add_settings_field(
+			self::TELEGRAM_ADMIN_CHAT_ID_OPTION,
+			__( 'Your chat ID (for alerts)', 'yeffoprint-core' ),
+			[ $this, 'render_telegram_admin_chat_id_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_telegram'
+		);
 	}
 
 	public function render_maintenance_section_intro(): void {
@@ -641,6 +664,20 @@ class YeffoPrint_Admin_Menu {
 			placeholder="123456789:AA..."
 		/>
 		<p class="description"><?php esc_html_e( 'From @BotFather on Telegram. Can also be set via a YEFFOPRINT_TELEGRAM_BOT_TOKEN constant in wp-config.php instead.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_telegram_admin_chat_id_field(): void {
+		$value = get_option( self::TELEGRAM_ADMIN_CHAT_ID_OPTION, '' );
+		?>
+		<input
+			type="text"
+			class="regular-text"
+			name="<?php echo esc_attr( self::TELEGRAM_ADMIN_CHAT_ID_OPTION ); ?>"
+			value="<?php echo esc_attr( $value ); ?>"
+			placeholder="123456789"
+		/>
+		<p class="description"><?php esc_html_e( 'Message /whoami to the bot from your own Telegram account to get this number. New paid orders, custom design requests, and Contact form messages get sent here.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 

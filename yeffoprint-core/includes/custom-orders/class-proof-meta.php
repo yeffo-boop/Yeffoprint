@@ -66,6 +66,19 @@ class YeffoPrint_Proof_Meta {
 
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'awaiting_approval' );
 		self::notify_customer( $custom_order_id );
+
+		/**
+		 * Lets other modules (the Telegram proactive-notification
+		 * integration, includes/telegram/class-telegram-order-
+		 * notifications.php) react to a proof becoming ready without this
+		 * class needing to know they exist — same reasoning as the
+		 * Contact form's yeffoprint_contact_form_submitted action. Fired
+		 * regardless of whether notify_customer()'s own email actually
+		 * went out (it bails early on a missing/invalid address), since a
+		 * Telegram ping doesn't depend on the customer having a usable
+		 * email at all.
+		 */
+		do_action( 'yeffoprint_proof_ready_for_review', $custom_order_id );
 	}
 
 	/**

@@ -64,7 +64,7 @@ class YeffoPrint_Reorder {
 		// GET /custom-orders/{id}, ownership-checked there).
 		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
 
-		if ( $custom_order_id && $this->should_render_link_for_item( $item, $custom_order_id, $order ) ) {
+		if ( $custom_order_id && self::should_render_link_for_item( $item, $custom_order_id, $order ) ) {
 			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
 
 			printf(
@@ -73,6 +73,50 @@ class YeffoPrint_Reorder {
 				esc_html__( 'Reorder this custom design', 'yeffoprint-core' )
 			);
 		}
+	}
+
+	/**
+	 * The same links render_reorder_link() prints inline on the order-
+	 * detail/email view, collected into one array instead — for the
+	 * Telegram bot's `/reorder` command (class-telegram-message-
+	 * handler.php), which has no per-item hook to render into and needs
+	 * the whole order's reorder links at once. Static (no instance
+	 * state involved) so callers don't have to construct a new
+	 * YeffoPrint_Reorder — doing that would re-run this class's own
+	 * constructor and double-register its add_action() hooks.
+	 *
+	 * @return array{label:string,url:string}[]
+	 */
+	public static function urls_for_order( \WC_Order $order ): array {
+		$links = [];
+
+		foreach ( $order->get_items() as $item_id => $item ) {
+			if ( ! $item instanceof \WC_Order_Item_Product ) {
+				continue;
+			}
+
+			$snapshot    = json_decode( (string) $item->get_meta( '_yp_template_snapshot' ), true );
+			$template_id = (int) ( $snapshot['id'] ?? 0 );
+
+			if ( $template_id ) {
+				$links[] = [
+					'label' => $item->get_name(),
+					'url'   => add_query_arg( 'reorder', $order->get_id() . ':' . $item_id, get_permalink( $template_id ) ),
+				];
+				continue;
+			}
+
+			$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
+
+			if ( $custom_order_id && self::should_render_link_for_item( $item, $custom_order_id, $order ) ) {
+				$links[] = [
+					'label' => $item->get_name(),
+					'url'   => add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) ),
+				];
+			}
+		}
+
+		return $links;
 	}
 
 	/**
@@ -91,7 +135,7 @@ class YeffoPrint_Reorder {
 	 *   disappear for exactly the orders customers are most likely to
 	 *   want to reorder again.
 	 */
-	private function should_render_link_for_item( \WC_Order_Item_Product $item, int $custom_order_id, \WC_Order $order ): bool {
+	private static function should_render_link_for_item( \WC_Order_Item_Product $item, int $custom_order_id, \WC_Order $order ): bool {
 		$fee_item_id       = null;
 		$lowest_row_index  = null;
 		$lowest_row_item_id = null;

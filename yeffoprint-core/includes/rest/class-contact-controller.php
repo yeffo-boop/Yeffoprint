@@ -122,6 +122,14 @@ class YeffoPrint_Contact_Controller {
 		$headers = [ sprintf( 'Reply-To: %1$s <%2$s>', $name, $email ) ];
 
 		wp_mail( $recipient, $subject, implode( "\n", $lines ), $headers );
+
+		/**
+		 * Lets other modules (the Telegram admin-alerts integration,
+		 * includes/telegram/class-telegram-admin-alerts.php) react to a
+		 * Contact form submission without this controller needing to know
+		 * they exist.
+		 */
+		do_action( 'yeffoprint_contact_form_submitted', $name, $email, $method, $handle, $message );
 	}
 
 	/**
