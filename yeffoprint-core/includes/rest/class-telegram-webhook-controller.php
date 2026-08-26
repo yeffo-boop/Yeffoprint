@@ -74,7 +74,7 @@ class YeffoPrint_Telegram_Webhook_Controller {
 			return rest_ensure_response( [ 'ok' => true ] );
 		}
 
-		$reply = ( new YeffoPrint_Telegram_Message_Handler() )->handle( $message['text'] );
+		$reply = ( new YeffoPrint_Telegram_Message_Handler() )->handle( $message );
 
 		( new YeffoPrint_Telegram_Client( YeffoPrint_Telegram_Settings::get_bot_token() ) )->send_message( $chat_id, $reply );
 
