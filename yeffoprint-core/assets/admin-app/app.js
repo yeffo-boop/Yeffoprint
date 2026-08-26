@@ -404,7 +404,15 @@
 	   one row per physical package/tracking number. A custom-order row
 	   jumps straight into its own detail via the router's subId
 	   (`#/orders/{id}`, app.js's currentSection()) rather than only ever
-	   landing on the Orders list. */
+	   landing on the Orders list.
+
+	   Pending Orders also carries a "Send to Printer" button per row
+	   (direct request) — a one-click manual transition from "Processing"
+	   to the new "In Production" status (class-order-production-status.php)
+	   via YeffoPrint_Admin_Order_Controller::send_to_printer(). It doesn't
+	   dispatch anything to a real printer; it's a status flag, and the row
+	   simply drops off this panel once it moves (this panel only ever
+	   queries "Processing" orders), same as any other status change. */
 
 	function setStatus( state, text ) {
 		statusEl.setAttribute( 'data-state', state );
@@ -454,13 +462,13 @@
 		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false };
 	}
 
-	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick ) {
+	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction ) {
 		var body;
 		if ( ! rows.length ) {
 			body = '<p class="yp-field__hint">Nothing here right now.</p>';
 		} else {
 			body =
-				'<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th></tr></thead><tbody>' +
+				'<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th>' + ( rowAction ? '<th></th>' : '' ) + '</tr></thead><tbody>' +
 					rows.map( function ( row ) {
 						var age = daysAgoLabel( row.date, dueDateDays );
 						var label = onOrderClick
@@ -471,6 +479,7 @@
 								'<td>' + label + '</td>' +
 								'<td>' + YP.escapeHtml( row.customer || '—' ) + '</td>' +
 								'<td>' + ( age.overdue ? '<span class="yp-pill yp-pill--crit">' + age.text + '</span>' : age.text ) + '</td>' +
+								( rowAction ? '<td>' + rowAction( row ) + '</td>' : '' ) +
 							'</tr>'
 						);
 					} ).join( '' ) +
@@ -515,8 +524,12 @@
 			'</tbody></table>'
 			: '<p class="yp-field__hint">Nothing here right now.</p>';
 
+		function sendToPrinterButtonHtml( row ) {
+			return '<button type="button" class="wp-block-button__link is-style-outline yp-row-action" style="padding:4px 10px;font-size:12px;" data-yp-send-to-printer="' + row.id + '">Send to Printer</button>';
+		}
+
 		el.innerHTML =
-			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped.', summary.pending_orders_url, summary.pending_orders, dueDateDays, false ) +
+			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped.', summary.pending_orders_url, summary.pending_orders, dueDateDays, false, sendToPrinterButtonHtml ) +
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Shipped Packages</h2></div>' +
 				'<p class="yp-panel__hint">Shipped, not yet delivered — every label with a tracking number currently in transit.</p>' +
@@ -533,6 +546,21 @@
 		el.querySelectorAll( '[data-yp-dashboard-order]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
 				window.location.hash = '#/orders/' + button.getAttribute( 'data-yp-dashboard-order' );
+			} );
+		} );
+
+		el.querySelectorAll( '[data-yp-send-to-printer]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var orderId = button.getAttribute( 'data-yp-send-to-printer' );
+				button.disabled = true;
+				button.textContent = 'Sending…';
+				YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + orderId + '/send-to-printer', { method: 'POST' } )
+					.then( loadDashboard )
+					.catch( function ( error ) {
+						button.disabled = false;
+						button.textContent = 'Send to Printer';
+						window.alert( 'Couldn’t send to printer: ' + error.message );
+					} );
 			} );
 		} );
 	}
