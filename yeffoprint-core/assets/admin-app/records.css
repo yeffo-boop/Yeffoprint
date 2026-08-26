@@ -1,0 +1,289 @@
+/*
+ * Shared list/table/form styles for every catalog CRUD screen the
+ * admin app builds (Materials, Sizes first — Sticker Sizes, Web Design
+ * Packages, and everything else with the same "list of records, click
+ * one, edit fields in a drawer" shape reuse this same file rather than
+ * each screen authoring its own copy). The drawer itself (backdrop,
+ * panel, header, body) is the theme's own `.yp-drawer` from
+ * global.css, not redefined here — this file only adds what that
+ * primitive doesn't already cover: the record list/table and the form
+ * fields that go inside a drawer's `.yp-drawer__body`.
+ */
+
+/* ---------- List toolbar + table ---------- */
+
+.yp-list-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--sm);
+	margin-bottom: var(--wp--preset--spacing--sm);
+	flex-wrap: wrap;
+}
+
+.yp-list-toolbar__search {
+	flex: 1;
+	max-width: 320px;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	padding: 0.55rem 0.9rem;
+	font-family: var(--wp--preset--font-family--body);
+	font-size: 0.85rem;
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-record-card {
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: 0.5rem 1rem 1rem;
+	overflow-x: auto;
+}
+
+.yp-record-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.yp-record-table th {
+	text-align: left;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--wp--preset--color--charcoal);
+	padding: 0.85rem 0.75rem 0.6rem;
+	white-space: nowrap;
+}
+
+.yp-record-table td {
+	padding: 0.65rem 0.75rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+	vertical-align: middle;
+}
+
+.yp-record-table tr:hover td {
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-record-name {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-weight: 600;
+}
+
+.yp-record-name__sub {
+	display: block;
+	font-weight: 400;
+	font-size: 0.78rem;
+	color: var(--wp--preset--color--charcoal);
+	margin-top: 0.1rem;
+}
+
+.yp-swatch {
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	object-fit: cover;
+	background: var(--wp--preset--color--light-gray);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-row-actions {
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* Compact text action inside a table row (Edit/Delete/reorder) —
+   distinct from .yp-drawer's own .yp-icon-button (global.css), which
+   is a fixed-size circular button sized for a single icon/glyph only
+   and would clip a text label like "Edit" or "Delete". */
+.yp-row-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: none;
+	color: var(--wp--preset--color--charcoal);
+	font-family: var(--wp--preset--font-family--body);
+	font-size: 0.8rem;
+	font-weight: 600;
+	padding: 0.35rem 0.55rem;
+	margin-left: 0.1rem;
+	border-radius: var(--wp--custom--radius--control);
+	cursor: pointer;
+}
+
+.yp-row-action:hover {
+	background: var(--wp--preset--color--light-gray);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-row-action:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
+.yp-row-action:disabled:hover {
+	background: none;
+}
+
+.yp-empty-row td {
+	text-align: center;
+	color: var(--wp--preset--color--charcoal);
+	padding: var(--wp--preset--spacing--md);
+}
+
+/* ---------- Pills / chips (mirrors the storefront's own
+   .yp-card__badge / .yp-spec-chip idiom) ---------- */
+
+.yp-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	padding: 0.2rem 0.55rem;
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-pill--good {
+	background: rgba(30, 138, 95, 0.1);
+	color: #1e8a5f;
+}
+
+.yp-pill--neutral {
+	background: rgba(58, 58, 60, 0.08);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-chip {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.78rem;
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.2rem 0.55rem;
+	color: var(--wp--preset--color--charcoal);
+	white-space: nowrap;
+}
+
+/* ---------- Form fields (used inside a .yp-drawer__body) ---------- */
+
+.yp-form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--sm);
+}
+
+.yp-form__row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--wp--preset--spacing--sm);
+}
+
+.yp-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.yp-field label {
+	font-size: 0.8rem;
+	font-weight: 600;
+}
+
+.yp-field input[type="text"],
+.yp-field input[type="number"],
+.yp-field input[type="url"],
+.yp-field select,
+.yp-field textarea {
+	font-family: var(--wp--preset--font-family--body);
+	font-size: 0.9rem;
+	padding: 0.6rem 0.8rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-field textarea {
+	resize: vertical;
+	min-height: 4.5rem;
+}
+
+.yp-field input:focus,
+.yp-field select:focus,
+.yp-field textarea:focus {
+	border-color: var(--wp--preset--color--near-black);
+	outline: none;
+}
+
+.yp-field--checkbox {
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.yp-field--checkbox label {
+	font-weight: 500;
+}
+
+.yp-field__hint {
+	font-size: 0.76rem;
+	color: var(--wp--preset--color--charcoal);
+	margin: 0;
+}
+
+.yp-media-field {
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+}
+
+.yp-media-field__preview {
+	width: 56px;
+	height: 56px;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--warm-white);
+	border: 1px dashed var(--wp--preset--color--light-gray);
+	overflow: hidden;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.yp-media-field__preview img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.yp-media-field__buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	align-items: flex-start;
+}
+
+.yp-form__error {
+	background: rgba(194, 0, 122, 0.08);
+	color: var(--wp--preset--color--magenta-deep);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.65rem 0.9rem;
+	font-size: 0.85rem;
+}
+
+.yp-form__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-top: 0.25rem;
+}

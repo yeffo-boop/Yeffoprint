@@ -87,6 +87,22 @@ class YeffoPrint_Admin_App {
 			yeffoprint_core_asset_version( 'assets/admin-app/app-shell.css' )
 		);
 
+		// List/table/form styles shared by every catalog CRUD screen
+		// (Phase 2: Materials, Sizes) — see that file's own docblock.
+		wp_enqueue_style(
+			'yeffoprint-admin-app-records',
+			YEFFOPRINT_CORE_URL . 'assets/admin-app/records.css',
+			[ 'yeffoprint-admin-app-shell' ],
+			yeffoprint_core_asset_version( 'assets/admin-app/records.css' )
+		);
+
+		// wp.media() — Materials' swatch/hover image pickers (Phase 2)
+		// and every future screen with an image field. Same call every
+		// other editor with a picker already makes (e.g.
+		// class-material-size-editor.php) — the modal/scripts it loads
+		// are otherwise absent from an admin screen.
+		wp_enqueue_media();
+
 		wp_enqueue_script(
 			'yeffoprint-admin-app',
 			YEFFOPRINT_CORE_URL . 'assets/admin-app/app.js',
@@ -97,10 +113,26 @@ class YeffoPrint_Admin_App {
 
 		wp_localize_script( 'yeffoprint-admin-app', 'yeffoprintAdminApp', [
 			'restUrl'         => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'wpApiUrl'        => esc_url_raw( rest_url( 'wp/v2/' ) ),
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
 			'exitUrl'         => esc_url_raw( admin_url() ),
 			'currentUserName' => wp_get_current_user()->display_name,
 		] );
+
+		// Each view script registers itself into YPAdminApp.views (see
+		// app.js's own docblock) — every one of them depends on
+		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
+		// always finish loading (and registering) before app.js's own
+		// DOMContentLoaded-triggered first route() call needs them.
+		foreach ( [ 'materials', 'sizes' ] as $view ) {
+			wp_enqueue_script(
+				'yeffoprint-admin-app-view-' . $view,
+				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',
+				[ 'yeffoprint-admin-app' ],
+				yeffoprint_core_asset_version( 'assets/admin-app/views/' . $view . '.js' ),
+				[ 'strategy' => 'defer' ]
+			);
+		}
 	}
 
 	private function is_own_screen(): bool {
