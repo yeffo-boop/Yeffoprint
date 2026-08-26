@@ -106,7 +106,75 @@ body.login #loginform input[type="email"]:focus {
 	outline: none;
 }
 
+/* ---------- Social login (class-social-login.php's .yp-social-login markup, appended via WordPress's own login_form action) — this page's actual brand tokens, not a generic fallback: the buttons live in the plugin, but styling any front-end surface is this theme's job, same division already used for the storefront/checkout version of these same buttons in woocommerce.css. ---------- */
+
+body.login .yp-social-login {
+	margin-top: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+body.login .yp-social-login__divider {
+	position: relative;
+	text-align: center;
+	color: #3A3A3C; /* charcoal */
+	font-size: 0.8rem;
+	margin: 0 0 0.9rem;
+}
+
+body.login .yp-social-login__divider::before,
+body.login .yp-social-login__divider::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	width: 38%;
+	border-top: 1px solid #E7E5E1; /* light-gray */
+}
+
+body.login .yp-social-login__divider::before {
+	left: 0;
+}
+
+body.login .yp-social-login__divider::after {
+	right: 0;
+}
+
+body.login .yp-social-login__buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+body.login .yp-social-login__button {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.6rem;
+	padding: 0.7rem 1rem;
+	border-radius: 12px; /* radius--input */
+	border: 1.5px solid #E7E5E1; /* light-gray */
+	background: #FFFFFF;
+	color: #141414; /* near-black */
+	font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	font-weight: 600;
+	font-size: 0.95rem;
+	text-decoration: none;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+body.login .yp-social-login__button:hover,
+body.login .yp-social-login__button:focus {
+	border-color: #00AEEF; /* cyan */
+	box-shadow: 0 0 0 2px rgba(0, 174, 239, 0.16);
+	color: #141414;
+	outline: none;
+}
+
+body.login .yp-social-login__button svg {
+	flex: none;
+}
+
 body.login .forgetmenot {
+	float: none; /* WordPress core floats this left; overridden since #wp-submit below is already full-width, so the float did no real layout work — it just meant .submit needed clear:both, and (found live) meant a new block inserted before this one skips it entirely for margin-collapsing purposes, silently eating the gap below the social login buttons. */
 	font-size: 0.875rem;
 	color: #3A3A3C;
 	margin-bottom: 0.75rem;
@@ -123,7 +191,6 @@ body.login .wp-hide-pw .dashicons {
 /* ---------- Submit button — same accent gradient/hover treatment as .wp-block-button.is-style-accent elsewhere on the site ---------- */
 
 body.login .submit {
-	clear: both;
 	margin-top: 1.25rem;
 }
 
