@@ -21,7 +21,8 @@
 		priceAdjustment: '_yp_price_adjustment',
 		hoverImage: '_yp_hover_image_id',
 		thickness: '_yp_thickness_mil',
-		scope: '_yp_material_scope'
+		scope: '_yp_material_scope',
+			inStock: '_yp_in_stock'
 	};
 
 	var SCOPES = {
@@ -86,6 +87,7 @@
 				var thickness = material.meta ? parseFloat( material.meta[ META.thickness ] ) || 0 : 0;
 				var priceAdjustment = material.meta ? parseFloat( material.meta[ META.priceAdjustment ] ) || 0 : 0;
 				var isPublished = 'publish' === material.status;
+				var isInStock = ! material.meta || false !== material.meta[ META.inStock ];
 
 				return (
 					'<tr data-id="' + material.id + '">' +
@@ -96,7 +98,10 @@
 						'<td><span class="yp-chip">' + YP.escapeHtml( SCOPES[ scope ] || scope ) + '</span></td>' +
 						'<td><span class="yp-chip">' + ( thickness ? thickness + ' mil' : '&mdash;' ) + '</span></td>' +
 						'<td><span class="yp-chip">' + ( priceAdjustment ? formatMoney( priceAdjustment ) : 'No adjustment' ) + '</span></td>' +
-						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span></td>' +
+						'<td>' +
+							'<span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span> ' +
+							( isInStock ? '' : '<span class="yp-pill yp-pill--crit">Out of Stock</span>' ) +
+						'</td>' +
 						'<td class="yp-row-actions">' +
 							'<button type="button" class="yp-row-action" data-yp-move-up="' + material.id + '" ' + ( 0 === index ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
 							'<button type="button" class="yp-row-action" data-yp-move-down="' + material.id + '" ' + ( index === filtered.length - 1 ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
@@ -189,6 +194,8 @@
 							'</div>' +
 							'<div class="yp-field"><label for="yp-mat-price">Price adjustment ($, per label)</label><input type="number" step="0.01" id="yp-mat-price" name="price_adjustment" value="' + ( meta[ META.priceAdjustment ] || '0' ) + '" /></div>' +
 							'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-mat-active" name="active"' + ( ! isEdit || 'publish' === material.status ? ' checked' : '' ) + ' /><label for="yp-mat-active">Active (visible to customers)</label></div>' +
+							'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-mat-in-stock" name="in_stock"' + ( ! isEdit || false !== meta[ META.inStock ] ? ' checked' : '' ) + ' /><label for="yp-mat-in-stock">In stock</label></div>' +
+							'<p class="yp-field__hint">Unchecking this keeps the material visible everywhere it already shows (configurator, forms, guide) with an "Out of Stock" label, but customers can’t select it until it’s checked again. Different from Active above — Active/Draft removes it from the site entirely.</p>' +
 							'<div class="yp-field"><label>Swatch image</label>' +
 								'<div class="yp-media-field">' +
 									'<div class="yp-media-field__preview" data-yp-swatch-preview>' + ( isEdit && material._embedded && material._embedded[ 'wp:featuredmedia' ] && material._embedded[ 'wp:featuredmedia' ][ 0 ] ? '<img src="' + YP.escapeAttr( material._embedded[ 'wp:featuredmedia' ][ 0 ].source_url ) + '" alt="" />' : '' ) + '</div>' +
@@ -286,6 +293,7 @@
 			body.meta[ META.thickness ] = parseFloat( form.thickness.value ) || 0;
 			body.meta[ META.priceAdjustment ] = parseFloat( form.price_adjustment.value ) || 0;
 			body.meta[ META.hoverImage ] = parseInt( form.hover_image.value, 10 ) || 0;
+			body.meta[ META.inStock ] = form.in_stock.checked;
 
 			var url = existing ? endpoint( '/' + existing.id ) : endpoint();
 

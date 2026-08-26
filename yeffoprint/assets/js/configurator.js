@@ -167,8 +167,23 @@
 
 	function applyDefaultState() {
 		state.sizeId = schema.sizes && schema.sizes.length ? schema.sizes[ 0 ].id : null;
-		state.materialId = schema.materials && schema.materials.length ? schema.materials[ 0 ].id : null;
+		state.materialId = firstAvailableMaterialId();
 		state.variants = [ createVariant() ];
+	}
+
+	/**
+	 * The first in-stock material, so a fresh page load never lands on
+	 * an unselectable default (direct request: out-of-stock materials
+	 * stay visible but can't be chosen). Falls back to the first
+	 * material regardless of stock only if every single one is out —
+	 * better than leaving nothing selected at all.
+	 */
+	function firstAvailableMaterialId() {
+		if ( ! schema.materials || ! schema.materials.length ) {
+			return null;
+		}
+		var available = schema.materials.filter( function ( m ) { return false !== m.in_stock; } );
+		return ( available.length ? available[ 0 ] : schema.materials[ 0 ] ).id;
 	}
 
 	function hydrateFromBatch( item ) {
@@ -259,9 +274,12 @@
 
 	function renderMaterialOptions() {
 		materialOptionsEl.innerHTML = schema.materials.map( function ( material ) {
-			var meta = material.price_adjustment ? ( material.price_adjustment > 0 ? '+' : '' ) + formatCurrency( material.price_adjustment ) : 'No adjustment';
+			var outOfStock = false === material.in_stock;
+			var meta = outOfStock
+				? 'Out of Stock'
+				: ( material.price_adjustment ? ( material.price_adjustment > 0 ? '+' : '' ) + formatCurrency( material.price_adjustment ) : 'No adjustment' );
 			var swatch = '<span class="yp-swatch-chip" style="' + ( material.swatch_url ? 'background-image:url(' + escapeHtml( material.swatch_url ) + ')' : '' ) + '"></span>';
-			return optionPillHtml( 'material', material.id, material.name, meta, material.id === state.materialId, swatch );
+			return optionPillHtml( 'material', material.id, material.name, meta, material.id === state.materialId, swatch, outOfStock );
 		} ).join( '' ) || '<p class="description">No compatible materials configured yet.</p>';
 
 		materialOptionsEl.querySelectorAll( '[data-option-id]' ).forEach( function ( button ) {
@@ -273,9 +291,10 @@
 		} );
 	}
 
-	function optionPillHtml( group, id, name, meta, isSelected, leadingHtml ) {
+	/** `isDisabled` (out-of-stock materials only, so far) renders a real `disabled` button — nothing else needs to guard against it being clicked, since a disabled button never fires its own click event. */
+	function optionPillHtml( group, id, name, meta, isSelected, leadingHtml, isDisabled ) {
 		return (
-			'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + '" data-option-group="' + group + '" data-option-id="' + id + '">' +
+			'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + ( isDisabled ? ' yp-option-pill--out-of-stock' : '' ) + '" data-option-group="' + group + '" data-option-id="' + id + '"' + ( isDisabled ? ' disabled' : '' ) + '>' +
 				( leadingHtml || '' ) +
 				'<span class="yp-option-pill__name">' + escapeHtml( name ) + '</span>' +
 				'<span class="yp-option-pill__meta">' + escapeHtml( meta ) + '</span>' +
