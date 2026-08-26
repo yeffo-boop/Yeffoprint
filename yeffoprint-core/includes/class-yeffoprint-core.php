@@ -54,6 +54,9 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-custom-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-proof-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-dashboard-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-settings-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-surcharge-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-rewards-controller.php';
 		// Moved out of the is_admin()-only block below — YeffoPrint_Admin_Dashboard_Controller
 		// calls YeffoPrint_Dashboard_Widgets::due_date_days() on every
 		// /admin/dashboard-summary REST request, which isn't an
@@ -126,6 +129,9 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Custom_Order_Controller();
 		new YeffoPrint_Admin_Proof_Controller();
 		new YeffoPrint_Admin_Dashboard_Controller();
+		new YeffoPrint_Admin_Settings_Controller();
+		new YeffoPrint_Admin_Surcharge_Controller();
+		new YeffoPrint_Admin_Rewards_Controller();
 		new YeffoPrint_Custom_Order_Meta();
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
