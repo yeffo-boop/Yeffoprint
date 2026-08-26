@@ -9,22 +9,40 @@
  * the box that said featured on the [a] template and it doesn't show
  * on the homepage." Confirmed by elimination with the owner: the
  * section WAS showing templates, but not ones actually marked
- * Featured (YeffoPrint_Template_Meta::FEATURED, '_yp_featured') — it
- * was relying on the Query Loop block's own `metaKey`/`metaValue`
- * JSON attributes, which depend on WordPress core translating them
- * into an actual meta filter at render time. On this site that
- * translation wasn't taking effect, so the query silently fell back
- * to "4 most recent yp_template posts," featured or not.
+ * Featured (YeffoPrint_Template_Meta::FEATURED, '_yp_featured').
  *
- * Fixed by resolving the actual featured post IDs in plain PHP
- * (get_posts(), the same reliable meta-query pattern every other
- * "live data" section of this theme already uses — see
- * materials.php/material-guide.php) and passing that exact ID list to
- * the Query Loop via `include` — a plain array of post IDs has always
- * been unambiguous and correctly supported, unlike the metaKey/
- * metaValue attribute pair this depended on before. Card rendering
- * itself (wp:post-template + the yeffoprint/template-card block) is
- * untouched — only which posts get selected changed.
+ * First attempt (reverted): swapped the Query Loop block's own
+ * `metaKey`/`metaValue` JSON attributes for a made-up `include`
+ * attribute, still relying on WordPress core's Query Loop block to
+ * translate a JSON query attribute into a WP_Query arg. That was the
+ * same class of bug as the original: core's `core/query` block only
+ * recognizes a fixed, documented set of `query` keys (postType,
+ * perPage, offset, order, orderBy, author, search, exclude, sticky,
+ * inherit, taxQuery, parents, format) — `metaKey`/`metaValue` and
+ * `include` were never among them, so both were always silently
+ * ignored and the block fell back to "N most recent posts of this
+ * type," featured or not, no matter which unsupported attribute this
+ * pattern tried next.
+ *
+ * Fixed for real by not routing the featured-post selection through
+ * the Query Loop block's attribute system at all: resolve the actual
+ * featured post IDs with a plain get_posts() meta query (the same
+ * reliable "read live WordPress data directly" convention
+ * materials.php/material-guide.php/web-design-packages.php already
+ * use), then render each card by hand — instantiating the
+ * yeffoprint/template-card block directly via WP_Block with an
+ * explicit `postId` context, the same context the Query Loop's own
+ * Post Template block would have set, just supplied ourselves. The
+ * markup this produces (`div.wp-block-query` > `ul.wp-block-post-
+ * template.yp-card-grid` > `li` per card) intentionally matches what
+ * core would have rendered, so patterns.css's existing `.yp-card-grid`
+ * rules apply unchanged. Deliberately no `<!-- wp:query -->` block
+ * comment around the output: this whole pattern file's return value
+ * still gets passed through do_blocks() once inserted into the page,
+ * and `core/query` is a dynamic block — if its block comment were
+ * left in place, do_blocks() would call its own render callback and
+ * rebuild the query from scratch from the same unsupported
+ * attributes, discarding this hand-rendered content entirely.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -63,13 +81,30 @@ $featured_ids = get_posts( [
 	</div>
 	<!-- /wp:group -->
 
-	<!-- wp:query {"queryId":1,"query":{"perPage":4,"postType":"yp_template","order":"desc","orderBy":"date","inherit":false,"include":<?php echo wp_json_encode( array_values( $featured_ids ) ); ?>}} -->
 	<div class="wp-block-query">
-		<!-- wp:post-template {"className":"yp-card-grid"} -->
-			<!-- wp:yeffoprint/template-card /-->
-		<!-- /wp:post-template -->
+		<ul class="wp-block-post-template yp-card-grid">
+			<?php foreach ( $featured_ids as $featured_id ) : ?>
+				<li>
+					<?php
+					$card_block = new WP_Block(
+						[
+							'blockName'    => 'yeffoprint/template-card',
+							'attrs'        => [],
+							'innerBlocks'  => [],
+							'innerHTML'    => '',
+							'innerContent' => [],
+						],
+						[
+							'postType' => 'yp_template',
+							'postId'   => $featured_id,
+						]
+					);
+					echo $card_block->render(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- yeffoprint/template-card's own render.php already escapes everything it outputs.
+					?>
+				</li>
+			<?php endforeach; ?>
+		</ul>
 	</div>
-	<!-- /wp:query -->
 
 </section>
 <!-- /wp:group -->
