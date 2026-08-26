@@ -54,66 +54,18 @@
  * swatch photo if no on-vial photo has been uploaded yet. A material
  * with neither (gradient-fallback only) gets no zoom affordance at
  * all, since there's no larger image to show.
+ *
+ * The per-material copy array and its live-data resolution (matching
+ * `slug` against a published yp_material record's post_name for the
+ * real photo/thickness) now live in yeffoprint_material_guide_entries()
+ * (functions.php), shared with the label configurator's Material info
+ * modal (patterns/material-info-modal.php) — this file's own rendering
+ * below is unchanged, it just consumes the already-resolved entries.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-// One entry per material this guide describes. `slug` must match the
-// yp_material record's own post_name for the real photo to be found —
-// this project's own established slugs (glossy-white, matte-white,
-// holographic, clear, metallic) for the five that already exist from
-// initial seeding; `prism` is a guess for if/when that one is added,
-// since it doesn't exist yet (see this pattern's own docblock above).
-$materials = [
-	[
-		'slug'   => 'glossy-white',
-		'name'   => 'Standard White Glossy',
-		'spec'   => '2.75mil · Glossy',
-		'finish' => 'Glossy',
-		'body'   => "Our standard material, recommended for most projects. A bright white base with a slight shine, and very easy to apply.",
-		'note'   => '',
-	],
-	[
-		'slug'   => 'matte-white',
-		'name'   => 'Standard White Matte',
-		'spec'   => '2.75mil · Matte',
-		'finish' => 'Matte',
-		'body'   => 'Our standard material, recommended for most projects. The same bright white base as our glossy option, without the shine, and very easy to apply.',
-		'note'   => '',
-	],
-	[
-		'slug'   => 'holographic',
-		'name'   => 'Holographic',
-		'spec'   => 'Rainbow Sheen',
-		'finish' => 'Rainbow Sheen',
-		'body'   => 'Our most popular holographic option, slightly thicker than our standard labels. Anywhere your design shows white, it takes on a rainbow, holographic sheen in the light.',
-		'note'   => "Designs with highly saturated solid colors can occasionally cause holographic sheets to curl slightly during shipping. This never affects a label's print quality or stickiness, but it does mean holographic orders ship about 24 hours later than usual to account for it.",
-	],
-	[
-		'slug'   => 'prism',
-		'name'   => 'Prism',
-		'spec'   => 'Prism Pattern',
-		'finish' => 'Prism Pattern',
-		'body'   => 'One of the newest additions to our lineup, slightly thicker than our standard labels. Anywhere your design shows white, it takes on our prism pattern — best suited to simpler designs, since a busier design can make the effect feel overwhelming.',
-		'note'   => '',
-	],
-	[
-		'slug'   => 'metallic',
-		'name'   => 'Metallic',
-		'spec'   => '4mil · Chrome',
-		'finish' => 'Chrome',
-		'body'   => 'A newer addition with a true chrome finish. Anywhere your design shows white, it takes on a metallic shine.',
-		'note'   => '',
-	],
-	[
-		'slug'   => 'clear',
-		'name'   => 'Transparent (Clear)',
-		'spec'   => 'Clear',
-		'finish' => 'Clear',
-		'body'   => 'Exactly what it sounds like — a fully clear label. Works best with simpler designs and less image detail, since fine detail can oversaturate during printing and edges can appear slightly blurred.',
-		'note'   => '',
-	],
-];
+$materials = yeffoprint_material_guide_entries();
 ?>
 <!-- wp:group {"tagName":"section","className":"yp-section","layout":{"type":"constrained","contentSize":"760px"}} -->
 <section class="wp-block-group yp-section">
@@ -134,22 +86,10 @@ $materials = [
 	<div class="yp-material-guide">
 
 		<?php foreach ( $materials as $material ) :
-			$record     = get_posts( [
-				'name'           => $material['slug'],
-				'post_type'      => 'yp_material',
-				'post_status'    => 'publish',
-				'posts_per_page' => 1,
-			] );
-			$photo_url = $record ? get_the_post_thumbnail_url( $record[0], 'thumbnail' ) : '';
-			$hover_id  = $record ? (int) get_post_meta( $record[0]->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true ) : 0;
-			$zoom_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'large' ) : ( $record ? get_the_post_thumbnail_url( $record[0], 'large' ) : '' );
-			$thickness = $record ? (float) get_post_meta( $record[0]->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ) : 0;
+			$photo_url = $material['photo_url'];
+			$zoom_url  = $material['zoom_url'];
 			$spec      = $material['spec'];
-			if ( $thickness > 0 ) {
-				$thickness_display = rtrim( rtrim( number_format( $thickness, 2, '.', '' ), '0' ), '.' );
-				$spec              = $thickness_display . 'mil · ' . $material['finish'];
-			}
-			$zoom_id = 'yp-material-zoom-' . $material['slug'];
+			$zoom_id   = 'yp-material-zoom-' . $material['slug'];
 			?>
 			<div class="yp-material-guide__item">
 

@@ -221,6 +221,29 @@
 	margin-bottom: 0.75rem;
 }
 
+/* Size/Material info-modal triggers (direct request: "a tooltip or
+   info button near materials and size"). Reuses the field tooltip's
+   own "?" button style (below) for one consistent info-icon language
+   across the whole configurator, just opening a .yp-drawer--center
+   modal (see patterns/material-info-modal.php, patterns/size-info-
+   modal.php) instead of toggling an inline paragraph — a single
+   short field hint fits inline, a full material guide or a set of
+   scaled size drawings doesn't. */
+.yp-section-heading-row {
+	display: flex;
+	align-items: baseline;
+	gap: 0.35rem;
+	margin-bottom: 0.75rem;
+}
+
+.yp-section-heading-row h2 {
+	margin-bottom: 0;
+}
+
+.yp-section-heading-row .yp-field__tooltip-trigger {
+	margin-left: 0;
+}
+
 .yp-option-group {
 	display: flex;
 	flex-wrap: wrap;
@@ -550,5 +573,70 @@
 
 .yp-sticky-bar__total {
 	font-family: var(--wp--preset--font-family--mono);
+	font-weight: 600;
+}
+
+/* ---------- Size info modal (patterns/size-info-modal.php) ---------- */
+
+.yp-size-info__intro {
+	margin-top: 0;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-size-info-grid {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: var(--wp--preset--spacing--md);
+}
+
+.yp-size-info-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 140px;
+	text-align: center;
+}
+
+.yp-size-info-card__canvas {
+	display: block;
+}
+
+/* A light square the size of the shared scale's own canvas, drawn
+   behind every rectangle — without it, a small size's rectangle would
+   float in empty space with nothing to show it's being compared
+   against the same reference frame as the others. */
+.yp-size-info-card__bounds {
+	fill: var(--wp--preset--color--warm-white);
+	stroke: var(--wp--preset--color--light-gray);
+	stroke-width: 1;
+}
+
+.yp-size-info-card__rect {
+	fill: rgba(0, 174, 239, 0.16);
+	stroke: var(--wp--preset--color--cyan-deep);
+	stroke-width: 1.5;
+}
+
+.yp-size-info-card__canvas--unset {
+	width: 120px;
+	height: 120px;
+	background: var(--wp--preset--color--warm-white);
+	border: 1px dashed var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-size-info-card__dims {
+	margin: 0.6rem 0 0.15rem;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-size-info-card__dims-in {
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-size-info-card__name {
+	margin: 0;
 	font-weight: 600;
 }
