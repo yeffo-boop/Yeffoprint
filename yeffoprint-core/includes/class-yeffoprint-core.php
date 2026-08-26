@@ -48,6 +48,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-rest-security.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-nonce-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-ping-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-pricing-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-item-keys.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-linked-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';
@@ -108,6 +109,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Cart_Controller();
 		new YeffoPrint_Nonce_Controller();
 		new YeffoPrint_Admin_Ping_Controller();
+		new YeffoPrint_Admin_Pricing_Controller();
 		new YeffoPrint_Custom_Order_Meta();
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
