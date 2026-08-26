@@ -35,4 +35,36 @@ class YeffoPrint_Rest_Security {
 			[ 'status' => 403 ]
 		);
 	}
+
+	/**
+	 * For the new admin dashboard's REST endpoints (`yeffoprint-core/v1/admin/*`,
+	 * includes/rest/admin/) — logged-in staff only, no guest pass-through.
+	 * Unlike guest_or_nonced_write() above (which exists specifically
+	 * because storefront writes must stay reachable by guests), nothing
+	 * under `/admin/` is ever meant to be reachable without a session, so
+	 * this checks capability first and always requires the nonce.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public static function admin_write( \WP_REST_Request $request ) {
+		if ( ! is_user_logged_in() || ! current_user_can( 'manage_options' ) ) {
+			return new \WP_Error(
+				'yeffoprint_admin_forbidden',
+				__( 'You do not have permission to do this.', 'yeffoprint-core' ),
+				[ 'status' => 403 ]
+			);
+		}
+
+		$nonce = $request->get_header( 'X-WP-Nonce' );
+
+		if ( $nonce && wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'yeffoprint_invalid_nonce',
+			__( 'Your session has expired. Please refresh the page and try again.', 'yeffoprint-core' ),
+			[ 'status' => 403 ]
+		);
+	}
 }

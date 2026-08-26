@@ -172,12 +172,19 @@ class YeffoPrint_Admin_Menu {
 	}
 
 	public function register_menu(): void {
+		// Render callback is the new custom admin app's shell
+		// (YeffoPrint_Admin_App::render(), includes/admin-app/), not
+		// render_dashboard() below — see docs/ARCHITECTURE.md's admin-
+		// dashboard plan. render_dashboard()/quick_links() stay in place,
+		// unused for now: a real Dashboard home view lands inside the new
+		// app in a later phase, at which point this whole classic
+		// version is removed rather than kept as a fallback.
 		$dashboard_hook = (string) add_menu_page(
 			__( 'YeffoPrint', 'yeffoprint-core' ),
 			__( 'YeffoPrint', 'yeffoprint-core' ),
 			'manage_options',
 			'yeffoprint',
-			[ $this, 'render_dashboard' ],
+			[ 'YeffoPrint_Admin_App', 'render' ],
 			'dashicons-store',
 			25
 		);
@@ -200,7 +207,7 @@ class YeffoPrint_Admin_Menu {
 			__( 'Dashboard', 'yeffoprint-core' ),
 			'manage_options',
 			'yeffoprint',
-			[ $this, 'render_dashboard' ]
+			[ 'YeffoPrint_Admin_App', 'render' ]
 		);
 
 		$this->settings_page_hook = (string) add_submenu_page(
@@ -212,10 +219,13 @@ class YeffoPrint_Admin_Menu {
 			[ $this, 'render_settings_page' ]
 		);
 
-		// Neither page is a CPT screen, so class-admin-shell.php can't
-		// recognize either one via its own POST_TYPES list — this is
-		// what actually gets the reskin's shared stylesheet loading here.
-		YeffoPrint_Admin_Shell::register_page_hook( $dashboard_hook );
+		// The 'yeffoprint' page hook now belongs to the new app shell
+		// (YeffoPrint_Admin_App::set_hook_suffix() below), which enqueues
+		// its own assets entirely and needs none of the classic reskin's
+		// stylesheet — that page renders no postboxes/list tables/wrap
+		// div for it to style. Settings is still a plain Settings-API
+		// page, so it keeps using the classic reskin as before.
+		YeffoPrint_Admin_App::set_hook_suffix( $dashboard_hook );
 		YeffoPrint_Admin_Shell::register_page_hook( $this->settings_page_hook );
 	}
 
@@ -759,6 +769,11 @@ class YeffoPrint_Admin_Menu {
 	}
 
 	/**
+	 * Currently unused (register_menu() above points the 'yeffoprint'
+	 * page at YeffoPrint_Admin_App::render() instead) — kept for a real
+	 * Dashboard home view inside the new admin app in a later phase, see
+	 * docs/ARCHITECTURE.md.
+	 *
 	 * Real landing page (was a single placeholder paragraph, then just a
 	 * quick-links grid) — now leads with YeffoPrint_Dashboard_Widgets'
 	 * own Pending Orders/Pending Proofs/Awaiting Approval tables (direct

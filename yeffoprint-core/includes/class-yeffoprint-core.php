@@ -47,6 +47,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-pricing-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-rest-security.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-nonce-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-ping-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-item-keys.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-linked-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';
@@ -106,6 +107,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Item_Meta();
 		new YeffoPrint_Cart_Controller();
 		new YeffoPrint_Nonce_Controller();
+		new YeffoPrint_Admin_Ping_Controller();
 		new YeffoPrint_Custom_Order_Meta();
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
@@ -191,6 +193,10 @@ final class YeffoPrint_Core {
 		}, 20 );
 
 		if ( is_admin() ) {
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-token-bridge.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-app.php';
+			new YeffoPrint_Admin_App();
+
 			new YeffoPrint_Admin_Menu();
 
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-shell.php';
