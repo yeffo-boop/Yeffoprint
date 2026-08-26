@@ -163,6 +163,16 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+.yp-pill--warn {
+	background: rgba(181, 121, 10, 0.12);
+	color: #8a5c08;
+}
+
+.yp-pill--crit {
+	background: rgba(194, 0, 122, 0.1);
+	color: var(--wp--preset--color--magenta-deep);
+}
+
 .yp-chip {
 	font-family: var(--wp--preset--font-family--mono);
 	font-size: 0.78rem;

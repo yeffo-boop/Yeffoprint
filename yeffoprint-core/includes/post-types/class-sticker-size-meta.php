@@ -31,6 +31,39 @@ class YeffoPrint_Sticker_Size_Meta {
 
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
+		add_action( 'added_post_meta', [ $this, 'enforce_single_custom_tier' ], 10, 4 );
+		add_action( 'updated_post_meta', [ $this, 'enforce_single_custom_tier' ], 10, 4 );
+	}
+
+	/**
+	 * "Only one tier may be the custom one" used to be enforced only in
+	 * class-sticker-size-editor.php's save() — fine while the classic
+	 * editor was the only way to write this field, but the admin
+	 * dashboard's Sticker Sizes screen (Phase 3) writes straight through
+	 * WP core's own REST route instead, which has no way to know about
+	 * that editor-specific rule. Moving the enforcement here, onto the
+	 * meta write itself, makes it hold no matter which UI (or WP-CLI, or
+	 * anything else) sets the flag.
+	 */
+	public function enforce_single_custom_tier( int $meta_id, int $post_id, string $meta_key, $meta_value ): void {
+		if ( self::IS_CUSTOM !== $meta_key || ! $meta_value || 'yp_sticker_size' !== get_post_type( $post_id ) ) {
+			return;
+		}
+
+		$others = get_posts( [
+			'post_type'      => 'yp_sticker_size',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'exclude'        => [ $post_id ],
+			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, admin-managed table.
+				[ 'key' => self::IS_CUSTOM, 'value' => '1' ],
+			],
+		] );
+
+		foreach ( $others as $other_id ) {
+			update_post_meta( $other_id, self::IS_CUSTOM, false );
+		}
 	}
 
 	public function register_meta(): void {
