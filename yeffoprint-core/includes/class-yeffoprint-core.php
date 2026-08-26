@@ -51,6 +51,15 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-pricing-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-template-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-field-preset-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-custom-order-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-proof-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-dashboard-controller.php';
+		// Moved out of the is_admin()-only block below — YeffoPrint_Admin_Dashboard_Controller
+		// calls YeffoPrint_Dashboard_Widgets::due_date_days() on every
+		// /admin/dashboard-summary REST request, which isn't an
+		// is_admin() context; the class itself is still only ever
+		// instantiated from class-admin-menu.php's render_dashboard().
+		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-dashboard-widgets.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-item-keys.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-linked-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';
@@ -114,6 +123,9 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Pricing_Controller();
 		new YeffoPrint_Admin_Template_Controller();
 		new YeffoPrint_Admin_Field_Preset_Controller();
+		new YeffoPrint_Admin_Custom_Order_Controller();
+		new YeffoPrint_Admin_Proof_Controller();
+		new YeffoPrint_Admin_Dashboard_Controller();
 		new YeffoPrint_Custom_Order_Meta();
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
@@ -206,7 +218,6 @@ final class YeffoPrint_Core {
 			new YeffoPrint_Admin_Menu();
 
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-admin-shell.php';
-			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-dashboard-widgets.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-template-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-field-preset-editor.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-material-size-editor.php';

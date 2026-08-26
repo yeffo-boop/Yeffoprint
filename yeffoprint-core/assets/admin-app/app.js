@@ -346,12 +346,22 @@
 
 	/* ---------- Router ---------- */
 
-	function currentSectionId() {
-		var hash = window.location.hash.replace( /^#\/?/, '' );
-		return labelsById[ hash ] ? hash : 'dashboard';
+	/**
+	 * `#/{section}` or `#/{section}/{subId}` — the optional second
+	 * segment (Phase 6: `#/orders/123`) lets the Dashboard home view
+	 * link a row straight to that record's own detail in the target
+	 * screen, rather than only ever landing on a section's bare list.
+	 * Not a general nested-router: each view script decides for itself
+	 * what its own `subId` means (an id to auto-open, or nothing).
+	 */
+	function currentSection() {
+		var hash  = window.location.hash.replace( /^#\/?/, '' );
+		var parts = hash.split( '/' );
+		var id    = labelsById[ parts[ 0 ] ] ? parts[ 0 ] : 'dashboard';
+		return { id: id, subId: parts[ 1 ] || '' };
 	}
 
-	function renderView( id ) {
+	function renderView( id, subId ) {
 		titleEl.textContent = labelsById[ id ] || 'Dashboard';
 
 		navEl.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
@@ -364,7 +374,7 @@
 		}
 
 		if ( YP.views[ id ] ) {
-			YP.views[ id ]( viewEl );
+			YP.views[ id ]( viewEl, subId );
 			return;
 		}
 
@@ -376,22 +386,22 @@
 	}
 
 	function route() {
-		renderView( currentSectionId() );
+		var section = currentSection();
+		renderView( section.id, section.subId );
 	}
 
 	window.addEventListener( 'hashchange', route );
 
-	/* ---------- Dashboard: the one real REST round-trip in Phase 1 ---------- */
-
-	function renderDashboard() {
-		viewEl.innerHTML =
-			'<div class="yp-status-card" data-yp-dashboard-card>' +
-				'<h2>Welcome back' + ( yeffoprintAdminApp.currentUserName ? ', ' + YP.escapeHtml( yeffoprintAdminApp.currentUserName ) : '' ) + '</h2>' +
-				'<p data-yp-dashboard-text>Checking the connection to YeffoPrint’s admin API&hellip;</p>' +
-			'</div>';
-
-		ping();
-	}
+	/* ---------- Dashboard home (Phase 6) ----------
+	   Four sections mirroring the classic reskin's own YeffoPrint_Dashboard_Widgets
+	   (includes/admin/class-dashboard-widgets.php): Pending Orders (native
+	   WooCommerce, still "Processing"), Pending Proofs and Awaiting Customer
+	   Approval (the two yp_custom_order pipeline stages that need staff
+	   action), and Active Maintenance Subscribers — all from one
+	   `/admin/dashboard-summary` call. A custom-order row jumps straight
+	   into its own detail via the router's subId (`#/orders/{id}`,
+	   app.js's currentSection()) rather than only ever landing on the
+	   Orders list. */
 
 	function setStatus( state, text ) {
 		statusEl.setAttribute( 'data-state', state );
@@ -400,32 +410,105 @@
 
 	function ping() {
 		YP.request( yeffoprintAdminApp.restUrl + 'admin/ping' )
-			.then( function ( data ) {
-				setStatus( 'connected', 'Connected as ' + data.name );
-				var textEl = viewEl.querySelector( '[data-yp-dashboard-text]' );
-				if ( textEl ) {
-					textEl.textContent = 'The admin API is connected and working. Every section in the nav will fill in over the next few phases.';
-				}
-			} )
-			.catch( function () {
-				setStatus( 'error', 'Connection failed' );
-				var card = viewEl.querySelector( '[data-yp-dashboard-card]' );
-				if ( card ) {
-					var textEl = card.querySelector( '[data-yp-dashboard-text]' );
-					if ( textEl ) {
-						textEl.textContent = 'Couldn’t reach the admin API. Refresh the page, or try again below.';
-					}
-					if ( ! card.querySelector( '[data-yp-retry]' ) ) {
-						var retryBtn = document.createElement( 'button' );
-						retryBtn.type = 'button';
-						retryBtn.className = 'wp-block-button__link is-style-outline yp-status-card__retry';
-						retryBtn.setAttribute( 'data-yp-retry', '' );
-						retryBtn.textContent = 'Try again';
-						retryBtn.addEventListener( 'click', renderDashboard );
-						card.appendChild( retryBtn );
-					}
-				}
+			.then( function ( data ) { setStatus( 'connected', 'Connected as ' + data.name ); } )
+			.catch( function () { setStatus( 'error', 'Connection failed' ); } );
+	}
+
+	function renderDashboard() {
+		viewEl.innerHTML =
+			'<p class="yp-app__intro">Welcome back' + ( yeffoprintAdminApp.currentUserName ? ', ' + YP.escapeHtml( yeffoprintAdminApp.currentUserName ) : '' ) + '. Here’s what needs attention today.</p>' +
+			'<div data-yp-dashboard><p class="yp-field__hint">Loading&hellip;</p></div>';
+
+		ping();
+		loadDashboard();
+	}
+
+	function loadDashboard() {
+		var el = viewEl.querySelector( '[data-yp-dashboard]' );
+		if ( ! el ) {
+			return; // Navigated away before this finished loading.
+		}
+
+		YP.request( yeffoprintAdminApp.restUrl + 'admin/dashboard-summary' )
+			.then( function ( summary ) { renderDashboardSummary( summary, el ); } )
+			.catch( function ( error ) {
+				el.innerHTML =
+					'<p class="yp-form__error">Couldn’t load the dashboard: ' + YP.escapeHtml( error.message ) + '</p>' +
+					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-dashboard-retry>Try again</button>';
+				el.querySelector( '[data-yp-dashboard-retry]' ).addEventListener( 'click', loadDashboard );
 			} );
+	}
+
+	function daysAgoLabel( isoDate, dueDateDays ) {
+		if ( ! isoDate ) {
+			return { text: '—', overdue: false };
+		}
+		var daysOpen = Math.floor( ( Date.now() - new Date( isoDate ).getTime() ) / 86400000 );
+		if ( daysOpen > dueDateDays ) {
+			var overdueBy = daysOpen - dueDateDays;
+			return { text: overdueBy + ( 1 === overdueBy ? ' day overdue' : ' days overdue' ), overdue: true };
+		}
+		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false };
+	}
+
+	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick ) {
+		var body;
+		if ( ! rows.length ) {
+			body = '<p class="yp-field__hint">Nothing here right now.</p>';
+		} else {
+			body =
+				'<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th></tr></thead><tbody>' +
+					rows.map( function ( row ) {
+						var age = daysAgoLabel( row.date, dueDateDays );
+						var label = onOrderClick
+							? '<button type="button" class="yp-row-action" style="padding:0;font-weight:600;" data-yp-dashboard-order="' + row.id + '">' + YP.escapeHtml( row.label ) + '</button>'
+							: '<a href="' + YP.escapeAttr( row.edit_url ) + '">' + YP.escapeHtml( row.label ) + '</a>';
+						return (
+							'<tr>' +
+								'<td>' + label + '</td>' +
+								'<td>' + YP.escapeHtml( row.customer || '—' ) + '</td>' +
+								'<td>' + ( age.overdue ? '<span class="yp-pill yp-pill--crit">' + age.text + '</span>' : age.text ) + '</td>' +
+							'</tr>'
+						);
+					} ).join( '' ) +
+				'</tbody></table>';
+		}
+
+		return (
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>' + YP.escapeHtml( title ) + '</h2>' + ( viewAllHref ? '<a href="' + YP.escapeAttr( viewAllHref ) + '">View all &rarr;</a>' : '' ) + '</div>' +
+				'<p class="yp-panel__hint">' + YP.escapeHtml( description ) + '</p>' +
+				body +
+			'</div>'
+		);
+	}
+
+	function renderDashboardSummary( summary, el ) {
+		var dueDateDays = summary.due_date_days;
+
+		var maintenanceBody = summary.maintenance_subscribers.length
+			? '<table class="yp-record-table"><thead><tr><th>Customer</th><th>Plan</th><th>Renews</th></tr></thead><tbody>' +
+				summary.maintenance_subscribers.map( function ( sub ) {
+					return '<tr><td>' + YP.escapeHtml( sub.name ) + '</td><td>' + YP.escapeHtml( sub.plan || '—' ) + '</td><td>' + ( sub.renews ? new Date( sub.renews * 1000 ).toLocaleDateString() : '—' ) + '</td></tr>';
+				} ).join( '' ) +
+			'</tbody></table>'
+			: '<p class="yp-field__hint">Nothing here right now.</p>';
+
+		el.innerHTML =
+			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped.', summary.pending_orders_url, summary.pending_orders, dueDateDays, false ) +
+			dashboardSectionHtml( 'Pending Proofs', 'Custom orders staff still owes a proof — brand new, or the customer just requested changes.', '#/orders', summary.pending_proofs, dueDateDays, true ) +
+			dashboardSectionHtml( 'Awaiting Customer Approval', 'A proof has been sent — waiting on the customer to approve it or request changes.', '#/orders', summary.awaiting_approval, dueDateDays, true ) +
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Active Maintenance Subscribers</h2><a href="#/maintenance">View all &rarr;</a></div>' +
+				'<p class="yp-panel__hint">Customers currently paying for ongoing site maintenance &amp; monitoring.</p>' +
+				maintenanceBody +
+			'</div>';
+
+		el.querySelectorAll( '[data-yp-dashboard-order]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				window.location.hash = '#/orders/' + button.getAttribute( 'data-yp-dashboard-order' );
+			} );
+		} );
 	}
 
 	// View scripts (assets/admin-app/views/*.js) are enqueued with a

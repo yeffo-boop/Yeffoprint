@@ -9,7 +9,11 @@
  * "Awaiting Proof Approval" (only forward, never overwriting a status
  * staff already moved past) and emails the customer their one-time
  * approval link, since that status is now something the customer is
- * actually meant to act on, not just an internal marker.
+ * actually meant to act on, not just an internal marker. That
+ * status-advance + email logic itself lives in
+ * `YeffoPrint_Proof_Meta::attach_file()` (docs/ARCHITECTURE.md, Phase
+ * 6) rather than here, so the new admin app's own proof-upload REST
+ * endpoint can trigger the exact same behavior this classic form does.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -116,59 +120,6 @@ class YeffoPrint_Proof_Editor {
 		$custom_order_id = isset( $_POST['yp_custom_order_id'] ) ? absint( $_POST['yp_custom_order_id'] ) : 0;
 		$file_id         = isset( $_POST['yp_proof_file_id'] ) ? absint( $_POST['yp_proof_file_id'] ) : 0;
 
-		update_post_meta( $post_id, YeffoPrint_Proof_Meta::CUSTOM_ORDER_ID, $custom_order_id );
-		update_post_meta( $post_id, YeffoPrint_Proof_Meta::FILE_ID, $file_id );
-
-		if ( $custom_order_id && $file_id ) {
-			$this->advance_status_to_awaiting_approval( $custom_order_id );
-		}
-	}
-
-	private function advance_status_to_awaiting_approval( int $custom_order_id ): void {
-		$current = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
-
-		if ( ! in_array( $current, [ 'design_in_progress', 'proof_ready' ], true ) ) {
-			return;
-		}
-
-		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'awaiting_approval' );
-		$this->notify_customer( $custom_order_id );
-	}
-
-	/**
-	 * Best-effort only — a failed/absent email is never the sole way to
-	 * reach the customer, since the admin screen always shows the same
-	 * link for staff to copy and send directly (guest orders especially
-	 * may have gone through with an email that bounces or was mistyped).
-	 */
-	private function notify_customer( int $custom_order_id ): void {
-		$email = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, true );
-		if ( ! $email || ! is_email( $email ) ) {
-			return;
-		}
-
-		$name = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true );
-		$url  = yeffoprint_core_proof_approval_url( $custom_order_id );
-		if ( ! $url ) {
-			return;
-		}
-
-		$site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
-
-		$subject = sprintf(
-			/* translators: %s: site name */
-			__( 'Your proof is ready to review — %s', 'yeffoprint-core' ),
-			$site_name
-		);
-
-		$body = sprintf(
-			/* translators: 1: customer's first name or "there", 2: proof approval URL, 3: site name */
-			__( "Hi %1\$s,\n\nYour custom label proof is ready to review. Please take a look and let us know if it's good to print:\n\n%2\$s\n\nNo account needed — that link is yours alone, so don't share it.\n\nThanks,\n%3\$s", 'yeffoprint-core' ),
-			$name ? $name : __( 'there', 'yeffoprint-core' ),
-			$url,
-			$site_name
-		);
-
-		wp_mail( $email, $subject, $body );
+		YeffoPrint_Proof_Meta::attach_file( $post_id, $custom_order_id, $file_id );
 	}
 }
