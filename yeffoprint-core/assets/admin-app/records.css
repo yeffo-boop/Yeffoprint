@@ -297,3 +297,78 @@
 	gap: 0.75rem;
 	margin-top: 0.25rem;
 }
+
+/* ---------- Settings-style panel (single-record screens: Pricing
+   Rules, and anything later that edits "the one active X" rather than
+   a list of records) ---------- */
+
+.yp-panel {
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: var(--wp--preset--spacing--md);
+	margin-bottom: var(--wp--preset--spacing--sm);
+}
+
+.yp-panel__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: var(--wp--preset--spacing--sm);
+}
+
+.yp-panel__head h2 {
+	font-size: 1.05rem;
+}
+
+.yp-panel__hint {
+	font-size: 0.82rem;
+	color: var(--wp--preset--color--charcoal);
+	margin: 0.5rem 0 0;
+}
+
+/* ---------- Editable repeater table (bulk-discount tiers) ---------- */
+
+.yp-tier-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 0.75rem;
+}
+
+.yp-tier-table th {
+	text-align: left;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--wp--preset--color--charcoal);
+	padding: 0 0.6rem 0.5rem;
+}
+
+.yp-tier-table td {
+	padding: 0.3rem 0.4rem;
+	vertical-align: middle;
+}
+
+.yp-tier-table input,
+.yp-tier-table select {
+	width: 100%;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.85rem;
+	padding: 0.5rem 0.6rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-tier-table select {
+	font-family: var(--wp--preset--font-family--body);
+}
+
+.yp-tier-table input:focus,
+.yp-tier-table select:focus {
+	border-color: var(--wp--preset--color--near-black);
+	outline: none;
+}
