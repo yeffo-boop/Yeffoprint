@@ -45,6 +45,27 @@
  * attribution) as a normal signup — a random 32-character password is
  * generated and never surfaced anywhere; the customer simply never
  * needs one.
+ *
+ * Direct report: on the live site, with a provider correctly turned on
+ * and a real Client ID/Secret saved, the button never appeared —
+ * ruled out (by the owner directly checking each) page caching, a
+ * stale deploy, and the settings not actually persisting. The login
+ * form itself rendered completely normally otherwise, which points at
+ * a template on that specific install (predating this project's
+ * git-based deploy, and therefore invisible to this repo — the deploy
+ * script only ever `git reset --hard`s, never `git clean`s, so a
+ * pre-existing file the git history never knew about just sits there
+ * untouched forever) that overrides WooCommerce's own
+ * `myaccount/form-login.php` without calling `woocommerce_login_form_end`.
+ * Rather than depend on chasing down and fixing that one server's
+ * exact template file, `enqueue_fallback_script()` below makes the
+ * button's appearance independent of that hook firing at all: it hands
+ * the browser the exact same server-rendered markup `render_login_buttons()`
+ * would have echoed, and a tiny script finds the login form by
+ * WooCommerce's own standard `.woocommerce-form-login` class (present
+ * on every WC login form regardless of which template rendered it) and
+ * appends it directly — a duplicate-append guard means this is a no-op
+ * wherever the hook *does* fire normally.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -57,6 +78,7 @@ class YeffoPrint_Social_Login {
 	public function __construct() {
 		add_action( 'template_redirect', [ $this, 'maybe_handle_request' ] );
 		add_action( 'woocommerce_login_form_end', [ $this, 'render_login_buttons' ] );
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_fallback_script' ] );
 	}
 
 	/** The fixed URL each provider redirects back to — register this exact value as the app's Redirect URI in its developer console. Static + public: class-admin-menu.php's Settings screen shows it without needing an instance. */
@@ -331,15 +353,8 @@ class YeffoPrint_Social_Login {
 		exit;
 	}
 
-	/**
-	 * Appended right before the login form's submit button
-	 * (`woocommerce_login_form_end` — the shared template both
-	 * `/my-account/` and checkout's "returning customer" toggle render,
-	 * so this covers both automatically). Only ever shows a provider
-	 * whose admin has both turned it on *and* pasted in a real Client
-	 * ID — never a dead button pointing at an unconfigured provider.
-	 */
-	public function render_login_buttons(): void {
+	/** @return string[] Provider slugs both turned on and carrying a real Client ID — never a dead button pointing at an unconfigured provider. */
+	private function configured_providers(): array {
 		$providers = [];
 		foreach ( [ 'google', 'discord' ] as $provider ) {
 			$config = $this->provider_config( $provider );
@@ -347,9 +362,25 @@ class YeffoPrint_Social_Login {
 				$providers[] = $provider;
 			}
 		}
+		return $providers;
+	}
 
+	/**
+	 * Appended right before the login form's submit button
+	 * (`woocommerce_login_form_end` — the shared template both
+	 * `/my-account/` and checkout's "returning customer" toggle render,
+	 * so this covers both automatically on a stock WooCommerce login
+	 * template).
+	 */
+	public function render_login_buttons(): void {
+		echo $this->buttons_html(); // phpcs:ignore WordPress.Security.EscapeOutput -- buttons_html() already escapes every value it interpolates.
+	}
+
+	/** Returns '' when no provider is configured — both callers (the hook above, and enqueue_fallback_script() below) treat that as "nothing to show." */
+	private function buttons_html(): string {
+		$providers = $this->configured_providers();
 		if ( ! $providers ) {
-			return;
+			return '';
 		}
 
 		// A guest who opened this form from checkout's "returning customer?"
@@ -359,6 +390,8 @@ class YeffoPrint_Social_Login {
 		$redirect_to = ( function_exists( 'is_checkout' ) && is_checkout() && function_exists( 'wc_get_checkout_url' ) )
 			? wc_get_checkout_url()
 			: '';
+
+		ob_start();
 		?>
 		<div class="yp-social-login">
 			<p class="yp-social-login__divider"><?php esc_html_e( 'or continue with', 'yeffoprint-core' ); ?></p>
@@ -381,6 +414,41 @@ class YeffoPrint_Social_Login {
 			</div>
 		</div>
 		<?php
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The resilience fallback (see this class's own docblock): hands the
+	 * browser the exact markup `render_login_buttons()` would have
+	 * echoed, and a tiny script appends it to whatever login form it
+	 * finds by WooCommerce's own standard `.woocommerce-form-login`
+	 * class — independent of `woocommerce_login_form_end` actually
+	 * firing on this particular install's template. Only enqueued on
+	 * pages that could plausibly show a login form, and only once
+	 * there's actually something configured to show.
+	 */
+	public function enqueue_fallback_script(): void {
+		if ( ! function_exists( 'is_account_page' ) || ! ( is_account_page() || is_checkout() ) ) {
+			return;
+		}
+
+		$html = $this->buttons_html();
+		if ( '' === $html ) {
+			return;
+		}
+
+		$path = 'assets/frontend/social-login-inject.js';
+		wp_enqueue_script(
+			'yeffoprint-social-login-inject',
+			YEFFOPRINT_CORE_URL . $path,
+			[],
+			yeffoprint_core_asset_version( $path ),
+			true
+		);
+
+		wp_localize_script( 'yeffoprint-social-login-inject', 'yeffoprintSocialLogin', [
+			'html' => $html,
+		] );
 	}
 
 	/** Fixed, hand-authored glyphs — no external icon font/CDN, same reasoning as every other inline SVG in this plugin (e.g. class-account-endpoints.php's proof-card icon). */
