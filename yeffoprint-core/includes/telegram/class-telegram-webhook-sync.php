@@ -17,9 +17,6 @@ class YeffoPrint_Telegram_Webhook_Sync {
 
 	const LAST_SYNC_MESSAGE_OPTION = 'yeffoprint_telegram_last_sync_message';
 
-	/** Both options can change in one request (the classic Settings page saves everything at once) — sync Telegram only once per request either way. */
-	private static bool $synced_this_request = false;
-
 	public function __construct() {
 		$M = 'YeffoPrint_Admin_Menu';
 
@@ -29,12 +26,20 @@ class YeffoPrint_Telegram_Webhook_Sync {
 		add_action( 'update_option_' . $M::TELEGRAM_ENABLED_OPTION, [ $this, 'sync' ] );
 	}
 
+	/**
+	 * Deliberately re-runs in full on every one of the four hooks above
+	 * that fires in a given request, rather than a "just once" guard —
+	 * both options can change in the same save (e.g. the very first
+	 * time a token is entered and "active" is checked together), and
+	 * update_option() writes an option's new value to the DB/cache
+	 * *before* firing its own hook, so whichever of these hooks fires
+	 * last always sees both options' fully current values. A "sync
+	 * once" guard broke exactly this case: token-save's hook could fire
+	 * first, read the not-yet-updated old "enabled" value, decide the
+	 * bot was off, and then block enabled-save's hook — the one that
+	 * would've seen the correct final state — from running at all.
+	 */
 	public function sync(): void {
-		if ( self::$synced_this_request ) {
-			return;
-		}
-		self::$synced_this_request = true;
-
 		$token   = YeffoPrint_Telegram_Settings::get_bot_token();
 		$enabled = YeffoPrint_Telegram_Settings::is_enabled();
 
