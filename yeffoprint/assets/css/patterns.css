@@ -487,6 +487,13 @@
 	top: 0.75rem;
 	left: 0.75rem;
 	background: var(--wp--preset--color--white);
+	/* The base .yp-card__badge rule (global.css) sets color:white for
+	   its own gradient background — never overridden here, so the
+	   label text was invisible (white on this white pill) ever since
+	   this rule first set a white background. Direct report: "the
+	   badges appear blank on the templates I select a badge for." */
+	color: var(--wp--preset--color--magenta-deep);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
 }
 
 .yp-template-card__body {
