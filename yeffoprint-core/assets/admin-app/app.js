@@ -68,7 +68,8 @@
 
 	root.innerHTML =
 		'<div class="yp-app">' +
-			'<nav class="yp-app__nav">' +
+			'<div class="yp-app__nav-backdrop" data-yp-nav-backdrop></div>' +
+			'<nav class="yp-app__nav" data-yp-nav-panel>' +
 				'<div class="yp-app__brand">' +
 					'<div class="yp-app__mark"></div>' +
 					'<div class="yp-app__wordmark">YeffoPrint</div>' +
@@ -80,7 +81,12 @@
 			'</nav>' +
 			'<div class="yp-app__main">' +
 				'<div class="yp-app__topbar">' +
-					'<div class="yp-app__title" data-yp-title></div>' +
+					'<div class="yp-app__title-row">' +
+						'<button type="button" class="yp-app__menu-toggle" data-yp-menu-toggle aria-label="Toggle menu" aria-expanded="false">' +
+							'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><line x1="2" y1="4.5" x2="16" y2="4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /><line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /><line x1="2" y1="13.5" x2="16" y2="13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>' +
+						'</button>' +
+						'<div class="yp-app__title" data-yp-title></div>' +
+					'</div>' +
 					'<div class="yp-app__status" data-yp-status data-state="loading"><span class="yp-app__status-dot"></span><span data-yp-status-text>Connecting&hellip;</span></div>' +
 				'</div>' +
 				'<div class="yp-app__view" data-yp-view></div>' +
@@ -88,10 +94,41 @@
 		'</div>';
 
 	var navEl = root.querySelector( '[data-yp-nav]' );
+	var navPanelEl = root.querySelector( '[data-yp-nav-panel]' );
+	var navBackdropEl = root.querySelector( '[data-yp-nav-backdrop]' );
+	var menuToggleEl = root.querySelector( '[data-yp-menu-toggle]' );
 	var titleEl = root.querySelector( '[data-yp-title]' );
 	var viewEl = root.querySelector( '[data-yp-view]' );
 	var statusEl = root.querySelector( '[data-yp-status]' );
 	var statusTextEl = root.querySelector( '[data-yp-status-text]' );
+
+	/* ---------- Mobile off-canvas nav ---------- */
+
+	function openNav() {
+		navPanelEl.classList.add( 'is-open' );
+		navBackdropEl.classList.add( 'is-open' );
+		menuToggleEl.setAttribute( 'aria-expanded', 'true' );
+	}
+
+	function closeNav() {
+		navPanelEl.classList.remove( 'is-open' );
+		navBackdropEl.classList.remove( 'is-open' );
+		menuToggleEl.setAttribute( 'aria-expanded', 'false' );
+	}
+
+	menuToggleEl.addEventListener( 'click', function () {
+		if ( navPanelEl.classList.contains( 'is-open' ) ) {
+			closeNav();
+		} else {
+			openNav();
+		}
+	} );
+	navBackdropEl.addEventListener( 'click', closeNav );
+	document.addEventListener( 'keydown', function ( event ) {
+		if ( 'Escape' === event.key ) {
+			closeNav();
+		}
+	} );
 
 	function escapeHtml( value ) {
 		var div = document.createElement( 'div' );
@@ -125,6 +162,7 @@
 	navEl.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
 		button.addEventListener( 'click', function () {
 			window.location.hash = '#/' + button.getAttribute( 'data-yp-nav-item' );
+			closeNav(); // No-op above the mobile breakpoint — is-open is never set there.
 		} );
 	} );
 
