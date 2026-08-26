@@ -1,17 +1,19 @@
 <?php
 /**
  * Admin REST endpoint backing the app's real Dashboard home view
- * (docs/ARCHITECTURE.md, Phase 6) — the same four sections
+ * (docs/ARCHITECTURE.md, Phase 6) — the four sections
  * `YeffoPrint_Dashboard_Widgets` already renders server-side for the
  * classic reskin's Dashboard page (`includes/admin/class-dashboard-widgets.php`),
  * reached here over REST instead so the new app's client-side router
- * can render them without a page reload. Deliberately the same
- * queries as that class, not a rewrite: `wc_get_orders( status: 'processing' )`
- * for Pending Orders, a `_yp_status` meta query for the two
- * CustomOrder pipeline sections, `YeffoPrint_Maintenance_Sub_Meta::get_active()`
- * for subscribers — and `YeffoPrint_Dashboard_Widgets::due_date_days()`
- * itself, reused as-is, so the "N days overdue" threshold can never
- * drift between the old dashboard and this one.
+ * can render them without a page reload, plus one section that class
+ * never had: Shipped Packages (package tracking, direct request).
+ * Deliberately the same queries as that class, not a rewrite:
+ * `wc_get_orders( status: 'processing' )` for Pending Orders, a
+ * `_yp_status` meta query for the two CustomOrder pipeline sections,
+ * `YeffoPrint_Maintenance_Sub_Meta::get_active()` for subscribers —
+ * and `YeffoPrint_Dashboard_Widgets::due_date_days()` itself, reused
+ * as-is, so the "N days overdue" threshold can never drift between the
+ * old dashboard and this one.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -40,6 +42,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			'due_date_days'           => YeffoPrint_Dashboard_Widgets::due_date_days(),
 			'pending_orders'          => $this->pending_wc_orders(),
 			'pending_orders_url'      => $this->orders_list_url(),
+			'shipped_packages'        => $this->shipped_packages(),
 			'pending_proofs'          => $this->custom_orders_by_status( 'design_in_progress' ),
 			'awaiting_approval'       => $this->custom_orders_by_status( 'awaiting_approval' ),
 			'maintenance_subscribers' => $this->maintenance_subscribers(),
@@ -79,6 +82,50 @@ class YeffoPrint_Admin_Dashboard_Controller {
 				'date'     => $date ? $date->date( 'c' ) : null,
 			];
 		}, $orders );
+	}
+
+	/**
+	 * One row per shipment, not per order — a single order can carry more
+	 * than one label (YeffoPrint_Order_Tracking::get_shipments() already
+	 * returns every trackable one), and "all of my packages that have
+	 * not been delivered yet" (direct request) means every physical
+	 * package, not every order. No overdue-days flagging here unlike the
+	 * other sections — that needs a real "label purchased" timestamp
+	 * this store doesn't reliably have yet (WooCommerce Shipping's own
+	 * label data only guarantees a tracking number, not a verified date
+	 * field — see class-order-tracking.php's own docblock on staying
+	 * conservative about that plugin's exact data shape), so the order
+	 * date would just be a misleading proxy for "how long has this been
+	 * in transit."
+	 */
+	private function shipped_packages(): array {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return [];
+		}
+
+		$orders = wc_get_orders( [
+			'status'  => YeffoPrint_Order_Shipment_Status::STATUS,
+			'limit'   => self::ROW_LIMIT,
+			'orderby' => 'date',
+			'order'   => 'ASC',
+		] );
+
+		$rows = [];
+		foreach ( $orders as $order ) {
+			foreach ( YeffoPrint_Order_Tracking::get_shipments( $order ) as $shipment ) {
+				$rows[] = [
+					/* translators: %s: order number */
+					'order_label'     => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
+					'customer'        => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
+					'edit_url'        => $order->get_edit_order_url(),
+					'carrier_label'   => $shipment['carrier_label'],
+					'tracking_number' => $shipment['tracking_number'],
+					'tracking_url'    => $shipment['carrier_url'],
+				];
+			}
+		}
+
+		return $rows;
 	}
 
 	private function custom_orders_by_status( string $status ): array {
