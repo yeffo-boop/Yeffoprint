@@ -135,9 +135,20 @@
  * stylesheet for the same page (which is also what caused a follow-up
  * bug: inserting a new block ahead of the floated `.forgetmenot` row
  * silently broke the margin collapsing `.submit`'s own spacing relied
- * on — fixed in `login.css` by removing that float entirely, since the
- * full-width submit button it was never actually needed for was already
- * defeating its one purpose).
+ * on).
+ *
+ * Direct follow-up: even with that float bug fixed, the block still
+ * reads as cramped against Remember Me/Log In, and the actual ask was
+ * to move it below the submit button entirely — but `login_form` fires
+ * right after the password field (core's own placement, not something
+ * this class controls), well ahead of Remember Me and Log In, and
+ * WordPress has no hook that fires later while still inside
+ * `#loginform`. `login.css` solves this at the layout level instead of
+ * chasing the DOM: `#loginform` is a flex column and `.yp-social-login`
+ * gets a high `order`, which both re-sequences it to the visual end
+ * regardless of DOM position and — as a permanent side effect — stops
+ * every sibling margin on that form from ever collapsing again, the
+ * same class of bug that caused the float issue in the first place.
  */
 
 defined( 'ABSPATH' ) || exit;
