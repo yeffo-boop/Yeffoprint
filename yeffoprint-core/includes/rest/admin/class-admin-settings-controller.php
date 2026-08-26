@@ -75,6 +75,9 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::MAINTENANCE_PAYMENT_LINK_OPTION, esc_url_raw( (string) ( $params['maintenance_payment_link'] ?? '' ) ) );
 		update_option( YeffoPrint_Stripe_Webhook_Secret::OPTION_KEY, sanitize_text_field( (string) ( $params['maintenance_webhook_secret'] ?? '' ) ) );
 
+		update_option( $M::TELEGRAM_BOT_TOKEN_OPTION, sanitize_text_field( (string) ( $params['telegram_bot_token'] ?? '' ) ) );
+		update_option( $M::TELEGRAM_ENABLED_OPTION, (bool) ( $params['telegram_enabled'] ?? false ) );
+
 		return rest_ensure_response( $this->payload() );
 	}
 
@@ -108,6 +111,10 @@ class YeffoPrint_Admin_Settings_Controller {
 			'maintenance_payment_link'   => (string) get_option( $M::MAINTENANCE_PAYMENT_LINK_OPTION, '' ),
 			'maintenance_webhook_secret' => YeffoPrint_Stripe_Webhook_Secret::get(),
 			'maintenance_webhook_url'    => esc_url_raw( rest_url( 'yeffoprint-core/v1/stripe/webhook' ) ),
+			'telegram_bot_token'         => (string) get_option( $M::TELEGRAM_BOT_TOKEN_OPTION, '' ),
+			'telegram_enabled'           => (bool) get_option( $M::TELEGRAM_ENABLED_OPTION, false ),
+			'telegram_webhook_url'       => esc_url_raw( YeffoPrint_Telegram_Webhook_Secret::webhook_url() ),
+			'telegram_status'            => YeffoPrint_Telegram_Webhook_Sync::last_message(),
 		];
 	}
 }
