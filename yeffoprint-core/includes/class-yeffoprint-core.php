@@ -86,6 +86,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-contact-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/access/class-web-design-page-gate.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -122,6 +123,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Tracking();
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Tracking_Controller();
+		new YeffoPrint_Web_Design_Page_Gate();
 		new YeffoPrint_Contact_Controller();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
