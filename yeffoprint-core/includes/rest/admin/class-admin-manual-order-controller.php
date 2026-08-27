@@ -29,6 +29,18 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			'callback'            => [ $this, 'create_order' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		// Custom Stickers has no public pricing-preview endpoint the way
+		// Custom Design does (class-custom-order-controller.php's
+		// /custom-orders/pricing-preview) — the storefront prices a
+		// sticker live via the cart itself instead. This admin screen has
+		// no cart to price against, so it gets its own small preview
+		// wrapper around the same authoritative YeffoPrint_Sticker_Pricing::calculate().
+		register_rest_route( self::NAMESPACE, '/admin/manual-orders/sticker-pricing-preview', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'sticker_pricing_preview' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
 	}
 
 	/** @return \WP_REST_Response */
@@ -76,5 +88,26 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			'custom_order_id'           => $custom_order_id,
 			'custom_order_approval_url' => $custom_order_id ? yeffoprint_core_proof_approval_url( $custom_order_id ) : '',
 		] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function sticker_pricing_preview( \WP_REST_Request $request ) {
+		$params = $request->get_json_params() ?: [];
+
+		$pricing = YeffoPrint_Sticker_Pricing::calculate(
+			absint( $params['size_id'] ?? 0 ),
+			(float) ( $params['custom_width_in'] ?? 0 ),
+			(float) ( $params['custom_height_in'] ?? 0 ),
+			absint( $params['material_id'] ?? 0 ),
+			sanitize_key( (string) ( $params['sticker_type'] ?? '' ) ),
+			sanitize_key( (string) ( $params['shape'] ?? '' ) ),
+			max( 1, absint( $params['quantity'] ?? 1 ) )
+		);
+
+		if ( is_wp_error( $pricing ) ) {
+			return $pricing;
+		}
+
+		return rest_ensure_response( $pricing );
 	}
 }

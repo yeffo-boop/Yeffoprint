@@ -5,17 +5,26 @@
  * to be approved by the customer?", broadened to "manually create any
  * orders, not just custom orders."
  *
- * Phase A (this file, for now): Custom Design orders only. The other
- * two tabs are visible-but-disabled placeholders so the nav/IA is final
- * from day one, same idiom app.js's own SECTIONS placeholder view
- * already uses for a not-yet-shipped section.
+ * Phase A shipped Custom Design orders. Phase B (this revision) adds
+ * Custom Stickers — no fee item, no batching (one sticker configuration
+ * per order), and its own artwork upload, matching the customer-facing
+ * Custom Stickers form's own shape. Template Label (Phase C) is still a
+ * visible-but-disabled placeholder so the nav/IA is final, same idiom
+ * app.js's own SECTIONS placeholder view already uses for a not-yet-
+ * shipped section.
  *
- * Reuses the exact same public endpoints the customer-facing Custom
- * Design form uses for its own picker options and live price preview
- * (`GET /custom-orders/options`, `POST /custom-orders/pricing-preview`,
- * class-custom-order-controller.php) — no new pricing/options endpoint
- * for this screen; only order creation itself
- * (`POST /admin/manual-orders`) is new.
+ * Reuses the exact same public endpoints each customer-facing form uses
+ * for its own picker options (`GET /custom-orders/options`,
+ * `GET /custom-stickers/options`) and file uploads
+ * (`POST /custom-orders/uploads`, shared by both flows — see
+ * class-custom-sticker-controller.php's own docblock for why). Custom
+ * Design's live price preview reuses its public
+ * `POST /custom-orders/pricing-preview` endpoint; Custom Stickers has no
+ * such public endpoint (the storefront prices a sticker live via the
+ * cart itself, which this admin screen doesn't have), so that one small
+ * preview wrapper (`POST /admin/manual-orders/sticker-pricing-preview`)
+ * is new. Order creation itself (`POST /admin/manual-orders`) is new for
+ * both.
  */
 
 ( function () {
@@ -83,16 +92,23 @@
 
 	YP.views[ 'manual-order' ] = function ( viewEl ) {
 		var state = {
-			options: null,
+			orderType: 'custom_design',
+			options: null, // custom-orders/options — Custom Design's own sizes/materials.
+			stickerOptions: null, // custom-stickers/options — Custom Stickers' own sizes/materials/types/shapes.
+			stickerUploads: [], // [{ name, id, error }] — same shape as the customer-facing form's own uploadedFiles.
 			selectedCustomer: null, // { id, display_name, email }
 			newCustomerMode: false
 		};
 
 		viewEl.innerHTML = '<p class="yp-app__intro">Loading&hellip;</p>';
 
-		YP.request( coreEndpoint( 'custom-orders/options' ) )
-			.then( function ( options ) {
-				state.options = options;
+		Promise.all( [
+			YP.request( coreEndpoint( 'custom-orders/options' ) ),
+			YP.request( coreEndpoint( 'custom-stickers/options' ) )
+		] )
+			.then( function ( results ) {
+				state.options = results[ 0 ];
+				state.stickerOptions = results[ 1 ];
 				render();
 			} )
 			.catch( function ( error ) {
@@ -106,8 +122,8 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Order type</h2></div>' +
 					'<div class="yp-form__row">' +
-						'<button type="button" class="wp-block-button__link is-style-accent" data-yp-order-type="custom_design">Custom Design</button>' +
-						'<button type="button" class="wp-block-button__link is-style-outline" disabled title="Coming soon">Custom Sticker</button>' +
+						'<button type="button" class="wp-block-button__link ' + ( 'custom_design' === state.orderType ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="custom_design">Custom Design</button>' +
+						'<button type="button" class="wp-block-button__link ' + ( 'sticker' === state.orderType ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="sticker">Custom Sticker</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" disabled title="Coming soon">Template Label</button>' +
 					'</div>' +
 				'</div>' +
@@ -117,22 +133,11 @@
 					'<div data-yp-customer-picker></div>' +
 				'</div>' +
 
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Custom Design details</h2></div>' +
-					'<div class="yp-field"><label for="yp-mo-brand">Brand name</label><input type="text" id="yp-mo-brand" /></div>' +
-					'<table class="yp-tier-table"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
-						'<tbody data-yp-batch>' + batchRowHtml( null, state.options ) + '</tbody>' +
-					'</table>' +
-					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-row>+ Add another label</button>' +
-					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-mo-style-notes">Style notes</label><textarea id="yp-mo-style-notes" rows="2"></textarea></div>' +
-						'<div class="yp-field"><label for="yp-mo-instructions">Instructions</label><textarea id="yp-mo-instructions" rows="2"></textarea></div>' +
-					'</div>' +
-				'</div>' +
+				( 'custom_design' === state.orderType ? customDesignFieldsHtml() : stickerFieldsHtml() ) +
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Price</h2></div>' +
-					'<div data-yp-price-preview><p class="yp-field__hint">Add a label to see pricing.</p></div>' +
+					'<div data-yp-price-preview><p class="yp-field__hint">' + ( 'custom_design' === state.orderType ? 'Add a label to see pricing.' : 'Choose a size, material, type, and shape to see pricing.' ) + '</p></div>' +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -148,20 +153,61 @@
 
 			renderCustomerPicker();
 
-			var batchBody = viewEl.querySelector( '[data-yp-batch]' );
-			wireRemoveButtons( batchBody, refreshPricePreview );
-
-			viewEl.querySelector( '[data-yp-add-row]' ).addEventListener( 'click', function () {
-				batchBody.insertAdjacentHTML( 'beforeend', batchRowHtml( null, state.options ) );
-				wireRemoveButtons( batchBody, refreshPricePreview );
-				bindBatchChangeListeners();
-				refreshPricePreview();
+			viewEl.querySelectorAll( '[data-yp-order-type]' ).forEach( function ( button ) {
+				if ( button.disabled ) {
+					return;
+				}
+				button.addEventListener( 'click', function () {
+					var type = button.getAttribute( 'data-yp-order-type' );
+					if ( type === state.orderType ) {
+						return;
+					}
+					state.orderType = type;
+					render();
+				} );
 			} );
 
-			bindBatchChangeListeners();
-			refreshPricePreview();
+			if ( 'custom_design' === state.orderType ) {
+				var batchBody = viewEl.querySelector( '[data-yp-batch]' );
+				wireRemoveButtons( batchBody, refreshPricePreview );
+
+				viewEl.querySelector( '[data-yp-add-row]' ).addEventListener( 'click', function () {
+					batchBody.insertAdjacentHTML( 'beforeend', batchRowHtml( null, state.options ) );
+					wireRemoveButtons( batchBody, refreshPricePreview );
+					bindBatchChangeListeners();
+					refreshPricePreview();
+				} );
+
+				bindBatchChangeListeners();
+				refreshPricePreview();
+			} else {
+				bindStickerChangeListeners();
+				wireStickerUploads();
+				renderStickerFileList();
+				toggleStickerCustomDimensions();
+				refreshStickerPricePreview();
+			}
 
 			viewEl.querySelector( '[data-yp-submit]' ).addEventListener( 'click', submit );
+		}
+
+		/* ---------- Custom Design (Phase A) ---------- */
+
+		function customDesignFieldsHtml() {
+			return (
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Custom Design details</h2></div>' +
+					'<div class="yp-field"><label for="yp-mo-brand">Brand name</label><input type="text" id="yp-mo-brand" /></div>' +
+					'<table class="yp-tier-table"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
+						'<tbody data-yp-batch>' + batchRowHtml( null, state.options ) + '</tbody>' +
+					'</table>' +
+					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-row>+ Add another label</button>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-mo-style-notes">Style notes</label><textarea id="yp-mo-style-notes" rows="2"></textarea></div>' +
+						'<div class="yp-field"><label for="yp-mo-instructions">Instructions</label><textarea id="yp-mo-instructions" rows="2"></textarea></div>' +
+					'</div>' +
+				'</div>'
+			);
 		}
 
 		function bindBatchChangeListeners() {
@@ -210,6 +256,214 @@
 					previewEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
 				} );
 		}
+
+		/* ---------- Custom Stickers (Phase B) ---------- */
+
+		function stickerSizeById( id ) {
+			return state.stickerOptions.sizes.filter( function ( size ) {
+				return String( size.id ) === String( id );
+			} )[ 0 ] || null;
+		}
+
+		function stickerFieldsHtml() {
+			var o = state.stickerOptions;
+			return (
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Custom Sticker details</h2></div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-mo-sticker-size">Size</label><select id="yp-mo-sticker-size">' +
+							'<option value="">Choose a size…</option>' +
+							o.sizes.map( function ( size ) {
+								return '<option value="' + size.id + '">' + YP.escapeHtml( size.name ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+						'<div class="yp-field"><label for="yp-mo-sticker-material">Material</label><select id="yp-mo-sticker-material">' +
+							'<option value="">Choose a material…</option>' +
+							o.materials.map( function ( material ) {
+								return '<option value="' + material.id + '"' + ( material.in_stock ? '' : ' disabled' ) + '>' + YP.escapeHtml( material.name ) + ( material.in_stock ? '' : ' (out of stock)' ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+					'</div>' +
+					'<div class="yp-form__row" data-yp-sticker-custom-dims style="display:none;">' +
+						'<div class="yp-field"><label for="yp-mo-sticker-width">Width (in)</label><input type="number" min="0.1" step="0.01" id="yp-mo-sticker-width" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-sticker-height">Height (in)</label><input type="number" min="0.1" step="0.01" id="yp-mo-sticker-height" /></div>' +
+					'</div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-mo-sticker-type">Type</label><select id="yp-mo-sticker-type">' +
+							'<option value="">Choose a type…</option>' +
+							Object.keys( o.sticker_types ).map( function ( key ) {
+								return '<option value="' + key + '">' + YP.escapeHtml( o.sticker_types[ key ] ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+						'<div class="yp-field"><label for="yp-mo-sticker-shape">Shape</label><select id="yp-mo-sticker-shape">' +
+							'<option value="">Choose a shape…</option>' +
+							Object.keys( o.shapes ).map( function ( key ) {
+								return '<option value="' + key + '">' + YP.escapeHtml( o.shapes[ key ] ) + '</option>';
+							} ).join( '' ) +
+						'</select></div>' +
+						'<div class="yp-field"><label for="yp-mo-sticker-quantity">Quantity</label><input type="number" min="1" step="1" id="yp-mo-sticker-quantity" value="100" /></div>' +
+					'</div>' +
+					'<div class="yp-field"><label for="yp-mo-sticker-instructions">Instructions</label><textarea id="yp-mo-sticker-instructions" rows="2"></textarea></div>' +
+					'<div class="yp-field">' +
+						'<label for="yp-mo-sticker-files">Artwork (optional — can be sent separately and attached later)</label>' +
+						'<input type="file" id="yp-mo-sticker-files" multiple />' +
+						'<ul data-yp-sticker-file-list></ul>' +
+					'</div>' +
+				'</div>'
+			);
+		}
+
+		function toggleStickerCustomDimensions() {
+			var sizeSelect = viewEl.querySelector( '#yp-mo-sticker-size' );
+			var dimsRow    = viewEl.querySelector( '[data-yp-sticker-custom-dims]' );
+			if ( ! sizeSelect || ! dimsRow ) {
+				return;
+			}
+			var size = stickerSizeById( sizeSelect.value );
+			dimsRow.style.display = ( size && size.is_custom ) ? '' : 'none';
+		}
+
+		function bindStickerChangeListeners() {
+			var ids = [ 'yp-mo-sticker-size', 'yp-mo-sticker-material', 'yp-mo-sticker-type', 'yp-mo-sticker-shape', 'yp-mo-sticker-quantity', 'yp-mo-sticker-width', 'yp-mo-sticker-height' ];
+			ids.forEach( function ( id ) {
+				var field = viewEl.querySelector( '#' + id );
+				if ( ! field || field._wired ) {
+					return;
+				}
+				field._wired = true;
+				field.addEventListener( 'change', function () {
+					if ( 'yp-mo-sticker-size' === id ) {
+						toggleStickerCustomDimensions();
+					}
+					refreshStickerPricePreview();
+				} );
+			} );
+		}
+
+		var stickerPreviewTimer = null;
+		function refreshStickerPricePreview() {
+			clearTimeout( stickerPreviewTimer );
+			stickerPreviewTimer = setTimeout( doRefreshStickerPricePreview, 300 );
+		}
+
+		function readStickerFields() {
+			var size = viewEl.querySelector( '#yp-mo-sticker-size' );
+			return {
+				size_id: size ? parseInt( size.value, 10 ) || 0 : 0,
+				material_id: parseInt( ( viewEl.querySelector( '#yp-mo-sticker-material' ) || {} ).value, 10 ) || 0,
+				sticker_type: ( viewEl.querySelector( '#yp-mo-sticker-type' ) || {} ).value || '',
+				shape: ( viewEl.querySelector( '#yp-mo-sticker-shape' ) || {} ).value || '',
+				quantity: parseInt( ( viewEl.querySelector( '#yp-mo-sticker-quantity' ) || {} ).value, 10 ) || 0,
+				custom_width_in: parseFloat( ( viewEl.querySelector( '#yp-mo-sticker-width' ) || {} ).value ) || 0,
+				custom_height_in: parseFloat( ( viewEl.querySelector( '#yp-mo-sticker-height' ) || {} ).value ) || 0
+			};
+		}
+
+		function doRefreshStickerPricePreview() {
+			var previewEl = viewEl.querySelector( '[data-yp-price-preview]' );
+			if ( ! previewEl ) {
+				return; // Navigated away.
+			}
+
+			var fields = readStickerFields();
+			var size   = stickerSizeById( fields.size_id );
+			var dimsOk = ! size || ! size.is_custom || ( fields.custom_width_in > 0 && fields.custom_height_in > 0 );
+
+			if ( ! fields.size_id || ! fields.material_id || ! fields.sticker_type || ! fields.shape || fields.quantity < 1 || ! dimsOk ) {
+				previewEl.innerHTML = '<p class="yp-field__hint">Choose a size, material, type, and shape to see pricing.</p>';
+				return;
+			}
+
+			YP.request( coreEndpoint( 'admin/manual-orders/sticker-pricing-preview' ), {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( fields )
+			} )
+				.then( function ( pricing ) {
+					previewEl.innerHTML = '<p><strong>Total: $' + pricing.total.toFixed( 2 ) + '</strong></p>';
+				} )
+				.catch( function ( error ) {
+					previewEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
+		}
+
+		function renderStickerFileList() {
+			var listEl = viewEl.querySelector( '[data-yp-sticker-file-list]' );
+			if ( ! listEl ) {
+				return;
+			}
+			listEl.innerHTML = state.stickerUploads.map( function ( file, index ) {
+				var status = file.error
+					? '<span class="yp-form__error">' + YP.escapeHtml( file.error ) + '</span>'
+					: ( file.id ? '<span>Uploaded</span>' : '<span>Uploading&hellip;</span>' );
+				return '<li>' + YP.escapeHtml( file.name ) + ' — ' + status +
+					' <button type="button" class="yp-row-action" data-yp-remove-sticker-file="' + index + '">Remove</button></li>';
+			} ).join( '' );
+
+			listEl.querySelectorAll( '[data-yp-remove-sticker-file]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					state.stickerUploads.splice( parseInt( button.getAttribute( 'data-yp-remove-sticker-file' ), 10 ), 1 );
+					renderStickerFileList();
+				} );
+			} );
+		}
+
+		function wireStickerUploads() {
+			var filesInput = viewEl.querySelector( '#yp-mo-sticker-files' );
+			if ( ! filesInput || filesInput._wired ) {
+				return;
+			}
+			filesInput._wired = true;
+
+			filesInput.addEventListener( 'change', function () {
+				var selected = Array.prototype.slice.call( filesInput.files );
+				filesInput.value = '';
+				if ( ! selected.length ) {
+					return;
+				}
+
+				var formData = new FormData();
+				selected.forEach( function ( file ) {
+					formData.append( 'files[]', file );
+				} );
+
+				var placeholders = selected.map( function ( file ) {
+					return { name: file.name, id: null, error: null };
+				} );
+				state.stickerUploads = state.stickerUploads.concat( placeholders );
+				renderStickerFileList();
+
+				YP.request( coreEndpoint( 'custom-orders/uploads' ), {
+					method: 'POST',
+					body: formData
+				} )
+					.then( function ( data ) {
+						( data.files || [] ).forEach( function ( result, i ) {
+							var entry = state.stickerUploads.indexOf( placeholders[ i ] );
+							if ( entry === -1 ) {
+								return;
+							}
+							if ( result.success ) {
+								state.stickerUploads[ entry ].id = result.id;
+							} else {
+								state.stickerUploads[ entry ].error = result.message;
+							}
+						} );
+						renderStickerFileList();
+					} )
+					.catch( function () {
+						placeholders.forEach( function ( placeholder ) {
+							var entry = state.stickerUploads.indexOf( placeholder );
+							if ( entry !== -1 ) {
+								state.stickerUploads[ entry ].error = 'Upload failed.';
+							}
+						} );
+						renderStickerFileList();
+					} );
+			} );
+		}
+
+		/* ---------- Customer picker (shared by every order type) ---------- */
 
 		function renderCustomerPicker() {
 			var el = viewEl.querySelector( '[data-yp-customer-picker]' );
@@ -295,20 +549,32 @@
 			};
 		}
 
+		/* ---------- Submit ---------- */
+
 		function submit() {
 			var statusEl     = viewEl.querySelector( '[data-yp-submit-status]' );
 			var submitButton = viewEl.querySelector( '[data-yp-submit]' );
-			var batchBody    = viewEl.querySelector( '[data-yp-batch]' );
 
-			var body = {
-				order_type: 'custom_design',
-				customer: customerPayload(),
-				brand_name: viewEl.querySelector( '#yp-mo-brand' ).value,
-				batch: readBatchRows( batchBody ),
-				style_notes: viewEl.querySelector( '#yp-mo-style-notes' ).value,
-				instructions: viewEl.querySelector( '#yp-mo-instructions' ).value,
-				requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked
-			};
+			var body;
+			if ( 'custom_design' === state.orderType ) {
+				var batchBody = viewEl.querySelector( '[data-yp-batch]' );
+				body = {
+					order_type: 'custom_design',
+					customer: customerPayload(),
+					brand_name: viewEl.querySelector( '#yp-mo-brand' ).value,
+					batch: readBatchRows( batchBody ),
+					style_notes: viewEl.querySelector( '#yp-mo-style-notes' ).value,
+					instructions: viewEl.querySelector( '#yp-mo-instructions' ).value,
+					requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked
+				};
+			} else {
+				body = readStickerFields();
+				body.order_type = 'sticker';
+				body.customer = customerPayload();
+				body.instructions = viewEl.querySelector( '#yp-mo-sticker-instructions' ).value;
+				body.uploads = state.stickerUploads.filter( function ( file ) { return file.id; } ).map( function ( file ) { return file.id; } );
+				body.requires_proof = viewEl.querySelector( '#yp-mo-requires-proof' ).checked;
+			}
 
 			submitButton.disabled = true;
 			submitButton.textContent = 'Creating…';
