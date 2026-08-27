@@ -804,6 +804,16 @@ Fix, entirely in `login.css`: `body.login #loginform` is now `display: flex; fle
 
 Verify: reload `wp-login.php` logged out and confirm the visual order is Username → Password → Remember Me → Log In → "or continue with" → social buttons, with an even, non-cramped gap around each; resize/check on mobile.
 
+### Fix, part 4: the actual reason the gap kept looking thin across all three earlier attempts
+
+Direct follow-up, with a fourth screenshot: buttons correctly below Log In (part 3 worked), but Remember Me→Log In was *still* visually tight.
+
+The real cause had been sitting in plain sight since part 1: this file's own header comment says some rules need `!important` to beat `wp-admin/css/login.min.css`'s own ID-anchored selectors — and nearly every rule that touches a core-styled element in this file already carries it (`#loginform`, the inputs, `#wp-submit`, the notice boxes). `.forgetmenot`'s `margin-bottom` and `.submit`'s `margin-top` — the two rules directly responsible for this exact gap, in every one of the last three fix attempts — never got it. Core's own spacing on those elements, set via a more specific ID-anchored selector, was winning outright regardless of what value this theme's rule set it to; flex non-collapsing (part 3) fixed a real bug but was never going to fix this one, since the losing rule wasn't being applied at all.
+
+Fixed by adding `!important` to both (and bumping both to `1.5rem` to match the vertical rhythm already used elsewhere on this card, e.g. `.yp-social-login`'s own margin-top).
+
+Verify: reload `wp-login.php` logged out and confirm a clearly visible, even gap between Remember Me and Log In — not just present, but obviously not cramped against the neighboring elements.
+
 ## Site migration: total database + media backup/restore (direct request: "update our migration plugin to do a total backup of the entire site and restore of the entire site, media and all," ahead of moving to a new server)
 
 No migration/backup plugin actually existed anywhere in the codebase (checked every plugin directory and all of `yeffoprint-core` itself) — "our migration plugin" turned out to mean this project's own plugin, `yeffoprint-core`, which this adds a new capability to.
