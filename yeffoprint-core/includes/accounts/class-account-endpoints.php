@@ -15,6 +15,11 @@
  * "Proof Foundation" (Phase 8) actually being visible to the customer
  * it belongs to, still short of the customer-facing approve/request-
  * changes UI that's its own V2 item.
+ *
+ * Connect Telegram (direct request: "as many people to use this as
+ * possible") links this account to a Telegram chat_id — see
+ * class-telegram-account-link.php for the actual link mechanics; this
+ * tab is just the code/deep-link display and disconnect action.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -25,6 +30,7 @@ class YeffoPrint_Account_Endpoints {
 		'saved-designs' => 'Saved Designs',
 		'rewards'       => 'Rewards',
 		'proofs'        => 'Proofs',
+		'telegram'      => 'Connect Telegram',
 	];
 
 	private const REMOVE_NONCE_ACTION = 'yeffoprint_remove_saved_design';
@@ -33,16 +39,84 @@ class YeffoPrint_Account_Endpoints {
 	private const REWARDS_NONCE_ACTION = 'yeffoprint_rewards_redeem';
 	private const REWARDS_NONCE_NAME   = 'yp_rewards_nonce';
 
+	private const TELEGRAM_NONCE_ACTION = 'yeffoprint_telegram_disconnect';
+	private const TELEGRAM_NONCE_NAME   = 'yp_telegram_nonce';
+
+	/**
+	 * Flags a just-created account for the one-time "Connect Telegram"
+	 * banner on its first Dashboard-tab view (render_registration_banner()
+	 * below) — direct request: "I'd like as many people to use this as
+	 * possible... can it also be an option to setup through the
+	 * registration flow." `user_register` fires for every path that
+	 * creates a WP user on this site (the classic WooCommerce Register
+	 * form, class-social-login.php's first-time signup, and even the
+	 * admin's manual-order-creator — all three call wc_create_new_
+	 * customer(), which fires this internally), so hooking it once here
+	 * covers all of them without each needing its own "just registered"
+	 * signal. A transient, not a permanent flag: the banner only needs
+	 * to survive to that first post-registration page view, and self-
+	 * expires if a fresh account's first Dashboard visit is delayed for
+	 * some reason rather than lingering forever.
+	 */
+	private const NEW_ACCOUNT_TRANSIENT_PREFIX = 'yp_telegram_new_account_';
+	private const NEW_ACCOUNT_TRANSIENT_TTL    = DAY_IN_SECONDS;
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_endpoints' ] );
 		add_filter( 'query_vars', [ $this, 'register_query_vars' ] );
 		add_filter( 'woocommerce_account_menu_items', [ $this, 'reorder_menu_items' ] );
 		add_action( 'template_redirect', [ $this, 'maybe_handle_remove_saved_design' ] );
 		add_action( 'template_redirect', [ $this, 'maybe_handle_rewards_redeem' ] );
+		add_action( 'template_redirect', [ $this, 'maybe_handle_telegram_disconnect' ] );
 
 		add_action( 'woocommerce_account_saved-designs_endpoint', [ $this, 'render_saved_designs' ] );
 		add_action( 'woocommerce_account_rewards_endpoint', [ $this, 'render_rewards' ] );
 		add_action( 'woocommerce_account_proofs_endpoint', [ $this, 'render_proofs' ] );
+		add_action( 'woocommerce_account_telegram_endpoint', [ $this, 'render_telegram' ] );
+
+		add_action( 'user_register', [ $this, 'flag_new_account_for_telegram_banner' ] );
+		add_action( 'woocommerce_before_account_dashboard', [ $this, 'render_registration_banner' ] );
+	}
+
+	public function flag_new_account_for_telegram_banner( int $user_id ): void {
+		set_transient( self::NEW_ACCOUNT_TRANSIENT_PREFIX . $user_id, 1, self::NEW_ACCOUNT_TRANSIENT_TTL );
+	}
+
+	/**
+	 * A dismissible-by-navigating-away banner (not a form/checkbox on
+	 * the register form itself, which can't actually generate a working
+	 * link/code before the account exists) on the very next Dashboard-
+	 * tab view after signup — the natural "welcome" moment WooCommerce's
+	 * own post-registration redirect already lands a customer on.
+	 * Cleared the moment it's shown, not left to expire on its own, so
+	 * it truly only ever appears once regardless of how many times the
+	 * customer revisits Dashboard afterward.
+	 */
+	public function render_registration_banner(): void {
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		$user_id = get_current_user_id();
+		$key     = self::NEW_ACCOUNT_TRANSIENT_PREFIX . $user_id;
+
+		if ( ! get_transient( $key ) ) {
+			return;
+		}
+
+		delete_transient( $key );
+
+		if ( YeffoPrint_Telegram_Account_Link::is_linked( $user_id ) || ! YeffoPrint_Telegram_Settings::is_enabled() ) {
+			return; // Already connected some other way, or the bot isn't configured — nothing to prompt for.
+		}
+		?>
+		<div class="yp-telegram-banner">
+			<p>
+				<?php esc_html_e( "Welcome! Want order updates the moment they happen — a proof ready to review, your order shipping? Connect Telegram and I'll message you directly.", 'yeffoprint-core' ); ?>
+			</p>
+			<a class="wp-block-button__link is-style-outline" href="<?php echo esc_url( wc_get_account_endpoint_url( 'telegram' ) ); ?>"><?php esc_html_e( 'Connect Telegram', 'yeffoprint-core' ); ?></a>
+		</div>
+		<?php
 	}
 
 	/**
@@ -109,6 +183,26 @@ class YeffoPrint_Account_Endpoints {
 		}
 
 		wp_safe_redirect( function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( 'rewards' ) : home_url( '/my-account/rewards/' ) );
+		exit;
+	}
+
+	/** Same plain POST-and-redirect pattern as maybe_handle_rewards_redeem() above. */
+	public function maybe_handle_telegram_disconnect(): void {
+		if ( ! isset( $_POST['yp_telegram_disconnect'], $_POST[ self::TELEGRAM_NONCE_NAME ] ) ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( wp_unslash( $_POST[ self::TELEGRAM_NONCE_NAME ] ), self::TELEGRAM_NONCE_ACTION ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		YeffoPrint_Telegram_Account_Link::unlink( get_current_user_id() );
+
+		wp_safe_redirect( function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( 'telegram' ) : home_url( '/my-account/telegram/' ) );
 		exit;
 	}
 
@@ -430,6 +524,53 @@ class YeffoPrint_Account_Endpoints {
 				<p class="yp-reorder-link"><a href="<?php echo esc_url( $reorder_url ); ?>"><?php esc_html_e( 'Reorder this custom design', 'yeffoprint-core' ); ?></a></p>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Direct request: "as many people to use this as possible" — a
+	 * short one-time code (class-telegram-account-link.php), shown as
+	 * both a tappable deep-link button (opens Telegram, taps its own
+	 * "Start" button, done — class-telegram-message-handler.php's
+	 * `/start link_CODE` handling) and, as a fallback if the bot's
+	 * username couldn't be resolved, the equivalent typed `/link CODE`
+	 * instructions. Once linked, this tab just shows connected state +
+	 * a Disconnect action — no code/link shown any more, since there's
+	 * nothing left to do.
+	 */
+	public function render_telegram(): void {
+		if ( ! YeffoPrint_Telegram_Settings::is_enabled() ) {
+			echo '<p>' . esc_html__( "Telegram notifications aren't available right now — check back later.", 'yeffoprint-core' ) . '</p>';
+			return;
+		}
+
+		$user_id = get_current_user_id();
+
+		if ( YeffoPrint_Telegram_Account_Link::is_linked( $user_id ) ) {
+			?>
+			<p><strong><?php esc_html_e( "You're connected.", 'yeffoprint-core' ); ?></strong> <?php esc_html_e( "We'll message you on Telegram about your orders — proofs ready to review (with a one-tap Approve/Request changes), and when an order ships.", 'yeffoprint-core' ); ?></p>
+			<form method="post">
+				<?php wp_nonce_field( self::TELEGRAM_NONCE_ACTION, self::TELEGRAM_NONCE_NAME ); ?>
+				<button type="submit" name="yp_telegram_disconnect" value="1" class="button-link-delete"><?php esc_html_e( 'Disconnect Telegram', 'yeffoprint-core' ); ?></button>
+			</form>
+			<?php
+			return;
+		}
+
+		$code      = YeffoPrint_Telegram_Account_Link::generate_code( $user_id );
+		$deep_link = YeffoPrint_Telegram_Account_Link::deep_link_url( $code );
+		?>
+		<p><?php esc_html_e( "Connect Telegram to get order updates the moment they happen — a proof ready to review (with a one-tap Approve/Request changes), or your order shipping — instead of only by email.", 'yeffoprint-core' ); ?></p>
+
+		<?php if ( $deep_link ) : ?>
+			<p><a class="wp-block-button__link" href="<?php echo esc_url( $deep_link ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open Telegram & Connect', 'yeffoprint-core' ); ?></a></p>
+			<p class="description"><?php esc_html_e( 'Or open our Telegram bot yourself and send:', 'yeffoprint-core' ); ?></p>
+		<?php else : ?>
+			<p class="description"><?php esc_html_e( 'Open our Telegram bot and send:', 'yeffoprint-core' ); ?></p>
+		<?php endif; ?>
+
+		<p><code class="yp-telegram-code">/link <?php echo esc_html( $code ); ?></code></p>
+		<p class="description"><?php esc_html_e( 'This code expires in 15 minutes — reload this page for a new one.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 }

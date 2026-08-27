@@ -106,14 +106,10 @@ class YeffoPrint_Proof_Approval_Controller {
 
 	public function approve( \WP_REST_Request $request ) {
 		$custom_order_id = absint( $request->get_param( 'id' ) );
-		$status          = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
 
-		if ( 'awaiting_approval' !== $status ) {
+		if ( ! self::approve_custom_order( $custom_order_id ) ) {
 			return new \WP_Error( 'yeffoprint_not_awaiting_approval', __( "This proof isn't waiting on your approval — it may have already been responded to. Refresh the page to see its current status.", 'yeffoprint-core' ), [ 'status' => 409 ] );
 		}
-
-		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'approved' );
-		$this->notify_admin_of_approval( $custom_order_id );
 
 		return rest_ensure_response( [
 			'success'      => true,
@@ -124,13 +120,48 @@ class YeffoPrint_Proof_Approval_Controller {
 
 	public function request_changes( \WP_REST_Request $request ) {
 		$custom_order_id = absint( $request->get_param( 'id' ) );
-		$status          = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
+		$notes           = sanitize_textarea_field( (string) $request->get_param( 'notes' ) );
 
-		if ( 'awaiting_approval' !== $status ) {
+		if ( ! self::reject_custom_order( $custom_order_id, $notes ) ) {
 			return new \WP_Error( 'yeffoprint_not_awaiting_approval', __( "This proof isn't waiting on your approval — it may have already been responded to. Refresh the page to see its current status.", 'yeffoprint-core' ), [ 'status' => 409 ] );
 		}
 
-		$notes = sanitize_textarea_field( (string) $request->get_param( 'notes' ) );
+		return rest_ensure_response( [
+			'success'      => true,
+			'status'       => 'design_in_progress',
+			'status_label' => YeffoPrint_Custom_Order_Meta::get_status_label( 'design_in_progress' ),
+		] );
+	}
+
+	/**
+	 * The actual approve/reject domain actions, extracted from approve()/
+	 * request_changes() above (which now just parse the REST request and
+	 * call these) so class-telegram-callback-handler.php (direct
+	 * request: approve or reject a proof right from the bot) can trigger
+	 * the identical status transition + admin notification without going
+	 * through a WP_REST_Request at all — there was no such indirection
+	 * layer before this; the guard/meta-writes/notify were previously
+	 * inline in the REST methods themselves. Both `static` and public
+	 * for exactly that cross-class reuse. @return bool False if the
+	 * order wasn't actually awaiting_approval — the caller's cue to
+	 * report "already responded to" rather than treat it as a hard
+	 * error.
+	 */
+	public static function approve_custom_order( int $custom_order_id ): bool {
+		if ( 'awaiting_approval' !== (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true ) ) {
+			return false;
+		}
+
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'approved' );
+		self::notify_admin_of_approval( $custom_order_id );
+
+		return true;
+	}
+
+	public static function reject_custom_order( int $custom_order_id, string $notes ): bool {
+		if ( 'awaiting_approval' !== (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true ) ) {
+			return false;
+		}
 
 		// Back to "Design in progress" — a requested change means staff
 		// have design work to do again before another proof goes out,
@@ -138,13 +169,9 @@ class YeffoPrint_Proof_Approval_Controller {
 		// §13's six states, no separate "changes requested" state).
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'design_in_progress' );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES, $notes );
-		$this->notify_admin_of_change_request( $custom_order_id, $notes );
+		self::notify_admin_of_change_request( $custom_order_id, $notes );
 
-		return rest_ensure_response( [
-			'success'      => true,
-			'status'       => 'design_in_progress',
-			'status_label' => YeffoPrint_Custom_Order_Meta::get_status_label( 'design_in_progress' ),
-		] );
+		return true;
 	}
 
 	/**
@@ -160,8 +187,8 @@ class YeffoPrint_Proof_Approval_Controller {
 	 * attention" alert, not customer-facing correspondence with its own
 	 * configurable inbox.
 	 */
-	private function notify_admin_of_approval( int $custom_order_id ): void {
-		$this->notify_admin(
+	private static function notify_admin_of_approval( int $custom_order_id ): void {
+		self::notify_admin(
 			sprintf(
 				/* translators: %s: the custom order's title (brand name + submission date, or "Custom Stickers — date") */
 				__( 'Proof approved — %s', 'yeffoprint-core' ),
@@ -175,8 +202,8 @@ class YeffoPrint_Proof_Approval_Controller {
 		);
 	}
 
-	private function notify_admin_of_change_request( int $custom_order_id, string $notes ): void {
-		$this->notify_admin(
+	private static function notify_admin_of_change_request( int $custom_order_id, string $notes ): void {
+		self::notify_admin(
 			sprintf(
 				/* translators: %s: the custom order's title */
 				__( 'Changes requested on proof — %s', 'yeffoprint-core' ),
@@ -191,7 +218,7 @@ class YeffoPrint_Proof_Approval_Controller {
 		);
 	}
 
-	private function notify_admin( string $subject, string $body ): void {
+	private static function notify_admin( string $subject, string $body ): void {
 		wp_mail( get_option( 'admin_email' ), $subject, $body );
 	}
 }

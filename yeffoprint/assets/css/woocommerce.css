@@ -502,6 +502,34 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+/* ---------- Connect Telegram banner (Dashboard) + tab ---------- */
+
+.yp-telegram-banner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 1rem;
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 2rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-telegram-banner p {
+	margin: 0;
+	flex: 1 1 320px;
+}
+
+.yp-telegram-code {
+	display: inline-block;
+	padding: 0.5rem 0.9rem;
+	font-size: var(--wp--preset--font-size--large);
+	font-family: var(--wp--preset--font-family--mono, monospace);
+	letter-spacing: 0.03em;
+	background: var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+}
+
 /* ---------- Rewards tab ---------- */
 
 .yp-rewards-balance {
