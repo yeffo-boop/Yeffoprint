@@ -41,11 +41,13 @@
 					<div class="yp-field-inputs" data-yp-field-inputs></div>
 				</div>
 				<div class="yp-configurator__section" data-yp-section="quantity">
-					<div class="yp-section-heading-row">
-						<h2 id="yp-quantity-heading">Quantity</h2>
-						<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-bulk-pricing-info-modal" aria-haspopup="dialog" aria-label="See bulk pricing" data-yp-bulk-pricing-trigger hidden>?</button>
-					</div>
+					<h2>Quantity</h2>
 					<div class="yp-quantity-control" data-yp-quantity></div>
+				</div>
+				<div class="yp-configurator__section" data-yp-section="bulk-pricing" data-yp-bulk-pricing-section hidden>
+					<h2>Bulk Pricing</h2>
+					<p class="yp-bulk-pricing__intro">The more you order, the less each label costs. Discounts apply to your whole order across every design you add, not just this one.</p>
+					<div data-yp-bulk-pricing-table></div>
 				</div>
 				<div class="yp-configurator__section" data-yp-section="variants">
 					<div class="yp-variants-header">
@@ -71,8 +73,6 @@
 <!-- wp:pattern {"slug":"yeffoprint/material-info-modal"} /-->
 
 <!-- wp:pattern {"slug":"yeffoprint/size-info-modal"} /-->
-
-<!-- wp:pattern {"slug":"yeffoprint/bulk-pricing-info-modal"} /-->
 
 <!-- wp:html -->
 <div class="yp-sticky-bar" data-yp-sticky-bar hidden>

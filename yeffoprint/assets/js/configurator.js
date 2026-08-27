@@ -890,17 +890,33 @@
 	 * YeffoPrint_Pricing_Rule::calculate() itself takes — needs no
 	 * extra round trip and can update instantly as the customer changes
 	 * size/material/quantity, same as the estimate above.
+	 *
+	 * V2 (direct follow-up report: "the ? doesn't work... I also always
+	 * want it visible"): originally a small info-button next to Quantity
+	 * that opened this table in a drawer modal. Dropped the modal
+	 * entirely — this now renders straight into its own always-on
+	 * section of the page (right below Quantity), so there's no click
+	 * required and nothing that can silently fail to open. The section
+	 * always shows once the page finishes loading; if the active Pricing
+	 * Rule genuinely has no discount tiers configured yet, it shows a
+	 * plain "not available yet" note instead of an empty table rather
+	 * than disappearing.
 	 */
 	function renderBulkPricingTable() {
+		var sectionEl = document.querySelector( '[data-yp-bulk-pricing-section]' );
 		var el = document.querySelector( '[data-yp-bulk-pricing-table]' );
-		var triggerButton = document.querySelector( '[data-yp-bulk-pricing-trigger]' );
 		var tiers = ( schema && schema.tiers ) || [];
 
-		if ( triggerButton ) {
-			triggerButton.hidden = ! tiers.length;
+		if ( sectionEl ) {
+			sectionEl.hidden = false;
 		}
 
-		if ( ! el || ! tiers.length ) {
+		if ( ! el ) {
+			return;
+		}
+
+		if ( ! tiers.length ) {
+			el.innerHTML = '<p class="yp-bulk-pricing__empty">Bulk pricing isn\'t available for this design yet — check back soon.</p>';
 			return;
 		}
 

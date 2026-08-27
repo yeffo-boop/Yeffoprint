@@ -403,13 +403,21 @@
 }
 
 /* Bulk pricing table (direct request: "so customers can see the
-   savings if they order more"), rendered into patterns/bulk-pricing-
-   info-modal.php's drawer body by configurator.js's
-   renderBulkPricingTable(). Plain table, no card chrome of its own —
-   the drawer body already supplies the padding. */
+   savings if they order more"; V2 follow-up: "the ? doesn't work... I
+   also always want it visible" moved this from a click-to-open drawer
+   modal into its own always-visible section right below Quantity —
+   see single-yp_template.html's data-yp-bulk-pricing-section and
+   configurator.js's renderBulkPricingTable()). Plain table, no card
+   chrome of its own — .yp-configurator__section already supplies the
+   spacing. */
 .yp-bulk-pricing__intro {
 	margin-top: 0;
 	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-bulk-pricing__empty {
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 .yp-bulk-pricing-table {
