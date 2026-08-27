@@ -8,12 +8,15 @@
  * the customer?", broadened immediately after to "manually create any
  * orders, not just custom orders."
  *
- * Phase A (this class, for now): Custom Design orders only — the
- * simplest order type, and the one that fully exercises every piece of
- * shared plumbing (customer resolution, direct order assembly outside
- * the cart, the proof-approval linkage) that Phases B (Custom Sticker)
- * and C (Template label) will reuse unchanged. See docs/ARCHITECTURE.md
- * for the full phasing rationale.
+ * Phase A shipped Custom Design orders — the simplest order type, and
+ * the one that fully exercised every piece of shared plumbing (customer
+ * resolution, direct order assembly outside the cart, the proof-approval
+ * linkage). Phase B (this revision) adds Custom Stickers, reusing all of
+ * that plumbing unchanged — no fee item (Custom Stickers has none) and
+ * no batching (one sticker configuration per submission, matching the
+ * customer-facing flow exactly). Phase C (Template label) is the only
+ * one still pending. See docs/ARCHITECTURE.md for the full phasing
+ * rationale.
  *
  * Never goes through `WC()->cart` — unlike the customer-facing
  * `YeffoPrint_Custom_Order_Controller::submit()`, which adds items to
@@ -46,30 +49,49 @@ class YeffoPrint_Manual_Order_Creator {
 
 	/**
 	 * @param array $payload {
-	 *     @type string $order_type      Only 'custom_design' supported in Phase A.
+	 *     @type string $order_type      'custom_design' or 'sticker'.
 	 *     @type array  $customer        { @type int $id } OR { @type string $name, @type string $email }.
-	 *     @type string $brand_name
-	 *     @type array  $batch           [ { size_id, material_id, quantity, compound_strength } ]
-	 *     @type string $style_notes
+	 *     @type string $brand_name      custom_design only.
+	 *     @type array  $batch           custom_design only — [ { size_id, material_id, quantity, compound_strength } ]
+	 *     @type string $style_notes     custom_design only.
 	 *     @type string $instructions
+	 *     @type int    $size_id         sticker only.
+	 *     @type int    $material_id     sticker only.
+	 *     @type string $sticker_type    sticker only.
+	 *     @type string $shape           sticker only.
+	 *     @type int    $quantity        sticker only.
+	 *     @type float  $custom_width_in  sticker only.
+	 *     @type float  $custom_height_in sticker only.
+	 *     @type array  $uploads         sticker only — attachment IDs, already uploaded via /custom-orders/uploads.
 	 *     @type bool   $requires_proof
 	 * }
 	 * @return array{order:\WC_Order, custom_order_id:int}|\WP_Error
 	 */
 	public static function create( array $payload ) {
 		$order_type = sanitize_key( (string) ( $payload['order_type'] ?? '' ) );
-		if ( 'custom_design' !== $order_type ) {
+		if ( ! in_array( $order_type, [ 'custom_design', 'sticker' ], true ) ) {
 			return new \WP_Error( 'yeffoprint_unsupported_order_type', __( 'That order type is not available yet.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$brand_name = sanitize_text_field( (string) ( $payload['brand_name'] ?? '' ) );
-		if ( '' === $brand_name ) {
-			return new \WP_Error( 'yeffoprint_missing_brand_name', __( 'Brand name is required.', 'yeffoprint-core' ), [ 'status' => 400 ] );
-		}
+		$brand_name = '';
+		$batch      = [];
+		$sticker    = [];
 
-		$batch = self::validate_batch_rows( $payload['batch'] ?? null );
-		if ( is_wp_error( $batch ) ) {
-			return $batch;
+		if ( 'custom_design' === $order_type ) {
+			$brand_name = sanitize_text_field( (string) ( $payload['brand_name'] ?? '' ) );
+			if ( '' === $brand_name ) {
+				return new \WP_Error( 'yeffoprint_missing_brand_name', __( 'Brand name is required.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
+			$batch = self::validate_batch_rows( $payload['batch'] ?? null );
+			if ( is_wp_error( $batch ) ) {
+				return $batch;
+			}
+		} else {
+			$sticker = self::validate_sticker_fields( $payload );
+			if ( is_wp_error( $sticker ) ) {
+				return $sticker;
+			}
 		}
 
 		$customer = self::resolve_or_create_customer( is_array( $payload['customer'] ?? null ) ? $payload['customer'] : [] );
@@ -93,9 +115,14 @@ class YeffoPrint_Manual_Order_Creator {
 
 		$custom_order_id = 0;
 		if ( ! empty( $payload['requires_proof'] ) ) {
+			$title = 'custom_design' === $order_type
+				? sprintf( '%s — %s', $brand_name, current_time( 'Y-m-d H:i' ) )
+				/* translators: %s: submission date/time */
+				: sprintf( __( 'Custom Stickers — %s', 'yeffoprint-core' ), current_time( 'Y-m-d H:i' ) );
+
 			$custom_order_id = YeffoPrint_Custom_Order_Meta::create_shell(
-				'label',
-				sprintf( '%s — %s', $brand_name, current_time( 'Y-m-d H:i' ) ),
+				'custom_design' === $order_type ? 'label' : 'sticker',
+				$title,
 				$customer->ID,
 				$customer->user_email,
 				trim( $customer->first_name . ' ' . $customer->last_name ) ?: $customer->display_name
@@ -107,7 +134,10 @@ class YeffoPrint_Manual_Order_Creator {
 			}
 		}
 
-		$result = self::add_custom_design_rows( $order, $batch, $custom_order_id );
+		$result = 'custom_design' === $order_type
+			? self::add_custom_design_rows( $order, $batch, $custom_order_id )
+			: self::add_sticker_row( $order, $sticker, $custom_order_id );
+
 		if ( is_wp_error( $result ) ) {
 			$order->delete( true );
 			if ( $custom_order_id ) {
@@ -116,7 +146,7 @@ class YeffoPrint_Manual_Order_Creator {
 			return $result;
 		}
 
-		if ( $custom_order_id ) {
+		if ( $custom_order_id && 'custom_design' === $order_type ) {
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, $brand_name );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BATCH, wp_json_encode( $batch ) );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SIZE_ID, $batch[0]['size_id'] );
@@ -125,6 +155,24 @@ class YeffoPrint_Manual_Order_Creator {
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH, $batch[0]['compound_strength'] );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STYLE_NOTES, sanitize_textarea_field( (string) ( $payload['style_notes'] ?? '' ) ) );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, sanitize_textarea_field( (string) ( $payload['instructions'] ?? '' ) ) );
+		} elseif ( $custom_order_id ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SIZE_ID, $sticker['size_id'] );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, $sticker['material_id'] );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::QUANTITY, $sticker['quantity'] );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STICKER_TYPE, $sticker['sticker_type'] );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SHAPE, $sticker['shape'] );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOM_WIDTH_IN, $sticker['custom_width_in'] );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOM_HEIGHT_IN, $sticker['custom_height_in'] );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $sticker['instructions'] );
+			// Optional here unlike the customer-facing form's hard
+			// requirement — staff placing a phone/email order often
+			// haven't received the artwork file yet and shouldn't be
+			// blocked from getting the order into the pipeline; the
+			// customer's proof-approval flow (once a proof is uploaded)
+			// is what actually needs artwork in hand, not this step.
+			if ( $sticker['uploads'] ) {
+				update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, $sticker['uploads'] );
+			}
 		}
 
 		$order->calculate_totals();
@@ -265,6 +313,132 @@ class YeffoPrint_Manual_Order_Creator {
 				YeffoPrint_Order_Item_Meta::apply( $item, $values, $tier_quantity );
 				$item->save();
 			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Same validation rules as class-custom-sticker-controller.php's own
+	 * submit() — kept local rather than shared, matching this file's own
+	 * existing per-controller convention (see validate_batch_rows()'s own
+	 * docblock below).
+	 *
+	 * @return array{size_id:int, material_id:int, sticker_type:string, shape:string, quantity:int, custom_width_in:float, custom_height_in:float, instructions:string, uploads:int[]}|\WP_Error
+	 */
+	private static function validate_sticker_fields( array $payload ) {
+		$size_id = absint( $payload['size_id'] ?? 0 );
+		if ( ! $size_id || ! self::is_published( 'yp_sticker_size', $size_id ) ) {
+			return new \WP_Error( 'yeffoprint_invalid_size', __( 'Please choose a valid size.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$material_id = absint( $payload['material_id'] ?? 0 );
+		if ( ! $material_id || ! self::is_published( 'yp_material', $material_id ) ) {
+			return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		if ( ! (bool) get_post_meta( $material_id, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ) ) {
+			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$sticker_type = sanitize_key( (string) ( $payload['sticker_type'] ?? '' ) );
+		if ( ! array_key_exists( $sticker_type, YeffoPrint_Sticker_Pricing::TYPES ) ) {
+			return new \WP_Error( 'yeffoprint_invalid_sticker_type', __( 'Please choose a valid sticker type.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$shape = sanitize_key( (string) ( $payload['shape'] ?? '' ) );
+		if ( ! array_key_exists( $shape, YeffoPrint_Sticker_Pricing::SHAPES ) ) {
+			return new \WP_Error( 'yeffoprint_invalid_shape', __( 'Please choose a valid shape.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$quantity = absint( $payload['quantity'] ?? 0 );
+		if ( $quantity < 1 ) {
+			return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Quantity must be at least 1.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$custom_width_in  = (float) ( $payload['custom_width_in'] ?? 0 );
+		$custom_height_in = (float) ( $payload['custom_height_in'] ?? 0 );
+
+		$pricing_check = YeffoPrint_Sticker_Pricing::calculate( $size_id, $custom_width_in, $custom_height_in, $material_id, $sticker_type, $shape, $quantity );
+		if ( is_wp_error( $pricing_check ) ) {
+			return $pricing_check;
+		}
+
+		$uploads = array_values( array_filter(
+			array_map( 'absint', is_array( $payload['uploads'] ?? null ) ? $payload['uploads'] : [] ),
+			static function ( $id ) {
+				return $id && 'attachment' === get_post_type( $id );
+			}
+		) );
+
+		return [
+			'size_id'          => $size_id,
+			'material_id'      => $material_id,
+			'sticker_type'     => $sticker_type,
+			'shape'            => $shape,
+			'quantity'         => $quantity,
+			'custom_width_in'  => $custom_width_in,
+			'custom_height_in' => $custom_height_in,
+			'instructions'     => sanitize_textarea_field( (string) ( $payload['instructions'] ?? '' ) ),
+			'uploads'          => $uploads,
+		];
+	}
+
+	/**
+	 * Custom Stickers' single line item — no fee item (Custom Stickers
+	 * has none at all, unlike Custom Design's separate $25 design fee)
+	 * and no batching (one sticker configuration per manual order,
+	 * matching the customer-facing flow's own shape exactly). Mirrors
+	 * class-custom-sticker-controller.php::submit()'s own pricing/add
+	 * steps, just built directly on the order instead of through
+	 * WC()->cart->add_to_cart().
+	 *
+	 * @return true|\WP_Error
+	 */
+	private static function add_sticker_row( \WC_Order $order, array $sticker, int $custom_order_id ) {
+		$product_id = YeffoPrint_Custom_Sticker_Product::get_product_id();
+		if ( ! $product_id ) {
+			return new \WP_Error( 'yeffoprint_no_sticker_product', __( 'Custom Stickers orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
+		}
+		$product = wc_get_product( $product_id );
+
+		// No cart-wide pool to combine against — this is the only sticker
+		// row a manual order can ever have (no batching for Custom
+		// Stickers), so the bulk-discount tier is just this row's own
+		// quantity, same as a solo customer-facing submission would see.
+		$pricing = YeffoPrint_Sticker_Pricing::calculate(
+			$sticker['size_id'],
+			$sticker['custom_width_in'],
+			$sticker['custom_height_in'],
+			$sticker['material_id'],
+			$sticker['sticker_type'],
+			$sticker['shape'],
+			$sticker['quantity']
+		);
+		if ( is_wp_error( $pricing ) ) {
+			return $pricing;
+		}
+		$total = $pricing['total'];
+
+		$item_id = $order->add_product( $product, $sticker['quantity'], [ 'subtotal' => $total, 'total' => $total ] );
+		if ( ! $item_id ) {
+			return new \WP_Error( 'yeffoprint_add_item_failed', __( "Couldn't add the stickers to the order.", 'yeffoprint-core' ), [ 'status' => 500 ] );
+		}
+
+		$item = $order->get_item( $item_id );
+		if ( $item instanceof \WC_Order_Item_Product ) {
+			$values = [
+				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID  => $custom_order_id,
+				YeffoPrint_Cart_Item_Keys::SIZE_ID          => $sticker['size_id'],
+				YeffoPrint_Cart_Item_Keys::MATERIAL_ID      => $sticker['material_id'],
+				YeffoPrint_Cart_Item_Keys::STICKER_TYPE     => $sticker['sticker_type'],
+				YeffoPrint_Cart_Item_Keys::SHAPE            => $sticker['shape'],
+				YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN  => $sticker['custom_width_in'],
+				YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN => $sticker['custom_height_in'],
+				YeffoPrint_Cart_Item_Keys::TOTAL_QTY        => $sticker['quantity'],
+			];
+			YeffoPrint_Order_Item_Meta::apply( $item, $values, $sticker['quantity'] );
+			$item->save();
 		}
 
 		return true;

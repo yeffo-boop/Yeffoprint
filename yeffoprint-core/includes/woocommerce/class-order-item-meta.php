@@ -84,7 +84,7 @@ class YeffoPrint_Order_Item_Meta {
 		// TOTAL_QTY, same shape as a Custom Design labels item, but
 		// needs its own snapshot fields (type/shape/custom dimensions).
 		if ( $custom_order_id && ! empty( $values[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
-			self::snapshot_custom_sticker( $item, $custom_order_id, $values );
+			self::snapshot_custom_sticker( $item, $custom_order_id, $values, $tier_quantity );
 			return;
 		}
 
@@ -161,7 +161,7 @@ class YeffoPrint_Order_Item_Meta {
 	}
 
 	/** Custom Stickers' own line item — same shape as snapshot_custom_order_labels() above, this flow's own fields (type/shape/size, including the custom-dimensions tier) instead. */
-	private static function snapshot_custom_sticker( \WC_Order_Item_Product $item, int $custom_order_id, array $values ): void {
+	private static function snapshot_custom_sticker( \WC_Order_Item_Product $item, int $custom_order_id, array $values, ?int $tier_quantity = null ): void {
 		$size_id           = (int) ( $values[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
 		$material_id       = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
 		$sticker_type      = (string) ( $values[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ?? '' );
@@ -170,7 +170,7 @@ class YeffoPrint_Order_Item_Meta {
 		$custom_height_in  = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? 0 );
 		$quantity          = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ?? 0 );
 		$is_custom_size    = $size_id && (bool) get_post_meta( $size_id, YeffoPrint_Sticker_Size_Meta::IS_CUSTOM, true );
-		$pricing           = YeffoPrint_Cart_Pricing::calculate_sticker_for_cart_item( $values );
+		$pricing           = YeffoPrint_Cart_Pricing::calculate_sticker_for_cart_item( $values, $tier_quantity );
 
 		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
 		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( self::record_snapshot( $size_id ) ), true );

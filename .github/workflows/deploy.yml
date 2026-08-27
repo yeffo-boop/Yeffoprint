@@ -1,10 +1,16 @@
 name: Deploy to production
 
-# Fires the moment Prod moves — the SSH session that actually runs is
-# pinned server-side to deploy/pull-and-deploy.sh via a forced command
-# in the deploy user's authorized_keys (docs/deploy-setup.md), so the
-# `script:` below is really just documentation of what happens; the key
-# can't be used to run anything else even if this workflow file changed.
+# Fires the moment Prod moves. `script:` below is what actually runs —
+# the originally-planned forced-command restriction in authorized_keys
+# (pinning the key to only ever run this one script server-side) turned
+# out not to survive on this instance: its guest agent periodically
+# rewrites ~/.ssh/authorized_keys from instance SSH-key metadata, wiping
+# any manually-added line including the forced-command one. The deploy
+# key here is instead added through that same metadata mechanism (see
+# docs/deploy-setup.md), which the guest agent preserves — but that
+# mechanism doesn't support the command= restriction, so this key can
+# run anything the deploy user could; treat it with the same care as
+# any other credential with real access to that account.
 on:
   push:
     branches: [Prod]
@@ -22,4 +28,4 @@ jobs:
           host: ${{ secrets.GCE_HOST }}
           username: ${{ secrets.GCE_USER }}
           key: ${{ secrets.GCE_SSH_PRIVATE_KEY }}
-          script: /path/to/somewhere/outside/wp-content/yeffoprint-deploy/deploy/pull-and-deploy.sh
+          script: /var/www/html/yeffoprint-deploy/deploy/pull-and-deploy.sh

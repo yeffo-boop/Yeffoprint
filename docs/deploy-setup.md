@@ -151,17 +151,37 @@ workflow instead, reusing the exact same deploy script either way.
    ssh-keygen -t ed25519 -f ./gh-actions-deploy-key -C "github-actions-deploy" -N ""
    ```
 
-3. **Authorize the public key on the instance, pinned to only the
-   deploy script**, added directly to the deploy user's
-   `~/.ssh/authorized_keys` on the box — not through GCP's
-   instance/project "SSH Keys" metadata field, since the guest agent
-   periodically re-syncs keys added that way and would silently strip a
-   forced-command restriction:
-   ```bash
-   echo 'command="/path/to/yeffoprint-deploy/deploy/pull-and-deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding ssh-ed25519 AAAA...your-pubkey... github-actions-deploy' >> ~/.ssh/authorized_keys
-   ```
-   Even if this private key ever leaked, it can only ever run that one
-   script on this one box — never an arbitrary shell.
+3. **Authorize the public key.** Originally tried as a forced-command
+   entry added directly to `~/.ssh/authorized_keys` (pinning the key to
+   only ever run the deploy script, so a leaked key could never open an
+   arbitrary shell) — found live not to survive on this instance: its
+   guest agent doesn't just add its own keys alongside manual ones, it
+   periodically **rewrites the entire file** from instance SSH-key
+   metadata, silently deleting anything added by hand, forced-command or
+   not. Add the key through that same metadata mechanism instead, so the
+   guest agent preserves it:
+   - Console: the instance's **Edit** page → **SSH Keys** → **Add item** →
+     paste the full contents of the `.pub` file (plain — no
+     `command="..."` prefix; GCP's metadata key format doesn't support
+     OpenSSH key options, so that hardening isn't available this way).
+   - Or via `gcloud`, being careful to preserve whatever's already in
+     the metadata rather than overwrite it:
+     ```bash
+     EXISTING=$(gcloud compute instances describe YOUR_INSTANCE --zone=YOUR_ZONE --format="get(metadata.items[ssh-keys])")
+     printf '%s\nDEPLOY_USER:%s\n' "$EXISTING" "$(cat gh-actions-deploy-key.pub)" \
+       | gcloud compute instances add-metadata YOUR_INSTANCE --zone=YOUR_ZONE --metadata-from-file ssh-keys=/dev/stdin
+     ```
+   Since this key can now run anything the deploy user could (not just
+   the one script), treat it with the same care as any other credential
+   with real account access — it isn't self-limiting the way the
+   forced-command version would have been. If your instance has the
+   guest agent's account-management daemon disabled (or you disable it
+   yourself), the original forced-command approach works as described
+   and is the stronger option — just confirm first, the same way this
+   was found not to work here: add the line, then check whether
+   `~/.ssh/authorized_keys` still has it after triggering a Console/
+   `gcloud compute ssh` connection (which is what prompts a metadata
+   resync).
 
 4. **Firewall rule scoped to GitHub's Actions IP ranges** — the one
    piece that needs periodic upkeep, since those ranges change:
