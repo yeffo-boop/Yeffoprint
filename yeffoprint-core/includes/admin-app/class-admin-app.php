@@ -174,7 +174,7 @@ class YeffoPrint_Admin_App {
 		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
 		// always finish loading (and registering) before app.js's own
 		// DOMContentLoaded-triggered first route() call needs them.
-		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'maintenance', 'pricing', 'orders', 'proofs', 'rewards', 'surcharge', 'settings' ] as $view ) {
+		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'maintenance', 'pricing', 'orders', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order' ] as $view ) {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',

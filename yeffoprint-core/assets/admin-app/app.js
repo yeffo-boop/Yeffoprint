@@ -229,6 +229,7 @@
 			{ id: 'field-presets', label: 'Field Presets' }
 		] },
 		{ group: 'Sales', items: [
+			{ id: 'manual-order', label: 'Create Order' },
 			{ id: 'pricing', label: 'Pricing Rules' },
 			{ id: 'orders', label: 'Custom Orders' },
 			{ id: 'proofs', label: 'Proofs' },

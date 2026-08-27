@@ -141,6 +141,45 @@ class YeffoPrint_Custom_Order_Meta {
 		return self::STATUSES[ $status ] ?? '';
 	}
 
+	/**
+	 * Creates a fresh, unpublished yp_custom_order shell with a real
+	 * ACCESS_TOKEN already set — the one thing every creation path needs
+	 * before it can add its own mode-specific meta (batch rows, sticker
+	 * fields, whatever). Extracted from class-custom-order-controller.php's
+	 * submit() so the admin app's manual-order creator (which never runs
+	 * through that customer-facing endpoint) can mint the same kind of
+	 * record. Stays 'draft' until class-custom-order-payment.php's
+	 * link_paid_custom_orders() publishes it once a linked WC order line
+	 * item actually reaches 'processing' — same rule regardless of origin.
+	 *
+	 * $customer_id/$customer_email/$customer_name are passed through as
+	 * given rather than looked up here — the customer submission path
+	 * still leaves them empty at this point (filled in later from the WC
+	 * order's billing details, unchanged), while the admin manual-order
+	 * path already has a real customer to record immediately.
+	 *
+	 * @return int 0 on failure.
+	 */
+	public static function create_shell( string $order_type, string $title, int $customer_id, string $customer_email, string $customer_name ): int {
+		$id = wp_insert_post( [
+			'post_type'   => 'yp_custom_order',
+			'post_status' => 'draft',
+			'post_title'  => $title,
+		], true );
+
+		if ( is_wp_error( $id ) ) {
+			return 0;
+		}
+
+		update_post_meta( $id, self::ORDER_TYPE, $order_type );
+		update_post_meta( $id, self::ACCESS_TOKEN, wp_generate_password( 40, false ) );
+		update_post_meta( $id, self::CUSTOMER_ID, $customer_id );
+		update_post_meta( $id, self::CUSTOMER_EMAIL, $customer_email );
+		update_post_meta( $id, self::CUSTOMER_NAME, $customer_name );
+
+		return $id;
+	}
+
 	/** Defaults to 'label' — every CustomOrder created before Custom Stickers existed has no ORDER_TYPE meta row at all. */
 	public static function get_order_type( int $post_id ): string {
 		$type = get_post_meta( $post_id, self::ORDER_TYPE, true );
