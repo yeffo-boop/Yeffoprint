@@ -402,6 +402,43 @@
 	width: 6rem;
 }
 
+/* Bulk pricing table (direct request: "so customers can see the
+   savings if they order more"), rendered into patterns/bulk-pricing-
+   info-modal.php's drawer body by configurator.js's
+   renderBulkPricingTable(). Plain table, no card chrome of its own —
+   the drawer body already supplies the padding. */
+.yp-bulk-pricing__intro {
+	margin-top: 0;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-bulk-pricing-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-bulk-pricing-table th,
+.yp-bulk-pricing-table td {
+	padding: 0.6rem 0.5rem;
+	text-align: left;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+	font-variant-numeric: tabular-nums;
+}
+
+.yp-bulk-pricing-table th {
+	color: var(--wp--preset--color--charcoal);
+	font-weight: 600;
+}
+
+.yp-bulk-pricing-table tr.is-active {
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-bulk-pricing-table tr.is-active td:first-child {
+	font-weight: 600;
+}
+
 .yp-variants-header {
 	display: flex;
 	justify-content: space-between;

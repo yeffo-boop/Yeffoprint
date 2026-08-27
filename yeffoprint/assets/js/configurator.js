@@ -26,6 +26,16 @@
  * with the authoritative, discount-aware breakdown. That server value
  * — never the client estimate — is what a future Add to Cart (Phase
  * 7) would submit. See docs/ARCHITECTURE.md §9.
+ *
+ * Bulk pricing table (direct request: "so customers can see the
+ * savings if they order more... dynamic and show whatever tiered
+ * pricing is assigned"): renderBulkPricingTable() reuses that same
+ * "instant client estimate" precedent — it builds a per-tier price
+ * preview straight from the schema's own base_unit_price/tiers plus
+ * whichever size/material is currently selected, no extra request,
+ * same as renderEstimatedSummary() above. It's purely informational;
+ * the price a customer actually pays is still only ever the
+ * authoritative /pricing/calculate result. See docs/ARCHITECTURE.md §9.
  */
 ( function () {
 	'use strict';
@@ -861,8 +871,81 @@
 
 	function renderSummary() {
 		renderEstimatedSummary();
+		renderBulkPricingTable();
 		window.clearTimeout( pricingDebounceTimer );
 		pricingDebounceTimer = window.setTimeout( fetchAuthoritativePricing, 300 );
+	}
+
+	/**
+	 * Direct request: "a bulk pricing table on the template order page
+	 * so customers can see the savings if they order more... dynamic
+	 * and show whatever tiered pricing is assigned." Same "instant
+	 * client-side estimate" precedent renderEstimatedSummary() above
+	 * already established — this table is purely informational (never
+	 * what Add to Cart actually submits, that's still always the
+	 * server-validated /pricing/calculate result via
+	 * fetchAuthoritativePricing()), so computing it here from schema's
+	 * own base_unit_price/tiers plus the currently selected size/
+	 * material's adjustments — the exact same inputs
+	 * YeffoPrint_Pricing_Rule::calculate() itself takes — needs no
+	 * extra round trip and can update instantly as the customer changes
+	 * size/material/quantity, same as the estimate above.
+	 */
+	function renderBulkPricingTable() {
+		var el = document.querySelector( '[data-yp-bulk-pricing-table]' );
+		var triggerButton = document.querySelector( '[data-yp-bulk-pricing-trigger]' );
+		var tiers = ( schema && schema.tiers ) || [];
+
+		if ( triggerButton ) {
+			triggerButton.hidden = ! tiers.length;
+		}
+
+		if ( ! el || ! tiers.length ) {
+			return;
+		}
+
+		var adjustments = unitAdjustments();
+		var base = schema.base_unit_price;
+		var fullPricePerUnit = base + adjustments.material + adjustments.size;
+		var currentQty = totalQuantity();
+
+		// One row for "no discount yet" (threshold 1) plus one per
+		// configured tier — mirrors exactly how YeffoPrint_Pricing_Rule::calculate()
+		// itself resolves a tier: highest threshold at or below the
+		// quantity in question wins.
+		var rows = [ { threshold: 1, discountPerUnit: 0 } ].concat( tiers.map( function ( tier ) {
+			var discountPerUnit = 'percent' === tier.type
+				? base * ( tier.value / 100 )
+				: Math.max( 0, base - tier.value );
+			return { threshold: tier.threshold, discountPerUnit: discountPerUnit };
+		} ) );
+
+		var activeIndex = 0;
+		rows.forEach( function ( row, index ) {
+			if ( currentQty >= row.threshold ) {
+				activeIndex = index;
+			}
+		} );
+
+		el.innerHTML =
+			'<table class="yp-bulk-pricing-table">' +
+				'<thead><tr><th>Quantity</th><th>Price per label</th><th>You save</th></tr></thead>' +
+				'<tbody>' +
+					rows.map( function ( row, index ) {
+						var discountedBase = Math.max( 0, base - row.discountPerUnit );
+						var perUnit = discountedBase + adjustments.material + adjustments.size;
+						var savingsPct = fullPricePerUnit > 0 ? Math.round( ( row.discountPerUnit / fullPricePerUnit ) * 100 ) : 0;
+
+						return (
+							'<tr' + ( index === activeIndex ? ' class="is-active"' : '' ) + '>' +
+								'<td>' + row.threshold + '+</td>' +
+								'<td>' + formatCurrency( perUnit ) + '</td>' +
+								'<td>' + ( savingsPct > 0 ? savingsPct + '%' : '—' ) + '</td>' +
+							'</tr>'
+						);
+					} ).join( '' ) +
+				'</tbody>' +
+			'</table>';
 	}
 
 	function renderEstimatedSummary() {
