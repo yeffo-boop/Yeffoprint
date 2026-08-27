@@ -1536,6 +1536,17 @@
 .yp-web-design-package__cta {
 	display: block;
 	text-align: center;
+	/* Direct report: "the get a quote buttons are all different sizes
+	   because each package contains a different number of items" — each
+	   card's own feature list is a different length (admin-editable per
+	   tier), so without this the button just sits right after wherever
+	   that list happens to end. margin-top:auto (this is the last child
+	   of .yp-web-design-package's own column flex layout) claims all
+	   leftover vertical space above itself, pinning every card's button
+	   to the same bottom edge regardless of how tall its own features
+	   list is — independent of, and a firmer guarantee than, the
+	   flex-grow already on .yp-web-design-package__features above. */
+	margin-top: auto;
 }
 
 /* "What's Included" icon grid */

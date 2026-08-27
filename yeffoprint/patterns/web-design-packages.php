@@ -108,7 +108,7 @@ $packages = array_map( static function ( $post ) {
 			<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
 				<path d="M12.5 3.5a4 4 0 0 0-5.4 4.9L2.5 13a1.8 1.8 0 0 0 2.5 2.5l4.6-4.6a4 4 0 0 0 4.9-5.4l-2.6 2.6-2-2 2.6-2.6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
 			</svg>
-			<span>Every package can add <strong>ongoing maintenance &amp; monitoring</strong> after launch</span>
+			<span>Every package can add <strong>ongoing maintenance &amp; monitoring</strong> for <strong>$35/mo</strong></span>
 			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
 				<path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
 			</svg>
@@ -187,7 +187,7 @@ $packages = array_map( static function ( $post ) {
 				</button>
 			</div>
 			<div class="yp-drawer__body">
-				<p>A launched site still needs attention — plugin and core updates, and someone watching for issues before your customers find them. Add this to any package and we'll keep your store current and monitored, month to month.</p>
+				<p>A launched site still needs attention — plugin and core updates, and someone watching for issues before your customers find them. Add this to any package for <strong>$35/mo</strong> and we'll keep your store current and monitored, month to month.</p>
 				<ul class="yp-web-design-package__features">
 					<li>
 						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
