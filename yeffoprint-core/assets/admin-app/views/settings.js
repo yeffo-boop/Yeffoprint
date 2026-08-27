@@ -41,18 +41,18 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Homepage Promo</h2></div>' +
-					'<p class="yp-panel__hint">A seasonal banner between the header and the hero — pick a theme, fill in the offer and code, and turn it on. Won’t show until both Offer and Promo code are filled in.</p>' +
+					'<p class="yp-panel__hint">Themed banners between the header and the hero. Fill in an Offer and Promo code for any theme below to make it active — two or more active themes rotate automatically. Shown exactly as typed, so make sure a matching active WooCommerce coupon exists for each code before turning this on.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-promo-enabled"' + ( settings.promo_enabled ? ' checked' : '' ) + ' /><label for="yp-set-promo-enabled">Show it on the homepage</label></div>' +
-					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-set-promo-theme">Theme</label><select id="yp-set-promo-theme">' +
-							Object.keys( settings.promo_themes ).map( function ( slug ) {
-								return '<option value="' + YP.escapeAttr( slug ) + '"' + ( settings.promo_theme === slug ? ' selected' : '' ) + '>' + YP.escapeHtml( settings.promo_themes[ slug ] ) + '</option>';
-							} ).join( '' ) +
-						'</select></div>' +
-						'<div class="yp-field"><label for="yp-set-promo-offer">Offer</label><input type="text" id="yp-set-promo-offer" value="' + YP.escapeAttr( settings.promo_offer ) + '" placeholder="15% off" /></div>' +
-					'</div>' +
-					'<div class="yp-field"><label for="yp-set-promo-code">Promo code</label><input type="text" id="yp-set-promo-code" value="' + YP.escapeAttr( settings.promo_code ) + '" placeholder="SUMMERWEEN26" /></div>' +
-					'<p class="yp-panel__hint">Shown in the banner exactly as typed — make sure a matching active WooCommerce coupon with this exact code exists before turning the banner on.</p>' +
+					'<table class="yp-tier-table"><thead><tr><th>Theme</th><th>Offer</th><th>Promo code</th></tr></thead><tbody>' +
+						Object.keys( settings.promo_themes ).map( function ( slug ) {
+							var banner = settings.promo_banners[ slug ] || {};
+							return '<tr>' +
+								'<td>' + YP.escapeHtml( settings.promo_themes[ slug ] ) + '</td>' +
+								'<td><input type="text" data-yp-promo-offer="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.offer || '' ) + '" placeholder="15% off" /></td>' +
+								'<td><input type="text" data-yp-promo-code="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.code || '' ) + '" placeholder="SUMMERWEEN26" /></td>' +
+							'</tr>';
+						} ).join( '' ) +
+					'</tbody></table>' +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -173,12 +173,17 @@
 			var saveButton = viewEl.querySelector( '[data-yp-save]' );
 			var statusEl = viewEl.querySelector( '[data-yp-save-status]' );
 
+			var promoBanners = {};
+			viewEl.querySelectorAll( '[data-yp-promo-offer]' ).forEach( function ( input ) {
+				var slug = input.getAttribute( 'data-yp-promo-offer' );
+				var codeInput = viewEl.querySelector( '[data-yp-promo-code="' + slug + '"]' );
+				promoBanners[ slug ] = { offer: input.value, code: codeInput ? codeInput.value : '' };
+			} );
+
 			var body = {
 				announcement_bar_text: viewEl.querySelector( '#yp-set-announcement' ).value,
 				promo_enabled: viewEl.querySelector( '#yp-set-promo-enabled' ).checked,
-				promo_theme: viewEl.querySelector( '#yp-set-promo-theme' ).value,
-				promo_offer: viewEl.querySelector( '#yp-set-promo-offer' ).value,
-				promo_code: viewEl.querySelector( '#yp-set-promo-code' ).value,
+				promo_banners: promoBanners,
 				live_preview_enabled: viewEl.querySelector( '#yp-set-live-preview' ).checked,
 				ups_client_id: viewEl.querySelector( '#yp-set-ups-id' ).value,
 				ups_client_secret: viewEl.querySelector( '#yp-set-ups-secret' ).value,

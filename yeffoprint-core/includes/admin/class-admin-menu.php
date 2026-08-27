@@ -101,19 +101,32 @@ class YeffoPrint_Admin_Menu {
 
 	/**
 	 * Also read by yeffoprint/blocks/promo-banner's render.php — same
-	 * reasoning as the options above. Direct request: a seasonal
-	 * homepage promo banner an admin can turn on, pick a theme for
-	 * (YeffoPrint_Promo_Themes::all()), and set the active code/offer
-	 * on — off by default, and off again the moment PROMO_CODE_OPTION
-	 * or PROMO_OFFER_OPTION is blank, so there's no way to end up with
-	 * a live banner advertising a code that was never actually set.
+	 * reasoning as the options above. Direct request: a homepage promo
+	 * banner an admin can turn on and pick a theme for
+	 * (YeffoPrint_Promo_Themes::all()) — and, per a follow-up direct
+	 * request ("select more than one active promo banner and have it
+	 * slide through the active ones"), *multiple* themes can each carry
+	 * their own offer/code at once, rotating on the frontend. Stored as
+	 * one option, a map of theme slug => {offer, code} — a theme is
+	 * "active" purely by having both filled in for it (get_active_
+	 * banners() below), the exact same gate the single-banner version
+	 * already used, just applied per theme instead of once globally.
+	 * PROMO_ENABLED_OPTION is still the master switch on top of that,
+	 * unchanged: off means nothing shows regardless of how many themes
+	 * have an offer/code saved.
 	 */
 	const PROMO_ENABLED_OPTION = 'yeffoprint_promo_enabled';
-	const PROMO_THEME_OPTION   = 'yeffoprint_promo_theme';
-	const PROMO_CODE_OPTION    = 'yeffoprint_promo_code';
-	const PROMO_OFFER_OPTION   = 'yeffoprint_promo_offer';
-	const PROMO_THEME_DEFAULT  = 'summer';
-	const PROMO_OFFER_DEFAULT  = '15% off';
+	const PROMO_BANNERS_OPTION = 'yeffoprint_promo_banners';
+
+	/**
+	 * The single-banner options PROMO_BANNERS_OPTION replaced — no
+	 * longer registered as settings or shown in either admin surface,
+	 * kept only so get_promo_banners() can migrate a site's pre-existing
+	 * selection into the new shape exactly once. See that method.
+	 */
+	const PROMO_THEME_OPTION_LEGACY = 'yeffoprint_promo_theme';
+	const PROMO_CODE_OPTION_LEGACY  = 'yeffoprint_promo_code';
+	const PROMO_OFFER_OPTION_LEGACY = 'yeffoprint_promo_offer';
 
 	/** Also read by class-contact-controller.php — same reasoning as the options above. */
 	const CONTACT_RECIPIENT_EMAIL_OPTION  = 'yeffoprint_contact_recipient_email';
@@ -407,22 +420,10 @@ class YeffoPrint_Admin_Menu {
 			'default'           => false,
 		] );
 
-		register_setting( 'yeffoprint_settings', self::PROMO_THEME_OPTION, [
-			'type'              => 'string',
-			'sanitize_callback' => [ $this, 'sanitize_promo_theme' ],
-			'default'           => self::PROMO_THEME_DEFAULT,
-		] );
-
-		register_setting( 'yeffoprint_settings', self::PROMO_CODE_OPTION, [
-			'type'              => 'string',
-			'sanitize_callback' => 'sanitize_text_field',
-			'default'           => '',
-		] );
-
-		register_setting( 'yeffoprint_settings', self::PROMO_OFFER_OPTION, [
-			'type'              => 'string',
-			'sanitize_callback' => 'sanitize_text_field',
-			'default'           => self::PROMO_OFFER_DEFAULT,
+		register_setting( 'yeffoprint_settings', self::PROMO_BANNERS_OPTION, [
+			'type'              => 'array',
+			'sanitize_callback' => [ $this, 'sanitize_promo_banners' ],
+			'default'           => [],
 		] );
 
 		add_settings_section(
@@ -441,25 +442,9 @@ class YeffoPrint_Admin_Menu {
 		);
 
 		add_settings_field(
-			self::PROMO_THEME_OPTION,
-			__( 'Theme', 'yeffoprint-core' ),
-			[ $this, 'render_promo_theme_field' ],
-			'yeffoprint-settings',
-			'yeffoprint_promo'
-		);
-
-		add_settings_field(
-			self::PROMO_OFFER_OPTION,
-			__( 'Offer', 'yeffoprint-core' ),
-			[ $this, 'render_promo_offer_field' ],
-			'yeffoprint-settings',
-			'yeffoprint_promo'
-		);
-
-		add_settings_field(
-			self::PROMO_CODE_OPTION,
-			__( 'Promo code', 'yeffoprint-core' ),
-			[ $this, 'render_promo_code_field' ],
+			self::PROMO_BANNERS_OPTION,
+			__( 'Banners', 'yeffoprint-core' ),
+			[ $this, 'render_promo_banners_field' ],
 			'yeffoprint-settings',
 			'yeffoprint_promo'
 		);
@@ -977,7 +962,7 @@ class YeffoPrint_Admin_Menu {
 	}
 
 	public function render_promo_section_intro(): void {
-		esc_html_e( 'A seasonal banner between the header and the hero on the homepage — pick a theme, fill in this promotion\'s offer and code, and turn it on. Off by default, and it won\'t show even when on until both Offer and Promo code are filled in.', 'yeffoprint-core' );
+		esc_html_e( 'Themed banners between the header and the hero on the homepage. Fill in an offer and code for any theme below to make it active — active themes rotate automatically if there\'s more than one. Off by default, and this whole section stays off until at least one theme has both fields filled in.', 'yeffoprint-core' );
 	}
 
 	/** Same hidden-input-plus-checkbox idiom as render_live_preview_field() above. */
@@ -997,49 +982,151 @@ class YeffoPrint_Admin_Menu {
 		<?php
 	}
 
-	public function render_promo_theme_field(): void {
-		$selected = (string) get_option( self::PROMO_THEME_OPTION, self::PROMO_THEME_DEFAULT );
+	/**
+	 * One row per known theme (YeffoPrint_Promo_Themes::all(), fixed at
+	 * 13 — no add/remove UI needed here the way a true repeater would,
+	 * since the full set of possible themes is already the full set of
+	 * rows) rather than a dynamic list of "added" banners — this classic
+	 * page is an unlinked fallback behind the admin-app's real Settings
+	 * screen (Phase 8), so it gets the plain-HTML-forms version of this
+	 * same idea instead of the admin-app's JS-driven one.
+	 */
+	public function render_promo_banners_field(): void {
+		$saved = self::get_promo_banners();
 		?>
-		<select name="<?php echo esc_attr( self::PROMO_THEME_OPTION ); ?>">
-			<?php foreach ( YeffoPrint_Promo_Themes::all() as $slug => $theme ) : ?>
-				<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $selected, $slug ); ?>><?php echo esc_html( $theme['label'] ); ?></option>
-			<?php endforeach; ?>
-		</select>
+		<table class="widefat" style="max-width:700px;">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Theme', 'yeffoprint-core' ); ?></th>
+					<th><?php esc_html_e( 'Offer', 'yeffoprint-core' ); ?></th>
+					<th><?php esc_html_e( 'Promo code', 'yeffoprint-core' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( YeffoPrint_Promo_Themes::all() as $slug => $theme ) : ?>
+					<tr>
+						<th scope="row"><?php echo esc_html( $theme['label'] ); ?></th>
+						<td>
+							<input
+								type="text"
+								class="regular-text"
+								name="<?php echo esc_attr( self::PROMO_BANNERS_OPTION . '[' . $slug . '][offer]' ); ?>"
+								value="<?php echo esc_attr( $saved[ $slug ]['offer'] ?? '' ); ?>"
+								placeholder="<?php esc_attr_e( '15% off', 'yeffoprint-core' ); ?>"
+							/>
+						</td>
+						<td>
+							<input
+								type="text"
+								class="regular-text"
+								name="<?php echo esc_attr( self::PROMO_BANNERS_OPTION . '[' . $slug . '][code]' ); ?>"
+								value="<?php echo esc_attr( $saved[ $slug ]['code'] ?? '' ); ?>"
+								placeholder="<?php esc_attr_e( 'SUMMERWEEN26', 'yeffoprint-core' ); ?>"
+							/>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<p class="description"><?php esc_html_e( 'A theme is only active once both its Offer and Promo code are filled in. This plugin doesn\'t create the coupon itself, so make sure a matching WooCommerce coupon (Marketing → Coupons) with this exact code actually exists and is active before turning the banner on. Two or more active themes rotate automatically on the homepage.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 
-	public function render_promo_offer_field(): void {
-		$value = get_option( self::PROMO_OFFER_OPTION, self::PROMO_OFFER_DEFAULT );
-		?>
-		<input
-			type="text"
-			class="regular-text"
-			name="<?php echo esc_attr( self::PROMO_OFFER_OPTION ); ?>"
-			value="<?php echo esc_attr( $value ); ?>"
-			placeholder="<?php echo esc_attr( self::PROMO_OFFER_DEFAULT ); ?>"
-		/>
-		<p class="description"><?php esc_html_e( 'Short phrase describing the deal, e.g. "15% off" or "20% off everything" — dropped straight into the theme\'s own headline (e.g. "Ring in the New Year with 15% off").', 'yeffoprint-core' ); ?></p>
-		<?php
+	/** Settings API sanitize_callback — the raw nested $_POST array for PROMO_BANNERS_OPTION[<slug>][offer|code]. */
+	public function sanitize_promo_banners( $value ): array {
+		return self::clean_promo_banners( is_array( $value ) ? $value : [] );
 	}
 
-	public function render_promo_code_field(): void {
-		$value = get_option( self::PROMO_CODE_OPTION, '' );
-		?>
-		<input
-			type="text"
-			class="regular-text"
-			name="<?php echo esc_attr( self::PROMO_CODE_OPTION ); ?>"
-			value="<?php echo esc_attr( $value ); ?>"
-			placeholder="<?php echo esc_attr( 'SUMMERWEEN26' ); ?>"
-		/>
-		<p class="description"><?php esc_html_e( 'Shown in the banner exactly as typed — this plugin doesn\'t create the coupon itself, so make sure a matching WooCommerce coupon (Marketing → Coupons) with this exact code actually exists and is active before turning the banner on.', 'yeffoprint-core' ); ?></p>
-		<?php
+	/**
+	 * Trims to known theme slugs only (a removed/renamed theme's old
+	 * data is dropped rather than lingering forever) and drops any entry
+	 * that ends up with neither field filled in, so an admin clearing
+	 * both fields back out actually removes that theme from rotation
+	 * rather than leaving an empty-but-present entry behind.
+	 *
+	 * @return array<string, array{offer:string, code:string}>
+	 */
+	public static function clean_promo_banners( array $raw ): array {
+		$clean = [];
+
+		foreach ( YeffoPrint_Promo_Themes::all() as $slug => $theme ) {
+			$offer = sanitize_text_field( (string) ( $raw[ $slug ]['offer'] ?? '' ) );
+			$code  = sanitize_text_field( (string) ( $raw[ $slug ]['code'] ?? '' ) );
+
+			if ( '' !== $offer || '' !== $code ) {
+				$clean[ $slug ] = [ 'offer' => $offer, 'code' => $code ];
+			}
+		}
+
+		return $clean;
 	}
 
-	/** Falls back to the default theme for an unrecognized/removed slug, rather than saving something get() can never resolve. */
-	public function sanitize_promo_theme( $value ): string {
-		$value = sanitize_key( (string) $value );
-		return null !== YeffoPrint_Promo_Themes::get( $value ) ? $value : self::PROMO_THEME_DEFAULT;
+	public static function save_promo_banners( array $raw ): void {
+		update_option( self::PROMO_BANNERS_OPTION, self::clean_promo_banners( $raw ) );
+	}
+
+	/**
+	 * @return array<string, array{offer:string, code:string}> Keyed by
+	 *  theme slug. Migrates a site's pre-existing single-banner selection
+	 *  (PROMO_THEME_OPTION_LEGACY etc.) into this shape exactly once —
+	 *  get_option()'s `false` default (distinct from an explicitly saved
+	 *  empty array) is the one-shot guard, same "auto-create on first
+	 *  use" idiom YeffoPrint_Pricing_Rule::get_active_rule_id() already
+	 *  uses for its own option.
+	 */
+	public static function get_promo_banners(): array {
+		$stored = get_option( self::PROMO_BANNERS_OPTION, false );
+
+		if ( false !== $stored ) {
+			return is_array( $stored ) ? $stored : [];
+		}
+
+		$legacy_theme = sanitize_key( (string) get_option( self::PROMO_THEME_OPTION_LEGACY, '' ) );
+		$legacy_offer = trim( (string) get_option( self::PROMO_OFFER_OPTION_LEGACY, '' ) );
+		$legacy_code  = trim( (string) get_option( self::PROMO_CODE_OPTION_LEGACY, '' ) );
+
+		$migrated = [];
+		if ( null !== YeffoPrint_Promo_Themes::get( $legacy_theme ) && '' !== $legacy_offer && '' !== $legacy_code ) {
+			$migrated[ $legacy_theme ] = [ 'offer' => $legacy_offer, 'code' => $legacy_code ];
+		}
+
+		update_option( self::PROMO_BANNERS_OPTION, $migrated );
+
+		return $migrated;
+	}
+
+	/**
+	 * Active themes, in YeffoPrint_Promo_Themes::all()'s own definition
+	 * order — the rotation order on the frontend. No separate admin-
+	 * configurable ordering: with only 13 possible themes and no request
+	 * for reordering specifically, a fixed, predictable order (roughly
+	 * calendar order, with the always-on Web Design theme last) needs no
+	 * extra UI of its own.
+	 *
+	 * @return array<int, array{slug:string, theme:array, offer:string, code:string}>
+	 */
+	public static function active_promo_banners(): array {
+		if ( ! get_option( self::PROMO_ENABLED_OPTION, false ) ) {
+			return [];
+		}
+
+		$saved  = self::get_promo_banners();
+		$active = [];
+
+		foreach ( YeffoPrint_Promo_Themes::all() as $slug => $theme ) {
+			if ( empty( $saved[ $slug ]['offer'] ) || empty( $saved[ $slug ]['code'] ) ) {
+				continue;
+			}
+
+			$active[] = [
+				'slug'  => $slug,
+				'theme' => $theme,
+				'offer' => $saved[ $slug ]['offer'],
+				'code'  => $saved[ $slug ]['code'],
+			];
+		}
+
+		return $active;
 	}
 
 	public function render_tracking_section_intro(): void {
