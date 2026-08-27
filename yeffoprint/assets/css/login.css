@@ -203,6 +203,20 @@ body.login .yp-telegram-login {
 	margin-top: 0.6rem;
 }
 
+/* Direct request: resize/reshape to actually match the Google/Discord/
+   Apple buttons — widget_html() now renders a real <button> reusing
+   .yp-social-login__button's own class (border/background/padding/font
+   all come from that rule above, unchanged) rather than Telegram's
+   auto-rendering iframe widget, which never could have matched it (see
+   that method's own docblock). Two small resets .yp-social-login__button
+   never needed before, since it was only ever applied to <a> tags
+   living inside a stretch-aligned flex container (.yp-social-login__buttons)
+   that gave them full width for free — this button has no such parent. */
+body.login .yp-telegram-login .yp-social-login__button {
+	width: 100%;
+	cursor: pointer;
+}
+
 body.login .forgetmenot {
 	/* WordPress core floats this left by default; #loginform's flex
 	 * layout (above) already neutralizes float entirely on its children

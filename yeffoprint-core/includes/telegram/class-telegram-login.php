@@ -7,18 +7,23 @@
  * different from OAuth 2.0's Authorization Code flow that class is
  * built entirely around:
  *
- *  - There's no "start" redirect this code has to issue — Telegram's
- *    own widget script (embedded directly on the page) *is* the
- *    button; tapping it opens Telegram's own popup/app, and on
- *    success Telegram itself redirects the browser straight to
- *    `data-auth-url` with the identity data as query params. No
+ *  - There's no "start" redirect this code has to issue — tapping the
+ *    button calls Telegram's own `Telegram.Login.auth()` JS function
+ *    (widget_html() below, using that low-level API rather than
+ *    Telegram's auto-rendering widget specifically so the button can
+ *    be a real `.yp-social-login__button`-styled element instead of an
+ *    iframe with Telegram's own fixed branding), which opens Telegram's
+ *    own popup/app and calls back with the identity data once
+ *    authenticated; this class's own click handler then puts that data
+ *    on the URL itself and navigates to callback_url(). No
  *    client_id/authorize_url/token exchange at all.
  *  - Identity arrives signed, not fetched: `id, first_name, last_name,
- *    username, photo_url, auth_date, hash` come back directly in that
- *    redirect's query string, authenticated by an HMAC-SHA256 the bot
- *    token itself is the key for (verify_and_get_data() below) —
- *    Telegram's documented algorithm, not something this class
- *    invented. There's no separate userinfo endpoint to call.
+ *    username, photo_url, auth_date, hash` come back from that callback
+ *    and end up on callback_url()'s query string, authenticated by an
+ *    HMAC-SHA256 the bot token itself is the key for
+ *    (verify_and_get_data() below) — Telegram's documented algorithm,
+ *    not something this class invented. There's no separate userinfo
+ *    endpoint to call.
  *  - No client_id/client_secret to register anywhere — it reuses the
  *    exact bot token already configured for the bot itself
  *    (class-telegram-settings.php). The one external setup step is on
@@ -342,12 +347,28 @@ class YeffoPrint_Telegram_Login {
 	}
 
 	/**
-	 * Telegram's own widget script — an iframe it injects itself, not
-	 * markup this theme styles, so it deliberately doesn't share
-	 * class-social-login.php's `.yp-social-login__button` treatment; a
-	 * plain block of its own is the honest representation of "this
-	 * button looks and behaves however Telegram wants it to." No
-	 * "or log in with Telegram" label above it (direct request) — on
+	 * Telegram's *low-level* Login API, not the auto-rendering widget
+	 * this originally shipped with — direct request: "resized and
+	 * shaped to match the other two social login buttons." The
+	 * auto-rendering widget (a `<script data-telegram-login=...>` tag
+	 * that draws its own iframe) only exposes `data-size`/`data-radius`
+	 * as knobs; there's no way to make that iframe's contents actually
+	 * match `.yp-social-login__button`'s look, since Telegram controls
+	 * everything drawn inside it. `Telegram.Login.auth()` is Telegram's
+	 * own documented alternative for exactly this case: load the *bare*
+	 * widget script (no `data-telegram-login` attribute, so nothing
+	 * auto-renders), build a fully custom button, and call that function
+	 * on click — Telegram opens its own popup/app for the actual
+	 * authentication, then calls back with the identical signed fields
+	 * (`id, first_name, last_name, username, photo_url, auth_date,
+	 * hash`) the redirect-mode widget used to put directly in the URL.
+	 * The click handler below just puts them there itself, so
+	 * `verify_and_get_data()` and everything past it needed zero changes
+	 * — same payload shape, same HMAC, same replay protection, just a
+	 * different (Telegram-documented) way of arriving at this class's
+	 * own callback URL.
+	 *
+	 * No "or log in with Telegram" label above it (direct request) — on
 	 * wp-login.php, `login.css` positions this block directly under the
 	 * Google/Discord/Apple buttons (same `order` flex trick that class's
 	 * own docblock documents, since `login_form` fires at a fixed DOM
@@ -365,17 +386,81 @@ class YeffoPrint_Telegram_Login {
 		ob_start();
 		?>
 		<div class="yp-telegram-login">
-			<script async
-				src="https://telegram.org/js/telegram-widget.js?22"
-				data-telegram-login="<?php echo esc_attr( YeffoPrint_Telegram_Account_Link::bot_username() ); ?>"
-				data-size="large"
-				data-radius="8"
+			<button
+				type="button"
+				class="yp-social-login__button yp-social-login__button--telegram"
+				data-yp-telegram-login-button
+				data-bot-id="<?php echo esc_attr( self::bot_id() ); ?>"
 				data-auth-url="<?php echo esc_url( $auth_url ); ?>"
-				data-request-access="write"
-			></script>
+			>
+				<?php self::render_icon(); ?>
+				<?php esc_html_e( 'Continue with Telegram', 'yeffoprint-core' ); ?>
+			</button>
 		</div>
+		<script src="https://telegram.org/js/telegram-widget.js?22"></script>
+		<script>
+		( function () {
+			// A document-level delegated listener, not one bound to this
+			// specific button — this same markup can land on the page
+			// twice in edge cases (the fallback-injection path recreates
+			// it independently of whether the server-rendered copy also
+			// made it through), so the bound-once guard is what actually
+			// prevents a double-fire, not scoping the listener narrowly.
+			if ( window.ypTelegramLoginBound ) {
+				return;
+			}
+			window.ypTelegramLoginBound = true;
+
+			document.addEventListener( 'click', function ( event ) {
+				var button = event.target.closest && event.target.closest( '[data-yp-telegram-login-button]' );
+				if ( ! button ) {
+					return;
+				}
+				event.preventDefault();
+
+				if ( ! window.Telegram || ! window.Telegram.Login ) {
+					return; // Telegram's script hasn't loaded (slow network, blocked) — nothing to do, no broken half-state.
+				}
+
+				window.Telegram.Login.auth(
+					{ bot_id: button.getAttribute( 'data-bot-id' ), request_access: 'write' },
+					function ( user ) {
+						if ( ! user ) {
+							return; // The visitor closed Telegram's popup without authorizing — same as never having clicked.
+						}
+
+						// Reassembles the exact query string the old
+						// redirect-mode widget used to build itself —
+						// every field Telegram signed, unmodified, so
+						// verify_and_get_data() recomputes the identical
+						// hash server-side.
+						var url    = button.getAttribute( 'data-auth-url' );
+						var params = [];
+						Object.keys( user ).forEach( function ( key ) {
+							params.push( encodeURIComponent( key ) + '=' + encodeURIComponent( user[ key ] ) );
+						} );
+
+						window.location.href = url + ( -1 === url.indexOf( '?' ) ? '?' : '&' ) + params.join( '&' );
+					}
+				);
+			} );
+		} )();
+		</script>
 		<?php
 		return (string) ob_get_clean();
+	}
+
+	/** Telegram.Login.auth() needs the bot's numeric ID, not its @username — the leading digits of any bot token, before the colon. Not a secret, same public-knowledge category as an OAuth client_id. */
+	private static function bot_id(): string {
+		$token = YeffoPrint_Telegram_Settings::get_bot_token();
+		$colon = strpos( $token, ':' );
+
+		return false !== $colon ? substr( $token, 0, $colon ) : '';
+	}
+
+	/** Telegram's brand mark (filled circle + paper plane) — same fixed, hand-authored-glyph convention (no external icon font/CDN) class-social-login.php's own render_icon() already uses for Google/Discord/Apple, at the identical 18x18 size so the row of buttons lines up. */
+	private static function render_icon(): void {
+		echo '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="9" fill="#229ED9"/><path fill="#fff" d="M13.44 5.13 4.6 8.53c-.6.24-.6.6-.11.75l2.26.7 5.24-3.3c.25-.15.47-.07.29.1l-4.25 3.84-.16 2.31c.24 0 .35-.11.48-.24l1.16-1.11 2.4 1.77c.44.24.76.12.87-.41l1.58-7.43c.17-.65-.25-.94-.72-.78Z"/></svg>';
 	}
 
 	/**
@@ -387,10 +472,11 @@ class YeffoPrint_Telegram_Login {
 	 * appends it to whatever login form it finds via WooCommerce's own
 	 * `.woocommerce-form-login` class, independent of that hook firing.
 	 * A dedicated script rather than reusing social-login-inject.js: the
-	 * injected markup here includes Telegram's own `<script src=...>`
-	 * widget tag, which (unlike a plain link) needs to be specifically
-	 * recreated to actually execute once inserted via innerHTML — see
-	 * that script's own docblock.
+	 * injected markup here includes two `<script>` tags of its own (the
+	 * bare Telegram widget loader and this class's click handler), which
+	 * — unlike a plain link/button — need to be specifically recreated to
+	 * actually execute once inserted via innerHTML — see that script's
+	 * own docblock.
 	 */
 	public function enqueue_fallback_script(): void {
 		if ( ! function_exists( 'is_account_page' ) || ! ( is_account_page() || is_checkout() ) ) {

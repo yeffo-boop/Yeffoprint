@@ -9,15 +9,20 @@
  * the server-side hook did fire.
  *
  * One thing this fallback needs that social-login-inject.js's doesn't:
- * the injected markup includes Telegram's own `<script src="https://
- * telegram.org/js/telegram-widget.js...">` tag (that script is the
- * widget — there's no plain link/button to inject the way there is for
- * Google/Discord/Apple). A `<script>` inserted via insertAdjacentHTML/
- * innerHTML never actually executes — a deliberate browser behavior,
- * not a bug — so the widget's iframe would silently never load if this
- * just appended the raw HTML the way the other fallback does. The block
- * below recreates that script tag via document.createElement() (copying
- * its attributes across) and swaps it in, which does execute.
+ * the injected markup includes two `<script>` tags of its own (the bare
+ * Telegram widget loader, and this feature's own Telegram.Login.auth()
+ * click handler — see widget_html()'s docblock for why it's a custom
+ * button and JS call rather than a plain link/button the way Google/
+ * Discord/Apple are). A `<script>` inserted via insertAdjacentHTML/
+ * innerHTML never actually executes — a deliberate browser behavior, not
+ * a bug — so neither the widget loader nor the click handler would ever
+ * run if this just appended the raw HTML the way the other fallback
+ * does. Building the fragment in a detached wrapper first, recreating
+ * every `<script>` found inside it via document.createElement() (copying
+ * both its attributes and its inline text across), and only then moving
+ * the wrapper's children into the real form sidesteps that — both
+ * scripts do execute this way, regardless of which one is external
+ * (`src`) or inline.
  */
 
 ( function () {
@@ -33,18 +38,21 @@
 				return;
 			}
 
-			form.insertAdjacentHTML( 'beforeend', yeffoprintTelegramLogin.html );
+			var wrapper = document.createElement( 'div' );
+			wrapper.innerHTML = yeffoprintTelegramLogin.html;
 
-			var inserted = form.querySelector( '.yp-telegram-login script' );
-			if ( ! inserted ) {
-				return;
-			}
-
-			var script = document.createElement( 'script' );
-			Array.prototype.forEach.call( inserted.attributes, function ( attr ) {
-				script.setAttribute( attr.name, attr.value );
+			wrapper.querySelectorAll( 'script' ).forEach( function ( inserted ) {
+				var script = document.createElement( 'script' );
+				Array.prototype.forEach.call( inserted.attributes, function ( attr ) {
+					script.setAttribute( attr.name, attr.value );
+				} );
+				script.textContent = inserted.textContent;
+				inserted.parentNode.replaceChild( script, inserted );
 			} );
-			inserted.parentNode.replaceChild( script, inserted );
+
+			while ( wrapper.firstChild ) {
+				form.appendChild( wrapper.firstChild );
+			}
 		} );
 	} );
 } )();
