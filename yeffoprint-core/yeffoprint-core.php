@@ -57,3 +57,16 @@ function yeffoprint_core_asset_version( string $relative_path ) {
 register_activation_hook( __FILE__, function () {
 	update_option( 'yeffoprint_core_flush_rewrite_rules', 1 );
 } );
+
+/**
+ * Only a real WP deactivation fires this (same caveat as the activation
+ * hook above) — the proof-reminder cron event otherwise just keeps
+ * firing hourly with nothing listening once the plugin's files are
+ * gone. YeffoPrint_Proof_Reminder_Scheduler::ensure_scheduled() (hooked
+ * on 'init') re-adds it the moment the plugin's active again, so this
+ * only ever needs to stop it, never restart it.
+ */
+register_deactivation_hook( __FILE__, function () {
+	require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-reminder-scheduler.php';
+	YeffoPrint_Proof_Reminder_Scheduler::unschedule();
+} );

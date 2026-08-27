@@ -65,6 +65,8 @@ class YeffoPrint_Proof_Meta {
 		}
 
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'awaiting_approval' );
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::AWAITING_APPROVAL_AT, time() );
+		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::PROOF_REMINDER_STAGE, 0 );
 		self::notify_customer( $custom_order_id );
 
 		/**
@@ -111,6 +113,50 @@ class YeffoPrint_Proof_Meta {
 			/* translators: 1: customer's first name or "there", 2: proof approval URL, 3: site name */
 			__( "Hi %1\$s,\n\nYour custom label proof is ready to review. Please take a look and let us know if it's good to print:\n\n%2\$s\n\nNo account needed — that link is yours alone, so don't share it.\n\nThanks,\n%3\$s", 'yeffoprint-core' ),
 			$name ? $name : __( 'there', 'yeffoprint-core' ),
+			$url,
+			$site_name
+		);
+
+		wp_mail( $email, $subject, $body );
+	}
+
+	/**
+	 * The 24h/48h proof-approval reminder email — same "best-effort,
+	 * bails silently on a missing/invalid address" shape as
+	 * notify_customer() above, called instead of reimplemented by
+	 * class-proof-reminder-scheduler.php's sweep so this class stays the
+	 * one place that knows how to build a proof-related email. Public
+	 * (unlike notify_customer()) since the scheduler is a different
+	 * class; $stage is 1 (24h) or 2 (48h), only used to vary the copy's
+	 * urgency.
+	 */
+	public static function send_reminder_email( int $custom_order_id, int $stage ): void {
+		$email = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, true );
+		if ( ! $email || ! is_email( $email ) ) {
+			return;
+		}
+
+		$name = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true );
+		$url  = yeffoprint_core_proof_approval_url( $custom_order_id );
+		if ( ! $url ) {
+			return;
+		}
+
+		$site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+		$subject = 2 === $stage
+			? sprintf( /* translators: %s: site name */ __( 'Still waiting on your OK — %s', 'yeffoprint-core' ), $site_name )
+			: sprintf( /* translators: %s: site name */ __( "Don't forget to review your proof — %s", 'yeffoprint-core' ), $site_name );
+
+		$urgency = 2 === $stage
+			? __( "It's been a couple of days since your custom label proof went up for review, and we haven't heard back yet. We'd love to get this printing for you — take a look when you get a chance:", 'yeffoprint-core' )
+			: __( "Just a friendly reminder — your custom label proof is still waiting on your review:", 'yeffoprint-core' );
+
+		$body = sprintf(
+			/* translators: 1: customer's first name or "there", 2: reminder copy, 3: proof approval URL, 4: site name */
+			__( "Hi %1\$s,\n\n%2\$s\n\n%3\$s\n\nNo account needed — that link is yours alone, so don't share it.\n\nThanks,\n%4\$s", 'yeffoprint-core' ),
+			$name ? $name : __( 'there', 'yeffoprint-core' ),
+			$urgency,
 			$url,
 			$site_name
 		);

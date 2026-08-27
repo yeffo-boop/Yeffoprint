@@ -181,6 +181,13 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			'date'                => get_post_datetime( $post ) ? get_post_datetime( $post )->format( 'c' ) : null,
 			'proofs'              => $this->proofs_payload( $post->ID ),
 			'approval_url'        => 'publish' === $post->post_status ? yeffoprint_core_proof_approval_url( $post->ID ) : '',
+			// Staff-visible state for the automated proof-approval
+			// reminder (class-proof-reminder-scheduler.php) — 0/absent
+			// means no reminder sent yet (or status isn't
+			// awaiting_approval at all, in which case this is simply
+			// stale/irrelevant and the UI has no reason to show it).
+			'proof_reminder_stage' => (int) $m( YeffoPrint_Custom_Order_Meta::PROOF_REMINDER_STAGE ),
+			'awaiting_approval_since' => ( $awaiting_since = (int) $m( YeffoPrint_Custom_Order_Meta::AWAITING_APPROVAL_AT ) ) ? gmdate( 'c', $awaiting_since ) : null,
 		];
 
 		if ( $is_sticker ) {
