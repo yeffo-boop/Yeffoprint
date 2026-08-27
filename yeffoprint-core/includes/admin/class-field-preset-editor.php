@@ -69,6 +69,7 @@ class YeffoPrint_Field_Preset_Editor {
 			// these two keys — see the comment there.
 			'qrMinMaxChars'    => YeffoPrint_Field_Schema::QR_MIN_MAX_CHARS,
 			'qrMaxChars'       => YeffoPrint_Field_Schema::QR_MAX_CHARS,
+			'cornerStyleOptions' => YeffoPrint_Field_Schema::CORNER_STYLE_OPTIONS,
 			// No artwork to preview/drag-position fields against here —
 			// this screen only ever shows field-schema.js's existing
 			// "Set a featured image..." empty state, which is close

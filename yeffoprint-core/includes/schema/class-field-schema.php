@@ -34,6 +34,23 @@
  * ignores — still present with their defaults for schema-shape
  * uniformity with every other field, same reasoning as `color` leaving
  * them unused rather than branching the stored shape per type).
+ *
+ * `corner_style` (direct request: "a radio selector set to specify
+ * which type of corners they want on their labels, squared or
+ * rounded") is the third — a fixed two-choice radio, not free text, so
+ * its value is constrained to CORNER_STYLE_OPTIONS' own keys
+ * everywhere a value is read or written, same "closed set" pattern as
+ * `color`/`qr_code`'s own format-specific sanitizing. Unlike those two
+ * it has nothing sensible to draw on the configurator's print-stage
+ * preview at all (it's a fulfillment choice about the label's physical
+ * die-cut, not printed artwork) — configurator.js excludes it from
+ * stage rendering outright rather than leaving that to the per-Template
+ * show_in_preview toggle. Rendered customer-side as two option pills
+ * (matching the Size/Material picker's own convention) rather than a
+ * native radio input, with a built-in "?" tooltip showing a small
+ * squared-vs-rounded diagram — no admin_description needed to unlock
+ * it, since the graphic is intrinsic to the type rather than authored
+ * per-Template content.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -43,10 +60,17 @@ class YeffoPrint_Field_Schema {
 	public const META_KEY = '_yp_field_schema';
 
 	public const TYPES = [
-		'text'     => 'Text (single line)',
-		'textarea' => 'Text (multi-line)',
-		'color'    => 'Color picker',
-		'qr_code'  => 'QR code (URL)',
+		'text'         => 'Text (single line)',
+		'textarea'     => 'Text (multi-line)',
+		'color'        => 'Color picker',
+		'qr_code'      => 'QR code (URL)',
+		'corner_style' => 'Corner style (Squared / Rounded)',
+	];
+
+	/** corner_style's own fixed, non-admin-editable choice set — see the class docblock's own paragraph on this type for why it's a closed set rather than free text. */
+	public const CORNER_STYLE_OPTIONS = [
+		'squared' => 'Squared',
+		'rounded' => 'Rounded',
 	];
 
 	public const ALIGNMENTS = [
@@ -180,6 +204,8 @@ class YeffoPrint_Field_Schema {
 				$default = (string) ( sanitize_hex_color( $default ) ?: '' );
 			} elseif ( 'qr_code' === $type ) {
 				$default = '' !== $default ? esc_url_raw( $default ) : '';
+			} elseif ( 'corner_style' === $type ) {
+				$default = array_key_exists( $default, self::CORNER_STYLE_OPTIONS ) ? $default : 'squared';
 			} else {
 				$default = sanitize_text_field( $default );
 			}
@@ -352,6 +378,13 @@ class YeffoPrint_Field_Schema {
 							[ 'status' => 400 ]
 						);
 					}
+				} elseif ( 'corner_style' === $type ) {
+					// A closed set, not free text — an invalid/blank submission
+					// is simply "nothing chosen" rather than a value to reject
+					// outright, same as any other unfilled field; the required-
+					// field check right below still catches that if this field
+					// is marked required.
+					$value = array_key_exists( $raw_value, self::CORNER_STYLE_OPTIONS ) ? $raw_value : '';
 				} else {
 					$value = sanitize_text_field( $raw_value );
 				}
@@ -403,9 +436,25 @@ class YeffoPrint_Field_Schema {
 			if ( '' === $value ) {
 				continue;
 			}
-			$parts[] = $field['label'] . ': ' . $value;
+			$parts[] = $field['label'] . ': ' . self::display_value( $field, $value );
 		}
 
 		return implode( ' — ', $parts );
+	}
+
+	/**
+	 * A corner_style value is stored as its canonical key ("squared"/
+	 * "rounded"), not its display label — this is the one place both
+	 * format_variant_summary() above and class-order-item-meta.php's own
+	 * variant_field_pairs() (admin order screen + emails) go through so
+	 * "Squared"/"Rounded" only has to be spelled out once. Every other
+	 * type's stored value already is its own display value.
+	 */
+	public static function display_value( array $field, string $value ): string {
+		if ( 'corner_style' === ( $field['type'] ?? '' ) && isset( self::CORNER_STYLE_OPTIONS[ $value ] ) ) {
+			return self::CORNER_STYLE_OPTIONS[ $value ];
+		}
+
+		return $value;
 	}
 }

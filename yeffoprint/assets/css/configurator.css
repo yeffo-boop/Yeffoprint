@@ -371,6 +371,33 @@
 	color: var(--wp--preset--color--near-black);
 }
 
+.yp-field__tooltip p {
+	margin: 0.6rem 0 0;
+}
+
+/* corner_style's built-in "?" diagram (direct request: "a graphic
+   example of what squared corners and rounded corners actually look
+   like") — see configurator.js's cornerStyleDiagramHtml(). */
+.yp-corner-style-diagram {
+	display: flex;
+	gap: 1rem;
+}
+
+.yp-corner-style-diagram__example {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-corner-style-diagram__rect {
+	fill: var(--wp--preset--color--white);
+	stroke: var(--wp--preset--color--near-black);
+	stroke-width: 1.5;
+}
+
 .yp-field__counter.is-over {
 	color: var(--wp--preset--color--magenta-deep);
 	font-weight: 600;

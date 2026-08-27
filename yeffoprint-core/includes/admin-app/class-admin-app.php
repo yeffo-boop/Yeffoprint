@@ -146,6 +146,7 @@ class YeffoPrint_Admin_App {
 				'previewBehaviors'     => YeffoPrint_Field_Schema::PREVIEW_BEHAVIORS,
 				'qrMinMaxChars'        => YeffoPrint_Field_Schema::QR_MIN_MAX_CHARS,
 				'qrMaxChars'           => YeffoPrint_Field_Schema::QR_MAX_CHARS,
+				'cornerStyleOptions'   => YeffoPrint_Field_Schema::CORNER_STYLE_OPTIONS,
 			],
 			'badges'                  => $badges,
 			'previewFontSuggestions' => YeffoPrint_Template_Meta::PREVIEW_FONT_SUGGESTIONS,

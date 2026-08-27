@@ -547,7 +547,7 @@ class YeffoPrint_Order_Item_Meta {
 
 			$pairs[] = [
 				'label' => (string) ( $field['label'] ?? '' ),
-				'value' => $value,
+				'value' => YeffoPrint_Field_Schema::display_value( $field, $value ),
 				'type'  => (string) ( $field['type'] ?? '' ),
 			];
 		}
