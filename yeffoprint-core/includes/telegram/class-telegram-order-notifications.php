@@ -112,14 +112,22 @@ class YeffoPrint_Telegram_Order_Notifications {
 
 	/**
 	 * $custom_order_id, when given, is a proof-related notification
-	 * (proof-ready or a reminder) — each linked chat that's ALSO
-	 * account-linked (class-telegram-account-link.php) to that Custom
-	 * Order's own owner gets Approve/Reject buttons attached, so tapping
-	 * one talks to the actual customer, not just whichever chat once
-	 * looked this order up. Every other linked chat (order-linked but
-	 * not account-linked, or account-linked to someone else) still gets
-	 * the plain text/link, unchanged — buttons are additive, not a
-	 * replacement for the existing notification.
+	 * (proof-ready or a reminder). Two things layer on top of the plain
+	 * text/link every linked chat already gets:
+	 *
+	 * - Approve/Reject buttons, for each linked chat that's ALSO
+	 *   account-linked (class-telegram-account-link.php) to that Custom
+	 *   Order's own owner, so tapping one talks to the actual customer,
+	 *   not just whichever chat once looked this order up.
+	 * - The actual proof image/file itself (direct follow-up report:
+	 *   buttons alone let a customer approve/reject "blind" without ever
+	 *   seeing what they're responding to) — sent to every chat this
+	 *   notification goes to, button-eligible or not, since seeing the
+	 *   proof is useful regardless of whether this particular chat can
+	 *   also act on it. Falls back to the plain text-only message if
+	 *   there's no proof file yet, or if Telegram couldn't fetch it for
+	 *   any reason (send_photo()/send_document() returning false) —
+	 *   never leaves the customer with nothing.
 	 */
 	private function notify_order( \WC_Order $order, string $text, int $custom_order_id = 0 ): void {
 		$token = YeffoPrint_Telegram_Settings::get_bot_token();
@@ -132,11 +140,40 @@ class YeffoPrint_Telegram_Order_Notifications {
 			[ 'text' => __( '✅ Approve', 'yeffoprint-core' ), 'callback_data' => 'proof_approve:' . $custom_order_id ],
 			[ 'text' => __( '✏️ Request changes', 'yeffoprint-core' ), 'callback_data' => 'proof_reject:' . $custom_order_id ],
 		] ] : null;
+		$media = $custom_order_id ? self::latest_proof_media( $custom_order_id ) : null;
 
 		foreach ( self::chat_ids( $order ) as $chat_id ) {
 			$buttons = ( $keyboard && YeffoPrint_Telegram_Callback_Handler::chat_owns_order( $chat_id, $custom_order_id ) ) ? $keyboard : null;
+
+			if ( $media ) {
+				$sent = $media['is_image']
+					? $client->send_photo( $chat_id, $media['url'], $text, $buttons )
+					: $client->send_document( $chat_id, $media['url'], $text, $buttons );
+
+				if ( $sent ) {
+					continue;
+				}
+			}
+
 			$client->send_message( $chat_id, $text, $buttons );
 		}
+	}
+
+	/** The most recent proof file for a Custom Order — get_for_custom_order() already returns newest first, and that's the one actually awaiting this round of approval (an earlier "Request changes" cycle's proof is superseded, not relevant here). Null if no file has actually been attached yet. */
+	private static function latest_proof_media( int $custom_order_id ): ?array {
+		$proof_ids = YeffoPrint_Proof_Meta::get_for_custom_order( $custom_order_id );
+		if ( ! $proof_ids ) {
+			return null;
+		}
+
+		$file_id = (int) get_post_meta( $proof_ids[0], YeffoPrint_Proof_Meta::FILE_ID, true );
+		$url     = $file_id ? wp_get_attachment_url( $file_id ) : false;
+
+		if ( ! $url ) {
+			return null;
+		}
+
+		return [ 'url' => $url, 'is_image' => (bool) wp_attachment_is_image( $file_id ) ];
 	}
 
 	/** @return int[] */
