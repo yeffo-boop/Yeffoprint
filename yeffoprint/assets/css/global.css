@@ -226,6 +226,32 @@ main.wp-block-group {
 	color: var(--wp--preset--color--charcoal);
 }
 
+/* Header-only: the wordmark + tagline stack beside the icon instead of
+   the footer's standalone block below it, so the tagline needs a much
+   tighter top margin here, and folds away once the header shrinks on
+   scroll (.is-scrolled, site.js) rather than keeping the sticky bar
+   tall just for a decorative line. */
+.yp-brand-lockup__text {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.2;
+}
+
+.yp-header__logo .yp-brand-lockup__tagline {
+	margin-top: 0.1rem;
+	font-size: 0.75rem;
+	transition: opacity 150ms ease, max-height 150ms ease, margin-top 150ms ease;
+	max-height: 1.2em;
+	opacity: 1;
+}
+
+.yp-header.is-scrolled .yp-brand-lockup__tagline {
+	margin-top: 0;
+	max-height: 0;
+	opacity: 0;
+	overflow: hidden;
+}
+
 .yp-header__nav {
 	flex: 1;
 }
