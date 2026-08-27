@@ -2,7 +2,7 @@
 /**
  * Plugin Name: YeffoPrint Migrate
  * Plugin URI: https://yeffoprint.com
- * Description: One-time migration tool for moving WooCommerce settings, order history, and user accounts from an old YeffoPrint site to a new one. Deliberately separate from yeffoprint-core — this is migration tooling, not part of the site's permanent architecture, and is meant to be deactivated (or removed) once a migration is complete.
+ * Description: Migration tooling for YeffoPrint. Two capabilities: (1) an admin-page tool for selectively moving WooCommerce settings, order history, and user accounts from an old YeffoPrint site to a different new one, and (2) a WP-CLI total database + media backup/restore for moving this exact site to a new server. Deliberately separate from yeffoprint-core — this is migration tooling, not part of the site's permanent architecture, and is meant to be deactivated (or removed) once a migration is complete.
  * Version: 1.0.0
  * Requires at least: 6.4
  * Requires PHP: 8.0
@@ -62,3 +62,17 @@ add_action( 'plugins_loaded', function () {
 } );
 
 register_activation_hook( __FILE__, [ 'YeffoPrint_Migrate_File_Store', 'protect_storage_dir' ] );
+
+/**
+ * A second, unrelated migration capability living in this same plugin
+ * (see class-cli-backup-command.php's own docblock for why it belongs
+ * here rather than duplicating this plugin, or living in yeffoprint-core):
+ * a full database + wp-content/uploads backup/restore for moving this
+ * exact site to a new server, as opposed to the selective settings/
+ * users/orders transplant above. WP-CLI only — `wp yeffoprint-migrate
+ * backup export|import`.
+ */
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	require_once YEFFOPRINT_MIGRATE_PATH . 'includes/class-cli-backup-command.php';
+	( new YeffoPrint_Migrate_CLI_Backup_Command() )->register();
+}

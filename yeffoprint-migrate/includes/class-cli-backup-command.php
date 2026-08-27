@@ -1,26 +1,44 @@
 <?php
 /**
- * Total site backup/restore for a server-to-server migration (direct
- * request: "a total backup of the entire site and restore of the
- * entire site, media and all").
+ * Total site backup/restore for a same-site server move (direct
+ * request: "migrate my finalized site to a new server... a total
+ * backup of the entire site and restore of the entire site, media and
+ * all"), living alongside this plugin's original browser-based
+ * settings/users/orders migrator rather than replacing it — the two
+ * solve genuinely different problems, not overlapping ones:
  *
- * Scoped to database + `wp-content/uploads` only — the plugin/theme
- * code itself is already handled by the project's own git-based deploy
- * (docs/deploy-setup.md), so re-syncing that is a separate, manual step
- * the owner takes care of directly; duplicating code into this backup
- * would just be dead weight riding along with the real data.
+ *  - The original tool (class-settings-migrator.php and friends, via
+ *    the Tools → YeffoPrint Migrate admin page) selectively carries
+ *    WooCommerce settings/users/orders from one already-running site
+ *    into a *different* one — deliberately skipping products, theme
+ *    content, yeffoprint-core's own content types, and all media, per
+ *    its own README.
+ *  - This class is the opposite shape: an unconditional full database
+ *    dump plus a full copy of `wp-content/uploads`, for moving *this
+ *    exact site* — same content, same products, same media, just a
+ *    new host. There's no selection to make; everything comes along.
  *
- * WP-CLI only, matching class-seed-command.php's own reasoning (never
- * runs automatically, no HTTP/admin-UI trigger) — confirmed the target
- * environment has shell access on both the old and new server, which
- * also means this can shell out to `mysqldump`/`mysql`/`tar` directly
+ * Confirmed directly before building: shell/WP-CLI access is available
+ * on both the old and new server, and the media library is a few GB —
+ * which is why this shells out to `mysqldump`/`mysql`/`tar` directly
  * rather than buffering a multi-gigabyte export through PHP memory or
- * an HTTP upload/download round trip (the real risk with an admin-UI
- * "download backup" button once a site's media library is more than a
- * few dozen megabytes).
+ * an HTTP upload/download round trip. That's also why it's WP-CLI only
+ * (`wp yeffoprint-migrate backup export|import`), unlike the rest of
+ * this plugin: the original admin-page-only design was itself a
+ * deliberate choice (documented in yeffoprint-migrate.php) to avoid
+ * assuming shell access on an arbitrary host, but that constraint
+ * doesn't apply here — this project's own servers already have it, and
+ * an admin-page upload/download of a multi-gigabyte archive is exactly
+ * the kind of thing that hits PHP memory/time/upload-size limits a
+ * shelled-out CLI process doesn't.
+ *
+ * A separate top-level command namespace (`yeffoprint-migrate`, not
+ * `yeffoprint core`'s own `yeffoprint migrate`) so this doesn't
+ * collide with, or get confused for, the plugin's other migration
+ * feature.
  *
  * `export` writes a fresh timestamped directory *outside* the WordPress
- * install root by default (`dirname(ABSPATH) . '/yp-migrations/'`) —
+ * install root by default (`dirname(ABSPATH) . '/yp-site-backups/'`) —
  * deliberately not under docroot, and deliberately not anywhere inside
  * the git working tree this project's deploy script manages. That tree
  * gets `git reset --hard`'d on every deploy cycle (never `git clean`'d,
@@ -30,7 +48,8 @@
  * no business sitting anywhere web-servable. `.htaccess`/`index.php`
  * hardening is added to the output directory regardless, as
  * defense-in-depth in case the chosen --output ever does end up
- * somewhere web-accessible.
+ * somewhere web-accessible — same reasoning class-file-store.php
+ * already applies to this plugin's own export files.
  *
  * `import` is the reverse: restores a database dump and/or a media
  * archive from a directory `export` produced. Same domain, different
@@ -43,10 +62,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class YeffoPrint_Migrate_Command {
+class YeffoPrint_Migrate_CLI_Backup_Command {
 
 	public function register(): void {
-		\WP_CLI::add_command( 'yeffoprint migrate', $this );
+		\WP_CLI::add_command( 'yeffoprint-migrate backup', $this );
 	}
 
 	/**
@@ -56,7 +75,7 @@ class YeffoPrint_Migrate_Command {
 	 *
 	 * [--output=<path>]
 	 * : Directory to write the backup into. A new timestamped
-	 * subdirectory is created inside it. Defaults to a `yp-migrations`
+	 * subdirectory is created inside it. Defaults to a `yp-site-backups`
 	 * directory one level above the WordPress install root — outside
 	 * both the web-servable docroot and this project's git working
 	 * tree.
@@ -69,13 +88,13 @@ class YeffoPrint_Migrate_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp yeffoprint migrate export
-	 *     wp yeffoprint migrate export --output=/home/user/backups
+	 *     wp yeffoprint-migrate backup export
+	 *     wp yeffoprint-migrate backup export --output=/home/user/backups
 	 */
 	public function export( array $args, array $assoc_args ): void {
 		$this->require_binaries( [ 'gzip' ] );
 
-		$base_dir = $assoc_args['output'] ?? ( dirname( ABSPATH ) . '/yp-migrations' );
+		$base_dir = $assoc_args['output'] ?? ( dirname( ABSPATH ) . '/yp-site-backups' );
 		$run_dir  = rtrim( $base_dir, '/' ) . '/' . gmdate( 'Y-m-d-His' );
 
 		if ( ! wp_mkdir_p( $run_dir ) ) {
@@ -85,13 +104,13 @@ class YeffoPrint_Migrate_Command {
 		$this->harden_directory( $run_dir );
 
 		$manifest = [
-			'site_url'          => site_url(),
-			'home_url'          => home_url(),
-			'wp_version'        => get_bloginfo( 'version' ),
-			'yeffoprint_core'   => YEFFOPRINT_CORE_VERSION,
-			'exported_at'       => gmdate( 'c' ),
-			'includes_database' => empty( $assoc_args['skip-db'] ),
-			'includes_uploads'  => empty( $assoc_args['skip-uploads'] ),
+			'site_url'           => site_url(),
+			'home_url'           => home_url(),
+			'wp_version'         => get_bloginfo( 'version' ),
+			'yeffoprint_migrate' => YEFFOPRINT_MIGRATE_VERSION,
+			'exported_at'        => gmdate( 'c' ),
+			'includes_database'  => empty( $assoc_args['skip-db'] ),
+			'includes_uploads'   => empty( $assoc_args['skip-uploads'] ),
 		];
 
 		if ( empty( $assoc_args['skip-db'] ) ) {
@@ -106,7 +125,7 @@ class YeffoPrint_Migrate_Command {
 
 		\WP_CLI::success( "Backup written to {$run_dir}" );
 		\WP_CLI::log( "Copy the whole directory to the new server (e.g. rsync -av {$run_dir}/ user@newhost:/path/) then run:" );
-		\WP_CLI::log( "    wp yeffoprint migrate import {$run_dir}" );
+		\WP_CLI::log( "    wp yeffoprint-migrate backup import {$run_dir}" );
 		\WP_CLI::log( '(from the new server, once the files have landed there).' );
 	}
 
@@ -116,7 +135,7 @@ class YeffoPrint_Migrate_Command {
 	 * ## OPTIONS
 	 *
 	 * <path>
-	 * : The backup directory (as produced by `wp yeffoprint migrate export`).
+	 * : The backup directory (as produced by `wp yeffoprint-migrate backup export`).
 	 *
 	 * [--skip-db]
 	 * : Don't restore the database, even if database.sql.gz is present.
@@ -136,8 +155,8 @@ class YeffoPrint_Migrate_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp yeffoprint migrate import /home/user/yp-migrations/2026-08-26-120000
-	 *     wp yeffoprint migrate import /home/user/backups/latest --skip-uploads
+	 *     wp yeffoprint-migrate backup import /home/user/yp-site-backups/2026-08-27-004500
+	 *     wp yeffoprint-migrate backup import /home/user/backups/latest --skip-uploads
 	 */
 	public function import( array $args, array $assoc_args ): void {
 		$run_dir = rtrim( $args[0] ?? '', '/' );
@@ -292,7 +311,7 @@ class YeffoPrint_Migrate_Command {
 		\WP_CLI::log( 'Uploads restored.' );
 	}
 
-	/** Every mysqldump/mysql invocation above shells out with credentials read from a 0600 --defaults-extra-file instead of a command-line flag — a bare --password=... would sit in plain sight in `ps aux` for any other user on the box for as long as the command runs. Plain PHP tempnam() rather than wp_tempnam() — the latter lives in wp-admin/includes/file.php, not loaded by default outside wp-admin/a WP-CLI bootstrap that happens to include it. */
+	/** Every mysqldump/mysql invocation above shells out with credentials read from a 0600 --defaults-extra-file instead of a command-line flag — a bare --password=... would sit in plain sight in `ps aux` for any other user on the box for as long as the command runs. Plain PHP tempnam() rather than wp_tempnam() — the latter lives in wp-admin/includes/file.php, not loaded by default outside a wp-admin/WP-CLI bootstrap that happens to include it. */
 	private function write_mysql_defaults_file(): string {
 		$path = tempnam( sys_get_temp_dir(), 'yp-migrate-my-cnf' );
 		file_put_contents( $path, "[client]\nuser={$this->escape_ini_value( DB_USER )}\npassword={$this->escape_ini_value( DB_PASSWORD )}\n" );

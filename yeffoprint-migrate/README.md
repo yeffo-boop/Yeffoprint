@@ -1,8 +1,13 @@
 # YeffoPrint Migrate
 
-A one-time tool for moving data from an old YeffoPrint WooCommerce site to a new one: **WooCommerce settings, order history, and user accounts — nothing else.** No products, no theme or other site content, no yeffoprint-core content types (Templates, Materials, Custom Orders, Proofs, Saved Designs).
+Migration tooling for YeffoPrint — two distinct tools living in one plugin, for two different situations:
 
-Deliberately a separate plugin from `yeffoprint-core` — this is migration tooling, not part of the site's permanent architecture. Deactivate (or delete) it once the migration is done.
+1. **Selective settings/users/orders transplant** (below) — moving specific data from an old YeffoPrint WooCommerce site into a *different*, already-set-up new one. No products, no theme or other site content, no yeffoprint-core content types (Templates, Materials, Custom Orders, Proofs, Saved Designs).
+2. **[Total site backup/restore](#total-site-backup--restore-same-site-server-move)** — an unconditional full database + media copy for moving *this exact site* to a new server, same content and all.
+
+Deliberately a separate plugin from `yeffoprint-core` — this is migration tooling, not part of the site's permanent architecture. Deactivate (or delete) it once a migration is done.
+
+## Settings / users / orders transplant
 
 ## Requirements
 
@@ -30,3 +35,24 @@ Large user/order histories are exported and imported in small batches automatica
 ## Security
 
 Export files can contain password hashes and customer PII. They're stored under `wp-content/uploads/yeffoprint-migrate/`, blocked from direct web access (`.htaccess` + `index.php`), and only reachable through a nonce-verified, `manage_options`-gated download link — never a guessable direct URL. Delete them from the Files list on the admin page once a migration is complete.
+
+## Total site backup / restore (same-site server move)
+
+A second, unrelated tool in this same plugin (`class-cli-backup-command.php`) for a different situation: moving *this exact site* — same products, same content, same media — to a new server, rather than transplanting select data into a different one. WP-CLI only, since it shells out directly to `mysqldump`/`mysql`/`tar` rather than pushing a multi-gigabyte archive through a browser upload/download.
+
+```
+# On the old server:
+wp yeffoprint-migrate backup export
+# → writes database.sql.gz, uploads.tar.gz, manifest.json into a fresh
+#   timestamped directory one level above the WP install root.
+
+# Copy that directory to the new server (rsync/scp), then on the new server:
+wp yeffoprint-migrate backup import /path/to/that/directory
+```
+
+Notes:
+
+- Code (plugins/theme) is **not** included — that's handled by this project's own git-based deploy, kept separate on purpose.
+- `--skip-db`, `--skip-uploads`, and `--clean-uploads` (replace rather than merge media on import) are all available — see `wp help yeffoprint-migrate backup export` / `import`.
+- No URL search-replace is performed (same domain was the assumption this was built under). If the domain does change, run WP-CLI's own `wp search-replace` after importing — it's serialization-safe, unlike a naive find/replace.
+- The confirmation prompt before `import` can be skipped with `--yes`, but this overwrites the current database and/or media — only do that once you're sure.
