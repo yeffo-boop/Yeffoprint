@@ -471,10 +471,10 @@ add_action( 'wp_footer', function () {
 					<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
 				</svg>
 			</button>
-			<img class="yp-splash__image" src="<?php echo esc_url( $image_url ); ?>" alt="<?php esc_attr_e( 'A preview of the new YeffoPrint site', 'yeffoprint' ); ?>" />
+			<img class="yp-splash__image" src="<?php echo esc_url( $image_url ); ?>" alt="<?php esc_attr_e( 'A preview of the new YeffoDesign site', 'yeffoprint' ); ?>" />
 			<div class="yp-splash__body">
 				<p class="yp-eyebrow"><?php esc_html_e( "We've Upgraded", 'yeffoprint' ); ?></p>
-				<h2 id="yp-splash-heading"><?php esc_html_e( 'Welcome to the New YeffoPrint', 'yeffoprint' ); ?></h2>
+				<h2 id="yp-splash-heading"><?php esc_html_e( 'Welcome to the New YeffoDesign', 'yeffoprint' ); ?></h2>
 				<p><?php esc_html_e( "You're looking at our newly rebuilt site — faster, and easier to order from. We're still smoothing out a few rough edges after the move, so if anything looks off or isn't working the way it should, we'd genuinely appreciate you letting us know.", 'yeffoprint' ); ?></p>
 				<div class="yp-splash__actions">
 					<button type="button" class="wp-block-button__link is-style-accent" data-yp-drawer-close><?php esc_html_e( 'Continue to the site', 'yeffoprint' ); ?></button>
@@ -579,20 +579,39 @@ add_filter( 'login_headertext', function () {
 	return get_bloginfo( 'name' );
 } );
 
-/** Same brand lockup markup as parts/header.html's — WordPress's own logo/h1 is hidden via login.css instead of overridden in place, so this doesn't have to fight its background-image approach. */
+/**
+ * Same brand lockup markup as parts/header.html's — WordPress's own
+ * logo/h1 is hidden via login.css instead of overridden in place, so
+ * this doesn't have to fight its background-image approach.
+ *
+ * The visible word gets header.html/footer.html's same two-weight
+ * "Yeffo"/"Design" split, but derived from the actual site title
+ * rather than hardcoded — this is the one brand lockup that's real PHP
+ * (the other two are static template-part markup, which can't run
+ * PHP), so it can stay correct on its own once Settings → General's
+ * Site Title is updated, rather than needing a matching manual edit
+ * here. Falls back to the plain site title, single weight, for any
+ * name that doesn't start with "Yeffo" — during the transition before
+ * that setting is updated, or if it's ever renamed to something else
+ * entirely.
+ */
 add_action( 'login_header', function () {
+	$site_name = get_bloginfo( 'name' );
+	$word_html = 0 === stripos( $site_name, 'Yeffo' )
+		? '<strong>' . esc_html( substr( $site_name, 0, 5 ) ) . '</strong>' . esc_html( substr( $site_name, 5 ) )
+		: esc_html( $site_name );
 	?>
 	<div class="yp-login-lockup">
-		<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="yp-brand-lockup" aria-label="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+		<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="yp-brand-lockup" aria-label="<?php echo esc_attr( $site_name ); ?>">
 			<svg class="yp-brand-lockup__mark" viewBox="0 0 30 34" aria-hidden="true" focusable="false">
 				<clipPath id="ypLoginBrandMarkClip"><path d="M4 6C4 3.79 5.79 2 8 2h14c2.21 0 4 1.79 4 4v22c0 3.31-2.69 6-6 6h-10c-3.31 0-6-2.69-6-6V6z" /></clipPath>
 				<g clip-path="url(#ypLoginBrandMarkClip)">
-					<rect x="4" y="2" width="7.3" height="34" fill="#00AEEF" />
-					<rect x="11.3" y="2" width="7.3" height="34" fill="#EC008C" />
-					<rect x="18.7" y="2" width="7.3" height="34" fill="#FFF200" />
+					<rect x="4" y="2" width="6.63" height="34" fill="#00AEEF" />
+					<rect x="11.63" y="2" width="6.63" height="34" fill="#EC008C" />
+					<rect x="19.26" y="2" width="6.63" height="34" fill="#FFF200" />
 				</g>
 			</svg>
-			<span class="yp-brand-lockup__word"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></span>
+			<span class="yp-brand-lockup__word"><?php echo $word_html; // phpcs:ignore WordPress.Security.EscapeOutput -- $word_html is built entirely from esc_html()'d parts above. ?></span>
 		</a>
 	</div>
 	<?php

@@ -234,7 +234,7 @@ class YeffoPrint_Telegram_Message_Handler {
 
 	private function help_text(): string {
 		return __(
-			"Hi! I'm the YeffoPrint order & FAQ bot. I can help with:\n\n" .
+			"Hi! I'm the YeffoDesign order & FAQ bot. I can help with:\n\n" .
 			"📦 Order status — send your order number and checkout email, e.g. \"YP-1042 jane@example.com\"\n" .
 			"🔁 Reorder — /reorder plus your order number and email\n" .
 			"🔍 Find a design — /search plus a name or keyword, e.g. \"/search labs\"\n" .

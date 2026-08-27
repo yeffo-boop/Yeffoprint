@@ -29,7 +29,7 @@ $points_per_dollar = function_exists( 'yeffoprint_core_rewards_points_per_dollar
 			<p class="yp-eyebrow">Rewards</p>
 			<!-- /wp:paragraph -->
 			<!-- wp:heading {"level":2,"fontSize":"x-large"} -->
-			<h2 class="wp-block-heading has-x-large-font-size">YeffoPrint Rewards</h2>
+			<h2 class="wp-block-heading has-x-large-font-size">YeffoDesign Rewards</h2>
 			<!-- /wp:heading -->
 			<!-- wp:paragraph -->
 			<p>Earn <?php echo esc_html( $points_per_dollar ); ?> point(s) for every $1 you spend, automatically — redeem your balance for a discount whenever you're ready. Create an account to start earning.</p>

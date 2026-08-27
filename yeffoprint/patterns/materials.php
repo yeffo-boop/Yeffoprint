@@ -58,7 +58,7 @@ $materials = get_posts( [
 			<?php endforeach; ?>
 		</div>
 	<?php else : ?>
-		<p class="has-text-align-center description">No materials published yet — add one from the YeffoPrint admin menu.</p>
+		<p class="has-text-align-center description">No materials published yet — add one from the YeffoDesign admin menu.</p>
 	<?php endif; ?>
 	<!-- /wp:html -->
 

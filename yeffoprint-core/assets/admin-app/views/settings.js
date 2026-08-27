@@ -110,6 +110,8 @@
 					( settings.telegram_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.telegram_status ) + '</p>' : '' ) +
 					'<div class="yp-field"><label for="yp-set-telegram-admin-chat-id">Your chat ID (for alerts)</label><input type="text" id="yp-set-telegram-admin-chat-id" value="' + YP.escapeAttr( settings.telegram_admin_chat_id ) + '" placeholder="123456789" /></div>' +
 					'<p class="yp-panel__hint">Message <code>/whoami</code> to the bot from your own Telegram to get this number. New paid orders, custom design requests, and Contact form messages get sent here.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-login-enabled"' + ( settings.telegram_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-login-enabled">Log in with Telegram</label></div>' +
+					'<p class="yp-panel__hint">Shows a "Log in with Telegram" button on the login/account pages, using the same bot token above — no separate app registration needed. One extra step on Telegram\'s side: message @BotFather with <code>/setdomain</code> and authorize this site\'s domain, or Telegram refuses to render the button.</p>' +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -191,6 +193,7 @@
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,
 				telegram_admin_chat_id: viewEl.querySelector( '#yp-set-telegram-admin-chat-id' ).value,
+				telegram_login_enabled: viewEl.querySelector( '#yp-set-telegram-login-enabled' ).checked,
 				google_login_enabled: viewEl.querySelector( '#yp-set-google-enabled' ).checked,
 				google_client_id: viewEl.querySelector( '#yp-set-google-id' ).value,
 				google_client_secret: viewEl.querySelector( '#yp-set-google-secret' ).value,

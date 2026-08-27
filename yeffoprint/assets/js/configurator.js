@@ -132,7 +132,7 @@
 		layoutEl.hidden = false;
 
 		titleEl.textContent = schema.title || '';
-		document.title = schema.title ? schema.title + ' — YeffoPrint' : document.title;
+		document.title = schema.title ? schema.title + ' — YeffoDesign' : document.title;
 
 		if ( descriptionEl ) {
 			descriptionEl.textContent = schema.description || '';

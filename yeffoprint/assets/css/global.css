@@ -208,10 +208,22 @@ main.wp-block-group {
 
 .yp-brand-lockup__word {
 	font-family: var(--wp--preset--font-family--heading);
-	font-weight: 800;
+	font-weight: 500;
 	font-size: 1.15rem;
 	letter-spacing: -0.02em;
 	color: var(--wp--preset--color--near-black);
+}
+
+/* The wordmark's two-weight treatment — "Yeffo" heavy, "Design" light — see the logo brief. */
+.yp-brand-lockup__word strong {
+	font-weight: 800;
+}
+
+.yp-brand-lockup__tagline {
+	margin: 0.35rem 0 0;
+	font-size: var(--wp--preset--font-size--small);
+	font-style: italic;
+	color: var(--wp--preset--color--charcoal);
 }
 
 .yp-header__nav {

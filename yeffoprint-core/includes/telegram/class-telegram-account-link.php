@@ -108,7 +108,8 @@ class YeffoPrint_Telegram_Account_Link {
 		return $username ? 'https://t.me/' . $username . '?start=link_' . rawurlencode( $code ) : '';
 	}
 
-	private static function bot_username(): string {
+	/** The bot's own @username, resolved once via Telegram's getMe and cached — needed both for the /link deep link above and for the Login Widget's required data-telegram-login attribute (class-telegram-login.php). */
+	public static function bot_username(): string {
 		$cached = get_transient( self::BOT_USERNAME_TRANSIENT );
 		if ( is_string( $cached ) ) {
 			return $cached; // Cached '' (a prior failed lookup) intentionally still short-circuits — see below.
