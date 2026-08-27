@@ -1,0 +1,22 @@
+name: Deploy to production
+
+# Fires the moment Prod moves — the SSH session that actually runs is
+# pinned server-side to deploy/pull-and-deploy.sh via a forced command
+# in the deploy user's authorized_keys (docs/deploy-setup.md), so the
+# `script:` below is really just documentation of what happens; the key
+# can't be used to run anything else even if this workflow file changed.
+on:
+  push:
+    branches: [Prod]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH in and run the deploy script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCE_HOST }}
+          username: ${{ secrets.GCE_USER }}
+          key: ${{ secrets.GCE_SSH_PRIVATE_KEY }}
+          script: /path/to/somewhere/outside/wp-content/yeffoprint-deploy/deploy/pull-and-deploy.sh
