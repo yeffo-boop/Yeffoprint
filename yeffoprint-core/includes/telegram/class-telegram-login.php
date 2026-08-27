@@ -345,8 +345,15 @@ class YeffoPrint_Telegram_Login {
 	 * Telegram's own widget script — an iframe it injects itself, not
 	 * markup this theme styles, so it deliberately doesn't share
 	 * class-social-login.php's `.yp-social-login__button` treatment; a
-	 * plain labeled block of its own is the honest representation of
-	 * "this button looks and behaves however Telegram wants it to."
+	 * plain block of its own is the honest representation of "this
+	 * button looks and behaves however Telegram wants it to." No
+	 * "or log in with Telegram" label above it (direct request) — on
+	 * wp-login.php, `login.css` positions this block directly under the
+	 * Google/Discord/Apple buttons (same `order` flex trick that class's
+	 * own docblock documents, since `login_form` fires at a fixed DOM
+	 * position core controls, not something a hook priority can move),
+	 * so it now reads as one more button appended to that same list
+	 * rather than a separately introduced section needing its own label.
 	 */
 	private function widget_html( string $redirect_to ): string {
 		if ( ! self::is_available() ) {
@@ -358,7 +365,6 @@ class YeffoPrint_Telegram_Login {
 		ob_start();
 		?>
 		<div class="yp-telegram-login">
-			<p class="yp-telegram-login__divider"><?php esc_html_e( 'or log in with Telegram', 'yeffoprint-core' ); ?></p>
 			<script async
 				src="https://telegram.org/js/telegram-widget.js?22"
 				data-telegram-login="<?php echo esc_attr( YeffoPrint_Telegram_Account_Link::bot_username() ); ?>"

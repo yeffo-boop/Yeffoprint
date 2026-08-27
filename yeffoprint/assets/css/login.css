@@ -186,6 +186,23 @@ body.login .yp-social-login__button svg {
 	flex: none;
 }
 
+/* ---------- Telegram login (class-telegram-login.php's .yp-telegram-login markup, also appended via login_form) ----------
+   Direct report: this rendered right after the password field, above
+   Remember Me/Log In, reading as disconnected from the Google/Discord/
+   Apple buttons below the submit button — same root cause as that
+   block's own order:10 rule above (login_form's DOM position is fixed
+   by core, not movable via hook priority), just never given the same
+   treatment when this widget was added later. order:11 puts it right
+   after .yp-social-login instead — visually the last item in that same
+   button list — and the small margin-top matches that list's own
+   button-to-button gap (.yp-social-login__buttons' gap: 0.6rem) rather
+   than .yp-social-login's own larger section-opening margin, so this
+   reads as one more button appended to the group, not a second section. */
+body.login .yp-telegram-login {
+	order: 11;
+	margin-top: 0.6rem;
+}
+
 body.login .forgetmenot {
 	/* WordPress core floats this left by default; #loginform's flex
 	 * layout (above) already neutralizes float entirely on its children
