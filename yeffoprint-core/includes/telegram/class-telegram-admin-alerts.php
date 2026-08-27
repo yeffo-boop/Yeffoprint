@@ -1,13 +1,14 @@
 <?php
 /**
  * Pushes real-time alerts to the store owner's own Telegram chat — a
- * new order (or custom design request) getting paid, or a Contact
- * form submission — as a faster companion to the existing email
- * notifications, not a replacement for them. Hooks the same stable
- * events those email paths already fire on (`woocommerce_payment_complete`,
- * the new `yeffoprint_contact_form_submitted` action on
- * class-contact-controller.php) rather than duplicating their trigger
- * logic.
+ * new order (or custom design request) getting paid, a Contact form
+ * submission, or a Web Design quote request — as a faster companion to
+ * the existing email notifications, not a replacement for them. Hooks
+ * the same stable events those email paths already fire on
+ * (`woocommerce_payment_complete`, `yeffoprint_contact_form_submitted`
+ * on class-contact-controller.php, `yeffoprint_web_design_quote_submitted`
+ * on class-web-design-quote-controller.php) rather than duplicating
+ * their trigger logic.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -16,6 +17,7 @@ class YeffoPrint_Telegram_Admin_Alerts {
 
 	public function __construct() {
 		add_action( 'yeffoprint_contact_form_submitted', [ $this, 'on_contact_form_submitted' ], 10, 5 );
+		add_action( 'yeffoprint_web_design_quote_submitted', [ $this, 'on_web_design_quote_submitted' ] );
 		add_action( 'woocommerce_payment_complete', [ $this, 'on_payment_complete' ] );
 	}
 
@@ -26,6 +28,18 @@ class YeffoPrint_Telegram_Admin_Alerts {
 			$name,
 			$email,
 			$message
+		) );
+	}
+
+	/** @param array<string,string> $answers Same shape class-web-design-quote-controller.php::send() builds. */
+	public function on_web_design_quote_submitted( array $answers ): void {
+		self::notify( sprintf(
+			/* translators: 1: business/brand name, 2: contact name, 3: contact email, 4: package they're interested in */
+			__( "New web design quote request\n\n%1\$s — %2\$s <%3\$s>\nPackage: %4\$s", 'yeffoprint-core' ),
+			$answers['business_name'] ?? '',
+			$answers['name'] ?? '',
+			$answers['email'] ?? '',
+			$answers['package'] ?? ''
 		) );
 	}
 

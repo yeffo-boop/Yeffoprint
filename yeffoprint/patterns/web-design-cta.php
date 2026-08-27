@@ -6,8 +6,9 @@
  *
  * Closing CTA for the Web Design page — same "dark break" section shape
  * as custom-design-cta.php (which this page can't reuse as-is, since
- * that pattern's copy is specific to label design), pointed at /contact/
- * per the confirmed quote-request flow.
+ * that pattern's copy is specific to label design), pointed at the
+ * dedicated /web-design-quote/ intake form (direct follow-up — richer
+ * than the generic /contact/ form) rather than /contact/.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -30,7 +31,7 @@ defined( 'ABSPATH' ) || exit;
 	<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
 	<div class="wp-block-buttons">
 		<!-- wp:button -->
-		<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="/contact/">Get a Quote</a></div>
+		<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="/web-design-quote/">Get a Quote</a></div>
 		<!-- /wp:button -->
 	</div>
 	<!-- /wp:buttons -->

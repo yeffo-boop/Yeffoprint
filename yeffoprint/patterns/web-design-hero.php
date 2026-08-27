@@ -49,7 +49,7 @@ defined( 'ABSPATH' ) || exit;
 			<!-- wp:buttons -->
 			<div class="wp-block-buttons">
 				<!-- wp:button {"className":"is-style-accent"} -->
-				<div class="wp-block-button is-style-accent"><a class="wp-block-button__link wp-element-button" href="/contact/">Get a Quote</a></div>
+				<div class="wp-block-button is-style-accent"><a class="wp-block-button__link wp-element-button" href="/web-design-quote/">Get a Quote</a></div>
 				<!-- /wp:button -->
 
 				<!-- wp:button {"className":"is-style-outline"} -->

@@ -10,6 +10,16 @@
  * hand-drawn icon convention (20x20 viewBox, stroke="currentColor",
  * stroke-width 1.6 — see process-steps.php for the same idiom) rather
  * than inventing a new icon style for this one section.
+ *
+ * Direct follow-up: this grid originally read as a blanket "every
+ * package gets all of this," which isn't true — Custom Design, Domain
+ * Setup, and Business Email vary by tier (each tier's own FEATURES list
+ * on the pricing cards above is the source of truth for which), and
+ * Ongoing Support isn't included in any tier at all — it's the
+ * Maintenance & Monitoring add-on (web-design-packages.php's own badge/
+ * modal). Copy on those four items now says so explicitly rather than
+ * implying blanket inclusion; WooCommerce Setup and Plugins & Features
+ * stay as-is since those genuinely are universal.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -36,7 +46,7 @@ defined( 'ABSPATH' ) || exit;
 				</svg>
 			</div>
 			<h3>Custom Design</h3>
-			<p>A storefront designed around your brand, not a generic template.</p>
+			<p>A storefront designed around your brand, not a generic template. Included in select packages — see plan details above.</p>
 		</div>
 
 		<div class="yp-included-item">
@@ -48,7 +58,7 @@ defined( 'ABSPATH' ) || exit;
 				</svg>
 			</div>
 			<h3>Domain Setup</h3>
-			<p>We connect your domain and get DNS pointed correctly, no guesswork.</p>
+			<p>We connect your domain and get DNS pointed correctly, no guesswork. Included in select packages — see plan details above.</p>
 		</div>
 
 		<div class="yp-included-item">
@@ -59,7 +69,7 @@ defined( 'ABSPATH' ) || exit;
 				</svg>
 			</div>
 			<h3>Business Email</h3>
-			<p>Professional email at your own domain, set up and ready to use.</p>
+			<p>Professional email at your own domain, set up and ready to use. Included in select packages — see plan details above.</p>
 		</div>
 
 		<div class="yp-included-item">
@@ -91,7 +101,7 @@ defined( 'ABSPATH' ) || exit;
 				</svg>
 			</div>
 			<h3>Ongoing Support</h3>
-			<p>We're here after launch if something needs attention.</p>
+			<p>We're here after launch if something needs attention — available as an add-on to any package.</p>
 		</div>
 
 	</div>

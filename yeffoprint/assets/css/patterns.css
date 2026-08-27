@@ -1435,6 +1435,15 @@
 	}
 }
 
+/* Hosting/domain-not-included disclaimer, under the grid — direct
+   follow-up. Muted via opacity rather than a separate color token, same
+   convention as the browser-mockup's own --soft variants above. */
+.yp-web-design-packages__disclaimer {
+	margin-top: var(--wp--preset--spacing--md);
+	font-size: var(--wp--preset--font-size--small);
+	opacity: 0.7;
+}
+
 .yp-web-design-package {
 	position: relative;
 	display: flex;
@@ -1600,6 +1609,23 @@
    <button> (opens the maintenance modal below), not a link — the
    border/background/font/cursor resets undo default button chrome so
    it still reads as the same pill it was as an <a>. */
+/* Wraps the Maintenance and Hosting badges — direct follow-up, adding
+   the Hosting add-on alongside the existing Maintenance one. A flex
+   column so a second badge stacks under the first with even spacing,
+   rather than each badge's own auto-margin centering separately with no
+   gap between them. */
+.yp-web-design-badge-row {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	margin-top: 1.25rem;
+}
+
+.yp-web-design-badge-row .yp-web-design-maintenance-badge {
+	margin-top: 0;
+}
+
 .yp-web-design-maintenance-badge {
 	display: flex;
 	align-items: center;
