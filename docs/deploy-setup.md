@@ -115,3 +115,80 @@ Session work in this project lands on its own branch first (like the
 one this was built on) — merge that into `Prod` once you're happy with
 it, and the cron job picks it up on its next run (within the interval
 set in Step 3).
+
+## Alternate setup: Google Compute Engine + GitHub Actions (push-triggered)
+
+Direct request, once the site moved off the original self-hosted-at-home
+server onto a GCE instance: the reasoning above for pulling instead of
+pushing ("port 22 open to GitHub's whole IP range means open to
+everyone") was specific to a home router with no real firewall control.
+A GCE instance has a real one (GCP VPC firewall rules, scoped by source
+IP range), so a push-triggered deploy — GitHub Actions SSHing in the
+moment `Prod` moves, instead of waiting up to 5 minutes for the next
+cron tick — became genuinely viable without that downside. Chosen over
+a self-hosted Actions runner (which would need zero inbound firewall
+rules at all) as an explicit tradeoff: this needs a firewall rule kept
+in sync with GitHub's published Actions IP ranges, which do change
+periodically, in exchange for not running an extra long-lived agent
+process on the server.
+
+Steps 1–2 above (turning the theme/plugin folders into a git clone,
+testing `pull-and-deploy.sh` by hand) are unchanged and still the
+starting point — this replaces Step 3's cron job with a GitHub Actions
+workflow instead, reusing the exact same deploy script either way.
+
+1. **Reserve a static external IP** for the instance, so the firewall
+   rule and the GitHub secret both target something that doesn't move:
+   ```bash
+   gcloud compute addresses create yeffoprint-static-ip --region=YOUR_REGION
+   gcloud compute instances add-access-config your-instance-name \
+     --zone=YOUR_ZONE --address=yeffoprint-static-ip
+   ```
+
+2. **Generate a dedicated deploy key** (not your own SSH key — this
+   one's only job is triggering the deploy script):
+   ```bash
+   ssh-keygen -t ed25519 -f ./gh-actions-deploy-key -C "github-actions-deploy" -N ""
+   ```
+
+3. **Authorize the public key on the instance, pinned to only the
+   deploy script**, added directly to the deploy user's
+   `~/.ssh/authorized_keys` on the box — not through GCP's
+   instance/project "SSH Keys" metadata field, since the guest agent
+   periodically re-syncs keys added that way and would silently strip a
+   forced-command restriction:
+   ```bash
+   echo 'command="/path/to/yeffoprint-deploy/deploy/pull-and-deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding ssh-ed25519 AAAA...your-pubkey... github-actions-deploy' >> ~/.ssh/authorized_keys
+   ```
+   Even if this private key ever leaked, it can only ever run that one
+   script on this one box — never an arbitrary shell.
+
+4. **Firewall rule scoped to GitHub's Actions IP ranges** — the one
+   piece that needs periodic upkeep, since those ranges change:
+   ```bash
+   gcloud compute firewall-rules create allow-github-actions-ssh \
+     --network=YOUR_VPC_NETWORK --direction=INGRESS --action=ALLOW \
+     --rules=tcp:22 \
+     --source-ranges=$(curl -s https://api.github.com/meta | jq -r '.actions | join(",")') \
+     --target-tags=yeffoprint-deploy-target
+   gcloud compute instances add-tags your-instance-name \
+     --zone=YOUR_ZONE --tags=yeffoprint-deploy-target
+   ```
+   Re-run with `firewall-rules update` and a fresh `curl` whenever
+   GitHub's ranges change — there's no automatic refresh set up for
+   this yet.
+
+5. **Repo secrets** (Settings → Secrets and variables → Actions):
+   `GCE_SSH_PRIVATE_KEY` (the private key from step 2), `GCE_HOST` (the
+   static IP from step 1), `GCE_USER` (the SSH username from step 3).
+
+6. **The workflow** — `.github/workflows/deploy.yml`, triggers on push
+   to `Prod`, SSHes in and runs the same `pull-and-deploy.sh` the cron
+   job would have run. The forced command in `authorized_keys` (step 3)
+   means the key can't be used to run anything else even if this file
+   changed — the `script:` line is there for clarity, not as the only
+   thing enforcing what actually executes.
+
+Test by merging something into `Prod` and watching the Actions tab —
+should land on the live site within seconds rather than the cron
+interval.
