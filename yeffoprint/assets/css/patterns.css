@@ -268,7 +268,14 @@
 .yp-proof__corner--br { bottom: 16px; right: 16px; transform: scale(-1); }
 
 .yp-proof__mark {
-	width: 42%;
+	/* Direct report: on a phone this read as a small, oddly narrow strip
+	   floating in a mostly-empty white card. The SVG's own shape (in
+	   patterns/hero.php) is a squared-off swatch now instead of a tall
+	   pill, and this width is bumped up to actually fill the card's
+	   available space (.yp-proof's corner brackets sit at a fixed 16px
+	   inset regardless of card size, so there's still clear room at
+	   every size this card renders at, mobile included). */
+	width: 62%;
 	filter: drop-shadow(0 14px 20px rgba(20, 20, 20, 0.18));
 }
 

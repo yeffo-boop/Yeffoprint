@@ -62,12 +62,12 @@ defined( 'ABSPATH' ) || exit;
 				<span class="yp-proof__corner yp-proof__corner--tr"></span>
 				<span class="yp-proof__corner yp-proof__corner--bl"></span>
 				<span class="yp-proof__corner yp-proof__corner--br"></span>
-				<svg class="yp-proof__mark" viewBox="0 0 120 136" fill="none">
-					<clipPath id="ypHeroMarkClip"><path d="M16 24C16 15.16 23.16 8 32 8h56c8.84 0 16 7.16 16 16v88c0 13.25-10.75 24-24 24H40c-13.25 0-24-10.75-24-24V24z" /></clipPath>
+				<svg class="yp-proof__mark" viewBox="0 0 120 120" fill="none">
+					<clipPath id="ypHeroMarkClip"><rect x="8" y="8" width="104" height="104" rx="16" /></clipPath>
 					<g clip-path="url(#ypHeroMarkClip)">
-						<rect class="yp-proof__bar yp-proof__bar--c" x="16" y="8" width="29.3" height="136" fill="var(--wp--preset--color--cyan)" />
-						<rect class="yp-proof__bar yp-proof__bar--m" x="45.3" y="8" width="29.3" height="136" fill="var(--wp--preset--color--magenta)" />
-						<rect class="yp-proof__bar yp-proof__bar--y" x="74.7" y="8" width="29.3" height="136" fill="var(--wp--preset--color--yellow)" />
+						<rect class="yp-proof__bar yp-proof__bar--c" x="8" y="8" width="34.7" height="104" fill="var(--wp--preset--color--cyan)" />
+						<rect class="yp-proof__bar yp-proof__bar--m" x="42.7" y="8" width="34.7" height="104" fill="var(--wp--preset--color--magenta)" />
+						<rect class="yp-proof__bar yp-proof__bar--y" x="77.3" y="8" width="34.7" height="104" fill="var(--wp--preset--color--yellow)" />
 					</g>
 				</svg>
 				<span class="yp-proof__caption">Press proof &middot; registration mark</span>
