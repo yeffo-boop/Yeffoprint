@@ -91,7 +91,12 @@
 						labeled( 'Label', inputHtml( 'text', index, 'label', field.label ) ) +
 						labeled( 'Field ID (leave blank to auto-generate)', inputHtml( 'text', index, 'id', field.id ) ) +
 						labeled( 'Type', selectHtml( index, 'type', config.types, field.type ) ) +
-						labeled( 'Default value', inputHtml( 'text', index, 'default', field.default ) ) +
+						labeled(
+							'Default value',
+							'corner_style' === field.type
+								? selectHtml( index, 'default', config.cornerStyleOptions, field.default )
+								: inputHtml( 'text', index, 'default', field.default )
+						) +
 						labeled(
 							'qr_code' === field.type ? 'Max characters (a URL — up to ' + config.qrMaxChars + ')' : 'Max characters',
 							inputHtml( 'number', index, 'max_chars', field.max_chars, 'qr_code' === field.type ? { min: 1, max: config.qrMaxChars } : { min: 1 } )

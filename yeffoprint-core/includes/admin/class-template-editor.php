@@ -96,6 +96,7 @@ class YeffoPrint_Template_Editor {
 			// numbers as the real floor/ceiling.
 			'qrMinMaxChars' => YeffoPrint_Field_Schema::QR_MIN_MAX_CHARS,
 			'qrMaxChars'    => YeffoPrint_Field_Schema::QR_MAX_CHARS,
+			'cornerStyleOptions' => YeffoPrint_Field_Schema::CORNER_STYLE_OPTIONS,
 			// The Template's own artwork — lets the position picker show
 			// fields on the actual label instead of leaving x/y as blind
 			// percentage guesses (Architecture §9: deferred from Phase 4

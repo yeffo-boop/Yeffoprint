@@ -658,6 +658,22 @@ add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $
  * data-fetching (matching each entry's slug against a published
  * yp_material record for its photo/thickness) moved here; both
  * patterns' own rendering stayed where it was.
+ *
+ * V5 fix (direct report: "matte white and glossy white don't show
+ * pictures... added prism... still has the placeholder"): the record
+ * lookup used to be a single get_posts( [ 'name' => $slug ] ) query
+ * per entry — an exact post_name match. That's brittle against a very
+ * common WordPress gotcha this site had actually hit: trashing and
+ * recreating a same-titled Material (e.g. re-uploading its photo by
+ * making a fresh post) leaves the old slug reserved by the trashed
+ * post, so the new one silently gets "-2" appended — "glossy-white"
+ * becomes "glossy-white-2" with nobody touching the slug field on
+ * purpose. Every published yp_material is now loaded once up front and
+ * indexed by its post_name AND its sanitize_title()'d post_title, each
+ * with any trailing "-<n>" WordPress disambiguation suffix stripped —
+ * so a record still matches this file's hardcoded "glossy-white" entry
+ * whether its real slug is "glossy-white", "glossy-white-2", or its
+ * title alone still reads "Glossy White".
  */
 function yeffoprint_material_guide_entries(): array {
 	$materials = [
@@ -711,17 +727,28 @@ function yeffoprint_material_guide_entries(): array {
 		],
 	];
 
-	return array_map( function ( $material ) {
-		$record    = get_posts( [
-			'name'           => $material['slug'],
-			'post_type'      => 'yp_material',
-			'post_status'    => 'publish',
-			'posts_per_page' => 1,
-		] );
-		$photo_url = $record ? get_the_post_thumbnail_url( $record[0], 'thumbnail' ) : '';
-		$hover_id  = $record ? (int) get_post_meta( $record[0]->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true ) : 0;
-		$zoom_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'large' ) : ( $record ? get_the_post_thumbnail_url( $record[0], 'large' ) : '' );
-		$thickness = $record ? (float) get_post_meta( $record[0]->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ) : 0;
+	$published = get_posts( [
+		'post_type'      => 'yp_material',
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+	] );
+
+	$by_normalized_slug = [];
+	foreach ( $published as $post ) {
+		foreach ( [ $post->post_name, sanitize_title( $post->post_title ) ] as $candidate ) {
+			$normalized = preg_replace( '/-\d+$/', '', $candidate );
+			if ( ! isset( $by_normalized_slug[ $normalized ] ) ) {
+				$by_normalized_slug[ $normalized ] = $post;
+			}
+		}
+	}
+
+	return array_map( function ( $material ) use ( $by_normalized_slug ) {
+		$record    = $by_normalized_slug[ $material['slug'] ] ?? null;
+		$photo_url = $record ? get_the_post_thumbnail_url( $record, 'thumbnail' ) : '';
+		$hover_id  = $record ? (int) get_post_meta( $record->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true ) : 0;
+		$zoom_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'large' ) : ( $record ? get_the_post_thumbnail_url( $record, 'large' ) : '' );
+		$thickness = $record ? (float) get_post_meta( $record->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ) : 0;
 		$spec      = $material['spec'];
 
 		if ( $thickness > 0 ) {

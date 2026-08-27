@@ -509,6 +509,12 @@
 			if ( 'textarea' === field.type ) {
 				return '<textarea' + attr + ' maxlength="' + field.max_chars + '">' + YP.escapeHtml( value ) + '</textarea>';
 			}
+			if ( 'corner_style' === field.type ) {
+				var options = yeffoprintAdminApp.fieldSchema.cornerStyleOptions || {};
+				return '<select' + attr + '>' + Object.keys( options ).map( function ( key ) {
+					return '<option value="' + YP.escapeAttr( key ) + '"' + ( key === value ? ' selected' : '' ) + '>' + YP.escapeHtml( options[ key ] ) + '</option>';
+				} ).join( '' ) + '</select>';
+			}
 			return '<input type="text"' + attr + ' maxlength="' + field.max_chars + '" value="' + YP.escapeAttr( value ) + '" />';
 		}
 

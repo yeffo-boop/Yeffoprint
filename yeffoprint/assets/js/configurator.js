@@ -47,6 +47,14 @@
 	var FIELD_BOX_WIDTH_RATIO = 0.86;
 	var FIELD_BOX_HEIGHT_RATIO = 0.32;
 
+	// Mirrors YeffoPrint_Field_Schema::CORNER_STYLE_OPTIONS (PHP) — a
+	// fixed, non-admin-editable two-choice set, so no REST round trip is
+	// needed to know these labels client-side (same reasoning ALIGNMENTS/
+	// FORMATTING_RULES etc. never get sent to this page at all: they're
+	// admin-editor-only concepts, this is the one closed-set choice a
+	// customer actually picks from).
+	var CORNER_STYLE_OPTIONS = { squared: 'Squared', rounded: 'Rounded' };
+
 	var root = document.getElementById( 'yp-configurator' );
 	if ( ! root ) {
 		return;
@@ -322,20 +330,74 @@
 
 	/* ---------- Customization fields ---------- */
 
+	/**
+	 * corner_style's own "?" — direct request: "have a modal pop up with
+	 * a graphic example of what squared corners and rounded corners
+	 * actually look like." Reuses the existing per-field tooltip
+	 * mechanism (below) rather than the section-level drawer modal
+	 * (site.js's data-yp-drawer-trigger/initDrawers()) — that scans the
+	 * DOM once at page load, so a trigger created here, after the async
+	 * schema fetch resolves, would never get wired up. This tooltip is
+	 * bound at render time instead, same as every other field's, so it
+	 * always works regardless of when the field itself was added. Two
+	 * small SVG rectangles, corners drawn to the same size, one with a
+	 * corner radius and one without — same "draw it to scale/shape
+	 * rather than describe it in words" approach as size-info-modal.php.
+	 */
+	function cornerStyleDiagramHtml() {
+		var examples = [ { label: 'Squared', rx: 0 }, { label: 'Rounded', rx: 10 } ];
+		return (
+			'<div class="yp-corner-style-diagram">' +
+				examples.map( function ( example ) {
+					return (
+						'<span class="yp-corner-style-diagram__example">' +
+							'<svg width="64" height="44" viewBox="0 0 64 44" aria-hidden="true" focusable="false">' +
+								'<rect x="2" y="2" width="60" height="40" rx="' + example.rx + '" class="yp-corner-style-diagram__rect" />' +
+							'</svg>' +
+							'<span>' + example.label + '</span>' +
+						'</span>'
+					);
+				} ).join( '' ) +
+			'</div>'
+		);
+	}
+
+	function cornerStyleOptionsHtml( field, value ) {
+		return (
+			'<div class="yp-option-group yp-corner-style-options" role="radiogroup" data-field-id="' + field.id + '">' +
+				Object.keys( CORNER_STYLE_OPTIONS ).map( function ( key ) {
+					var isSelected = key === value;
+					return (
+						'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + '" data-corner-value="' + key + '">' +
+							'<span class="yp-option-pill__name">' + CORNER_STYLE_OPTIONS[ key ] + '</span>' +
+						'</button>'
+					);
+				} ).join( '' ) +
+			'</div>'
+		);
+	}
+
 	function renderFieldInputStructure() {
 		fieldInputsEl.innerHTML = schema.field_schema.map( function ( field ) {
 			var control;
+			var value = ( activeVariant().values[ field.id ] ) || '';
 			if ( 'color' === field.type ) {
 				control = '<input type="color" data-field-id="' + field.id + '" class="yp-field__color-input" />';
 			} else if ( 'qr_code' === field.type ) {
 				control = '<input type="url" placeholder="https://" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
 			} else if ( 'textarea' === field.type ) {
 				control = '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>';
+			} else if ( 'corner_style' === field.type ) {
+				control = cornerStyleOptionsHtml( field, value );
 			} else {
 				control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
 			}
 
-			var tooltip = field.admin_description
+			// corner_style's tooltip always exists (the diagram is
+			// intrinsic to the type, not admin-authored content) even
+			// when the admin never typed a tooltip/help text for this field.
+			var hasTooltip = !! field.admin_description || 'corner_style' === field.type;
+			var tooltip = hasTooltip
 				? ' <button type="button" class="yp-field__tooltip-trigger" data-tooltip-trigger="' + field.id + '" aria-expanded="false" aria-controls="yp-field-tooltip-' + field.id + '" aria-label="More info about ' + escapeHtml( field.label ) + '">?</button>'
 				: '';
 
@@ -343,9 +405,14 @@
 				'<div class="yp-field">' +
 					'<div class="yp-field__label-row">' +
 						'<label for="yp-field-' + field.id + '">' + escapeHtml( field.label ) + ( field.required ? ' *' : '' ) + tooltip + '</label>' +
-						( 'color' === field.type ? '' : '<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' ) +
+						( 'color' === field.type || 'corner_style' === field.type ? '' : '<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' ) +
 					'</div>' +
-					( field.admin_description ? '<p class="yp-field__tooltip" id="yp-field-tooltip-' + field.id + '" hidden>' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
+					( hasTooltip
+						? '<div class="yp-field__tooltip" id="yp-field-tooltip-' + field.id + '" hidden>' +
+							( 'corner_style' === field.type ? cornerStyleDiagramHtml() : '' ) +
+							( field.admin_description ? '<p>' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
+						'</div>'
+						: '' ) +
 					control.replace( '<textarea', '<textarea id="yp-field-' + field.id + '"' ).replace( '<input', '<input id="yp-field-' + field.id + '"' ) +
 				'</div>'
 			);
@@ -373,7 +440,27 @@
 			} );
 		} );
 
+		fieldInputsEl.querySelectorAll( '.yp-corner-style-options' ).forEach( function ( group ) {
+			var fieldId = group.getAttribute( 'data-field-id' );
+			group.querySelectorAll( '[data-corner-value]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					activeVariant().values[ fieldId ] = button.getAttribute( 'data-corner-value' );
+					syncCornerStyleGroup( group, fieldId );
+					updateActiveVariantCardSummary();
+				} );
+			} );
+		} );
+
 		syncFieldValuesToActiveVariant();
+	}
+
+	function syncCornerStyleGroup( group, fieldId ) {
+		var value = activeVariant().values[ fieldId ] || '';
+		group.querySelectorAll( '[data-corner-value]' ).forEach( function ( button ) {
+			var isSelected = button.getAttribute( 'data-corner-value' ) === value;
+			button.classList.toggle( 'is-selected', isSelected );
+			button.setAttribute( 'aria-checked', isSelected ? 'true' : 'false' );
+		} );
 	}
 
 	function updateCounter( fieldId ) {
@@ -389,12 +476,18 @@
 	}
 
 	function syncFieldValuesToActiveVariant() {
-		var variant = activeVariant();
-
 		schema.field_schema.forEach( function ( field ) {
+			if ( 'corner_style' === field.type ) {
+				var group = fieldInputsEl.querySelector( '.yp-corner-style-options[data-field-id="' + field.id + '"]' );
+				if ( group ) {
+					syncCornerStyleGroup( group, field.id );
+				}
+				return;
+			}
+
 			var input = fieldInputsEl.querySelector( '[data-field-id="' + field.id + '"]' );
 			if ( input ) {
-				input.value = variant.values[ field.id ] || '';
+				input.value = activeVariant().values[ field.id ] || '';
 			}
 			updateCounter( field.id );
 		} );
@@ -503,7 +596,13 @@
 			return '';
 		}
 		var value = variant.values[ firstField.id ];
-		return value ? ' — "' + value + '"' : '';
+		if ( ! value ) {
+			return '';
+		}
+		if ( 'corner_style' === firstField.type ) {
+			value = CORNER_STYLE_OPTIONS[ value ] || value;
+		}
+		return ' — "' + value + '"';
 	}
 
 	function switchActiveVariant( index ) {
@@ -616,6 +715,15 @@
 				// controls pane below is unaffected; this only skips
 				// creating a stage element, so the field stays fully
 				// usable for input/pricing/order data.
+				return;
+			}
+
+			if ( 'corner_style' === field.type ) {
+				// A fulfillment choice about the label's physical die-cut,
+				// not printed artwork — unlike every other type, there's no
+				// show_in_preview toggle that would make sense to draw this
+				// as text/swatch/QR on the stage, so it's always skipped
+				// here regardless of that flag.
 				return;
 			}
 
@@ -890,17 +998,33 @@
 	 * YeffoPrint_Pricing_Rule::calculate() itself takes — needs no
 	 * extra round trip and can update instantly as the customer changes
 	 * size/material/quantity, same as the estimate above.
+	 *
+	 * V2 (direct follow-up report: "the ? doesn't work... I also always
+	 * want it visible"): originally a small info-button next to Quantity
+	 * that opened this table in a drawer modal. Dropped the modal
+	 * entirely — this now renders straight into its own always-on
+	 * section of the page (right below Quantity), so there's no click
+	 * required and nothing that can silently fail to open. The section
+	 * always shows once the page finishes loading; if the active Pricing
+	 * Rule genuinely has no discount tiers configured yet, it shows a
+	 * plain "not available yet" note instead of an empty table rather
+	 * than disappearing.
 	 */
 	function renderBulkPricingTable() {
+		var sectionEl = document.querySelector( '[data-yp-bulk-pricing-section]' );
 		var el = document.querySelector( '[data-yp-bulk-pricing-table]' );
-		var triggerButton = document.querySelector( '[data-yp-bulk-pricing-trigger]' );
 		var tiers = ( schema && schema.tiers ) || [];
 
-		if ( triggerButton ) {
-			triggerButton.hidden = ! tiers.length;
+		if ( sectionEl ) {
+			sectionEl.hidden = false;
 		}
 
-		if ( ! el || ! tiers.length ) {
+		if ( ! el ) {
+			return;
+		}
+
+		if ( ! tiers.length ) {
+			el.innerHTML = '<p class="yp-bulk-pricing__empty">Bulk pricing isn\'t available for this design yet — check back soon.</p>';
 			return;
 		}
 
