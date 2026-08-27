@@ -86,15 +86,18 @@ class YeffoPrint_Custom_Order_Payment {
 	 * item-meta.php) rather than trusting "whichever item triggered
 	 * this call" to be the fee.
 	 *
-	 * Custom Stickers has no equivalent flat fee item at all (direct
-	 * pricing decision, docs/ARCHITECTURE.md — preset size tiers only,
-	 * no separate proofing charge), so its one linked item *always*
-	 * carries `_yp_batch_quantity` and would otherwise fall through to
-	 * the label flow's own fee constant below — meaningless for a
-	 * sticker order, and not even the right dollar amount. DESIGN_FEE's
-	 * stored meaning here is really "what unlocked production," not
-	 * literally "the flat design fee" — for a sticker order that's just
-	 * the sum of its own linked item(s).
+	 * Custom Stickers and Template orders both have no equivalent flat fee
+	 * item at all (Custom Stickers: direct pricing decision, docs/
+	 * ARCHITECTURE.md — preset size tiers only, no separate proofing
+	 * charge; Template: it's just a normal Template batch, priced exactly
+	 * like the customer-facing flow, which never had a design fee to
+	 * begin with — proof approval here is a staff-opt-in addition, not a
+	 * paid design service), so either one's linked item *always* carries
+	 * `_yp_batch_quantity` and would otherwise fall through to the label
+	 * flow's own fee constant below — meaningless for either, and not
+	 * even the right dollar amount. DESIGN_FEE's stored meaning here is
+	 * really "what unlocked production," not literally "the flat design
+	 * fee" — for these two it's just the sum of their own linked item(s).
 	 */
 	private function find_design_fee( \WC_Order $order, int $custom_order_id ): float {
 		// A customer-provided-design or fee-free-reorder order never has a
@@ -105,7 +108,7 @@ class YeffoPrint_Custom_Order_Payment {
 			return 0.0;
 		}
 
-		if ( 'sticker' === YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id ) ) {
+		if ( 'label' !== YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id ) ) {
 			$total = 0.0;
 			foreach ( $order->get_items() as $item ) {
 				if ( (int) $item->get_meta( '_yp_custom_order_id' ) === $custom_order_id ) {

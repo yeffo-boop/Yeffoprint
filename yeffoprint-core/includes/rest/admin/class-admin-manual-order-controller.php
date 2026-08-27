@@ -41,6 +41,20 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			'callback'            => [ $this, 'sticker_pricing_preview' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		// Same reasoning as sticker-pricing-preview above: the public
+		// /custom-orders/pricing-preview endpoint reads the live session
+		// cart's own combined_label_quantity() for its bulk-discount tier
+		// (class-custom-order-controller.php::pricing_preview()), which
+		// would silently pull in whatever's sitting in the *staff member's
+		// own* cart here — this order's own quantity is the whole tier
+		// pool instead, same as YeffoPrint_Manual_Order_Creator::add_template_row()
+		// itself prices it.
+		register_rest_route( self::NAMESPACE, '/admin/manual-orders/template-pricing-preview', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'template_pricing_preview' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
 	}
 
 	/** @return \WP_REST_Response */
@@ -109,5 +123,36 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		}
 
 		return rest_ensure_response( $pricing );
+	}
+
+	/** @return \WP_REST_Response */
+	public function template_pricing_preview( \WP_REST_Request $request ) {
+		$params      = $request->get_json_params() ?: [];
+		$size_id     = absint( $params['size_id'] ?? 0 );
+		$material_id = absint( $params['material_id'] ?? 0 );
+		$quantity    = max( 1, absint( $params['quantity'] ?? 1 ) );
+
+		$pricing = YeffoPrint_Pricing_Rule::calculate(
+			$this->record_adjustment( 'yp_material', $material_id ),
+			$this->record_adjustment( 'yp_size', $size_id ),
+			$quantity,
+			$quantity
+		);
+
+		return rest_ensure_response( $pricing );
+	}
+
+	/** Same lookup class-cart-pricing.php's own adjustment() and class-custom-order-controller.php's own record_adjustment() already use — a size/material's PRICE_ADJUSTMENT meta, verified against the given post type first. */
+	private function record_adjustment( string $post_type, int $post_id ): float {
+		if ( ! $post_id ) {
+			return 0.0;
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post || $post_type !== $post->post_type ) {
+			return 0.0;
+		}
+
+		return (float) get_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true );
 	}
 }

@@ -13,6 +13,21 @@
  * a real PricingRule; the price this endpoint returns is provisional
  * only. See docs/ARCHITECTURE.md §9 — Phase 6 replaces it with an
  * authoritative, server-validated calculation the client can't spoof.
+ *
+ * `tiers` (direct request: "a bulk pricing table... dynamic and show
+ * whatever tiered pricing is assigned") is the same already-public
+ * `YeffoPrint_Pricing_Rule::get_tiers()` list every checkout price is
+ * already computed from — not per-Template data (there's only ever one
+ * active site-wide tier set, same "one active rule" model as
+ * base_unit_price itself), riding along here since this is where
+ * configurator.js already loads its own base price/size/material
+ * adjustments from. The bulk-pricing table itself is still just a
+ * client-side *estimate* built from this, same "instant estimate, no
+ * server round-trip" precedent renderEstimatedSummary() already
+ * established for the live price display — the transactional price a
+ * customer actually pays always goes through the separate,
+ * authoritative `/pricing/calculate` endpoint before Add to Cart,
+ * unchanged.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -72,6 +87,7 @@ class YeffoPrint_Template_Schema_Controller {
 			// Dashboard → YeffoPrint → Settings → Label Configurator.
 			'live_preview_enabled'  => (bool) get_option( YeffoPrint_Admin_Menu::LIVE_PREVIEW_ENABLED_OPTION, true ),
 			'base_unit_price'       => function_exists( 'yeffoprint_core_base_unit_price' ) ? yeffoprint_core_base_unit_price() : 0,
+			'tiers'                 => YeffoPrint_Pricing_Rule::get_tiers(),
 			'quantity_presets'      => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
 			'field_schema'          => YeffoPrint_Field_Schema::get( $template->ID ),
 			'sizes'                 => $this->records( YeffoPrint_Template_Meta::COMPATIBLE_SIZES, $template->ID, [ $this, 'format_size' ] ),
