@@ -29,7 +29,7 @@ defined( 'ABSPATH' ) || exit;
 			<!-- /wp:heading -->
 
 			<!-- wp:paragraph {"fontSize":"large"} -->
-			<p class="has-large-font-size">Yeffoprint designs and prints research and supplement vial labels — waterproof stock, exact color matching, and a proof you approve before anything hits press.</p>
+			<p class="has-large-font-size">YeffoDesign designs and prints research and supplement vial labels — waterproof stock, exact color matching, and a proof you approve before anything hits press.</p>
 			<!-- /wp:paragraph -->
 
 			<!-- wp:buttons -->
