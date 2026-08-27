@@ -78,6 +78,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/uploads/class-secure-upload.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-reminder-scheduler.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-payment.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-manual-order-creator.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-custom-order-controller.php';
@@ -179,6 +180,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Webhook_Controller();
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
+		new YeffoPrint_Proof_Reminder_Scheduler();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)

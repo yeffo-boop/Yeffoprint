@@ -102,6 +102,26 @@ class YeffoPrint_Custom_Order_Meta {
 	public const CHANGE_REQUEST_NOTES = '_yp_change_request_notes';
 
 	/**
+	 * Direct request: automated nudges for a customer who hasn't
+	 * responded to a proof yet. `AWAITING_APPROVAL_AT` is set the moment
+	 * status enters 'awaiting_approval' (class-proof-meta.php's
+	 * advance_status_to_awaiting_approval()) — the real timestamp a
+	 * reminder job needs, since `post_modified` isn't touched by a plain
+	 * update_post_meta() call and status has no other "changed at" of
+	 * its own. Reset every time status re-enters 'awaiting_approval' (a
+	 * "Request changes" round trip followed by a new proof upload), so
+	 * the 24h/48h clock restarts against the *new* proof, not the first
+	 * one. `PROOF_REMINDER_STAGE` (0 = none sent, 1 = 24h sent, 2 = 48h
+	 * sent — see class-proof-reminder-scheduler.php) resets alongside it
+	 * for the same reason, and needs no explicit "cancel" anywhere else:
+	 * the reminder sweep only ever queries STATUS === 'awaiting_approval',
+	 * so approving/requesting changes stops reminders for free by moving
+	 * status away from it.
+	 */
+	public const AWAITING_APPROVAL_AT  = '_yp_awaiting_approval_at';
+	public const PROOF_REMINDER_STAGE  = '_yp_proof_reminder_stage';
+
+	/**
 	 * Direct request: two ways to skip the $25 design fee. Points back to
 	 * the source yp_custom_order this one was reordered from — absent
 	 * means this order was either a normal new-design submission or a

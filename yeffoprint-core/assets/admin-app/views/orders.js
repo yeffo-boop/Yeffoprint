@@ -246,12 +246,26 @@
 					( order.approval_url
 						? '<p class="yp-field__hint"><strong>Customer approval link:</strong> <input type="text" readonly onclick="this.select();" value="' + YP.escapeAttr( order.approval_url ) + '" style="width:100%;margin-top:0.35rem;padding:0.4rem 0.6rem;font-family:var(--wp--preset--font-family--mono);font-size:0.78rem;border:1.5px solid var(--wp--preset--color--light-gray);border-radius:var(--wp--custom--radius--control);" /></p>'
 						: '' ) +
+					( 'awaiting_approval' === order.status ? reminderStatusHtml( order ) : '' ) +
 				'</div>';
 
 			if ( order.paid ) {
 				bodyEl.querySelector( '[data-yp-save-status]' ).addEventListener( 'click', function () { saveStatus( order, drawer, bodyEl ); } );
 				bodyEl.querySelector( '[data-yp-add-proof]' ).addEventListener( 'click', function () { addProof( order, drawer, bodyEl ); } );
 			}
+		}
+
+		/** Staff-visible state for the automated 24h/48h proof reminder (class-proof-reminder-scheduler.php) — only shown while status is actually awaiting_approval, since the stage number is meaningless/stale once it's moved on. */
+		function reminderStatusHtml( order ) {
+			var label = 2 === order.proof_reminder_stage
+				? 'Reminder sent (24h + 48h)'
+				: 1 === order.proof_reminder_stage
+					? 'Reminder sent (24h)'
+					: 'No reminder sent yet';
+
+			return '<p class="yp-field__hint">' + YP.escapeHtml( label ) +
+				( order.awaiting_approval_since ? ' — waiting since ' + new Date( order.awaiting_approval_since ).toLocaleString() : '' ) +
+				'</p>';
 		}
 
 		function proofsListHtml( proofs ) {

@@ -19,6 +19,7 @@ class YeffoPrint_Telegram_Order_Notifications {
 	public function __construct() {
 		add_action( 'woocommerce_order_status_shipped', [ $this, 'on_shipped' ] );
 		add_action( 'yeffoprint_proof_ready_for_review', [ $this, 'on_proof_ready' ] );
+		add_action( 'yeffoprint_proof_reminder_due', [ $this, 'on_reminder_due' ], 10, 2 );
 	}
 
 	/** @return bool True if this chat was newly linked (wasn't already) — lets the caller decide whether to mention it. */
@@ -73,6 +74,27 @@ class YeffoPrint_Telegram_Order_Notifications {
 		$text = $url
 			? sprintf( /* translators: %s: proof approval link */ __( "Your custom label proof is ready to review:\n\n%s", 'yeffoprint-core' ), $url )
 			: __( 'Your custom label proof is ready to review — check your email for the link.', 'yeffoprint-core' );
+
+		$this->notify_order( $order, $text );
+	}
+
+	/** class-proof-reminder-scheduler.php's 24h/48h nudge — same guest-access link, just a shorter/more urgent line since the full proof-ready text already went out to this chat once. */
+	public function on_reminder_due( int $custom_order_id, int $stage ): void {
+		$wc_order_id = (int) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::WC_ORDER_ID, true );
+		$order       = $wc_order_id ? wc_get_order( $wc_order_id ) : false;
+
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+
+		$url = function_exists( 'yeffoprint_core_proof_approval_url' ) ? yeffoprint_core_proof_approval_url( $custom_order_id ) : '';
+		if ( ! $url ) {
+			return;
+		}
+
+		$text = 2 === $stage
+			? sprintf( /* translators: %s: proof approval link */ __( "Still waiting on your OK for this proof — take a look when you get a chance:\n\n%s", 'yeffoprint-core' ), $url )
+			: sprintf( /* translators: %s: proof approval link */ __( "Friendly reminder — your proof is still waiting on your review:\n\n%s", 'yeffoprint-core' ), $url );
 
 		$this->notify_order( $order, $text );
 	}
