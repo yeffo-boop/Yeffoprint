@@ -36,22 +36,6 @@ class YeffoPrint_Telegram_Account_Link {
 
 	public const CHAT_ID_META = '_yp_telegram_chat_id';
 
-	/**
-	 * Set on an account class-telegram-login.php creates for a brand-new
-	 * Telegram Login Widget sign-in — Telegram never hands back an email
-	 * address at all, unlike Google/Discord/Apple, but every other part
-	 * of this system (order confirmations, proof-approval emails,
-	 * rewards) assumes a real one exists. Rather than silently store an
-	 * undeliverable address, the account gets a placeholder using the
-	 * `.invalid` TLD (RFC 2606 — reserved specifically for exactly this:
-	 * a syntactically valid address guaranteed never to be a real,
-	 * deliverable one) and this flag, so the rest of the site can react
-	 * to it — class-account-endpoints.php shows a persistent "add your
-	 * email" banner and blocks checkout while it's set, clearing
-	 * automatically the moment the customer saves a real address.
-	 */
-	public const PLACEHOLDER_EMAIL_META = '_yp_telegram_placeholder_email';
-
 	private const CODE_TRANSIENT_PREFIX = 'yp_telegram_link_';
 	private const CODE_TTL              = 15 * MINUTE_IN_SECONDS;
 
@@ -122,23 +106,6 @@ class YeffoPrint_Telegram_Account_Link {
 		$username = self::bot_username();
 
 		return $username ? 'https://t.me/' . $username . '?start=link_' . rawurlencode( $code ) : '';
-	}
-
-	/** A syntactically-valid, never-real placeholder for an account that has no real address yet — see PLACEHOLDER_EMAIL_META's own docblock for why. One per Telegram numeric id, so a repeat "log in with Telegram" attempt before the customer's added a real address is idempotent rather than colliding on a second wc_create_new_customer() call. */
-	public static function placeholder_email( int $telegram_id ): string {
-		return 'telegram-' . $telegram_id . '@' . wp_parse_url( home_url(), PHP_URL_HOST ) . '.invalid';
-	}
-
-	public static function mark_placeholder_email( int $user_id ): void {
-		update_user_meta( $user_id, self::PLACEHOLDER_EMAIL_META, 1 );
-	}
-
-	public static function has_placeholder_email( int $user_id ): bool {
-		return (bool) get_user_meta( $user_id, self::PLACEHOLDER_EMAIL_META, true );
-	}
-
-	public static function clear_placeholder_email_flag( int $user_id ): void {
-		delete_user_meta( $user_id, self::PLACEHOLDER_EMAIL_META );
 	}
 
 	/** The bot's own @username, resolved once via Telegram's getMe and cached — needed both for the /link deep link above and for the Login Widget's required data-telegram-login attribute (class-telegram-login.php). */
