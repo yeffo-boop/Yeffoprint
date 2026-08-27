@@ -76,6 +76,86 @@ class YeffoPrint_Account_Endpoints {
 
 		add_action( 'user_register', [ $this, 'flag_new_account_for_telegram_banner' ] );
 		add_action( 'woocommerce_before_account_dashboard', [ $this, 'render_registration_banner' ] );
+
+		add_action( 'woocommerce_before_account_dashboard', [ $this, 'render_placeholder_email_banner' ] );
+		add_action( 'template_redirect', [ $this, 'maybe_block_checkout_for_placeholder_email' ] );
+		add_action( 'profile_update', [ $this, 'maybe_clear_placeholder_email' ] );
+	}
+
+	/**
+	 * "Log in with Telegram" (class-telegram-login.php) creates a real
+	 * account the instant someone signs in, since Telegram never hands
+	 * over an email address and every order-dependent feature downstream
+	 * (confirmation emails, proof-ready alerts, reward notifications)
+	 * assumes a real one exists — see PLACEHOLDER_EMAIL_META's own
+	 * docblock in class-telegram-account-link.php for the full design
+	 * rationale. This is the customer-facing half of that tradeoff: a
+	 * banner that keeps showing (unlike render_registration_banner()'s
+	 * one-time welcome message above) for as long as the placeholder is
+	 * still in place, since it's not optional the way Connect Telegram
+	 * is — checkout is actually blocked below until it's resolved.
+	 */
+	public function render_placeholder_email_banner(): void {
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		$user_id = get_current_user_id();
+
+		if ( ! YeffoPrint_Telegram_Account_Link::has_placeholder_email( $user_id ) ) {
+			return;
+		}
+		?>
+		<div class="yp-telegram-banner yp-telegram-banner--warning">
+			<p>
+				<?php esc_html_e( "You signed in with Telegram, which doesn't give us an email address — add one so we can send order confirmations, proof-ready alerts, and reward updates. You'll need this before you can check out.", 'yeffoprint-core' ); ?>
+			</p>
+			<a class="wp-block-button__link is-style-outline" href="<?php echo esc_url( wc_get_account_endpoint_url( 'edit-account' ) ); ?>"><?php esc_html_e( 'Add your email', 'yeffoprint-core' ); ?></a>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Companion to render_placeholder_email_banner() above — the banner
+	 * alone is easy to miss or dismiss by just navigating away, and
+	 * placing a real order against a `.invalid` placeholder address
+	 * would silently blackhole every downstream email for it. Checked on
+	 * template_redirect (before any output starts) so a real redirect is
+	 * still possible, same as the other template_redirect handlers in
+	 * this class.
+	 */
+	public function maybe_block_checkout_for_placeholder_email(): void {
+		if ( ! is_user_logged_in() || ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+			return;
+		}
+
+		if ( ! YeffoPrint_Telegram_Account_Link::has_placeholder_email( get_current_user_id() ) ) {
+			return;
+		}
+
+		wc_add_notice( __( 'Please add a real email address to your account before checking out.', 'yeffoprint-core' ), 'error' );
+		wp_safe_redirect( wc_get_account_endpoint_url( 'edit-account' ) );
+		exit;
+	}
+
+	/**
+	 * Fires on every account-details save (WP core's profile_update,
+	 * which wc_edit_account() itself calls through to), so the placeholder
+	 * flag — and with it the banner above and the checkout block — clears
+	 * itself the moment a Telegram-login customer replaces the `.invalid`
+	 * placeholder with a real address, with no separate "confirm your
+	 * email" step to build.
+	 */
+	public function maybe_clear_placeholder_email( int $user_id ): void {
+		if ( ! YeffoPrint_Telegram_Account_Link::has_placeholder_email( $user_id ) ) {
+			return;
+		}
+
+		$user = get_userdata( $user_id );
+
+		if ( $user && ! str_ends_with( strtolower( $user->user_email ), '.invalid' ) ) {
+			YeffoPrint_Telegram_Account_Link::clear_placeholder_email_flag( $user_id );
+		}
 	}
 
 	public function flag_new_account_for_telegram_banner( int $user_id ): void {

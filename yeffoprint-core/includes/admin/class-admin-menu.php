@@ -178,6 +178,21 @@ class YeffoPrint_Admin_Menu {
 	const TELEGRAM_ADMIN_CHAT_ID_OPTION = 'yeffoprint_telegram_admin_chat_id';
 
 	/**
+	 * Also read by includes/telegram/class-telegram-login.php. Direct
+	 * request: "allow users to login to the site using their telegram
+	 * account" — Telegram's own official Login Widget, not a hand-rolled
+	 * scheme. Reuses the same bot token above rather than needing its
+	 * own credentials (unlike Google/Discord/Apple, which each need a
+	 * separate app registration) — the one extra setup step is entirely
+	 * on Telegram's side: the bot's domain has to be authorized for the
+	 * widget via @BotFather's `/setdomain` command, or Telegram simply
+	 * refuses to render/authenticate it. Independent of TELEGRAM_ENABLED_
+	 * OPTION above (that one is specifically "respond to bot messages")
+	 * — the widget only needs a valid token, not the message webhook.
+	 */
+	const TELEGRAM_LOGIN_ENABLED_OPTION = 'yeffoprint_telegram_login_enabled';
+
+	/**
 	 * Also read by includes/accounts/class-social-login.php — same
 	 * reasoning as the options above. Direct request: "allow users to
 	 * login with Google/Apple/Discord" — Google and Discord shipped
@@ -610,6 +625,20 @@ class YeffoPrint_Admin_Menu {
 			'yeffoprint_telegram'
 		);
 
+		register_setting( 'yeffoprint_settings', self::TELEGRAM_LOGIN_ENABLED_OPTION, [
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		] );
+
+		add_settings_field(
+			self::TELEGRAM_LOGIN_ENABLED_OPTION,
+			__( 'Log in with Telegram', 'yeffoprint-core' ),
+			[ $this, 'render_telegram_login_enabled_field' ],
+			'yeffoprint-settings',
+			'yeffoprint_telegram'
+		);
+
 		register_setting( 'yeffoprint_settings', self::GOOGLE_LOGIN_ENABLED_OPTION, [ 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => false ] );
 		register_setting( 'yeffoprint_settings', self::GOOGLE_CLIENT_ID_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
 		register_setting( 'yeffoprint_settings', self::GOOGLE_CLIENT_SECRET_OPTION, [ 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field', 'default' => '' ] );
@@ -748,6 +777,22 @@ class YeffoPrint_Admin_Menu {
 			placeholder="123456789"
 		/>
 		<p class="description"><?php esc_html_e( 'Message /whoami to the bot from your own Telegram account to get this number. New paid orders, custom design requests, and Contact form messages get sent here.', 'yeffoprint-core' ); ?></p>
+		<?php
+	}
+
+	public function render_telegram_login_enabled_field(): void {
+		$enabled = (bool) get_option( self::TELEGRAM_LOGIN_ENABLED_OPTION, false );
+		?>
+		<input type="hidden" name="<?php echo esc_attr( self::TELEGRAM_LOGIN_ENABLED_OPTION ); ?>" value="0" />
+		<label>
+			<input
+				type="checkbox"
+				name="<?php echo esc_attr( self::TELEGRAM_LOGIN_ENABLED_OPTION ); ?>"
+				value="1"
+				<?php checked( $enabled ); ?>
+			/> <?php esc_html_e( 'Show a "Log in with Telegram" button on the login/account pages', 'yeffoprint-core' ); ?>
+		</label>
+		<p class="description"><?php esc_html_e( 'Uses the same bot token above — no separate app registration needed. One extra step on Telegram\'s side, though: message @BotFather with /setdomain and authorize this site\'s domain, or Telegram will refuse to render the button.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 

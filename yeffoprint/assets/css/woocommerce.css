@@ -520,6 +520,17 @@
 	flex: 1 1 320px;
 }
 
+/* Placeholder-email nag (class-account-endpoints.php's
+   render_placeholder_email_banner()) — unlike the one-time Connect
+   Telegram banner above, this keeps showing until resolved and
+   actually blocks checkout, so it reads as more urgent: a magenta
+   accent border instead of the plain neutral background. */
+.yp-telegram-banner--warning {
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--magenta-deep);
+	border-left-width: 4px;
+}
+
 .yp-telegram-code {
 	display: inline-block;
 	padding: 0.5rem 0.9rem;
