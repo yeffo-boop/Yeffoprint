@@ -78,6 +78,13 @@ class YeffoPrint_Pages_Setup_Command {
 			'',
 			'web-design.html'
 		);
+
+		$this->create_page(
+			'web-design-quote',
+			__( 'Web Design Quote Request', 'yeffoprint-core' ),
+			'',
+			'web-design-quote.html'
+		);
 	}
 
 	private function create_page( string $slug, string $title, string $content, string $template = '' ): void {
