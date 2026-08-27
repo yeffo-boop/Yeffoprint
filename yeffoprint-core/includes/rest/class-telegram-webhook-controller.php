@@ -1,7 +1,9 @@
 <?php
 /**
  * Receives incoming updates from Telegram (direct request: a Telegram
- * bot answering FAQs and order-status questions). Registered with
+ * bot answering FAQs and order-status questions, later extended to
+ * proof approve/reject button taps — class-telegram-callback-handler.php).
+ * Registered with
  * Telegram via `setWebhook` (class-telegram-webhook-sync.php, kept in
  * sync with the Settings-screen bot token/on-off toggle) rather than
  * long-polling — a REST route Telegram calls fits this plugin's
@@ -61,7 +63,21 @@ class YeffoPrint_Telegram_Webhook_Controller {
 			return rest_ensure_response( [ 'ok' => true ] );
 		}
 
-		$update  = $request->get_json_params();
+		$update = $request->get_json_params();
+
+		// Button taps (direct request: approve/reject a proof right from
+		// the bot) — a different update shape entirely, dispatched to a
+		// different handler than the plain-text messages below. See
+		// class-telegram-callback-handler.php.
+		$callback_query = is_array( $update ) ? ( $update['callback_query'] ?? null ) : null;
+		if ( is_array( $callback_query ) ) {
+			$chat_id = (int) ( $callback_query['message']['chat']['id'] ?? 0 );
+			if ( $chat_id && ! $this->is_rate_limited( $chat_id ) ) {
+				( new YeffoPrint_Telegram_Callback_Handler() )->handle( $callback_query, YeffoPrint_Telegram_Settings::get_bot_token() );
+			}
+			return rest_ensure_response( [ 'ok' => true ] );
+		}
+
 		$message = is_array( $update ) ? ( $update['message'] ?? $update['edited_message'] ?? null ) : null;
 
 		if ( ! is_array( $message ) || empty( $message['chat']['id'] ) || ! isset( $message['text'] ) || ! is_string( $message['text'] ) ) {

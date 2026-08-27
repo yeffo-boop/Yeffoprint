@@ -121,6 +121,8 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-message-handler.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-admin-alerts.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-order-notifications.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-account-link.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-callback-handler.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-telegram-webhook-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();

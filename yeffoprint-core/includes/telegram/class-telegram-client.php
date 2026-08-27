@@ -1,9 +1,10 @@
 <?php
 /**
  * Thin wrapper over the Telegram Bot API — outbound calls only
- * (sendMessage, setWebhook, deleteWebhook, getWebhookInfo). Inbound
- * updates arrive at class-telegram-webhook-controller.php instead, so
- * this class never needs to know about commands/FAQ/order lookup.
+ * (sendMessage, answerCallbackQuery, getMe, setWebhook, deleteWebhook,
+ * getWebhookInfo). Inbound updates arrive at class-telegram-webhook-
+ * controller.php instead, so this class never needs to know about
+ * commands/FAQ/order lookup/proof approval.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -18,14 +19,49 @@ class YeffoPrint_Telegram_Client {
 		$this->token = $token;
 	}
 
-	public function send_message( int $chat_id, string $text ): bool {
-		$response = $this->call( 'sendMessage', [
+	/**
+	 * $inline_keyboard, when given, is a plain `[ [ ['text'=>.., 'callback_data'=>..], .. ], .. ]`
+	 * array (rows of buttons) — this class just JSON-encodes it into
+	 * Telegram's own `reply_markup` shape; callers (e.g.
+	 * class-telegram-order-notifications.php) build the button labels/
+	 * callback_data themselves.
+	 */
+	public function send_message( int $chat_id, string $text, ?array $inline_keyboard = null ): bool {
+		$params = [
 			'chat_id'                  => $chat_id,
 			'text'                     => $text,
 			'disable_web_page_preview' => true,
-		] );
+		];
+
+		if ( $inline_keyboard ) {
+			$params['reply_markup'] = wp_json_encode( [ 'inline_keyboard' => $inline_keyboard ] );
+		}
+
+		$response = $this->call( 'sendMessage', $params );
 
 		return ! is_wp_error( $response );
+	}
+
+	/**
+	 * Acknowledges a button tap (Telegram's own requirement — the
+	 * tapped button shows a loading spinner/error state to the customer
+	 * until this is called, or a few seconds pass and Telegram gives up
+	 * waiting). $text, if given, shows as a small transient toast/alert
+	 * in the customer's Telegram client — used for a quick "Approved!"
+	 * without needing a whole extra sendMessage call.
+	 */
+	public function answer_callback_query( string $callback_query_id, string $text = '' ): bool {
+		$response = $this->call( 'answerCallbackQuery', array_filter( [
+			'callback_query_id' => $callback_query_id,
+			'text'              => $text,
+		] ) );
+
+		return ! is_wp_error( $response );
+	}
+
+	/** @return array|\WP_Error */
+	public function get_me() {
+		return $this->call( 'getMe', [] );
 	}
 
 	/** @return array|\WP_Error */
@@ -33,7 +69,13 @@ class YeffoPrint_Telegram_Client {
 		return $this->call( 'setWebhook', [
 			'url'             => $url,
 			'secret_token'    => $secret_token,
-			'allowed_updates' => wp_json_encode( [ 'message' ] ),
+			// 'callback_query' (direct request: approve/reject a proof
+			// right from the bot) added alongside the original 'message'
+			// — see class-telegram-webhook-sync.php's version-bump-triggered
+			// re-sync for why an existing, already-registered webhook
+			// actually picks this up after a deploy rather than needing an
+			// admin to re-save Settings.
+			'allowed_updates' => wp_json_encode( [ 'message', 'callback_query' ] ),
 		] );
 	}
 

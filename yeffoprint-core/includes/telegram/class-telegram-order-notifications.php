@@ -8,6 +8,14 @@
  * command, and no new access rule either: linking a chat to an order
  * only ever happens right after the exact same order-number +
  * checkout-email check that already gates reading that order's status.
+ *
+ * A proof-related notification (on_proof_ready(), on_reminder_due())
+ * additionally attaches Approve/Reject buttons for any linked chat
+ * that's ALSO account-linked (class-telegram-account-link.php) to that
+ * Custom Order's own owner — see notify_order()'s own docblock. That's
+ * a stronger, separate trust bar than this class's own order-scoped
+ * linking above; a chat linked only via order+email lookup still gets
+ * the plain notification, never buttons.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -68,14 +76,17 @@ class YeffoPrint_Telegram_Order_Notifications {
 
 		// The guest-access proof-approval link (class-proof-meta.php's
 		// own customer email uses the exact same one) — no separate
-		// account/token needed for the Telegram-linked chat either.
+		// account/token needed for the Telegram-linked chat either. Still
+		// included even for a chat that's about to get Approve/Reject
+		// buttons too (below), since the link works from anywhere the
+		// buttons don't (a browser, a different device).
 		$url = function_exists( 'yeffoprint_core_proof_approval_url' ) ? yeffoprint_core_proof_approval_url( $custom_order_id ) : '';
 
 		$text = $url
 			? sprintf( /* translators: %s: proof approval link */ __( "Your custom label proof is ready to review:\n\n%s", 'yeffoprint-core' ), $url )
 			: __( 'Your custom label proof is ready to review — check your email for the link.', 'yeffoprint-core' );
 
-		$this->notify_order( $order, $text );
+		$this->notify_order( $order, $text, $custom_order_id );
 	}
 
 	/** class-proof-reminder-scheduler.php's 24h/48h nudge — same guest-access link, just a shorter/more urgent line since the full proof-ready text already went out to this chat once. */
@@ -96,18 +107,35 @@ class YeffoPrint_Telegram_Order_Notifications {
 			? sprintf( /* translators: %s: proof approval link */ __( "Still waiting on your OK for this proof — take a look when you get a chance:\n\n%s", 'yeffoprint-core' ), $url )
 			: sprintf( /* translators: %s: proof approval link */ __( "Friendly reminder — your proof is still waiting on your review:\n\n%s", 'yeffoprint-core' ), $url );
 
-		$this->notify_order( $order, $text );
+		$this->notify_order( $order, $text, $custom_order_id );
 	}
 
-	private function notify_order( \WC_Order $order, string $text ): void {
+	/**
+	 * $custom_order_id, when given, is a proof-related notification
+	 * (proof-ready or a reminder) — each linked chat that's ALSO
+	 * account-linked (class-telegram-account-link.php) to that Custom
+	 * Order's own owner gets Approve/Reject buttons attached, so tapping
+	 * one talks to the actual customer, not just whichever chat once
+	 * looked this order up. Every other linked chat (order-linked but
+	 * not account-linked, or account-linked to someone else) still gets
+	 * the plain text/link, unchanged — buttons are additive, not a
+	 * replacement for the existing notification.
+	 */
+	private function notify_order( \WC_Order $order, string $text, int $custom_order_id = 0 ): void {
 		$token = YeffoPrint_Telegram_Settings::get_bot_token();
 		if ( '' === $token || ! YeffoPrint_Telegram_Settings::is_enabled() ) {
 			return;
 		}
 
-		$client = new YeffoPrint_Telegram_Client( $token );
+		$client   = new YeffoPrint_Telegram_Client( $token );
+		$keyboard = $custom_order_id ? [ [
+			[ 'text' => __( '✅ Approve', 'yeffoprint-core' ), 'callback_data' => 'proof_approve:' . $custom_order_id ],
+			[ 'text' => __( '✏️ Request changes', 'yeffoprint-core' ), 'callback_data' => 'proof_reject:' . $custom_order_id ],
+		] ] : null;
+
 		foreach ( self::chat_ids( $order ) as $chat_id ) {
-			$client->send_message( $chat_id, $text );
+			$buttons = ( $keyboard && YeffoPrint_Telegram_Callback_Handler::chat_owns_order( $chat_id, $custom_order_id ) ) ? $keyboard : null;
+			$client->send_message( $chat_id, $text, $buttons );
 		}
 	}
 

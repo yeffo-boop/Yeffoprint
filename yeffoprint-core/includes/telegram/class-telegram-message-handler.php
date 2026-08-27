@@ -21,14 +21,42 @@ class YeffoPrint_Telegram_Message_Handler {
 			return $this->handle_pending_escalation( $chat_id, $text, $from );
 		}
 
+		// A tapped "Request changes" button (class-telegram-callback-
+		// handler.php) leaves this chat waiting for the customer's next
+		// message to use as their change-request notes — checked before
+		// any command routing, same "pending state short-circuits
+		// everything else" shape as the escalation check above, just with
+		// the payload arriving *after* the prompt rather than before it.
+		if ( YeffoPrint_Telegram_Callback_Handler::has_pending_reject( $chat_id ) ) {
+			return $this->handle_pending_reject( $chat_id, $text );
+		}
+
 		if ( '' === $text ) {
 			return $this->help_text();
 		}
 
 		$command = strtolower( strtok( $text, " \n" ) ?: '' );
 
-		if ( in_array( $command, [ '/start', '/help' ], true ) ) {
+		// `/start link_CODE` — the deep-link button on My Account's
+		// "Connect Telegram" tab (class-account-endpoints.php) opens the
+		// chat and taps Telegram's own "Start" button for the customer,
+		// which delivers exactly this as the chat's first message. Typed
+		// `/link CODE` (below) is the same flow for someone typing it by
+		// hand instead of tapping the button.
+		if ( '/start' === $command ) {
+			$payload = trim( substr( $text, strlen( $command ) ) );
+			if ( 0 === strpos( $payload, 'link_' ) ) {
+				return $this->link_account_reply( substr( $payload, 5 ), $chat_id );
+			}
 			return $this->help_text();
+		}
+
+		if ( '/help' === $command ) {
+			return $this->help_text();
+		}
+
+		if ( '/link' === $command ) {
+			return $this->link_account_reply( trim( substr( $text, strlen( $command ) ) ), $chat_id );
 		}
 
 		if ( in_array( $command, [ '/whoami', '/id' ], true ) ) {
@@ -71,6 +99,37 @@ class YeffoPrint_Telegram_Message_Handler {
 
 		YeffoPrint_Telegram_Escalation::clear( $chat_id );
 		return __( "No problem — I won't send that. Try /help or /faq, or ask me something else.", 'yeffoprint-core' );
+	}
+
+	private function handle_pending_reject( int $chat_id, string $text ): string {
+		$custom_order_id = YeffoPrint_Telegram_Callback_Handler::consume_pending_reject( $chat_id );
+
+		if ( ! $custom_order_id || '' === trim( $text ) ) {
+			return __( "No changes were recorded — send a message describing what you'd like changed, or /help for other commands.", 'yeffoprint-core' );
+		}
+
+		return YeffoPrint_Telegram_Callback_Handler::apply_reject( $custom_order_id, $text );
+	}
+
+	/**
+	 * Completes an account link (class-telegram-account-link.php) started
+	 * from My Account's "Connect Telegram" tab — via either a typed
+	 * `/link CODE` or a `/start link_CODE` deep link, both routed here.
+	 */
+	private function link_account_reply( string $code, int $chat_id ): string {
+		if ( '' === trim( $code ) ) {
+			return __( "To connect your account, open My Account → Connect Telegram on the site and follow the instructions there.", 'yeffoprint-core' );
+		}
+
+		$user_id = YeffoPrint_Telegram_Account_Link::consume_code( $code );
+
+		if ( ! $user_id ) {
+			return __( "That code has expired or isn't valid. Head back to My Account → Connect Telegram on the site to get a fresh one.", 'yeffoprint-core' );
+		}
+
+		YeffoPrint_Telegram_Account_Link::link( $user_id, $chat_id );
+
+		return __( "You're connected! I'll message you here about your orders — including a chance to approve or request changes on a proof right from this chat.", 'yeffoprint-core' );
 	}
 
 	private function order_status_reply( string $args_text, int $chat_id ): string {
@@ -151,8 +210,9 @@ class YeffoPrint_Telegram_Message_Handler {
 			"Hi! I'm the YeffoPrint order & FAQ bot. I can help with:\n\n" .
 			"📦 Order status — send your order number and checkout email, e.g. \"YP-1042 jane@example.com\"\n" .
 			"🔁 Reorder — /reorder plus your order number and email\n" .
+			"🔗 Connect your account — /link plus the code from My Account → Connect Telegram, so I can message you directly and let you approve proofs right here\n" .
 			"❓ Questions — ask about sizes, materials, shipping, the custom design fee, or accounts\n\n" .
-			'Commands: /order, /reorder, /faq, /help',
+			'Commands: /order, /reorder, /link, /faq, /help',
 			'yeffoprint-core'
 		);
 	}
