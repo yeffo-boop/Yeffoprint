@@ -54,6 +54,29 @@ class YeffoPrint_Order_Item_Meta {
 	}
 
 	public function snapshot( \WC_Order_Item_Product $item, string $cart_item_key, array $values, \WC_Order $order ): void {
+		self::apply( $item, $values );
+	}
+
+	/**
+	 * The actual snapshot logic — split out from snapshot() above so it's
+	 * callable outside the `woocommerce_checkout_create_order_line_item`
+	 * hook, which only ever fires inside `WC_Checkout::create_order()`.
+	 * Never read `$cart_item_key`/`$order` to begin with, so this is a
+	 * pure extraction: same behavior, just usable by code building an
+	 * order directly (e.g. class-manual-order-creator.php) instead of
+	 * through checkout.
+	 *
+	 * $tier_quantity: left null for the checkout hook (unchanged
+	 * behavior — YeffoPrint_Cart_Pricing::calculate_for_cart_item()
+	 * defaults it to the live cart's own combined quantity, correct
+	 * there since checkout always runs against a real, fully-populated
+	 * cart). A caller with no cart at all — the manual-order creator,
+	 * which never touches WC()->cart — passes the combined quantity of
+	 * its own batch explicitly instead, so the price snapshotted here
+	 * matches the price it actually charged rather than silently
+	 * defaulting to an empty/irrelevant admin session cart.
+	 */
+	public static function apply( \WC_Order_Item_Product $item, array $values, ?int $tier_quantity = null ): void {
 		$custom_order_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ?? 0 );
 
 		// Checked first, same reason as class-cart-pricing.php's
@@ -61,12 +84,12 @@ class YeffoPrint_Order_Item_Meta {
 		// TOTAL_QTY, same shape as a Custom Design labels item, but
 		// needs its own snapshot fields (type/shape/custom dimensions).
 		if ( $custom_order_id && ! empty( $values[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
-			$this->snapshot_custom_sticker( $item, $custom_order_id, $values );
+			self::snapshot_custom_sticker( $item, $custom_order_id, $values );
 			return;
 		}
 
 		if ( $custom_order_id && empty( $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
-			$this->snapshot_custom_order_fee( $item, $custom_order_id );
+			self::snapshot_custom_order_fee( $item, $custom_order_id );
 			return;
 		}
 
@@ -77,7 +100,7 @@ class YeffoPrint_Order_Item_Meta {
 		$size_id     = (int) ( $values[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
 		$material_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
 		$quantity    = (int) $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
-		$pricing     = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values );
+		$pricing     = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values, $tier_quantity );
 
 		if ( $custom_order_id ) {
 			// A Custom Order's own labels: same Size/Material/pricing
@@ -89,7 +112,7 @@ class YeffoPrint_Order_Item_Meta {
 			// splits across multiple line items here specifically.
 			$row_index         = (int) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ROW_INDEX ] ?? 0 );
 			$compound_strength = (string) ( $values[ YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH ] ?? '' );
-			$this->snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength );
+			self::snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength );
 			return;
 		}
 
@@ -103,8 +126,8 @@ class YeffoPrint_Order_Item_Meta {
 			'field_schema' => $field_schema,
 		] ), true );
 
-		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( $this->record_snapshot( $size_id ) ), true );
-		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( $this->record_snapshot( $material_id ) ), true );
+		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( self::record_snapshot( $size_id ) ), true );
+		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( self::record_snapshot( $material_id ) ), true );
 		$item->add_meta_data( '_yp_variants', wp_json_encode( $variants ), true );
 		$item->add_meta_data( '_yp_batch_quantity', $quantity, true );
 		$item->add_meta_data( '_yp_pricing_snapshot', wp_json_encode( $pricing ), true );
@@ -115,13 +138,13 @@ class YeffoPrint_Order_Item_Meta {
 		$item->add_meta_data( __( 'Material', 'yeffoprint-core' ), $material_id ? get_the_title( $material_id ) : '—', true );
 		$item->add_meta_data( __( 'Labels in this batch', 'yeffoprint-core' ), count( $variants ), true );
 
-		$this->add_variant_rows( $item, $variants, $field_schema );
+		self::add_variant_rows( $item, $variants, $field_schema );
 	}
 
-	private function snapshot_custom_order_labels( \WC_Order_Item_Product $item, int $custom_order_id, int $size_id, int $material_id, int $quantity, ?array $pricing, int $row_index = 0, string $compound_strength = '' ): void {
+	private static function snapshot_custom_order_labels( \WC_Order_Item_Product $item, int $custom_order_id, int $size_id, int $material_id, int $quantity, ?array $pricing, int $row_index = 0, string $compound_strength = '' ): void {
 		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
-		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( $this->record_snapshot( $size_id ) ), true );
-		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( $this->record_snapshot( $material_id ) ), true );
+		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( self::record_snapshot( $size_id ) ), true );
+		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( self::record_snapshot( $material_id ) ), true );
 		$item->add_meta_data( '_yp_batch_quantity', $quantity, true );
 		$item->add_meta_data( '_yp_pricing_snapshot', wp_json_encode( $pricing ), true );
 		// Batching-only fields — a pre-batching order's single labels item
@@ -138,7 +161,7 @@ class YeffoPrint_Order_Item_Meta {
 	}
 
 	/** Custom Stickers' own line item — same shape as snapshot_custom_order_labels() above, this flow's own fields (type/shape/size, including the custom-dimensions tier) instead. */
-	private function snapshot_custom_sticker( \WC_Order_Item_Product $item, int $custom_order_id, array $values ): void {
+	private static function snapshot_custom_sticker( \WC_Order_Item_Product $item, int $custom_order_id, array $values ): void {
 		$size_id           = (int) ( $values[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
 		$material_id       = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
 		$sticker_type      = (string) ( $values[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ?? '' );
@@ -150,8 +173,8 @@ class YeffoPrint_Order_Item_Meta {
 		$pricing           = YeffoPrint_Cart_Pricing::calculate_sticker_for_cart_item( $values );
 
 		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
-		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( $this->record_snapshot( $size_id ) ), true );
-		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( $this->record_snapshot( $material_id ) ), true );
+		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( self::record_snapshot( $size_id ) ), true );
+		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( self::record_snapshot( $material_id ) ), true );
 		$item->add_meta_data( '_yp_sticker_type', $sticker_type, true );
 		$item->add_meta_data( '_yp_shape', $shape, true );
 		$item->add_meta_data( '_yp_batch_quantity', $quantity, true );
@@ -177,7 +200,7 @@ class YeffoPrint_Order_Item_Meta {
 	 * on the order screen and in customer emails even though it's the
 	 * one thing staff actually need to know what to print.
 	 */
-	private function add_variant_rows( \WC_Order_Item_Product $item, array $variants, array $field_schema ): void {
+	private static function add_variant_rows( \WC_Order_Item_Product $item, array $variants, array $field_schema ): void {
 		$multiple = count( $variants ) > 1;
 
 		foreach ( $variants as $index => $variant ) {
@@ -199,12 +222,12 @@ class YeffoPrint_Order_Item_Meta {
 		}
 	}
 
-	private function snapshot_custom_order_fee( \WC_Order_Item_Product $item, int $custom_order_id ): void {
+	private static function snapshot_custom_order_fee( \WC_Order_Item_Product $item, int $custom_order_id ): void {
 		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
 		$item->add_meta_data( __( 'Custom Design Request', 'yeffoprint-core' ), $custom_order_id ? get_the_title( $custom_order_id ) : '—', true );
 	}
 
-	private function record_snapshot( int $post_id ): array {
+	private static function record_snapshot( int $post_id ): array {
 		if ( ! $post_id ) {
 			return [];
 		}
