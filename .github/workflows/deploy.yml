@@ -9,6 +9,9 @@ on:
   push:
     branches: [Prod]
 
+# Test marker — confirms this workflow actually fires end-to-end on a
+# real push to Prod. Safe to remove once verified.
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
