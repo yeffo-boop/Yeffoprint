@@ -27,10 +27,17 @@ class YeffoPrint_Promo_Themes {
 	 *   bg:string, glow_a:string, glow_b:string, ink:string,
 	 *   ink_soft:string, accent:string, accent_ink:string,
 	 *   bars:array{0:string,1:string,2:string}, code_bg:string,
-	 *   code_ink:string, icon:string
+	 *   code_ink:string, icon:string, cta_label?:string, cta_url?:string
 	 * }> Keyed by a stable slug (stored in the option; never rename a
 	 *    key that's shipped, or an existing site's saved selection
 	 *    silently falls back to the default).
+	 *
+	 * `cta_label`/`cta_url` are optional — every seasonal theme omits
+	 * them and gets render.php's default "Shop the Sale" → /shop-labels/
+	 * (a literal discount code always applies there). A theme that isn't
+	 * actually a labels discount, like `web-design-launch` below, sets
+	 * both so its button says and does the right thing instead of
+	 * sending a web-design lead to the label shop.
 	 */
 	public static function all(): array {
 		return [
@@ -249,6 +256,40 @@ class YeffoPrint_Promo_Themes {
 				'code_bg'    => '#F5F3EC',
 				'code_ink'   => '#0E1F16',
 				'icon'       => '<line x1="12" y1="3" x2="12" y2="21"/><line x1="4.5" y1="7.5" x2="19.5" y2="16.5"/><line x1="19.5" y1="7.5" x2="4.5" y2="16.5"/><path d="M12 6l-1.6 1M12 6l1.6 1M12 18l-1.6-1M12 18l1.6-1" stroke-width="1.1"/><path d="M6.7 9l.4-1.8M6.7 9l-1.8-.4M17.3 15l-.4 1.8M17.3 15l1.8.4" stroke-width="1.1"/><path d="M17.3 9l.4-1.8M17.3 9l1.8-.4M6.7 15l-.4 1.8M6.7 15l-1.8-.4" stroke-width="1.1"/>',
+			],
+
+			/**
+			 * Not seasonal — always available to switch to whenever the
+			 * new Web Design service (yeffoprint/web-design/) needs a
+			 * homepage push, direct request: "design one and add it to
+			 * the list... announcing the new web design service." Recolored
+			 * with the brand's own actual CMY colors for `bars` rather than
+			 * a themed palette (every seasonal entry above recolors away
+			 * from the brand mark on purpose; this one IS the brand,
+			 * launching a new offering, so it keeps them). `cta_label`/
+			 * `cta_url` override render.php's "Shop the Sale" → /shop-
+			 * labels/ default, since sending a web-design lead into the
+			 * label shop would be a broken funnel, not a cosmetic detail.
+			 */
+			'web-design-launch' => [
+				'label'      => __( 'Web Design Launch', 'yeffoprint-core' ),
+				'eyebrow'    => __( 'New Service', 'yeffoprint-core' ),
+				/* translators: %s: the admin-entered offer, e.g. "15% off your first project" */
+				'headline'   => __( 'Now offering web design — %s', 'yeffoprint-core' ),
+				'body'       => __( 'Custom, WooCommerce-ready websites built and launched for you — from first draft to going live, hosting and ongoing support available.', 'yeffoprint-core' ),
+				'bg'         => '#0B1420',
+				'glow_a'     => 'rgba(0,174,239,.30)',
+				'glow_b'     => 'rgba(236,0,140,.30)',
+				'ink'        => '#FAF9F6',
+				'ink_soft'   => '#B9C2CC',
+				'accent'     => '#00AEEF',
+				'accent_ink' => '#0B1420',
+				'bars'       => [ '#00AEEF', '#EC008C', '#FFF200' ],
+				'code_bg'    => '#FAF9F6',
+				'code_ink'   => '#0B1420',
+				'icon'       => '<rect x="3" y="5" width="18" height="14" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="6" cy="7" r=".6" fill="currentColor" stroke="none"/><circle cx="8.4" cy="7" r=".6" fill="currentColor" stroke="none"/><circle cx="10.8" cy="7" r=".6" fill="currentColor" stroke="none"/><rect x="6" y="12" width="5" height="4"/><line x1="13" y1="12.5" x2="18" y2="12.5"/><line x1="13" y1="15" x2="16.5" y2="15"/>',
+				'cta_label'  => __( 'Explore Web Design', 'yeffoprint-core' ),
+				'cta_url'    => home_url( '/web-design/' ),
 			],
 		];
 	}
