@@ -102,9 +102,11 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-seed-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-shipping-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-pages-setup-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-migrate-command.php';
 			( new YeffoPrint_Seed_Command() )->register();
 			( new YeffoPrint_Shipping_Setup_Command() )->register();
 			( new YeffoPrint_Pages_Setup_Command() )->register();
+			( new YeffoPrint_Migrate_Command() )->register();
 		}
 	}
 }
