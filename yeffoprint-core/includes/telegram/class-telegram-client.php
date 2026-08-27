@@ -1,10 +1,10 @@
 <?php
 /**
  * Thin wrapper over the Telegram Bot API — outbound calls only
- * (sendMessage, answerCallbackQuery, getMe, setWebhook, deleteWebhook,
- * getWebhookInfo). Inbound updates arrive at class-telegram-webhook-
- * controller.php instead, so this class never needs to know about
- * commands/FAQ/order lookup/proof approval.
+ * (sendMessage, sendPhoto, sendDocument, answerCallbackQuery, getMe,
+ * setWebhook, deleteWebhook, getWebhookInfo). Inbound updates arrive at
+ * class-telegram-webhook-controller.php instead, so this class never
+ * needs to know about commands/FAQ/order lookup/proof approval.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -38,6 +38,41 @@ class YeffoPrint_Telegram_Client {
 		}
 
 		$response = $this->call( 'sendMessage', $params );
+
+		return ! is_wp_error( $response );
+	}
+
+	/**
+	 * Posts the actual proof image inline in the chat (direct follow-up
+	 * report: buttons alone let a customer approve/reject "blind,"
+	 * without ever seeing what they're responding to) — Telegram fetches
+	 * $photo_url itself server-side, same as it would for a link
+	 * preview, so this needs no file upload/multipart handling on our
+	 * end. $caption is the same text send_message() would otherwise
+	 * send (1024-char Telegram cap — comfortably clear of anything this
+	 * plugin's own proof-notification copy ever generates).
+	 */
+	public function send_photo( int $chat_id, string $photo_url, string $caption = '', ?array $inline_keyboard = null ): bool {
+		return $this->send_media( 'sendPhoto', 'photo', $chat_id, $photo_url, $caption, $inline_keyboard );
+	}
+
+	/** Same as send_photo() but for a non-image proof file (a PDF, say) Telegram can't render as a photo — still lets the customer open/preview it from within Telegram rather than needing the web link. */
+	public function send_document( int $chat_id, string $document_url, string $caption = '', ?array $inline_keyboard = null ): bool {
+		return $this->send_media( 'sendDocument', 'document', $chat_id, $document_url, $caption, $inline_keyboard );
+	}
+
+	private function send_media( string $method, string $media_param, int $chat_id, string $media_url, string $caption, ?array $inline_keyboard ): bool {
+		$params = [
+			'chat_id'     => $chat_id,
+			$media_param  => $media_url,
+			'caption'     => $caption,
+		];
+
+		if ( $inline_keyboard ) {
+			$params['reply_markup'] = wp_json_encode( [ 'inline_keyboard' => $inline_keyboard ] );
+		}
+
+		$response = $this->call( $method, $params );
 
 		return ! is_wp_error( $response );
 	}
