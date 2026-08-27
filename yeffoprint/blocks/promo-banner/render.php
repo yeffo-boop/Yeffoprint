@@ -33,6 +33,13 @@ if ( ! $theme || '' === $code || '' === $offer ) {
 	return;
 }
 
+// Every seasonal theme omits these and gets the discount-shop default
+// below unchanged; a non-discount theme like `web-design-launch` sets
+// both so the button says and does the right thing instead of sending
+// that lead into the label shop.
+$cta_label = $theme['cta_label'] ?? __( 'Shop the Sale', 'yeffoprint-core' );
+$cta_url   = $theme['cta_url'] ?? home_url( '/shop-labels/' );
+
 $style = sprintf(
 	'--yp-promo-bg:%1$s;--yp-promo-glow-a:%2$s;--yp-promo-glow-b:%3$s;--yp-promo-ink:%4$s;--yp-promo-ink-soft:%5$s;--yp-promo-accent:%6$s;--yp-promo-accent-ink:%7$s;--yp-promo-bar-1:%8$s;--yp-promo-bar-2:%9$s;--yp-promo-bar-3:%10$s;--yp-promo-code-bg:%11$s;--yp-promo-code-ink:%12$s;',
 	esc_attr( $theme['bg'] ),
@@ -62,8 +69,8 @@ $style = sprintf(
 					<span class="yp-promo__code-label"><?php esc_html_e( 'Code', 'yeffoprint-core' ); ?></span>
 					<span class="yp-promo__code-value"><?php echo esc_html( $code ); ?></span>
 				</span>
-				<a class="yp-promo__cta" href="<?php echo esc_url( home_url( '/shop-labels/' ) ); ?>">
-					<?php esc_html_e( 'Shop the Sale', 'yeffoprint-core' ); ?> &rarr;
+				<a class="yp-promo__cta" href="<?php echo esc_url( $cta_url ); ?>">
+					<?php echo esc_html( $cta_label ); ?> &rarr;
 				</a>
 			</div>
 		</div>
