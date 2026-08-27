@@ -441,7 +441,40 @@ main.wp-block-group {
 
 /* ---------- Buttons ---------- */
 
+/*
+ * A real base box model (padding/radius/color/font), not just the
+ * transition below — needed as an explicit rule here because who
+ * renders this markup matters. On the storefront, a Gutenberg button
+ * block is `<div class="wp-block-button is-style-…"><a class="wp-block-button__link">`,
+ * and WordPress's own generated global-styles stylesheet (from
+ * theme.json's styles.blocks.core/button) already supplies the base box
+ * model for that `<a>` on the front end. The admin app
+ * (assets/admin-app/*.js) instead builds `<button class="wp-block-button__link is-style-…">`
+ * directly — no wrapping `.wp-block-button` at all — and wp-admin never
+ * loads that generated stylesheet; YeffoPrint_Admin_Token_Bridge only
+ * bridges the `--wp--…` custom properties, not element rules (see that
+ * class's own docblock for the exact same *class* of bug: "looks like
+ * no styling at all," there for every token-dependent style, here for
+ * buttons specifically). Direct report: the admin app's Create Order
+ * forms "look unfinished" — root cause was every button on every admin
+ * screen rendering with zero of this component's intended styling.
+ * Restated in full here so the component is self-sufficient regardless
+ * of context — duplicates, rather than conflicts with, theme.json's own
+ * numbers on the front end.
+ */
 .wp-block-button__link {
+	display: inline-block;
+	border: 0;
+	border-radius: var(--wp--custom--radius--input);
+	padding: 0.85rem 1.75rem;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
+	font-family: var(--wp--preset--font-family--body);
+	font-size: var(--wp--preset--font-size--medium);
+	font-weight: 600;
+	line-height: normal;
+	text-decoration: none;
+	cursor: pointer;
 	transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
@@ -449,18 +482,34 @@ main.wp-block-group {
 	transform: translateY(1px);
 }
 
-.wp-block-button.is-style-outline .wp-block-button__link {
+.wp-block-button__link:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	transform: none;
+}
+
+/*
+ * Two selector forms per variant, for the same reason as the base rule
+ * above: the storefront's own markup puts the style class on the
+ * wrapping `.wp-block-button`, while the admin app puts it directly on
+ * `.wp-block-button__link` with no wrapper — neither selector alone
+ * matches both shapes.
+ */
+.wp-block-button.is-style-outline .wp-block-button__link,
+.wp-block-button__link.is-style-outline {
 	border: 1.5px solid var(--wp--preset--color--near-black);
 	color: var(--wp--preset--color--near-black);
 	background: transparent;
 }
 
-.wp-block-button.is-style-outline .wp-block-button__link:hover {
+.wp-block-button.is-style-outline .wp-block-button__link:hover,
+.wp-block-button__link.is-style-outline:hover {
 	background: var(--wp--preset--color--near-black);
 	color: var(--wp--preset--color--warm-white);
 }
 
-.wp-block-button.is-style-accent .wp-block-button__link {
+.wp-block-button.is-style-accent .wp-block-button__link,
+.wp-block-button__link.is-style-accent {
 	/* "deep" variant: white button text on top needs to meet contrast,
 	   which the brighter decorative gradient (used for washes/glows
 	   elsewhere) doesn't reliably clear at its cyan end. */
@@ -472,7 +521,8 @@ main.wp-block-group {
 	transition: background-position 300ms ease, box-shadow 200ms ease, transform 150ms ease;
 }
 
-.wp-block-button.is-style-accent .wp-block-button__link:hover {
+.wp-block-button.is-style-accent .wp-block-button__link:hover,
+.wp-block-button__link.is-style-accent:hover {
 	background-position: 100% 50%;
 	box-shadow: 0 10px 28px rgba(0, 174, 239, 0.35);
 	transform: translateY(-1px);

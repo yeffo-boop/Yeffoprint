@@ -198,6 +198,20 @@
 	gap: var(--wp--preset--spacing--sm);
 }
 
+/* Three fields in one row (e.g. manual-order.js's Type/Shape/Quantity) — plain .yp-form__row's 2-column grid would strand a 3rd field alone on its own row with an empty cell beside it. */
+.yp-form__row--three {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: var(--wp--preset--spacing--sm);
+}
+
+@media (max-width: 620px) {
+	.yp-form__row,
+	.yp-form__row--three {
+		grid-template-columns: 1fr;
+	}
+}
+
 .yp-field {
 	display: flex;
 	flex-direction: column;
@@ -212,6 +226,10 @@
 .yp-field input[type="text"],
 .yp-field input[type="number"],
 .yp-field input[type="url"],
+.yp-field input[type="email"],
+.yp-field input[type="tel"],
+.yp-field input[type="password"],
+.yp-field input[type="date"],
 .yp-field select,
 .yp-field textarea {
 	font-family: var(--wp--preset--font-family--body);
@@ -294,6 +312,7 @@
 .yp-form__actions {
 	display: flex;
 	align-items: center;
+	flex-wrap: wrap;
 	gap: 0.75rem;
 	margin-top: 0.25rem;
 }

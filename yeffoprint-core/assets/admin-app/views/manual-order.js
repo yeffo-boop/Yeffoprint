@@ -121,7 +121,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Order type</h2></div>' +
-					'<div class="yp-form__row">' +
+					'<div class="yp-form__actions">' +
 						'<button type="button" class="wp-block-button__link ' + ( 'custom_design' === state.orderType ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="custom_design">Custom Design</button>' +
 						'<button type="button" class="wp-block-button__link ' + ( 'sticker' === state.orderType ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="sticker">Custom Sticker</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" disabled title="Coming soon">Template Label</button>' +
@@ -288,7 +288,7 @@
 						'<div class="yp-field"><label for="yp-mo-sticker-width">Width (in)</label><input type="number" min="0.1" step="0.01" id="yp-mo-sticker-width" /></div>' +
 						'<div class="yp-field"><label for="yp-mo-sticker-height">Height (in)</label><input type="number" min="0.1" step="0.01" id="yp-mo-sticker-height" /></div>' +
 					'</div>' +
-					'<div class="yp-form__row">' +
+					'<div class="yp-form__row--three">' +
 						'<div class="yp-field"><label for="yp-mo-sticker-type">Type</label><select id="yp-mo-sticker-type">' +
 							'<option value="">Choose a type…</option>' +
 							Object.keys( o.sticker_types ).map( function ( key ) {
