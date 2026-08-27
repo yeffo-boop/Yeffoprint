@@ -186,10 +186,15 @@ body.login .forgetmenot {
 	/* WordPress core floats this left by default; #loginform's flex
 	 * layout (above) already neutralizes float entirely on its children
 	 * — same reason no clear:both is needed on .submit below either — so
-	 * there's nothing left to override here. */
+	 * there's nothing left to override here. margin-bottom does need
+	 * !important, though: core's own login.min.css sets spacing here via
+	 * an ID-anchored selector (#loginform p, effectively), which beat
+	 * this rule's plain-class specificity every time before — the actual
+	 * reason the Remember Me→Log In gap kept looking thin across every
+	 * earlier attempt at fixing it, not the margin value itself. */
 	font-size: 0.875rem;
 	color: #3A3A3C;
-	margin-bottom: 0.75rem;
+	margin-bottom: 1.5rem !important;
 }
 
 body.login .forgetmenot input[type="checkbox"] {
@@ -203,7 +208,7 @@ body.login .wp-hide-pw .dashicons {
 /* ---------- Submit button — same accent gradient/hover treatment as .wp-block-button.is-style-accent elsewhere on the site ---------- */
 
 body.login .submit {
-	margin-top: 1.25rem;
+	margin-top: 1.5rem !important; /* see .forgetmenot's own comment — needs !important for the same reason, to actually beat core's ID-anchored spacing rather than silently lose to it. */
 }
 
 body.login #wp-submit {
