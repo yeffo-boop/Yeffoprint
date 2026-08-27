@@ -3,8 +3,8 @@
  * Pure command-routing/reply-text logic for an incoming Telegram
  * message — kept separate from class-telegram-webhook-controller.php
  * so the Telegram-plumbing (secret token, JSON update shape, actually
- * calling sendMessage) and the actual FAQ/order-status/escalation
- * behavior don't live in the same class.
+ * calling sendMessage) and the actual FAQ/order-status/search/
+ * escalation behavior don't live in the same class.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -71,6 +71,10 @@ class YeffoPrint_Telegram_Message_Handler {
 			return $this->reorder_reply( trim( substr( $text, strlen( $command ) ) ) );
 		}
 
+		if ( in_array( $command, [ '/search', '/find' ], true ) ) {
+			return $this->search_reply( trim( substr( $text, strlen( $command ) ) ) );
+		}
+
 		if ( '/faq' === $command ) {
 			return YeffoPrint_Telegram_Faq::topics_text();
 		}
@@ -85,6 +89,17 @@ class YeffoPrint_Telegram_Message_Handler {
 		$faq_answer = YeffoPrint_Telegram_Faq::match( $text );
 		if ( $faq_answer ) {
 			return $faq_answer;
+		}
+
+		// Last resort before escalating to a human: try it as a design
+		// search — direct report, "help me find the labs label" got
+		// escalated instead of just finding it. Only ever replaces
+		// escalation when this actually turns up a match; a query that
+		// finds nothing here (most non-design questions) falls through
+		// to escalation exactly as before, unchanged.
+		$search_reply = YeffoPrint_Telegram_Template_Search::reply( $text );
+		if ( $search_reply ) {
+			return $search_reply;
 		}
 
 		YeffoPrint_Telegram_Escalation::store_pending( $chat_id, $text );
@@ -189,6 +204,18 @@ class YeffoPrint_Telegram_Message_Handler {
 		return implode( "\n", $lines );
 	}
 
+	private function search_reply( string $query ): string {
+		if ( '' === $query ) {
+			return __( "Tell me what you're looking for, like:\n/search labs", 'yeffoprint-core' );
+		}
+
+		return YeffoPrint_Telegram_Template_Search::reply( $query ) ?? sprintf(
+			/* translators: %s: link to browse the full design gallery */
+			__( "I couldn't find a design matching that. Browse the full gallery instead:\n%s", 'yeffoprint-core' ),
+			home_url( '/shop-labels/' )
+		);
+	}
+
 	/** @return array{order_ref:string,email:string}|null */
 	private static function extract_order_ref_and_email( string $text ): ?array {
 		if ( ! preg_match( '/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/', $text, $email_match ) ) {
@@ -210,9 +237,10 @@ class YeffoPrint_Telegram_Message_Handler {
 			"Hi! I'm the YeffoPrint order & FAQ bot. I can help with:\n\n" .
 			"📦 Order status — send your order number and checkout email, e.g. \"YP-1042 jane@example.com\"\n" .
 			"🔁 Reorder — /reorder plus your order number and email\n" .
+			"🔍 Find a design — /search plus a name or keyword, e.g. \"/search labs\"\n" .
 			"🔗 Connect your account — /link plus the code from My Account → Connect Telegram, so I can message you directly and let you approve proofs right here\n" .
 			"❓ Questions — ask about sizes, materials, shipping, the custom design fee, or accounts\n\n" .
-			'Commands: /order, /reorder, /link, /faq, /help',
+			'Commands: /order, /reorder, /search, /link, /faq, /help',
 			'yeffoprint-core'
 		);
 	}
