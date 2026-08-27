@@ -101,8 +101,17 @@ class YeffoPrint_Order_Item_Meta {
 		$material_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
 		$quantity    = (int) $values[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
 		$pricing     = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values, $tier_quantity );
+		$template_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
 
-		if ( $custom_order_id ) {
+		// TEMPLATE_ID is checked first: a manually-created Template order
+		// requiring proof approval (class-manual-order-creator.php) also
+		// carries CUSTOM_ORDER_ID, same as a Custom Design labels row, but
+		// it's a real Template + field_schema/variants underneath, not a
+		// Custom Design batch row — the customer-facing checkout flow
+		// never sets both at once (a Template add-to-cart never has a
+		// CUSTOM_ORDER_ID; a Custom Design labels row never has a
+		// TEMPLATE_ID), so this only ever branches for that one new path.
+		if ( $custom_order_id && ! $template_id ) {
 			// A Custom Order's own labels: same Size/Material/pricing
 			// snapshot shape as a Template batch, but there's no
 			// template/field_schema/variants behind it (Architecture §2).
@@ -116,9 +125,18 @@ class YeffoPrint_Order_Item_Meta {
 			return;
 		}
 
-		$template_id  = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
 		$variants     = (array) ( $values[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [] );
 		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+
+		if ( $custom_order_id ) {
+			// Only ever set here for a manually-created Template order
+			// with proof approval requested — an ordinary checkout-driven
+			// Template batch never has one. Same _yp_custom_order_id key
+			// link_paid_custom_orders() already scans every line item for,
+			// generically, regardless of product — no new linking code
+			// needed for this to work.
+			$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
+		}
 
 		$item->add_meta_data( '_yp_template_snapshot', wp_json_encode( [
 			'id'           => $template_id,

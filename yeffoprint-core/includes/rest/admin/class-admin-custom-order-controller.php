@@ -147,13 +147,18 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			return get_post_meta( $post->ID, $key, true );
 		};
 
-		$order_type = YeffoPrint_Custom_Order_Meta::get_order_type( $post->ID );
-		$is_sticker = 'sticker' === $order_type;
-		$status     = (string) $m( YeffoPrint_Custom_Order_Meta::STATUS );
+		$order_type  = YeffoPrint_Custom_Order_Meta::get_order_type( $post->ID );
+		$is_sticker  = 'sticker' === $order_type;
+		$is_template = 'template' === $order_type;
+		$status      = (string) $m( YeffoPrint_Custom_Order_Meta::STATUS );
 		$wc_order_id = (int) $m( YeffoPrint_Custom_Order_Meta::WC_ORDER_ID );
 
-		$customer_provided_design = ! $is_sticker && (bool) $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_PROVIDED_DESIGN );
-		$source_custom_order_id   = $is_sticker ? 0 : (int) $m( YeffoPrint_Custom_Order_Meta::SOURCE_CUSTOM_ORDER_ID );
+		// Reorder/fee-skip are Custom Design ('label') concepts only —
+		// a Template order was never eligible for either (it's priced
+		// exactly like a normal checkout batch, no fee to skip in the
+		// first place), same as Custom Stickers already excludes itself.
+		$customer_provided_design = 'label' === $order_type && (bool) $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_PROVIDED_DESIGN );
+		$source_custom_order_id   = 'label' === $order_type ? (int) $m( YeffoPrint_Custom_Order_Meta::SOURCE_CUSTOM_ORDER_ID ) : 0;
 
 		$payload = [
 			'id'                  => $post->ID,
@@ -200,6 +205,31 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 				'quantity'           => (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ),
 				'instructions'       => (string) $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ),
 				'artwork_uploads'    => $this->upload_payload( (array) $m( YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS ) ),
+			];
+		} elseif ( $is_template ) {
+			$template_id = (int) $m( YeffoPrint_Custom_Order_Meta::TEMPLATE_ID );
+			$size_id     = (int) $m( YeffoPrint_Custom_Order_Meta::SIZE_ID );
+			$material_id = (int) $m( YeffoPrint_Custom_Order_Meta::MATERIAL_ID );
+
+			$raw_variants = (string) $m( YeffoPrint_Custom_Order_Meta::TEMPLATE_VARIANTS );
+			$variants     = $raw_variants ? json_decode( $raw_variants, true ) : null;
+			$variants     = is_array( $variants ) ? $variants : [];
+			$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+
+			$payload['template'] = [
+				'template_id'    => $template_id,
+				'template_title' => $template_id ? get_the_title( $template_id ) : '',
+				'size_id'        => $size_id,
+				'size_label'     => $size_id ? get_the_title( $size_id ) : '',
+				'material_id'    => $material_id,
+				'material_label' => $material_id ? get_the_title( $material_id ) : '',
+				'variants'       => array_map( static function ( array $variant ) use ( $field_schema ) {
+					return [
+						'quantity' => (int) ( $variant['quantity'] ?? 0 ),
+						'summary'  => YeffoPrint_Field_Schema::format_variant_summary( $variant, $field_schema ),
+					];
+				}, $variants ),
+				'instructions'   => (string) $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ),
 			];
 		} else {
 			$batch_rows = array_map( function ( array $row ) {

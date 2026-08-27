@@ -20,21 +20,30 @@ class YeffoPrint_Custom_Order_Meta {
 	/**
 	 * Which flow created this request — 'label' (Fully Custom Design,
 	 * PROJECT_SPEC §13, the only value that existed before Custom
-	 * Stickers) or 'sticker' (Custom Stickers). Defaults to 'label' via
-	 * get_order_type() below so every pre-existing CustomOrder, which
-	 * has no meta row for this at all, keeps behaving exactly as before
-	 * without a migration. SIZE_ID/MATERIAL_ID/QUANTITY are reused as-is
-	 * for both flows — a size/material/quantity is a size/material/
-	 * quantity regardless of which product it's for; SIZE_ID just
-	 * points at a yp_size post for a label order and a yp_sticker_size
-	 * post for a sticker one, which every reader of this record already
-	 * has to branch on ORDER_TYPE for anyway.
+	 * Stickers), 'sticker' (Custom Stickers), or 'template' (a real
+	 * Template order manually created via the admin app's "Create Order"
+	 * screen with proof approval requested — see class-manual-order-
+	 * creator.php's own docblock for why this is the one case that needs
+	 * its own ORDER_TYPE: unlike 'label'/'sticker', which are both
+	 * freeform Custom Design/Sticker submissions, a 'template' shell
+	 * wraps a real, existing yp_template + its own field_schema/variants,
+	 * something the customer-facing flow never routes through the proof-
+	 * approval pipeline at all — only staff manually opting in to it can).
+	 * Defaults to 'label' via get_order_type() below so every pre-existing
+	 * CustomOrder, which has no meta row for this at all, keeps behaving
+	 * exactly as before without a migration. SIZE_ID/MATERIAL_ID/QUANTITY
+	 * are reused as-is across all three flows — a size/material/quantity
+	 * is a size/material/quantity regardless of which product it's for;
+	 * SIZE_ID just points at a yp_size post for a label or template order
+	 * and a yp_sticker_size post for a sticker one, which every reader of
+	 * this record already has to branch on ORDER_TYPE for anyway.
 	 */
 	public const ORDER_TYPE = '_yp_order_type';
 
 	public const ORDER_TYPES = [
-		'label'   => 'Custom Label',
-		'sticker' => 'Custom Sticker',
+		'label'    => 'Custom Label',
+		'sticker'  => 'Custom Sticker',
+		'template' => 'Template Label',
 	];
 
 	public const SIZE_ID             = '_yp_size_id';
@@ -61,6 +70,17 @@ class YeffoPrint_Custom_Order_Meta {
 	/** Sticker orders only, and only meaningful when SIZE_ID points at the Sticker Size marked is_custom — the customer's own entered dimensions. */
 	public const CUSTOM_WIDTH_IN     = '_yp_custom_width_in';
 	public const CUSTOM_HEIGHT_IN    = '_yp_custom_height_in';
+	/** Template orders only — the yp_template this shell wraps. */
+	public const TEMPLATE_ID         = '_yp_co_template_id';
+	/**
+	 * Template orders only — a JSON-encoded array of
+	 * { quantity, values: { field_id: value } }, same shape as a cart
+	 * item's own VARIANTS (YeffoPrint_Cart_Item_Keys) — one entry per
+	 * distinct customization in the batch, exactly what
+	 * YeffoPrint_Field_Schema::sanitize_variants() already validates for
+	 * every other entry point into this data shape.
+	 */
+	public const TEMPLATE_VARIANTS   = '_yp_co_template_variants';
 	public const DESIGN_FEE          = '_yp_design_fee';
 	public const STATUS              = '_yp_status';
 	public const WC_ORDER_ID         = '_yp_wc_order_id';

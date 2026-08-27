@@ -175,6 +175,20 @@
 				rowsHtml += row( 'Quantity', String( s.quantity ) );
 				rowsHtml += row( 'Instructions', s.instructions ? YP.escapeHtml( s.instructions ).replace( /\n/g, '<br>' ) : '—' );
 				rowsHtml += row( 'Artwork Files', uploadListHtml( s.artwork_uploads ) );
+			} else if ( 'template' === order.order_type ) {
+				var t = order.template;
+				rowsHtml += row( 'Design', YP.escapeHtml( t.template_title || '—' ) );
+				rowsHtml += row( 'Size', YP.escapeHtml( t.size_label || '—' ) );
+				rowsHtml += row( 'Material', YP.escapeHtml( t.material_label || '—' ) );
+				rowsHtml += row(
+					'Batch',
+					'<table class="yp-record-table"><thead><tr><th>Qty</th><th>Customization</th></tr></thead><tbody>' +
+						t.variants.map( function ( v ) {
+							return '<tr><td>' + v.quantity + '</td><td>' + ( v.summary ? YP.escapeHtml( v.summary ) : '—' ) + '</td></tr>';
+						} ).join( '' ) +
+					'</tbody></table>'
+				);
+				rowsHtml += row( 'Instructions', t.instructions ? YP.escapeHtml( t.instructions ).replace( /\n/g, '<br>' ) : '—' );
 			} else {
 				var l = order.label;
 				rowsHtml += row( 'Brand Name', YP.escapeHtml( l.brand_name || '—' ) );
@@ -192,7 +206,7 @@
 			}
 
 			rowsHtml += row(
-				'sticker' === order.order_type ? 'Amount Paid' : 'Design Fee',
+				'label' === order.order_type ? 'Design Fee' : 'Amount Paid',
 				order.fee_skipped
 					? '$0.00 — fee skipped'
 					: ( order.design_fee ? '$' + order.design_fee.toFixed( 2 ) + ' — paid' : 'Awaiting payment' )
