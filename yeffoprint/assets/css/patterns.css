@@ -1321,6 +1321,91 @@
 	opacity: 0.85;
 }
 
+/* ---------- Multi-banner rotation (2+ active themes) ----------
+   Direct request: "select more than one active promo banner and have
+   it slide through the active ones." Only one `.yp-promo--slide` is
+   ever laid out at a time (display:none on the rest) rather than an
+   absolutely-positioned crossfade stack — themes vary slightly in copy
+   length, and this sidesteps needing a JS-measured shared height
+   entirely; the brief fade-in on activation still reads as a
+   transition. site.js's initPromoRotator() owns the timer/dot clicks;
+   this file only owns how each state looks. */
+
+.yp-promo-rotator {
+	position: relative;
+	overflow: hidden;
+	border-radius: var(--wp--custom--radius--container);
+	margin-top: var(--wp--preset--spacing--md) !important;
+}
+
+.yp-promo-rotator .yp-promo--slide {
+	display: none;
+	margin-top: 0 !important;
+}
+
+.yp-promo-rotator .yp-promo--slide.is-active {
+	display: block;
+	animation: yp-promo-fade-in 500ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yp-promo-rotator .yp-promo--slide.is-active {
+		animation: none;
+	}
+}
+
+@keyframes yp-promo-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.yp-promo-rotator .yp-promo__grid {
+	/* Room for the dot pill below, on top of the CTA row's own spacing. */
+	padding-bottom: calc(var(--wp--preset--spacing--lg) + 1.75rem);
+}
+
+/* A translucent dark pill behind the dots, not theme-colored — the
+   active slide's own palette ranges from near-black to near-white
+   across the 13 themes, so a fixed light or dark dot alone would
+   disappear against roughly half of them. This reads on all of them. */
+.yp-promo-rotator__dots {
+	position: absolute;
+	bottom: 0.85rem;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 2;
+	display: flex;
+	gap: 0.4rem;
+	padding: 0.4rem 0.55rem;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.28);
+	backdrop-filter: blur(6px);
+}
+
+.yp-promo-rotator__dot {
+	width: 0.5rem;
+	height: 0.5rem;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.45);
+	cursor: pointer;
+	transition: background 150ms ease, transform 150ms ease;
+}
+
+.yp-promo-rotator__dot:hover {
+	background: rgba(255, 255, 255, 0.7);
+}
+
+.yp-promo-rotator__dot.is-active {
+	background: #ffffff;
+	transform: scale(1.3);
+}
+
 @media (max-width: 761px) {
 	.yp-promo__grid {
 		grid-template-columns: 1fr;

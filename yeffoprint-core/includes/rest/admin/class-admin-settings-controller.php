@@ -60,10 +60,7 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::LIVE_PREVIEW_ENABLED_OPTION, (bool) ( $params['live_preview_enabled'] ?? false ) );
 
 		update_option( $M::PROMO_ENABLED_OPTION, (bool) ( $params['promo_enabled'] ?? false ) );
-		$promo_theme = sanitize_key( (string) ( $params['promo_theme'] ?? '' ) );
-		update_option( $M::PROMO_THEME_OPTION, null !== YeffoPrint_Promo_Themes::get( $promo_theme ) ? $promo_theme : $M::PROMO_THEME_DEFAULT );
-		update_option( $M::PROMO_OFFER_OPTION, sanitize_text_field( (string) ( $params['promo_offer'] ?? '' ) ) );
-		update_option( $M::PROMO_CODE_OPTION, sanitize_text_field( (string) ( $params['promo_code'] ?? '' ) ) );
+		$M::save_promo_banners( is_array( $params['promo_banners'] ?? null ) ? $params['promo_banners'] : [] );
 
 		update_option( $M::CONTACT_RECIPIENT_EMAIL_OPTION, sanitize_email( (string) ( $params['contact_recipient_email'] ?? '' ) ) );
 
@@ -115,9 +112,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			'usps_consumer_secret'       => (string) get_option( $M::USPS_CONSUMER_SECRET_OPTION, '' ),
 			'live_preview_enabled'       => (bool) get_option( $M::LIVE_PREVIEW_ENABLED_OPTION, true ),
 			'promo_enabled'              => (bool) get_option( $M::PROMO_ENABLED_OPTION, false ),
-			'promo_theme'                => (string) get_option( $M::PROMO_THEME_OPTION, $M::PROMO_THEME_DEFAULT ),
-			'promo_offer'                => (string) get_option( $M::PROMO_OFFER_OPTION, $M::PROMO_OFFER_DEFAULT ),
-			'promo_code'                 => (string) get_option( $M::PROMO_CODE_OPTION, '' ),
+			'promo_banners'              => $M::get_promo_banners(),
 			'promo_themes'               => $promo_themes,
 			'contact_recipient_email'    => (string) get_option( $M::CONTACT_RECIPIENT_EMAIL_OPTION, $M::CONTACT_RECIPIENT_EMAIL_DEFAULT ),
 			'splash_enabled'             => (bool) get_option( $M::SPLASH_ENABLED_OPTION, false ),

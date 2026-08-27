@@ -304,6 +304,93 @@
 		openDrawer( splash );
 	}
 
+	/* ---------- Homepage promo rotator (2+ active banners) ---------- */
+
+	/**
+	 * Only present in the markup at all once render.php actually has 2+
+	 * active banners to rotate (blocks/promo-banner/render.php) — a
+	 * single active banner renders as a bare `.yp-promo` with no
+	 * `.yp-promo-rotator` wrapper, so this is a no-op on that page and
+	 * every other page site-wide. Auto-advances on a timer, pauses on
+	 * hover/keyboard focus (a countdown a reader can't stop is a real
+	 * accessibility problem, not a nicety), and skips the timer
+	 * entirely under prefers-reduced-motion — manual dot navigation
+	 * still works either way.
+	 */
+	function initPromoRotator() {
+		var rotator = document.querySelector( '.yp-promo-rotator' );
+		if ( ! rotator ) {
+			return;
+		}
+
+		var slides = Array.prototype.slice.call( rotator.querySelectorAll( '.yp-promo--slide' ) );
+		var dots = Array.prototype.slice.call( rotator.querySelectorAll( '.yp-promo-rotator__dot' ) );
+		if ( slides.length < 2 ) {
+			return;
+		}
+
+		var INTERVAL_MS = 7000;
+		var reducedMotion = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+		var current = 0;
+		var timer = null;
+
+		function show( index ) {
+			slides[ current ].classList.remove( 'is-active' );
+			slides[ current ].setAttribute( 'aria-hidden', 'true' );
+			if ( dots[ current ] ) {
+				dots[ current ].classList.remove( 'is-active' );
+			}
+
+			current = index;
+
+			slides[ current ].classList.add( 'is-active' );
+			slides[ current ].removeAttribute( 'aria-hidden' );
+			if ( dots[ current ] ) {
+				dots[ current ].classList.add( 'is-active' );
+			}
+		}
+
+		function start() {
+			if ( reducedMotion || timer ) {
+				return;
+			}
+			timer = window.setInterval( function () {
+				show( ( current + 1 ) % slides.length );
+			}, INTERVAL_MS );
+		}
+
+		function stop() {
+			if ( timer ) {
+				window.clearInterval( timer );
+				timer = null;
+			}
+		}
+
+		dots.forEach( function ( dot, index ) {
+			dot.addEventListener( 'click', function () {
+				if ( index === current ) {
+					return;
+				}
+				show( index );
+				// Restart the countdown fresh rather than letting a manual
+				// pick get auto-advanced away moments later.
+				stop();
+				start();
+			} );
+		} );
+
+		rotator.addEventListener( 'mouseenter', stop );
+		rotator.addEventListener( 'mouseleave', start );
+		rotator.addEventListener( 'focusin', stop );
+		rotator.addEventListener( 'focusout', function ( event ) {
+			if ( ! rotator.contains( event.relatedTarget ) ) {
+				start();
+			}
+		} );
+
+		start();
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initHeaderScroll();
 		initDrawers();
@@ -311,5 +398,6 @@
 		initCartDrawer();
 		initSplashScreen();
 		initReferralCopy();
+		initPromoRotator();
 	} );
 } )();
