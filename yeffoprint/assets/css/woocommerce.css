@@ -9,24 +9,33 @@
  * Cart and Checkout pages use the WooCommerce Cart/Checkout *blocks*
  * (Store API), not the classic [woocommerce_cart]/[woocommerce_checkout]
  * shortcodes — most of this file's classic-only selectors (.col2-set,
- * #order_review, table.shop_table) have therefore never applied on the
- * live site at all. Kept for the My Account pages, which are still
- * classic templates regardless (confirmed unaffected), but the block
- * classes below (wc-block-*) are what actually render Cart/Checkout —
- * this only adds decorative styling (color/radius/shadow/spacing) on
- * top of WooCommerce Blocks' own structural layout CSS, not a rebuilt
- * layout, since that base CSS is already correct and I can't verify a
- * rebuilt one visually from here. Class names are WooCommerce's
- * documented, stable Blocks theming API; if anything doesn't land
- * pixel-perfect, a screenshot beats guessing further blind.
+ * #order_review, table.shop_table) don't apply on the main Cart/Checkout
+ * pages themselves for that reason. They DO apply on two other classic-
+ * template surfaces though: the My Account pages (confirmed working),
+ * and — direct report, a screenshot showing none of this file's styling
+ * at all on that page — the "Pay for order" page
+ * (checkout/order-pay/{id}, reached from a declined-payment retry link
+ * or an admin-created order's own payment link). WooCommerce never
+ * rebuilt that one page on top of the Checkout block; it always falls
+ * back to the classic checkout/form-pay.php template
+ * (Checkout.php::render()'s own is_checkout_endpoint() check). The
+ * screenshot showed literally nothing from this file landing there —
+ * not a specificity loss (there'd be partial styling), but this file's
+ * own enqueue gate in functions.php never actually firing for that
+ * endpoint — fixed there by also checking is_wc_endpoint_url() directly
+ * rather than trusting is_checkout() alone to cover it.
+ *
+ * Class names are WooCommerce's documented, stable Blocks theming API;
+ * if anything doesn't land pixel-perfect, a screenshot beats guessing
+ * further blind.
  */
 
 .woocommerce-cart .entry-content,
 .woocommerce-checkout .entry-content,
 .woocommerce-account .entry-content {
-	max-width: 1200px;
-	margin-inline: auto;
-	padding: var(--wp--preset--spacing--md) var(--wp--preset--spacing--sm) var(--wp--preset--spacing--xl);
+	max-width: 1200px !important;
+	margin-inline: auto !important;
+	padding: var(--wp--preset--spacing--md) var(--wp--preset--spacing--sm) var(--wp--preset--spacing--xl) !important;
 }
 
 /* Buttons: classic (.button) and block (.wp-block-button-ish) share our token-based look already via theme.json's button element styles — just tighten a few WooCommerce-specific ones. */
@@ -34,8 +43,7 @@
 .woocommerce button.button,
 .woocommerce input.button,
 .wc-block-cart__submit-container .wc-block-cart__submit-button,
-.wc-block-components-checkout-place-order-button,
-#place_order {
+.wc-block-components-checkout-place-order-button {
 	border-radius: var(--wp--custom--radius--input) !important;
 	background: var(--wp--preset--color--near-black) !important;
 	color: var(--wp--preset--color--warm-white) !important;
@@ -44,26 +52,54 @@
 
 .woocommerce a.button:hover,
 .woocommerce button.button:hover,
-.wc-block-components-checkout-place-order-button:hover,
-#place_order:hover {
+.wc-block-components-checkout-place-order-button:hover {
 	background: var(--wp--preset--color--charcoal) !important;
+}
+
+/* The "Pay for order" page's own submit — the one classic-checkout
+   button real customers actually click through to a charge, same weight
+   as the accent-gradient primary CTA used everywhere else a customer
+   commits to paying (login's #wp-submit, .is-style-accent buttons site-
+   wide) rather than the flatter near-black treatment every other plain
+   .button gets. #place_order only ever renders on this one classic page
+   (the Checkout/Cart *blocks* this site actually uses for a normal order
+   have their own submit button, styled above), so this doesn't touch
+   anything else. */
+.woocommerce #place_order {
+	width: 100%;
+	border-radius: var(--wp--custom--radius--input) !important;
+	background: var(--wp--custom--gradient-brand-deep) !important;
+	background-size: 160% 160%;
+	background-position: 0% 50%;
+	color: var(--wp--preset--color--white) !important;
+	border: none !important;
+	box-shadow: 0 8px 22px rgba(236, 0, 140, 0.28);
+	padding: 0.9rem 1.5rem !important;
+	font-weight: 600;
+	transition: background-position 300ms ease, box-shadow 200ms ease, transform 150ms ease;
+}
+
+.woocommerce #place_order:hover {
+	background-position: 100% 50%;
+	box-shadow: 0 10px 28px rgba(0, 174, 239, 0.35);
+	transform: translateY(-1px);
 }
 
 /* Tables */
 .woocommerce table.shop_table,
 .woocommerce-checkout-review-order-table {
-	border-radius: var(--wp--custom--radius--card);
-	border-collapse: separate;
-	border-spacing: 0;
+	border-radius: var(--wp--custom--radius--card) !important;
+	border-collapse: separate !important;
+	border-spacing: 0 !important;
 	overflow: hidden;
-	box-shadow: var(--wp--custom--shadow-elevation--low);
+	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
 }
 
 .woocommerce table.shop_table th,
 .woocommerce table.shop_table td {
-	border: none;
-	border-bottom: 1px solid var(--wp--preset--color--light-gray);
-	padding: 1rem;
+	border: none !important;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray) !important;
+	padding: 1rem !important;
 }
 
 /* Form fields: classic + block */
@@ -78,9 +114,9 @@
 
 /* Checkout two-column layout (classic already does this structurally via .col2-set; this just gives it breathing room and a right-column card treatment matching PROJECT_SPEC §14: "left contact/shipping/payment + right order summary"). */
 .woocommerce-checkout .col2-set {
-	display: grid;
+	display: grid !important;
 	grid-template-columns: 1fr;
-	gap: var(--wp--preset--spacing--lg);
+	gap: var(--wp--preset--spacing--lg) !important;
 }
 
 @media (min-width: 961px) {
@@ -97,6 +133,28 @@
 	padding: var(--wp--preset--spacing--md) !important;
 	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
 	align-self: start;
+}
+
+/* On the normal (two-column) Checkout page, #order_review is just the
+   right-column summary the rule above styles as a sidebar card — but
+   this site's real Checkout renders via the Cart/Checkout *blocks*
+   (this file's own top comment), which never uses the classic #order_review
+   ID at all. In practice #order_review only ever exists on the one
+   classic-template page that still renders it regardless: "Pay for
+   order" (checkout/order-pay/{id}), where it wraps the *entire* page —
+   product table, payment methods, submit button — not a sidebar. A
+   little extra width and its own bottom margin on the table inside make
+   it read as the page's one content card rather than a cramped sidebar
+   still trying to fit a full page's worth of content. */
+.woocommerce-checkout #order_review {
+	max-width: 640px;
+	margin-inline: auto;
+	padding: var(--wp--preset--spacing--lg) !important;
+}
+
+.woocommerce-checkout #order_review table.shop_table {
+	margin-bottom: var(--wp--preset--spacing--md);
+	box-shadow: none !important;
 }
 
 /* ---------- Cart & Checkout blocks (Store API) ----------
@@ -227,28 +285,29 @@
    block version above (card border, radius, checked state), rebuilt
    against the classic selectors this one page actually renders. */
 .wc_payment_methods {
-	list-style: none;
-	margin: 0 0 1.5rem;
-	padding: 0;
+	list-style: none !important;
+	margin: 0 0 1.5rem !important;
+	padding: 0 !important;
 }
 
 .wc_payment_methods .wc_payment_method {
 	position: relative;
-	border: 1.5px solid var(--wp--preset--color--light-gray);
-	border-radius: var(--wp--custom--radius--control);
-	margin-bottom: 0.6rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray) !important;
+	border-radius: var(--wp--custom--radius--control) !important;
+	margin-bottom: 0.6rem !important;
 	transition: border-color 150ms ease, box-shadow 150ms ease;
 	overflow: hidden;
 }
 
 .wc_payment_methods .wc_payment_method:has(> input.input-radio:checked) {
-	border-color: var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black) !important;
 	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
 }
 
 .wc_payment_methods .wc_payment_method > label {
 	display: block;
-	padding: 0.85rem 1rem 0.85rem 3rem;
+	padding: 0.85rem 1rem 0.85rem 3rem !important;
+	margin: 0 !important;
 	cursor: pointer;
 }
 
@@ -257,20 +316,20 @@
    checkouts sit one click apart (a declined payment sends the customer
    straight back here) and shouldn't look like different sites. */
 .wc_payment_methods .wc_payment_method > input.input-radio {
-	appearance: none;
-	position: absolute;
+	appearance: none !important;
+	position: absolute !important;
 	left: 1rem;
 	top: 1.05rem;
-	width: 20px;
-	height: 20px;
-	margin: 0;
-	border: 1px solid var(--wp--preset--color--charcoal);
-	border-radius: 50%;
-	background: var(--wp--preset--color--white);
+	width: 20px !important;
+	height: 20px !important;
+	margin: 0 !important;
+	border: 1px solid var(--wp--preset--color--charcoal) !important;
+	border-radius: 50% !important;
+	background: var(--wp--preset--color--white) !important;
 }
 
 .wc_payment_methods .wc_payment_method > input.input-radio:checked {
-	border-color: var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black) !important;
 }
 
 .wc_payment_methods .wc_payment_method > input.input-radio:checked::after {
@@ -282,10 +341,11 @@
 }
 
 .wc_payment_methods .payment_box {
-	background: var(--wp--preset--color--warm-white);
-	padding: 0 1rem 1rem 3rem;
+	background: var(--wp--preset--color--warm-white) !important;
+	padding: 0 1rem 1rem 3rem !important;
 	font-size: var(--wp--preset--font-size--small);
 	color: var(--wp--preset--color--charcoal);
+	margin: 0 !important;
 }
 
 /* The default theme draws a small css-triangle "speech bubble" arrow
@@ -296,6 +356,20 @@
    drop it than to keep re-deriving its position against both. */
 .wc_payment_methods .payment_box::before {
 	display: none;
+}
+
+/* The submit area below the payment method list — terms checkbox,
+   privacy-policy note, #place_order — same breathing room as every
+   other stacked section on this page rather than crowding straight
+   into the last payment option. */
+.woocommerce #payment .form-row {
+	margin-top: var(--wp--preset--spacing--sm) !important;
+}
+
+.woocommerce-privacy-policy-text {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin-bottom: 1rem !important;
 }
 
 .yp-blocks-payment-description {
