@@ -136,20 +136,34 @@
 			return null;
 		}
 
+		/**
+		 * Swapping two items' menu_order values silently does nothing once
+		 * they're already equal — which every material created here was,
+		 * since save() below never set menu_order on creation, defaulting
+		 * new records to 0 (same bug, same fix, as web-design-packages.js's
+		 * move()). Renumbering the whole list to match the new visual
+		 * order avoids that failure mode entirely and self-heals any
+		 * existing ties the moment a material is moved.
+		 */
 		function move( material, direction ) {
 			var index = allMaterials.indexOf( material );
 			var swapIndex = index + direction;
 			if ( ! material || swapIndex < 0 || swapIndex >= allMaterials.length ) {
 				return;
 			}
-			var neighbor = allMaterials[ swapIndex ];
-			var materialOrder = material.menu_order;
-			var neighborOrder = neighbor.menu_order;
 
-			Promise.all( [
-				YP.request( endpoint( '/' + material.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { menu_order: neighborOrder } ) } ),
-				YP.request( endpoint( '/' + neighbor.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { menu_order: materialOrder } ) } )
-			] ).then( load ).catch( function ( error ) {
+			var reordered = allMaterials.slice();
+			reordered.splice( index, 1 );
+			reordered.splice( swapIndex, 0, material );
+
+			var updates = [];
+			reordered.forEach( function ( m, i ) {
+				if ( m.menu_order !== i ) {
+					updates.push( YP.request( endpoint( '/' + m.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { menu_order: i } ) } ) );
+				}
+			} );
+
+			Promise.all( updates ).then( load ).catch( function ( error ) {
 				window.alert( 'Couldn’t reorder: ' + error.message );
 			} );
 		}
@@ -294,6 +308,9 @@
 			body.meta[ META.priceAdjustment ] = parseFloat( form.price_adjustment.value ) || 0;
 			body.meta[ META.hoverImage ] = parseInt( form.hover_image.value, 10 ) || 0;
 			body.meta[ META.inStock ] = form.in_stock.checked;
+			if ( ! existing ) {
+				body.menu_order = allMaterials.length; // New materials land at the end of the list, not menu_order 0 (see move()'s docblock above).
+			}
 
 			var url = existing ? endpoint( '/' + existing.id ) : endpoint();
 
