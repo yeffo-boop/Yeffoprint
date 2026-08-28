@@ -137,6 +137,14 @@ class YeffoPrint_Admin_Order_Controller {
 			// here.
 			'shipping_address'     => $order->get_formatted_shipping_address() ?: $order->get_formatted_billing_address(),
 			'payment_method_title' => $order->get_payment_method_title(),
+			// The shipping method(s) the customer actually selected at checkout (comma-joined titles
+			// of every shipping line item — same accessor WooCommerce Shipping's own order presenter
+			// reads, class-wc-connect-order-presenter.php). Direct request: since this store's 3
+			// shipping options are plain WooCommerce methods rather than WooCommerce Shipping's own
+			// live carrier-rate method, there's no order data linking them to a specific carrier
+			// service for that plugin to auto-select — this surfaces the choice as a plain string so
+			// the frontend can show it right next to the embedded label form instead.
+			'shipping_method'      => $order->get_shipping_method(),
 			'items'                => array_values( array_filter( array_map( [ $this, 'item_payload' ], $order->get_items() ) ) ),
 			'subtotal'             => (float) $order->get_subtotal(),
 			'shipping_total'       => (float) $order->get_shipping_total(),
