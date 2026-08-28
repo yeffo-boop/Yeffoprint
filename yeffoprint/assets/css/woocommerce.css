@@ -125,7 +125,6 @@
 	}
 }
 
-.woocommerce-checkout #order_review,
 .wc-block-checkout__sidebar,
 .wc-block-cart__sidebar {
 	background: var(--wp--preset--color--warm-white) !important;
@@ -135,26 +134,60 @@
 	align-self: start;
 }
 
-/* On the normal (two-column) Checkout page, #order_review is just the
-   right-column summary the rule above styles as a sidebar card — but
-   this site's real Checkout renders via the Cart/Checkout *blocks*
-   (this file's own top comment), which never uses the classic #order_review
-   ID at all. In practice #order_review only ever exists on the one
-   classic-template page that still renders it regardless: "Pay for
-   order" (checkout/order-pay/{id}), where it wraps the *entire* page —
-   product table, payment methods, submit button — not a sidebar. A
-   little extra width and its own bottom margin on the table inside make
-   it read as the page's one content card rather than a cramped sidebar
-   still trying to fit a full page's worth of content. */
+/* ---------- "Pay for order" page (checkout/order-pay/{id}) ----------
+   This site's real Checkout renders via the Cart/Checkout *blocks* (this
+   file's own top comment), which never uses the classic #order_review ID
+   at all — in practice it only ever exists on this one page, reached
+   from a declined-payment retry link or an admin-created order's own
+   payment link. Direct report ("split it into 2 columns... make it look
+   nicer"): its own heading (functions.php's the_content filter) plus a
+   real two-column layout — order summary left, payment method right —
+   rather than one undifferentiated block. #order_review's only two
+   direct children in WooCommerce's own checkout/form-pay.php are
+   table.shop_table and #payment, so this needs no template override —
+   they become the two grid columns as-is. */
 .woocommerce-checkout #order_review {
-	max-width: 640px;
+	max-width: 1040px;
 	margin-inline: auto;
-	padding: var(--wp--preset--spacing--lg) !important;
+	background: none !important;
+	box-shadow: none !important;
+	padding: 0 !important;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--wp--preset--spacing--lg);
+	align-items: start;
+}
+
+@media (min-width: 782px) {
+	.woocommerce-checkout #order_review {
+		grid-template-columns: 1.15fr 1fr;
+	}
 }
 
 .woocommerce-checkout #order_review table.shop_table {
-	margin-bottom: var(--wp--preset--spacing--md);
-	box-shadow: none !important;
+	margin: 0;
+}
+
+/* WooCommerce's own default (unbranded) frontend stylesheet — always
+   loaded, this theme or any other — puts a flat lavender-tinted
+   background directly on #payment (assets/css/woocommerce.css in the
+   plugin itself: `#payment { background: rgba(129,110,153,.14) }`),
+   which is exactly the "weird box around the payment methods" reported —
+   never a color this site's own palette produces. Reset here and given
+   its own real card treatment instead, so it reads as the deliberate
+   second column of this layout (matching the order-summary table's own
+   card look) rather than an unbranded default nobody asked for. */
+.woocommerce-checkout #order_review #payment {
+	background: var(--wp--preset--color--white) !important;
+	border-radius: var(--wp--custom--radius--card) !important;
+	box-shadow: var(--wp--custom--shadow-elevation--low) !important;
+	padding: var(--wp--preset--spacing--md) !important;
+}
+
+.yp-pay-page-heading {
+	max-width: 1040px;
+	margin: 0 auto var(--wp--preset--spacing--md);
+	font-family: var(--wp--preset--font-family--heading);
 }
 
 /* ---------- Cart & Checkout blocks (Store API) ----------
@@ -317,6 +350,7 @@
    straight back here) and shouldn't look like different sites. */
 .wc_payment_methods .wc_payment_method > input.input-radio {
 	appearance: none !important;
+	-webkit-appearance: none !important;
 	position: absolute !important;
 	left: 1rem;
 	top: 1.05rem;
@@ -346,6 +380,20 @@
 	font-size: var(--wp--preset--font-size--small);
 	color: var(--wp--preset--color--charcoal);
 	margin: 0 !important;
+}
+
+/* class-manual-payment-gateway.php's own "Pay with Venmo/Zelle" link
+   (payment_action_html()) — a real <a class="button">, so it already
+   inherits this file's own .woocommerce a.button treatment above by
+   class alone; this just gives it its own line and breathing room
+   inside the payment_box's tighter padding, direct request ("pay with
+   venmo button looks wrong") — it read as bare underlined text with no
+   button chrome at all when this file wasn't loading (see this file's
+   top comment on the enqueue-gate fix). */
+.wc_payment_methods .payment_box a.button {
+	display: inline-block !important;
+	margin: 0.75rem 0 0.5rem !important;
+	text-decoration: none !important;
 }
 
 /* The default theme draws a small css-triangle "speech bubble" arrow
