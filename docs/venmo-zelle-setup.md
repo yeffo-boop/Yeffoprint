@@ -111,6 +111,11 @@ function processLabel(labelName, method, webhookUrl) {
     // differently — this matches "$25.00" / "$1,234.56" style amounts.
     var amountMatch = body.match(/\$([0-9,]+\.\d{2})/);
     if (!amountMatch) {
+      // Logged, not silent — without this, a regex that doesn't match
+      // your real email's wording fails exactly like a webhook problem
+      // (label applied, nothing reaches the site, no error anywhere)
+      // with no way to tell the two apart from the Execution log.
+      Logger.log(method + ' payment: could not find a dollar amount in this email (subject: "' + thread.getFirstMessageSubject() + '") — check the regex above against this email\'s actual plain-text body.');
       thread.addLabel(processedLabel); // Don't retry something we can't parse.
       return;
     }
@@ -158,6 +163,19 @@ function processLabel(labelName, method, webhookUrl) {
    message in it, and that the regex in Step 3 actually matches your
    real email's wording (open the email, view its plain-text body, and
    test the pattern).
+
+**The single most common silent failure**: the thread gets labeled
+`-Processed` (so it looks like the script "handled" it) but the site
+never receives anything, because the amount regex didn't match your
+real email's exact wording — the script gives up on an email it can't
+parse rather than retrying it forever. The Execution log now says so
+explicitly ("could not find a dollar amount in this email"); if you're
+running an older copy of this script without that log line, add it (see
+the `if (!amountMatch)` block in Step 3) or just re-check the regex by
+hand against a real email's plain-text body. This is different from an
+actual webhook problem, where the log instead shows a real HTTP
+response — `{"status":"unmatched"}`/`{"status":"matched",...}` from the
+site, or an error if the URL/token is wrong.
 
 ## Step 5 — Automate it
 
