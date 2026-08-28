@@ -261,7 +261,7 @@
 			'<nav class="yp-app__nav" data-yp-nav-panel>' +
 				'<div class="yp-app__brand">' +
 					'<div class="yp-app__mark"></div>' +
-					'<div class="yp-app__wordmark">YeffoPrint</div>' +
+					'<div class="yp-app__wordmark">YeffoDesign</div>' +
 				'</div>' +
 				'<div class="yp-app__groups" data-yp-nav></div>' +
 				'<div class="yp-app__foot">' +
@@ -463,7 +463,7 @@
 		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false };
 	}
 
-	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction ) {
+	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction, clickAttr ) {
 		var body;
 		if ( ! rows.length ) {
 			body = '<p class="yp-field__hint">Nothing here right now.</p>';
@@ -473,7 +473,7 @@
 					rows.map( function ( row ) {
 						var age = daysAgoLabel( row.date, dueDateDays );
 						var label = onOrderClick
-							? '<button type="button" class="yp-row-action" style="padding:0;font-weight:600;" data-yp-dashboard-order="' + row.id + '">' + YP.escapeHtml( row.label ) + '</button>'
+							? '<button type="button" class="yp-row-action" style="padding:0;font-weight:600;" ' + ( clickAttr || 'data-yp-dashboard-order' ) + '="' + row.id + '">' + YP.escapeHtml( row.label ) + '</button>'
 							: '<a href="' + YP.escapeAttr( row.edit_url ) + '">' + YP.escapeHtml( row.label ) + '</a>';
 						return (
 							'<tr>' +
@@ -530,7 +530,7 @@
 		}
 
 		el.innerHTML =
-			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped.', summary.pending_orders_url, summary.pending_orders, dueDateDays, false, sendToPrinterButtonHtml ) +
+			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped.', summary.pending_orders_url, summary.pending_orders, dueDateDays, true, sendToPrinterButtonHtml, 'data-yp-wc-order' ) +
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Shipped Packages</h2></div>' +
 				'<p class="yp-panel__hint">Shipped, not yet delivered — every label with a tracking number currently in transit.</p>' +
@@ -550,6 +550,12 @@
 			} );
 		} );
 
+		el.querySelectorAll( '[data-yp-wc-order]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-wc-order' ), 10 ) );
+			} );
+		} );
+
 		el.querySelectorAll( '[data-yp-send-to-printer]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
 				var orderId = button.getAttribute( 'data-yp-send-to-printer' );
@@ -564,6 +570,128 @@
 					} );
 			} );
 		} );
+	}
+
+	/* ---------- Pending Orders detail drawer ----------
+	   Direct request: staff want the same "click a row, see everything
+	   in a sidebar" experience the Custom Orders screen already has
+	   (orders.js's openDetail/loadDetail/renderDetail, same pattern
+	   replicated here) for a normal paid WooCommerce order too, backed
+	   by class-admin-order-controller.php's detail_payload(). */
+
+	function wcOrderRow( label, valueHtml ) {
+		return '<tr><th>' + YP.escapeHtml( label ) + '</th><td>' + valueHtml + '</td></tr>';
+	}
+
+	function openWcOrderDrawer( id ) {
+		var drawer = document.createElement( 'div' );
+		drawer.className = 'yp-drawer yp-drawer--wide';
+		drawer.setAttribute( 'aria-hidden', 'true' );
+		drawer.innerHTML =
+			'<div class="yp-drawer__backdrop"></div>' +
+			'<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="Order detail">' +
+				'<div class="yp-drawer__header"><span>Order detail</span>' +
+					'<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">&times;</button>' +
+				'</div>' +
+				'<div class="yp-drawer__body" data-yp-body><p class="yp-field__hint">Loading&hellip;</p></div>' +
+			'</div>';
+
+		document.body.appendChild( drawer );
+		YP.initDrawer( drawer );
+		YP.openDrawer( drawer );
+
+		loadWcOrderDetail( id, drawer );
+	}
+
+	function loadWcOrderDetail( id, drawer ) {
+		var bodyEl = drawer.querySelector( '[data-yp-body]' );
+		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + id )
+			.then( function ( order ) { renderWcOrderDetail( order, drawer, bodyEl ); } )
+			.catch( function ( error ) {
+				bodyEl.innerHTML = '<p class="yp-form__error">Couldn’t load this order: ' + YP.escapeHtml( error.message ) + '</p>';
+			} );
+	}
+
+	function wcOrderItemsHtml( items ) {
+		if ( ! items.length ) {
+			return '<p class="yp-field__hint">No line items.</p>';
+		}
+		return '<table class="yp-record-table"><thead><tr><th>Item</th><th>Qty</th><th>Total</th></tr></thead><tbody>' +
+			items.map( function ( item ) {
+				var metaHtml = item.meta.length
+					? '<dl class="yp-field__hint" style="margin:0.35rem 0 0;">' +
+						item.meta.map( function ( m ) {
+							return '<dt style="font-weight:600;display:inline;">' + YP.escapeHtml( m.label ) + ':</dt> <dd style="display:inline;margin:0 0 0.35rem;">' + m.value + '</dd><br>';
+						} ).join( '' ) +
+					'</dl>'
+					: '';
+				return (
+					'<tr>' +
+						'<td>' + YP.escapeHtml( item.name ) + metaHtml + '</td>' +
+						'<td>' + item.quantity + '</td>' +
+						'<td>$' + item.total.toFixed( 2 ) + '</td>' +
+					'</tr>'
+				);
+			} ).join( '' ) +
+		'</tbody></table>';
+	}
+
+	function renderWcOrderDetail( order, drawer, bodyEl ) {
+		var rowsHtml = wcOrderRow(
+			'Customer',
+			YP.escapeHtml( order.customer_name || '' ) + ( order.customer_email ? ' — <a href="mailto:' + YP.escapeAttr( order.customer_email ) + '">' + YP.escapeHtml( order.customer_email ) + '</a>' : '' ) +
+				( order.customer_phone ? ' — ' + YP.escapeHtml( order.customer_phone ) : '' )
+		);
+		rowsHtml += wcOrderRow( 'Shipping Address', order.shipping_address ? order.shipping_address.replace( /\n/g, '<br>' ) : '—' );
+		rowsHtml += wcOrderRow( 'Payment Method', YP.escapeHtml( order.payment_method_title || '—' ) );
+		if ( order.customer_note ) {
+			rowsHtml += wcOrderRow( 'Customer Note', YP.escapeHtml( order.customer_note ).replace( /\n/g, '<br>' ) );
+		}
+		rowsHtml += wcOrderRow( 'Date', order.date ? new Date( order.date ).toLocaleString() : '—' );
+
+		bodyEl.innerHTML =
+			'<div class="yp-record-card"><table class="yp-record-table"><tbody>' + rowsHtml + '</tbody></table></div>' +
+
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Items</h2></div>' +
+				wcOrderItemsHtml( order.items ) +
+				'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
+			'</div>' +
+
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Status</h2></div>' +
+				'<div class="yp-form__row"><div class="yp-field"><select data-yp-wc-status>' +
+					Object.keys( order.statuses ).map( function ( key ) {
+						return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
+					} ).join( '' ) +
+				'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
+				'<div data-yp-wc-status-error></div>' +
+			'</div>' +
+
+			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
+
+		bodyEl.querySelector( '[data-yp-wc-save-status]' ).addEventListener( 'click', function () { saveWcOrderStatus( order, drawer, bodyEl ); } );
+	}
+
+	function saveWcOrderStatus( order, drawer, bodyEl ) {
+		var select = bodyEl.querySelector( '[data-yp-wc-status]' );
+		var button = bodyEl.querySelector( '[data-yp-wc-save-status]' );
+		var errorEl = bodyEl.querySelector( '[data-yp-wc-status-error]' );
+
+		button.disabled = true;
+		button.textContent = 'Saving…';
+		errorEl.innerHTML = '';
+
+		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { status: select.value } ) } )
+			.then( function ( updated ) {
+				renderWcOrderDetail( updated, drawer, bodyEl );
+				loadDashboard();
+			} )
+			.catch( function ( error ) {
+				button.disabled = false;
+				button.textContent = 'Save Status';
+				errorEl.innerHTML = '<p class="yp-form__error">Couldn’t save: ' + YP.escapeHtml( error.message ) + '</p>';
+			} );
 	}
 
 	// View scripts (assets/admin-app/views/*.js) are enqueued with a
