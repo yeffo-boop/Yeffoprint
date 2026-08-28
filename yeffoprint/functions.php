@@ -62,6 +62,26 @@ add_filter( 'wp_resource_hints', function ( $urls, $relation_type ) {
 	return $urls;
 }, 10, 2 );
 
+/**
+ * Direct report: the "Pay for order" page read as floating, title-less
+ * blank space above the order table — page-checkout.html (the Checkout
+ * page's own template) has no page-title block at all, by design, since
+ * the normal Checkout Blocks flow never needed one. This page is the one
+ * exception: it's reached cold, from an email or a retry link, so it
+ * needs to actually say what it is. There's no hook in WooCommerce's own
+ * checkout/form-pay.php early enough to inject a heading via an action,
+ * so this prepends one to the_content() instead, gated tightly to this
+ * one endpoint so every other page (including the normal Checkout page
+ * itself) is untouched.
+ */
+add_filter( 'the_content', function ( $content ) {
+	if ( ! is_main_query() || ! function_exists( 'is_checkout_pay_page' ) || ! is_checkout_pay_page() ) {
+		return $content;
+	}
+
+	return '<h1 class="yp-pay-page-heading">' . esc_html__( 'Complete Your Payment', 'yeffoprint' ) . '</h1>' . $content;
+} );
+
 add_action( 'wp_enqueue_scripts', function () {
 	// theme.json declares Geist/Inter/IBM Plex Mono as the brand's font
 	// stack, but nothing actually loaded those files — every page was
