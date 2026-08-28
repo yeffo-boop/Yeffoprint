@@ -111,20 +111,37 @@
 			return null;
 		}
 
+		/**
+		 * Direct bug report: "the button is there, I can click it, but it
+		 * doesn't actually move." Root cause: save() below never set
+		 * menu_order when creating a package, so every package added
+		 * through this screen defaulted to menu_order 0 — swapping two
+		 * packages' menu_order values is a no-op once they're already
+		 * equal, which silently succeeds (no error) but changes nothing.
+		 * Renumbering the whole list to match the new visual order (every
+		 * item's menu_order set to its own array index), rather than
+		 * swapping two values, fixes that and self-heals any existing ties
+		 * the moment a package is moved — no separate migration needed.
+		 */
 		function move( pkg, direction ) {
 			var index = allPackages.indexOf( pkg );
 			var swapIndex = index + direction;
 			if ( ! pkg || swapIndex < 0 || swapIndex >= allPackages.length ) {
 				return;
 			}
-			var neighbor = allPackages[ swapIndex ];
-			var pkgOrder = pkg.menu_order;
-			var neighborOrder = neighbor.menu_order;
 
-			Promise.all( [
-				YP.request( endpoint( '/' + pkg.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { menu_order: neighborOrder } ) } ),
-				YP.request( endpoint( '/' + neighbor.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { menu_order: pkgOrder } ) } )
-			] ).then( load ).catch( function ( error ) {
+			var reordered = allPackages.slice();
+			reordered.splice( index, 1 );
+			reordered.splice( swapIndex, 0, pkg );
+
+			var updates = [];
+			reordered.forEach( function ( p, i ) {
+				if ( p.menu_order !== i ) {
+					updates.push( YP.request( endpoint( '/' + p.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { menu_order: i } ) } ) );
+				}
+			} );
+
+			Promise.all( updates ).then( load ).catch( function ( error ) {
 				window.alert( 'Couldn’t reorder: ' + error.message );
 			} );
 		}
@@ -210,6 +227,9 @@
 			body.meta[ META.tagline ] = form.tagline.value.trim();
 			body.meta[ META.featured ] = form.featured.checked;
 			body.meta[ META.features ] = form.features.value.split( '\n' ).map( function ( line ) { return line.trim(); } ).filter( function ( line ) { return line.length; } );
+			if ( ! existing ) {
+				body.menu_order = allPackages.length; // New packages land at the end of the list, not menu_order 0 (see move()'s docblock above).
+			}
 
 			var url = existing ? endpoint( '/' + existing.id ) : endpoint();
 
