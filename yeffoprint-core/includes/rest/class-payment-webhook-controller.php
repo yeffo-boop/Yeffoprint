@@ -98,12 +98,12 @@ class YeffoPrint_Payment_Webhook_Controller {
 
 		if ( empty( $candidates ) ) {
 			$this->notify_admin(
-				sprintf( /* translators: 1: Venmo/Zelle, 2: amount */ __( 'Unmatched %1$s payment: %2$s', 'yeffoprint-core' ), ucfirst( $method ), wp_strip_all_tags( wc_price( $amount ) ) ),
+				sprintf( /* translators: 1: Venmo/Zelle, 2: amount */ __( 'Unmatched %1$s payment: %2$s', 'yeffoprint-core' ), ucfirst( $method ), $this->plain_text_amount( $amount ) ),
 				sprintf(
 					/* translators: 1: Venmo/Zelle, 2: amount, 3: note text */
 					__( "A %1\$s payment notification for %2\$s came in, but no on-hold order for that exact amount was found.\n\nPayment note: %3\$s\n\nIf this is a real payment, find the order and update its status manually.", 'yeffoprint-core' ),
 					ucfirst( $method ),
-					wp_strip_all_tags( wc_price( $amount ) ),
+					$this->plain_text_amount( $amount ),
 					$note ?: __( '(none)', 'yeffoprint-core' )
 				)
 			);
@@ -111,12 +111,12 @@ class YeffoPrint_Payment_Webhook_Controller {
 		}
 
 		$this->notify_admin(
-			sprintf( /* translators: 1: Venmo/Zelle, 2: amount */ __( 'Multiple orders match a %1$s payment: %2$s', 'yeffoprint-core' ), ucfirst( $method ), wp_strip_all_tags( wc_price( $amount ) ) ),
+			sprintf( /* translators: 1: Venmo/Zelle, 2: amount */ __( 'Multiple orders match a %1$s payment: %2$s', 'yeffoprint-core' ), ucfirst( $method ), $this->plain_text_amount( $amount ) ),
 			sprintf(
 				/* translators: 1: Venmo/Zelle, 2: amount, 3: candidate count, 4: order list, 5: note text */
 				__( "A %1\$s payment notification for %2\$s came in, but %3\$d on-hold orders share that exact total, so none were matched automatically (to avoid marking the wrong one paid). Please review and update the correct one manually:\n\n%4\$s\n\nPayment note: %5\$s", 'yeffoprint-core' ),
 				ucfirst( $method ),
-				wp_strip_all_tags( wc_price( $amount ) ),
+				$this->plain_text_amount( $amount ),
 				count( $candidates ),
 				implode( "\n", array_map( [ $this, 'order_admin_line' ], $candidates ) ),
 				$note ?: __( '(none)', 'yeffoprint-core' )
@@ -187,6 +187,22 @@ class YeffoPrint_Payment_Webhook_Controller {
 
 	private function order_admin_line( \WC_Order $order ): string {
 		return '#' . $order->get_order_number() . ' — ' . admin_url( 'post.php?post=' . $order->get_id() . '&action=edit' );
+	}
+
+	/**
+	 * Direct report: the admin notification emails below showed literal
+	 * "&#36;227.30" instead of "$227.30" — purely cosmetic, confirmed
+	 * unrelated to matching (that compares $amount/$order->get_total()
+	 * directly, never touching this formatted string). wc_price() returns
+	 * HTML with the currency symbol as an entity (`&#36;` for `$`, or
+	 * whatever the equivalent is for the store's actual currency);
+	 * wp_strip_all_tags() only strips tags, not entities, and these
+	 * strings land in a plain-text wp_mail() body, not an HTML context
+	 * that would decode the entity for free the way an admin order note
+	 * (mark_paid() below, rendered as HTML in wp-admin) already does.
+	 */
+	private function plain_text_amount( float $amount ): string {
+		return html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
 	}
 
 	private function notify_admin( string $subject, string $body ): void {
