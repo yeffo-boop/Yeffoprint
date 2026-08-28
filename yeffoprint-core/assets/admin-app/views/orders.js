@@ -310,7 +310,7 @@
 				var listEl = bodyEl.querySelector( '[data-yp-proofs-list]' );
 				listEl.innerHTML = '<p class="yp-field__hint">Uploading proof&hellip;</p>';
 
-				YP.request( endpoint( 'proof' ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { custom_order_id: order.id, file_id: attachment.id } ) } )
+				YP.request( endpoint( 'proofs' ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { custom_order_id: order.id, file_id: attachment.id } ) } )
 					.then( function () { return YP.request( endpoint( 'custom-order/' + order.id ) ); } )
 					.then( function ( updated ) {
 						renderDetail( updated, drawer, bodyEl );
