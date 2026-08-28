@@ -700,6 +700,12 @@
 			'<div class="yp-panel" data-yp-shipping-label-panel>' +
 				'<div class="yp-panel__head"><h2>Shipping Label</h2></div>' +
 				'<p class="yp-panel__hint">Powered by the WooCommerce Shipping plugin already installed on this store.</p>' +
+				// Direct request: default to what the customer picked at checkout. WooCommerce
+				// Shipping has no way to auto-select a matching carrier service for a plain
+				// (non-live-rate) shipping method like this store's, so this surfaces the choice
+				// right above the form instead — a one-glance match, not automation that could
+				// silently select (and pay for) the wrong service if it ever guessed wrong.
+				'<p style="font-size:0.9rem;margin:0 0 0.75rem;">Customer selected: <strong>' + ( order.shipping_method ? YP.escapeHtml( order.shipping_method ) : 'No shipping method recorded' ) + '</strong></p>' +
 				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-print-label>Print Shipping Label</button>' +
 				'<div data-yp-shipping-label-frame></div>' +
 			'</div>'
