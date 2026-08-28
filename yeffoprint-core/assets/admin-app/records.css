@@ -401,6 +401,20 @@
 	color: var(--wp--preset--color--white);
 }
 
+/* ---------- Pending Orders drawer: embedded Shipping Label iframe
+   (app.js's embedShippingLabel() — the WooCommerce Shipping plugin's own
+   meta box, same-origin-embedded so staff can print a label without
+   leaving this drawer) ---------- */
+
+.yp-shipping-label-frame {
+	display: block;
+	width: 100%;
+	height: 720px;
+	margin-top: var(--wp--preset--spacing--sm);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--card);
+}
+
 /* ---------- Editable repeater table (bulk-discount tiers) ---------- */
 
 .yp-tier-table {

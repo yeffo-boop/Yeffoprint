@@ -658,6 +658,8 @@
 				'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
 			'</div>' +
 
+			wcOrderShippingLabelHtml( order ) +
+
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Status</h2></div>' +
 				'<div class="yp-form__row"><div class="yp-field"><select data-yp-wc-status>' +
@@ -671,6 +673,83 @@
 			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
 
 		bodyEl.querySelector( '[data-yp-wc-save-status]' ).addEventListener( 'click', function () { saveWcOrderStatus( order, drawer, bodyEl ); } );
+
+		var printButton = bodyEl.querySelector( '[data-yp-print-label]' );
+		if ( printButton ) {
+			printButton.addEventListener( 'click', function () { embedShippingLabel( order, bodyEl ); } );
+		}
+	}
+
+	/**
+	 * Direct request: print a real shipping label from this drawer
+	 * "without having to go to WooCommerce." WooCommerce Shipping (the
+	 * plugin already active on this store) only ever renders its
+	 * rate-shopping/label-purchase UI — a large proprietary React app,
+	 * no public REST API of its own to drive from outside it — as a meta
+	 * box (`#woocommerce-order-label`) on the classic order edit screen.
+	 * Rather than reimplement that, this embeds the exact same meta box
+	 * via a same-origin iframe onto `order.edit_url` and hides the
+	 * surrounding wp-admin chrome with injected CSS, so what renders is
+	 * that plugin's own real, fully-functional label form.
+	 */
+	function wcOrderShippingLabelHtml( order ) {
+		if ( ! order.shipping_label_available ) {
+			return '';
+		}
+		return (
+			'<div class="yp-panel" data-yp-shipping-label-panel>' +
+				'<div class="yp-panel__head"><h2>Shipping Label</h2></div>' +
+				'<p class="yp-panel__hint">Powered by the WooCommerce Shipping plugin already installed on this store.</p>' +
+				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-print-label>Print Shipping Label</button>' +
+				'<div data-yp-shipping-label-frame></div>' +
+			'</div>'
+		);
+	}
+
+	/** The CSS injected into the embedded iframe (see wcOrderShippingLabelHtml() above) — hides every core wp-admin chrome element and every other meta box on the classic order edit screen, leaving only #woocommerce-order-label (WooCommerce Shipping's own meta box id) visible. Every selector here is either a stable WordPress core admin id/class (#wpadminbar, #adminmenumain, .postbox, #postbox-container-1/2) or WooCommerce core's own order-screen meta box id (#woocommerce-order-data) — nothing specific to WooCommerce Shipping's own internal markup, which this never touches. */
+	var SHIPPING_LABEL_IFRAME_CSS =
+		'#wpadminbar, #adminmenumain, #adminmenuback, #adminmenuwrap, #wpfooter, ' +
+		'#screen-meta-links, #screen-meta, .wrap > h1.wp-heading-inline, .wrap > a.page-title-action, ' +
+		'.wrap > hr.wp-header-end, #woocommerce-order-data, .notice, #postbox-container-1 ' +
+		'{ display: none !important; }' +
+		'#wpcontent, #wpbody, #wpbody-content, #wpbody-content .wrap { margin: 0 !important; padding: 0 !important; }' +
+		'#poststuff { padding-top: 0 !important; }' +
+		'#poststuff .postbox:not(#woocommerce-order-label) { display: none !important; }' +
+		'#postbox-container-2 { width: 100% !important; float: none !important; margin: 0 !important; }';
+
+	function embedShippingLabel( order, bodyEl ) {
+		var button = bodyEl.querySelector( '[data-yp-print-label]' );
+		var frameHost = bodyEl.querySelector( '[data-yp-shipping-label-frame]' );
+		if ( ! frameHost || frameHost.querySelector( 'iframe' ) ) {
+			return; // Already embedded.
+		}
+
+		button.disabled = true;
+		button.textContent = 'Loading&hellip;';
+
+		var iframe = document.createElement( 'iframe' );
+		iframe.className = 'yp-shipping-label-frame';
+		iframe.setAttribute( 'title', 'Shipping Label' );
+		iframe.src = order.edit_url + '#woocommerce-order-label';
+
+		iframe.addEventListener( 'load', function () {
+			button.style.display = 'none';
+			try {
+				var doc = iframe.contentDocument;
+				var style = doc.createElement( 'style' );
+				style.textContent = SHIPPING_LABEL_IFRAME_CSS;
+				doc.head.appendChild( style );
+				var box = doc.getElementById( 'woocommerce-order-label' );
+				if ( box ) {
+					box.scrollIntoView();
+				}
+			} catch ( error ) {
+				// Cross-origin or otherwise inaccessible — leave the iframe showing the full
+				// classic screen; the "Open in WooCommerce" link elsewhere in this drawer still works.
+			}
+		} );
+
+		frameHost.appendChild( iframe );
 	}
 
 	function saveWcOrderStatus( order, drawer, bodyEl ) {
