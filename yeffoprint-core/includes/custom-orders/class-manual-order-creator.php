@@ -77,6 +77,10 @@ class YeffoPrint_Manual_Order_Creator {
 	 *     @type int    $template_id     template only.
 	 *     @type array  $variants        template only — [ { quantity, values: { field_id: value } } ]
 	 *     @type bool   $requires_proof
+	 *     @type bool   $waive_design_fee custom_design only — direct request: staff need to be able to
+	 *                                    waive the $25 design fee on some manual orders (VIP customer,
+	 *                                    goodwill, etc). No effect on sticker/template orders, which have
+	 *                                    no flat fee to waive in the first place.
 	 * }
 	 * @return array{order:\WC_Order, custom_order_id:int}|\WP_Error
 	 */
@@ -164,7 +168,8 @@ class YeffoPrint_Manual_Order_Creator {
 		}
 
 		if ( 'custom_design' === $order_type ) {
-			$result = self::add_custom_design_rows( $order, $batch, $custom_order_id );
+			$waive_fee = ! empty( $payload['waive_design_fee'] );
+			$result    = self::add_custom_design_rows( $order, $batch, $custom_order_id, $waive_fee );
 		} elseif ( 'sticker' === $order_type ) {
 			$result = self::add_sticker_row( $order, $sticker, $custom_order_id );
 		} else {
@@ -223,13 +228,20 @@ class YeffoPrint_Manual_Order_Creator {
 		$order->update_meta_data( '_yp_manually_created', 1 );
 		$order->save();
 
-		// Fires woocommerce_order_status_processing, which is what
-		// link_paid_custom_orders() listens for — publishes/links the
-		// shell created above (if any) and makes this order show up in
-		// the Dashboard's existing Pending Orders panel / Send to
-		// Printer action, exactly like a real checkout.
-		$order->update_status( 'processing', __( 'Marked processing on manual creation.', 'yeffoprint-core' ) );
-
+		// Direct report: this used to force the order straight to
+		// 'processing' regardless of payment, which (a) showed an unpaid
+		// order as if it were already in production, and (b) made
+		// WooCommerce's own order-pay page refuse it ("This order cannot
+		// be paid for") since needs_payment() is false once an order is
+		// processing. Left at 'pending' (set in wc_create_order() above)
+		// instead — the exact same "pending payment" status a real
+		// checkout starts an order in. Once it's actually paid (via the
+		// order-pay link, a manual status change, whatever gateway is
+		// used), the existing woocommerce_order_status_processing/
+		// _completed/payment_complete hooks in class-custom-order-payment.php
+		// publish/link the shell created above — same rule regardless of
+		// origin, per YeffoPrint_Custom_Order_Meta::create_shell()'s own
+		// docblock.
 		return [ 'order' => $order, 'custom_order_id' => $custom_order_id ];
 	}
 
@@ -283,22 +295,25 @@ class YeffoPrint_Manual_Order_Creator {
 	 * Adds the design fee (skipped if $custom_order_id is 0 — an order
 	 * not requiring proof approval still gets its labels priced and
 	 * snapshotted identically, just with no fee item and no
-	 * _yp_custom_order_id anywhere, same as a normal print run) plus one
-	 * "Custom Order Labels" line item per batch row — mirrors
-	 * class-custom-order-controller.php::submit()'s own fee-then-rows
-	 * shape, just built directly on the order instead of through
-	 * WC()->cart->add_to_cart().
+	 * _yp_custom_order_id anywhere, same as a normal print run — or if
+	 * $waive_fee is true, staff choosing not to charge it on this
+	 * particular order) plus one "Custom Order Labels" line item per
+	 * batch row — mirrors class-custom-order-controller.php::submit()'s
+	 * own fee-then-rows shape, just built directly on the order instead
+	 * of through WC()->cart->add_to_cart().
 	 *
 	 * @return true|\WP_Error
 	 */
-	private static function add_custom_design_rows( \WC_Order $order, array $batch, int $custom_order_id ) {
+	private static function add_custom_design_rows( \WC_Order $order, array $batch, int $custom_order_id, bool $waive_fee = false ) {
 		$labels_product_id = YeffoPrint_Custom_Order_Labels_Product::get_product_id();
 		if ( ! $labels_product_id ) {
 			return new \WP_Error( 'yeffoprint_no_labels_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 		$labels_product = wc_get_product( $labels_product_id );
 
-		if ( $custom_order_id ) {
+		if ( $custom_order_id && $waive_fee ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::FEE_WAIVED, '1' );
+		} elseif ( $custom_order_id ) {
 			$fee_product_id = YeffoPrint_Custom_Design_Fee_Product::get_product_id();
 			if ( ! $fee_product_id ) {
 				return new \WP_Error( 'yeffoprint_no_fee_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
