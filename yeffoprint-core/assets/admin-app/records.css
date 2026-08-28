@@ -365,6 +365,42 @@
 	margin: 0 0 0.5rem;
 }
 
+/* ---------- Settings sub-navigation (direct request: the Settings
+   screen's ~10 panels were "too cluttered" on one long scroll — grouped
+   into a handful of named tabs, still one GET/POST and one Save button
+   underneath all of them, class-admin-settings-controller.php
+   unchanged) ---------- */
+
+.yp-settings-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin-bottom: var(--wp--preset--spacing--sm);
+}
+
+.yp-settings-tabs__tab {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--charcoal);
+	font-family: inherit;
+	font-size: 0.85rem;
+	font-weight: 600;
+	padding: 0.45rem 0.9rem;
+	border-radius: var(--wp--custom--radius--pill, 999px);
+	cursor: pointer;
+	transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.yp-settings-tabs__tab:hover {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.yp-settings-tabs__tab.is-active {
+	background: var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+}
+
 /* ---------- Editable repeater table (bulk-discount tiers) ---------- */
 
 .yp-tier-table {

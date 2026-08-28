@@ -266,8 +266,8 @@ class YeffoPrint_Admin_Menu {
 		// not a dead end" reasoning as every classic editor class Phase 8
 		// unlinked but didn't remove.
 		$dashboard_hook = (string) add_menu_page(
-			__( 'YeffoPrint', 'yeffoprint-core' ),
-			__( 'YeffoPrint', 'yeffoprint-core' ),
+			__( 'YeffoDesign', 'yeffoprint-core' ),
+			__( 'YeffoDesign', 'yeffoprint-core' ),
 			'manage_options',
 			'yeffoprint',
 			[ 'YeffoPrint_Admin_App', 'render' ],
@@ -1203,7 +1203,7 @@ class YeffoPrint_Admin_Menu {
 	public function render_dashboard(): void {
 		?>
 		<div class="wrap yp-dashboard">
-			<h1><?php esc_html_e( 'YeffoPrint', 'yeffoprint-core' ); ?></h1>
+			<h1><?php esc_html_e( 'YeffoDesign', 'yeffoprint-core' ); ?></h1>
 
 			<?php ( new YeffoPrint_Dashboard_Widgets() )->render(); ?>
 

@@ -5,6 +5,15 @@
  * ARCHITECTURE.md, Phase 7). Same "edit the one active record
  * directly on the page, no list" shape as `views/pricing.js` — there's
  * only ever one settings record.
+ *
+ * Direct request: this screen "is becoming too cluttered" — its ~10
+ * panels are grouped below into four tabs (General/Storefront/
+ * Shipping/Integrations, TAB_GROUPS) so only one group is visible at a
+ * time. Every panel still renders into the DOM up front and is just
+ * hidden/shown via the native `hidden` attribute — save() keeps reading
+ * every field by id regardless of which tab is active, so the single
+ * GET/POST pair and single Save button below all of them are
+ * unchanged; this is presentation-only, not a data model split.
  */
 
 ( function () {
@@ -19,6 +28,13 @@
 		return yeffoprintAdminApp.restUrl + 'admin/settings';
 	}
 
+	var TAB_GROUPS = [
+		{ id: 'general', label: 'General' },
+		{ id: 'storefront', label: 'Storefront' },
+		{ id: 'shipping', label: 'Shipping' },
+		{ id: 'integrations', label: 'Integrations' }
+	];
+
 	YP.views.settings = function ( viewEl ) {
 		viewEl.innerHTML = '<p class="yp-app__intro">Loading settings&hellip;</p>';
 
@@ -28,17 +44,39 @@
 				viewEl.innerHTML = '<p class="yp-app__intro">Couldn’t load settings: ' + YP.escapeHtml( error.message ) + '</p>';
 			} );
 
-		function render( settings ) {
-			viewEl.innerHTML =
-				'<p class="yp-app__intro">Site-wide options — changes apply to the storefront immediately.</p>' +
-				'<div data-yp-save-status></div>' +
+		function render( settings, activeTabId ) {
+			activeTabId = activeTabId && TAB_GROUPS.some( function ( t ) { return t.id === activeTabId; } ) ? activeTabId : TAB_GROUPS[ 0 ].id;
 
+			var generalHtml =
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Announcement Bar</h2></div>' +
 					'<div class="yp-field"><label for="yp-set-announcement">Announcement text</label><input type="text" id="yp-set-announcement" value="' + YP.escapeAttr( settings.announcement_bar_text ) + '" /></div>' +
 					'<p class="yp-panel__hint">Shown in the thin bar above the header, on every page. Leave blank to hide the bar entirely.</p>' +
 				'</div>' +
 
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Splash Screen</h2></div>' +
+					'<p class="yp-panel__hint">A dismissible "we’ve upgraded" welcome screen on the homepage — each visitor sees it once per browser session until switched off here.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-splash-enabled"' + ( settings.splash_enabled ? ' checked' : '' ) + ' /><label for="yp-set-splash-enabled">Show it on the homepage</label></div>' +
+					'<div class="yp-field"><label>Screenshot</label>' +
+						'<div class="yp-media-field">' +
+							'<div class="yp-media-field__preview" data-yp-splash-preview>' + ( settings.splash_image_url ? '<img src="' + YP.escapeAttr( settings.splash_image_url ) + '" alt="" />' : '' ) + '</div>' +
+							'<div class="yp-media-field__buttons">' +
+								'<input type="hidden" data-yp-splash-id value="' + ( settings.splash_image_id || '' ) + '" />' +
+								'<button type="button" class="wp-block-button__link is-style-outline" data-yp-splash-select>Select screenshot</button>' +
+								'<button type="button" class="yp-row-action" data-yp-splash-remove ' + ( settings.splash_image_id ? '' : 'hidden' ) + '>Remove</button>' +
+							'</div>' +
+						'</div>' +
+					'</div>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Dashboard</h2></div>' +
+					'<div class="yp-field"><label for="yp-set-due-date">Order due date (days)</label><input type="number" min="1" step="1" id="yp-set-due-date" value="' + YP.escapeAttr( settings.dashboard_due_date_days ) + '" style="max-width:100px;" /></div>' +
+					'<p class="yp-panel__hint">How long after an order/request comes in before the Dashboard flags it as overdue.</p>' +
+				'</div>';
+
+			var storefrontHtml =
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Homepage Promo</h2></div>' +
 					'<p class="yp-panel__hint">Themed banners between the header and the hero. Fill in an Offer and Promo code for any theme below to make it active — two or more active themes rotate automatically. Shown exactly as typed, so make sure a matching active WooCommerce coupon exists for each code before turning this on.</p>' +
@@ -62,6 +100,13 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Contact Form</h2></div>' +
+					'<div class="yp-field"><label for="yp-set-contact-email">Send messages to</label><input type="email" id="yp-set-contact-email" value="' + YP.escapeAttr( settings.contact_recipient_email ) + '" /></div>' +
+					'<p class="yp-panel__hint">Every Contact form submission is emailed here. Replying goes straight to the customer — their address is set as Reply-To.</p>' +
+				'</div>';
+
+			var shippingHtml =
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Shipment Tracking</h2></div>' +
 					'<p class="yp-panel__hint">Powers the live tracking timeline on /track-order/ and order emails. Optional — a direct carrier-site link is shown instead when these are blank.</p>' +
 					'<div class="yp-form__row">' +
@@ -72,36 +117,9 @@
 						'<div class="yp-field"><label for="yp-set-usps-key">USPS Consumer Key</label><input type="password" autocomplete="off" id="yp-set-usps-key" value="' + YP.escapeAttr( settings.usps_consumer_key ) + '" /></div>' +
 						'<div class="yp-field"><label for="yp-set-usps-secret">USPS Consumer Secret</label><input type="password" autocomplete="off" id="yp-set-usps-secret" value="' + YP.escapeAttr( settings.usps_consumer_secret ) + '" /></div>' +
 					'</div>' +
-				'</div>' +
+				'</div>';
 
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Contact Form</h2></div>' +
-					'<div class="yp-field"><label for="yp-set-contact-email">Send messages to</label><input type="email" id="yp-set-contact-email" value="' + YP.escapeAttr( settings.contact_recipient_email ) + '" /></div>' +
-					'<p class="yp-panel__hint">Every Contact form submission is emailed here. Replying goes straight to the customer — their address is set as Reply-To.</p>' +
-				'</div>' +
-
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Splash Screen</h2></div>' +
-					'<p class="yp-panel__hint">A dismissible "we’ve upgraded" welcome screen on the homepage — each visitor sees it once per browser session until switched off here.</p>' +
-					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-splash-enabled"' + ( settings.splash_enabled ? ' checked' : '' ) + ' /><label for="yp-set-splash-enabled">Show it on the homepage</label></div>' +
-					'<div class="yp-field"><label>Screenshot</label>' +
-						'<div class="yp-media-field">' +
-							'<div class="yp-media-field__preview" data-yp-splash-preview>' + ( settings.splash_image_url ? '<img src="' + YP.escapeAttr( settings.splash_image_url ) + '" alt="" />' : '' ) + '</div>' +
-							'<div class="yp-media-field__buttons">' +
-								'<input type="hidden" data-yp-splash-id value="' + ( settings.splash_image_id || '' ) + '" />' +
-								'<button type="button" class="wp-block-button__link is-style-outline" data-yp-splash-select>Select screenshot</button>' +
-								'<button type="button" class="yp-row-action" data-yp-splash-remove ' + ( settings.splash_image_id ? '' : 'hidden' ) + '>Remove</button>' +
-							'</div>' +
-						'</div>' +
-					'</div>' +
-				'</div>' +
-
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Dashboard</h2></div>' +
-					'<div class="yp-field"><label for="yp-set-due-date">Order due date (days)</label><input type="number" min="1" step="1" id="yp-set-due-date" value="' + YP.escapeAttr( settings.dashboard_due_date_days ) + '" style="max-width:100px;" /></div>' +
-					'<p class="yp-panel__hint">How long after an order/request comes in before the Dashboard flags it as overdue.</p>' +
-				'</div>' +
-
+			var integrationsHtml =
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Telegram Bot</h2></div>' +
 					'<p class="yp-panel__hint">Answers FAQs and order-status questions for customers on Telegram. Create a bot with <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>, paste its token below, and turn it on — the webhook connects automatically when you save.</p>' +
@@ -154,9 +172,42 @@
 					'<div class="yp-field"><label for="yp-set-maint-link">Payment Link URL</label><input type="url" id="yp-set-maint-link" value="' + YP.escapeAttr( settings.maintenance_payment_link ) + '" placeholder="https://buy.stripe.com/..." /></div>' +
 					'<div class="yp-field"><label for="yp-set-maint-secret">Stripe webhook signing secret</label><input type="password" autocomplete="off" id="yp-set-maint-secret" value="' + YP.escapeAttr( settings.maintenance_webhook_secret ) + '" placeholder="whsec_..." /></div>' +
 					'<p class="yp-panel__hint">Webhook endpoint: <code>' + YP.escapeHtml( settings.maintenance_webhook_url ) + '</code></p>' +
+				'</div>';
+
+			var TAB_CONTENT = { general: generalHtml, storefront: storefrontHtml, shipping: shippingHtml, integrations: integrationsHtml };
+
+			viewEl.innerHTML =
+				'<p class="yp-app__intro">Site-wide options — changes apply to the storefront immediately.</p>' +
+				'<div data-yp-save-status></div>' +
+
+				'<div class="yp-settings-tabs" role="tablist">' +
+					TAB_GROUPS.map( function ( tab ) {
+						var isActive = tab.id === activeTabId;
+						return '<button type="button" class="yp-settings-tabs__tab' + ( isActive ? ' is-active' : '' ) + '" data-yp-settings-tab-button="' + tab.id + '" role="tab" aria-selected="' + ( isActive ? 'true' : 'false' ) + '">' + YP.escapeHtml( tab.label ) + '</button>';
+					} ).join( '' ) +
 				'</div>' +
 
+				TAB_GROUPS.map( function ( tab ) {
+					return '<div data-yp-settings-tab="' + tab.id + '"' + ( tab.id === activeTabId ? '' : ' hidden' ) + '>' + TAB_CONTENT[ tab.id ] + '</div>';
+				} ).join( '' ) +
+
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-save>Save Settings</button>';
+
+			viewEl.querySelectorAll( '[data-yp-settings-tab-button]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					var target = button.getAttribute( 'data-yp-settings-tab-button' );
+
+					viewEl.querySelectorAll( '[data-yp-settings-tab-button]' ).forEach( function ( b ) {
+						var isActive = b === button;
+						b.classList.toggle( 'is-active', isActive );
+						b.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
+					} );
+
+					viewEl.querySelectorAll( '[data-yp-settings-tab]' ).forEach( function ( section ) {
+						section.hidden = section.getAttribute( 'data-yp-settings-tab' ) !== target;
+					} );
+				} );
+			} );
 
 			YP.bindMediaPicker( {
 				title: 'Select screenshot',
@@ -216,9 +267,12 @@
 			saveButton.textContent = 'Saving…';
 			statusEl.innerHTML = '';
 
+			var activeTabButton = viewEl.querySelector( '[data-yp-settings-tab-button].is-active' );
+			var activeTabId = activeTabButton ? activeTabButton.getAttribute( 'data-yp-settings-tab-button' ) : '';
+
 			YP.request( endpoint(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( body ) } )
 				.then( function ( settings ) {
-					render( settings );
+					render( settings, activeTabId );
 					viewEl.querySelector( '[data-yp-save-status]' ).innerHTML = '<p class="yp-panel__hint">Saved — live on the storefront now.</p>';
 				} )
 				.catch( function ( error ) {
