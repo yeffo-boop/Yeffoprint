@@ -138,6 +138,18 @@ class YeffoPrint_Custom_Order_Meta {
 	public const CUSTOMER_PROVIDED_DESIGN = '_yp_customer_provided_design';
 
 	/**
+	 * '1' when staff waived the $25 design fee on a manually-created order
+	 * (VIP customer, goodwill, etc.) — direct request. Deliberately its own
+	 * flag rather than reusing CUSTOMER_PROVIDED_DESIGN: that one means
+	 * "no design work needed, print exactly what's attached," which isn't
+	 * true here — the design still needs to be made, staff have just chosen
+	 * not to charge for it. Only ever set by
+	 * YeffoPrint_Manual_Order_Creator (the customer-facing submission flow
+	 * has no equivalent — a customer can't waive their own fee).
+	 */
+	public const FEE_WAIVED = '_yp_fee_waived';
+
+	/**
 	 * Batching: a JSON-encoded array of
 	 * { size_id, material_id, quantity, compound_strength }, one entry
 	 * per label in the order — direct request, so a customer needing more
@@ -253,14 +265,16 @@ class YeffoPrint_Custom_Order_Meta {
 
 	/**
 	 * Whether this order's $25 fee was intentionally never charged (a
-	 * customer-provided design, or a fee-free reorder) — so "no fee line
-	 * item on the WooCommerce order" is never mistaken for "the fee just
-	 * hasn't been paid yet" anywhere that checks for one (find_design_fee(),
-	 * the admin editor, class-reorder.php's own reorder-link rendering).
+	 * customer-provided design, a fee-free reorder, or staff waiving it on
+	 * a manually-created order) — so "no fee line item on the WooCommerce
+	 * order" is never mistaken for "the fee just hasn't been paid yet"
+	 * anywhere that checks for one (find_design_fee(), the admin editor,
+	 * class-reorder.php's own reorder-link rendering).
 	 */
 	public static function is_fee_skipped( int $custom_order_id ): bool {
 		return (bool) get_post_meta( $custom_order_id, self::CUSTOMER_PROVIDED_DESIGN, true )
-			|| (bool) get_post_meta( $custom_order_id, self::SOURCE_CUSTOM_ORDER_ID, true );
+			|| (bool) get_post_meta( $custom_order_id, self::SOURCE_CUSTOM_ORDER_ID, true )
+			|| (bool) get_post_meta( $custom_order_id, self::FEE_WAIVED, true );
 	}
 
 	/**

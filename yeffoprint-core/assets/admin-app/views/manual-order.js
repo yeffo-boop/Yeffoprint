@@ -152,6 +152,13 @@
 						'<label for="yp-mo-requires-proof">Requires proof approval before printing</label>' +
 					'</div>' +
 					'<p class="yp-panel__hint">When checked, the customer gets a proof-approval link once staff upload a proof from the Custom Orders screen — same flow as an order placed on the storefront.</p>' +
+					( 'custom_design' === state.orderType ?
+						'<div class="yp-field yp-field--checkbox">' +
+							'<input type="checkbox" id="yp-mo-waive-fee" />' +
+							'<label for="yp-mo-waive-fee">Waive the ' + ( state.options && state.options.design_fee ? state.options.design_fee : 'design' ) + ' fee</label>' +
+						'</div>' +
+						'<p class="yp-panel__hint">No design-fee line item gets added to the order — for a VIP customer or as goodwill. The customer still pays for the print run itself.</p>'
+						: '' ) +
 				'</div>' +
 
 				'<div data-yp-submit-status></div>' +
@@ -186,6 +193,12 @@
 
 				bindBatchChangeListeners();
 				refreshPricePreview();
+
+				var waiveFeeToggle = viewEl.querySelector( '#yp-mo-waive-fee' );
+				if ( waiveFeeToggle && ! waiveFeeToggle._wired ) {
+					waiveFeeToggle._wired = true;
+					waiveFeeToggle.addEventListener( 'change', refreshPricePreview );
+				}
 			} else if ( 'sticker' === state.orderType ) {
 				bindStickerChangeListeners();
 				wireStickerUploads();
@@ -264,10 +277,18 @@
 				return;
 			}
 
+			// 'own_design' is the existing mode this same endpoint already
+			// uses for a customer-provided design — no design-fee product,
+			// so it's the exact shape needed for "staff waived it" too:
+			// the preview shouldn't show a fee that's about to be left off
+			// the actual order.
+			var waiveFeeEl = viewEl.querySelector( '#yp-mo-waive-fee' );
+			var mode = waiveFeeEl && waiveFeeEl.checked ? 'own_design' : 'new_design';
+
 			YP.request( coreEndpoint( 'custom-orders/pricing-preview' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify( { mode: 'new_design', batch: batch } )
+				body: JSON.stringify( { mode: mode, batch: batch } )
 			} )
 				.then( function ( pricing ) {
 					previewEl.innerHTML =
@@ -835,7 +856,8 @@
 					batch: readBatchRows( batchBody ),
 					style_notes: viewEl.querySelector( '#yp-mo-style-notes' ).value,
 					instructions: viewEl.querySelector( '#yp-mo-instructions' ).value,
-					requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked
+					requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked,
+					waive_design_fee: viewEl.querySelector( '#yp-mo-waive-fee' ).checked
 				};
 			} else if ( 'sticker' === state.orderType ) {
 				body = readStickerFields();

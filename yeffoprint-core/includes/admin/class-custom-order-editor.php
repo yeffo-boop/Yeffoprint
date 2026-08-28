@@ -61,12 +61,13 @@ class YeffoPrint_Custom_Order_Editor {
 		$order_type  = YeffoPrint_Custom_Order_Meta::get_order_type( $post->ID );
 		$is_sticker  = 'sticker' === $order_type;
 
-		// Direct request: two ways to skip the $25 design fee — see
-		// YeffoPrint_Custom_Order_Meta's own doc comments. Neither ever
+		// Direct request: three ways to skip the $25 design fee — see
+		// YeffoPrint_Custom_Order_Meta's own doc comments. None ever
 		// applies to a sticker order (that flow has no flat fee to skip
-		// in the first place), so both stay false there.
+		// in the first place), so all three stay false there.
 		$customer_provided_design = ! $is_sticker && (bool) $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_PROVIDED_DESIGN );
 		$source_custom_order_id   = $is_sticker ? 0 : (int) $m( YeffoPrint_Custom_Order_Meta::SOURCE_CUSTOM_ORDER_ID );
+		$fee_waived               = ! $is_sticker && (bool) $m( YeffoPrint_Custom_Order_Meta::FEE_WAIVED );
 		?>
 		<?php if ( $change_request && 'design_in_progress' === $m( YeffoPrint_Custom_Order_Meta::STATUS ) ) : ?>
 			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
@@ -77,6 +78,11 @@ class YeffoPrint_Custom_Order_Editor {
 		<?php if ( $customer_provided_design ) : ?>
 			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
 				<p style="margin: 0;"><strong><?php esc_html_e( 'Customer provided their own print-ready design — no design work needed.', 'yeffoprint-core' ); ?></strong> <?php esc_html_e( "Check the attached file(s) below are print-ready, then move this straight to a proof/status update.", 'yeffoprint-core' ); ?></p>
+			</div>
+		<?php endif; ?>
+		<?php if ( $fee_waived ) : ?>
+			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
+				<p style="margin: 0;"><strong><?php esc_html_e( 'The design fee was waived by staff on this order.', 'yeffoprint-core' ); ?></strong> <?php esc_html_e( 'Design work is still needed — the customer just was not charged for it.', 'yeffoprint-core' ); ?></p>
 			</div>
 		<?php endif; ?>
 		<table class="widefat striped">
@@ -102,6 +108,8 @@ class YeffoPrint_Custom_Order_Editor {
 								)
 							);
 							?>
+						<?php elseif ( $fee_waived ) : ?>
+							<?php esc_html_e( 'New design (fee waived by staff)', 'yeffoprint-core' ); ?>
 						<?php else : ?>
 							<?php esc_html_e( 'New design', 'yeffoprint-core' ); ?>
 						<?php endif; ?>
