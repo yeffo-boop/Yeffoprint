@@ -81,6 +81,9 @@ class YeffoPrint_Manual_Order_Creator {
 	 *                                    waive the $25 design fee on some manual orders (VIP customer,
 	 *                                    goodwill, etc). No effect on sticker/template orders, which have
 	 *                                    no flat fee to waive in the first place.
+	 *     @type bool   $send_invoice_email  All order types — direct request: email the customer their
+	 *                                       order details and a payment link right on creation, via
+	 *                                       WooCommerce's own built-in Order details/Customer Invoice email.
 	 * }
 	 * @return array{order:\WC_Order, custom_order_id:int}|\WP_Error
 	 */
@@ -242,6 +245,27 @@ class YeffoPrint_Manual_Order_Creator {
 		// publish/link the shell created above — same rule regardless of
 		// origin, per YeffoPrint_Custom_Order_Meta::create_shell()'s own
 		// docblock.
+
+		// Direct request: staff need a way to hand the customer their
+		// order details plus a working payment link, right from creation,
+		// instead of relaying one by hand (the likely source of a
+		// separately-reported "your cart is empty" error — a manually
+		// typed/copied link that wasn't actually built from
+		// $order->get_checkout_payment_url()). Reuses WooCommerce's own
+		// built-in "Order details" (nee "Customer invoice") email
+		// wholesale — WC_Email_Customer_Invoice, `manual = true`, the
+		// exact email core's own "Email invoice / order details to
+		// customer" order action sends — rather than building a parallel
+		// one: it already renders the order items/totals table, and its
+		// own template (theme override: woocommerce/emails/
+		// customer-invoice.php) already includes the payment link via
+		// $order->get_checkout_payment_url() whenever needs_payment() is
+		// true, so this order's fee waiver/pending status are reflected
+		// automatically with no extra plumbing here.
+		if ( ! empty( $payload['send_invoice_email'] ) && function_exists( 'WC' ) && WC()->mailer() ) {
+			WC()->mailer()->customer_invoice( $order );
+		}
+
 		return [ 'order' => $order, 'custom_order_id' => $custom_order_id ];
 	}
 

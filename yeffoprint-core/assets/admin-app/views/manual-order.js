@@ -159,6 +159,11 @@
 						'</div>' +
 						'<p class="yp-panel__hint">No design-fee line item gets added to the order — for a VIP customer or as goodwill. The customer still pays for the print run itself.</p>'
 						: '' ) +
+					'<div class="yp-field yp-field--checkbox">' +
+						'<input type="checkbox" id="yp-mo-send-invoice" checked />' +
+						'<label for="yp-mo-send-invoice">Email the customer their order details and a payment link</label>' +
+					'</div>' +
+					'<p class="yp-panel__hint">Sent right away via WooCommerce’s own Order details email, with the order’s real payment link — skip this if you’re taking payment another way (over the phone, in person) instead.</p>' +
 				'</div>' +
 
 				'<div data-yp-submit-status></div>' +
@@ -879,6 +884,8 @@
 					requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked
 				};
 			}
+
+			body.send_invoice_email = viewEl.querySelector( '#yp-mo-send-invoice' ).checked;
 
 			submitButton.disabled = true;
 			submitButton.textContent = 'Creating…';
