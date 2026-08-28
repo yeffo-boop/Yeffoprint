@@ -142,6 +142,15 @@ class YeffoPrint_Admin_Order_Controller {
 			'shipping_total'       => (float) $order->get_shipping_total(),
 			'total'                => (float) $order->get_total(),
 			'edit_url'             => $order->get_edit_order_url(),
+			// Direct request: print a real shipping label from this drawer, "without having to go to
+			// WooCommerce" — the WooCommerce Shipping plugin (Automattic\WCShipping\Loader, already
+			// active on this store) only ever renders its label-purchase UI as a meta box
+			// (#woocommerce-order-label) on the classic order edit screen; there's no public API to
+			// drive rate-shopping/label purchase from outside it. Rather than reimplement that (a large
+			// proprietary React app — rates, customs forms, payment, printing), the frontend embeds that
+			// exact meta box via a same-origin iframe onto `edit_url` and hides the surrounding chrome
+			// with injected CSS, so this flag just tells it whether that plugin is even active.
+			'shipping_label_available' => class_exists( '\Automattic\WCShipping\Loader' ),
 		];
 	}
 
