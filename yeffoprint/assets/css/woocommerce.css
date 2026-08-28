@@ -44,10 +44,19 @@
 .woocommerce input.button,
 .wc-block-cart__submit-container .wc-block-cart__submit-button,
 .wc-block-components-checkout-place-order-button {
+	display: inline-block !important;
 	border-radius: var(--wp--custom--radius--input) !important;
 	background: var(--wp--preset--color--near-black) !important;
 	color: var(--wp--preset--color--warm-white) !important;
 	border: none !important;
+	/* Same padding as .wp-block-button__link (global.css) — theme.json's
+	   generated global-styles stylesheet only reaches that real Gutenberg
+	   button class, never a bare classic `.button` like this, so without
+	   this it inherits no padding from anywhere and reads as bare/cramped
+	   text with a color behind it rather than an actual button — exactly
+	   the "Pay with Venmo button still looks bad" report. */
+	padding: 0.85rem 1.75rem !important;
+	text-decoration: none !important;
 }
 
 .woocommerce a.button:hover,
@@ -337,8 +346,20 @@
 	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
 }
 
+/* Direct report: only the word "Card" itself was clickable, not the
+   rest of that row, while Venmo/Zelle (our own gateway's markup, no
+   competing CSS of its own) worked fine — the real card-payment gateway
+   plugin ships its own CSS for this same label, evidently more specific
+   than this rule's plain two-class selector, keeping `display` at
+   whatever inline/inline-block default it set and leaving the label
+   shrink-wrapped to its own text instead of the full clickable row this
+   rule intends. !important (missing before) plus an explicit width so
+   the label reliably fills the row regardless of what any gateway's own
+   CSS does elsewhere. */
 .wc_payment_methods .wc_payment_method > label {
-	display: block;
+	display: block !important;
+	width: 100% !important;
+	box-sizing: border-box !important;
 	padding: 0.85rem 1rem 0.85rem 3rem !important;
 	margin: 0 !important;
 	cursor: pointer;
@@ -401,9 +422,15 @@
    plain white background, but it sits at a fixed left offset that
    lands under the radio circle now that this box has its own
    background and the radio has its own custom look above; simpler to
-   drop it than to keep re-deriving its position against both. */
+   drop it than to keep re-deriving its position against both. Direct
+   report ("weird arrow above each payment method that runs into the
+   title"): this needed !important and didn't have it — WooCommerce's
+   own rule for the same triangle (assets/css/woocommerce.css in the
+   plugin: `#payment div.payment_box::before`) is an ID selector, higher
+   specificity than this plain two-class one, so it was winning even
+   though this rule already existed. */
 .wc_payment_methods .payment_box::before {
-	display: none;
+	display: none !important;
 }
 
 /* The submit area below the payment method list — terms checkbox,
