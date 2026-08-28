@@ -176,7 +176,7 @@
 			saveButton.disabled = true;
 			saveButton.textContent = 'Adding…';
 
-			YP.request( endpoint( 'proof' ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { custom_order_id: customOrderId, file_id: fileId } ) } )
+			YP.request( endpoint( 'proofs' ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { custom_order_id: customOrderId, file_id: fileId } ) } )
 				.then( function () {
 					YP.closeDrawer( drawer );
 					load();
