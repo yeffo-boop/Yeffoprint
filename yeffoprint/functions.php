@@ -193,7 +193,22 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
-	if ( function_exists( 'is_cart' ) && ( is_cart() || is_checkout() || is_account_page() ) ) {
+	// Direct report: the "Pay for order" page (a declined-payment retry
+	// link, or an admin-created order's own payment link) rendered with
+	// none of this file's styling at all — plain browser radio buttons,
+	// square-cornered table, an unstyled "Pay with Venmo" link. That page
+	// is the checkout/order-pay/{id} endpoint, still technically "the
+	// Checkout page" as far as is_checkout() is concerned in most
+	// WooCommerce versions — but not reliably enough to trust blind, and
+	// the visual evidence (literally nothing here landed, not even a
+	// single rule) points at this enqueue gate never firing for that
+	// endpoint at all, not a CSS specificity loss. is_wc_endpoint_url()
+	// checks the endpoint directly, sidestepping whatever is_checkout()
+	// itself does — belt-and-suspenders, and it's what Checkout.php's own
+	// is_checkout_endpoint() checks internally for the exact same
+	// decision (whether to fall back to the classic template at all).
+	if ( function_exists( 'is_cart' ) && ( is_cart() || is_checkout() || is_account_page()
+		|| ( function_exists( 'is_wc_endpoint_url' ) && ( is_wc_endpoint_url( 'order-pay' ) || is_wc_endpoint_url( 'order-received' ) ) ) ) ) {
 		wp_enqueue_style(
 			'yeffoprint-woocommerce',
 			get_theme_file_uri( 'assets/css/woocommerce.css' ),
