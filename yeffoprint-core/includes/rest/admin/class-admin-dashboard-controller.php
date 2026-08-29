@@ -35,6 +35,24 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			'callback'            => [ $this, 'get_summary' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		// Direct request, testing the just-shipped live-tracking feature:
+		// staff don't want to wait for the next hourly
+		// YeffoPrint_Order_Delivery_Status sweep — this runs the exact same
+		// sweep synchronously and hands back the refreshed summary, so the
+		// Shipped Packages panel's "Check tracking now" button can show
+		// results immediately.
+		register_rest_route( self::NAMESPACE, '/admin/dashboard/refresh-tracking', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'refresh_tracking' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+	}
+
+	public function refresh_tracking(): \WP_REST_Response {
+		( new YeffoPrint_Order_Delivery_Status() )->sweep();
+
+		return $this->get_summary();
 	}
 
 	public function get_summary(): \WP_REST_Response {
@@ -123,6 +141,14 @@ class YeffoPrint_Admin_Dashboard_Controller {
 	 * conservative about that plugin's exact data shape), so the order
 	 * date would just be a misleading proxy for "how long has this been
 	 * in transit."
+	 *
+	 * `tracking_status`/`tracking_status_description`/`tracking_checked_at`
+	 * — direct request: "I want live tracking to show for any orders that
+	 * haven't been delivered." Reads YeffoPrint_Order_Delivery_Status's own
+	 * stored last-known-good status rather than calling a carrier/Shippo
+	 * live on every dashboard load — that class's hourly sweep (or the
+	 * panel's own "Check tracking now" button, refresh_tracking() above)
+	 * is what actually keeps this current.
 	 */
 	private function shipped_packages(): array {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
@@ -139,14 +165,19 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		$rows = [];
 		foreach ( $orders as $order ) {
 			foreach ( YeffoPrint_Order_Tracking::get_shipments( $order ) as $shipment ) {
+				$status = YeffoPrint_Order_Delivery_Status::get_status( $order, $shipment['tracking_number'] );
+
 				$rows[] = [
 					/* translators: %s: order number */
-					'order_label'     => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
-					'customer'        => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
-					'edit_url'        => $order->get_edit_order_url(),
-					'carrier_label'   => $shipment['carrier_label'],
-					'tracking_number' => $shipment['tracking_number'],
-					'tracking_url'    => $shipment['carrier_url'],
+					'order_label'                 => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
+					'customer'                    => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
+					'edit_url'                    => $order->get_edit_order_url(),
+					'carrier_label'               => $shipment['carrier_label'],
+					'tracking_number'             => $shipment['tracking_number'],
+					'tracking_url'                => $shipment['carrier_url'],
+					'tracking_status'             => $status['status'] ?? null,
+					'tracking_status_description' => $status['description'] ?? '',
+					'tracking_checked_at'         => $status['checked_at'] ?? null,
 				];
 			}
 		}

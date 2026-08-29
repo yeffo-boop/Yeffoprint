@@ -177,6 +177,83 @@ class YeffoPrint_Shippo_Client {
 		return $label . ': ' . $text;
 	}
 
+	/**
+	 * Live tracking via Shippo's own /tracks/ endpoint — direct request:
+	 * "I want live tracking to show for any orders that haven't been
+	 * delivered." This works for a shipment regardless of whether its
+	 * label was purchased through Shippo or WooCommerce Shipping (Shippo
+	 * can look up any tracking number for a carrier it knows), and unlike
+	 * the carrier-native providers in includes/woocommerce/tracking-
+	 * providers/, it needs no separate developer.usps.com/developer.ups.com
+	 * credentials — just the Shippo API key this store already has
+	 * configured. See class-shippo-tracking-provider.php, the adapter that
+	 * plugs this into that same tracking-provider interface.
+	 *
+	 * @return array{status:string,events:array{status:string,description:string,location:string,timestamp:string}[]}|\WP_Error
+	 */
+	public function track( string $carrier_id, string $tracking_number ) {
+		$response = $this->call( 'GET', '/tracks/' . rawurlencode( $carrier_id ) . '/' . rawurlencode( $tracking_number ) . '/' );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		// Shippo's documented shape: `tracking_status` is the current/latest
+		// state, `tracking_history` the full timeline — `tracking_status` is
+		// normally already `tracking_history`'s own newest entry, but it's
+		// folded in here too as a safety net (deduped below on status+
+		// timestamp) in case some carrier/account combination ever omits it
+		// from the history array, so a shipment with a real current status
+		// never comes back reporting zero events.
+		$history = $response['tracking_history'] ?? [];
+		if ( ! is_array( $history ) ) {
+			$history = [];
+		}
+		if ( is_array( $response['tracking_status'] ?? null ) ) {
+			$history[] = $response['tracking_status'];
+		}
+
+		if ( ! $history ) {
+			return [ 'status' => 'UNKNOWN', 'events' => [] ];
+		}
+
+		usort( $history, static function ( $a, $b ) {
+			return strtotime( (string) ( $b['status_date'] ?? '' ) ) <=> strtotime( (string) ( $a['status_date'] ?? '' ) );
+		} );
+
+		$events = [];
+		$seen   = [];
+		foreach ( $history as $raw ) {
+			$status    = strtoupper( trim( (string) ( $raw['status'] ?? '' ) ) );
+			$timestamp = (string) ( $raw['status_date'] ?? '' );
+			$dedupe_key = $status . '|' . $timestamp;
+
+			if ( '' === $status || isset( $seen[ $dedupe_key ] ) ) {
+				continue;
+			}
+			$seen[ $dedupe_key ] = true;
+
+			$events[] = [
+				'status'      => $status,
+				'description' => (string) ( $raw['status_details'] ?? '' ),
+				'location'    => $this->format_tracking_location( is_array( $raw['location'] ?? null ) ? $raw['location'] : [] ),
+				'timestamp'   => $timestamp,
+			];
+		}
+
+		return [
+			'status' => $events[0]['status'] ?? 'UNKNOWN',
+			'events' => $events,
+		];
+	}
+
+	private function format_tracking_location( array $location ): string {
+		$city  = trim( (string) ( $location['city'] ?? '' ) );
+		$state = trim( (string) ( $location['state'] ?? '' ) );
+
+		return $city . ( '' !== $city && '' !== $state ? ', ' : '' ) . $state;
+	}
+
 	/** @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error */
 	public function purchase_label( string $rate_id ) {
 		$response = $this->call( 'POST', '/transactions/', [

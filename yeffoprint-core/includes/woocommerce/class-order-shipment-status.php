@@ -18,10 +18,10 @@
  * actually wrote the label, and keeps working if that plugin ever
  * renames its own hooks.
  *
- * "Delivered" is a separate, later piece: it needs a working carrier
- * tracking API connection to know a shipment has actually arrived,
- * which this store doesn't have configured yet (Dashboard → YeffoPrint
- * → Settings → Shipment Tracking).
+ * "Delivered" is a separate, later piece — now built: class-order-
+ * delivery-status.php's hourly sweep watches every order in this
+ * "shipped" status for live delivery confirmation and moves it on to
+ * "completed" once every one of its shipments has arrived.
  */
 
 defined( 'ABSPATH' ) || exit;
