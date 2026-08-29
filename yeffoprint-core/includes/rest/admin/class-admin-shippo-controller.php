@@ -56,10 +56,27 @@ class YeffoPrint_Admin_Shippo_Controller {
 			return $client;
 		}
 
-		$params = $request->get_json_params() ?: [];
-		$parcel = $this->parcel_from_request( $params );
+		$params      = $request->get_json_params() ?: [];
+		$parcel      = $this->parcel_from_request( $params );
+		$address_to  = $this->address_to( $order );
 
-		$rates = $client->get_rates( $this->address_to( $order ), $parcel );
+		// Direct report: an incomplete address (this order had neither a
+		// shipping nor billing street/zip on file) reached Shippo and came
+		// back as two genuine "must not be empty" messages buried inside a
+		// dozen unrelated "Carrier account ... doesn't support" lines from
+		// Shippo's own default sample international carrier accounts every
+		// new account gets — technically correct, but an unreadable wall
+		// of noise for what's really one clear problem. Catching this here
+		// means a broken address reads as one sentence instead of that.
+		if ( '' === trim( $address_to['street1'] ) || '' === trim( $address_to['zip'] ) ) {
+			return new \WP_Error(
+				'yeffoprint_shippo_incomplete_address',
+				__( 'This order has no complete shipping or billing address on file — Shippo can\'t rate a shipment without a street address and ZIP/postal code.', 'yeffoprint-core' ),
+				[ 'status' => 400 ]
+			);
+		}
+
+		$rates = $client->get_rates( $address_to, $parcel );
 		if ( is_wp_error( $rates ) ) {
 			return $rates;
 		}

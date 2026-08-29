@@ -1333,3 +1333,14 @@ Added a targeted override for `.wc-block-components-quantity-selector__input` (`
 
 Verify: add a line item to the cart with quantity ≥ 10 → confirm the full two-digit number is visible in the quantity box, not clipped.
 
+## Fix: Shippo "Get Rates" buried two real errors in a wall of unrelated carrier noise (direct report, pasting the full error text after connecting the API key)
+
+The two genuine problems — `Attribute "address_to.street1" must not be empty.` and `Attribute "address_to.zip" must not be empty.` — were sitting among a dozen `Carrier account ... doesn't support one or more shipment options` lines. Every new Shippo account comes with a set of default sample carrier accounts (Correos, DPD, Chronopost, Hermes UK, a Canada Post/DHL/UPS master account, …), mostly international, that reject a normal domestic US shipment with that exact wording on every single request — not an error specific to this order, just permanent noise from carriers this store will never actually use.
+
+Two fixes:
+
+1. **Root cause**: `class-admin-shippo-controller.php::get_rates()` now validates the order actually has a street address and ZIP (shipping, falling back to billing) *before* ever calling Shippo — an incomplete address now reads as one clear sentence ("This order has no complete shipping or billing address on file...") instead of reaching the API and coming back wrapped in a dozen irrelevant carrier-account rejections.
+2. **Noise filtering**: `class-shippo-client.php::get_rates()` strips the `"doesn't support one or more shipment options"` and transient `"Too Many Requests"` message patterns out of any future error text, so a genuine failure (an incomplete address, an expired rate, …) stays readable instead of getting buried again.
+
+Verify: try Get Rates on an order with no shipping or billing address on file → confirm one clear sentence, not a wall of carrier noise → on an order with a real address, confirm rates return normally (the default sample carriers' rejections never surface at all when rates do come back, since they're just entries in `messages` alongside successful ones).
+
