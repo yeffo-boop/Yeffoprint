@@ -53,14 +53,42 @@ class YeffoPrint_Shippo_Client {
 
 		$notes = $this->relevant_messages( $response['messages'] ?? [] );
 
-		if ( 'SUCCESS' !== ( $response['status'] ?? '' ) || empty( $response['rates'] ) ) {
+		if ( 'SUCCESS' !== ( $response['status'] ?? '' ) ) {
 			return new \WP_Error(
 				'yeffoprint_shippo_no_rates',
 				$notes ? implode( ' ', $notes ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
 			);
 		}
 
-		$rates = array_map( [ $this, 'normalize_rate' ], $response['rates'] );
+		$raw_rates   = $response['rates'] ?? [];
+		$shipment_id = (string) ( $response['object_id'] ?? '' );
+
+		// Direct report, after ruling out any code-side rate limit: "should
+		// there be more [UPS options]?" — `async: false` above asks Shippo
+		// to answer synchronously, but Shippo's own docs describe that
+		// synchronous response as a snapshot: a carrier that's slow to
+		// respond (UPS is a known one) can still be missing from it even
+		// though the shipment itself was created successfully. A follow-up
+		// call to the shipment's own rates endpoint picks up whatever's
+		// landed since, unioned with the original snapshot by rate id so a
+		// rate present in one response but not the other (either order) is
+		// never dropped — a slow/failed follow-up call degrades back to the
+		// original snapshot instead of losing rates that were already there.
+		if ( '' !== $shipment_id ) {
+			$follow_up = $this->call( 'GET', '/shipments/' . rawurlencode( $shipment_id ) . '/rates' );
+			if ( ! is_wp_error( $follow_up ) && ! empty( $follow_up['results'] ) ) {
+				$raw_rates = $this->merge_rates( $raw_rates, $follow_up['results'] );
+			}
+		}
+
+		if ( empty( $raw_rates ) ) {
+			return new \WP_Error(
+				'yeffoprint_shippo_no_rates',
+				$notes ? implode( ' ', $notes ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
+			);
+		}
+
+		$rates = array_map( [ $this, 'normalize_rate' ], $raw_rates );
 
 		usort( $rates, static fn( $a, $b ) => $a['amount'] <=> $b['amount'] );
 
@@ -145,6 +173,20 @@ class YeffoPrint_Shippo_Client {
 		];
 	}
 
+	/** Union of two raw-rate-object lists by `object_id`, later list's entry winning on a collision — see get_rates()'s own docblock note above. */
+	private function merge_rates( array $initial, array $supplemental ): array {
+		$by_id = [];
+
+		foreach ( array_merge( $initial, $supplemental ) as $rate ) {
+			$id = (string) ( $rate['object_id'] ?? '' );
+			if ( '' !== $id ) {
+				$by_id[ $id ] = $rate;
+			}
+		}
+
+		return array_values( $by_id );
+	}
+
 	private function normalize_rate( array $rate ): array {
 		$carrier_id = sanitize_key( str_replace( ' ', '_', strtolower( (string) ( $rate['provider'] ?? '' ) ) ) );
 
@@ -180,20 +222,28 @@ class YeffoPrint_Shippo_Client {
 	}
 
 	/** @return array|\WP_Error */
-	private function call( string $method, string $path, array $body ) {
+	private function call( string $method, string $path, array $body = [] ) {
 		if ( '' === $this->token ) {
 			return new \WP_Error( 'yeffoprint_shippo_no_token', __( 'No Shippo API token is configured.', 'yeffoprint-core' ) );
 		}
 
-		$response = wp_remote_request( self::API_BASE . $path, [
+		$args = [
 			'method'  => $method,
 			'timeout' => 20,
 			'headers' => [
 				'Authorization' => 'ShippoToken ' . $this->token,
 				'Content-Type'  => 'application/json',
 			],
-			'body'    => wp_json_encode( $body ),
-		] );
+		];
+
+		// Only the two POST calls (create shipment, purchase transaction)
+		// carry a body — the GET rates follow-up in get_rates() has nothing
+		// to send, and an empty JSON body on a GET is needless noise.
+		if ( ! empty( $body ) ) {
+			$args['body'] = wp_json_encode( $body );
+		}
+
+		$response = wp_remote_request( self::API_BASE . $path, $args );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
