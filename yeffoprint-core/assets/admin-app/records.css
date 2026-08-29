@@ -459,3 +459,139 @@
 	border-color: var(--wp--preset--color--near-black);
 	outline: none;
 }
+
+/* ---------- Order detail modal ----------
+   Direct request: "move the whole order screen from a sidebar to a
+   modal window so it's bigger." Reuses two existing .yp-drawer
+   modifiers together rather than inventing a third positioning/
+   animation system: .yp-drawer--center (global.css — the splash
+   screen's own centered, scale-in treatment) supplies positioning;
+   this combined selector only widens it. .yp-drawer--wide alone (no
+   --center) still means the Templates screen's plain wide *sidebar*
+   drawer, untouched — this rule only ever matches an element carrying
+   both classes, which today is only the order detail drawer
+   (app.js's openWcOrderDrawer()). */
+.yp-drawer--wide.yp-drawer--center .yp-drawer__panel {
+	width: min(1040px, calc(100% - 2rem));
+	max-height: min(88vh, calc(100dvh - 2rem));
+}
+
+/* Two columns once there's room for them — order/customer/items/status
+   on the left, both shipping panels stacked on the right, instead of
+   everything in one long scrolling list. Collapses to a single column
+   below the breakpoint (phones/narrow windows), where the modal's own
+   width already shrinks to calc(100% - 2rem) anyway. */
+.yp-order-detail-grid {
+	display: grid;
+	grid-template-columns: 1.1fr 1fr;
+	gap: var(--wp--preset--spacing--sm);
+	align-items: start;
+}
+
+@media (max-width: 760px) {
+	.yp-order-detail-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ---------- Shippo rate list ---------- */
+
+/* Carrier filter pills, above the rate list — direct request: "I'd
+   like to be able to filter carriers from shippo." Toggle-style, same
+   visual language as configurator.js's own option pills (not reused
+   directly — that CSS lives in the theme, this is the admin app's own
+   copy of the same idea) rather than a plain multi-select, so the
+   active filters are visible at a glance. */
+.yp-carrier-filter {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0 0 1rem;
+}
+
+.yp-carrier-filter__pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.4rem 0.85rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: 999px;
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.8rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.yp-carrier-filter__pill:hover {
+	border-color: var(--wp--preset--color--charcoal);
+}
+
+.yp-carrier-filter__pill.is-active {
+	border-color: var(--wp--preset--color--near-black);
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+}
+
+/* Each rate as its own clickable card (the whole row selects the
+   radio, not just the small circle) instead of a cramped table row —
+   direct request to "make it look really nice." */
+.yp-rate-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin: 0 0 1rem;
+}
+
+.yp-rate-card {
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	padding: 0.75rem 1rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	cursor: pointer;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-rate-card:hover {
+	border-color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rate-card.is-selected {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-rate-card input[type="radio"] {
+	flex-shrink: 0;
+}
+
+.yp-rate-card__body {
+	flex: 1;
+	min-width: 0;
+}
+
+.yp-rate-card__carrier {
+	font-weight: 700;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-rate-card__service {
+	font-size: 0.85rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rate-card__days {
+	font-size: 0.78rem;
+	color: var(--wp--preset--color--charcoal);
+	white-space: nowrap;
+}
+
+.yp-rate-card__price {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: var(--wp--preset--color--near-black);
+	white-space: nowrap;
+}
