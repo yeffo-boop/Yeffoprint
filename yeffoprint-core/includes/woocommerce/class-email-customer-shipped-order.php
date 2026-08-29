@@ -87,12 +87,20 @@ class YeffoPrint_Email_Customer_Shipped_Order extends \WC_Email {
 				$this->placeholders['{order_number}'] = $this->object->get_order_number();
 			}
 
-			// Staff can pick "Shipped" from the status dropdown by hand,
-			// with no real label ever purchased — this guards against
-			// sending an email with an empty shipping-details box (no
-			// carrier, no tracking number, nothing to show) in that case.
-			// Same source of truth render_tracking_button() already checks.
-			if ( is_a( $this->object, \WC_Order::class ) && YeffoPrint_Order_Tracking::get_shipments( $this->object ) ) {
+			// Sends on any transition into "shipped" — including a manual
+			// status change from the drawer's own dropdown, direct report:
+			// "I also manually marked the order shipped and it didn't
+			// send the email." An earlier version of this only sent when
+			// YeffoPrint_Order_Tracking::get_shipments() found real label
+			// data, to avoid an empty shipping-details box — but staff
+			// marking an order shipped by hand (e.g. it went out without
+			// a label purchased through this system) is a real "it
+			// shipped" signal the customer should still hear about.
+			// customer-shipped-order.php's own template already renders
+			// the shipping-details box conditionally (`if ( $shipments )`),
+			// so this degrades gracefully to a shipped notice with no
+			// carrier/tracking section rather than an empty one.
+			if ( is_a( $this->object, \WC_Order::class ) ) {
 				$this->send_notification();
 			}
 
