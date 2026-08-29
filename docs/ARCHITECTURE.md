@@ -1344,3 +1344,12 @@ Two fixes:
 
 Verify: try Get Rates on an order with no shipping or billing address on file → confirm one clear sentence, not a wall of carrier noise → on an order with a real address, confirm rates return normally (the default sample carriers' rejections never surface at all when rates do come back, since they're just entries in `messages` alongside successful ones).
 
+### Follow-up: surface partial-success carrier notes, and fix a real label purchase failing on missing seller contact info
+
+Two more direct reports on the same feature, both fixed together:
+
+1. **"it only has a few USPS rates shown, how can I show UPS rates as well? I've enabled UPS in the Shippo dashboard"** — `get_rates()` previously only ever read Shippo's `messages` array on the all-fail path; the moment at least one carrier (USPS) returned a rate, any per-carrier explanation for why a *different* enabled carrier (a newly-connected UPS account) didn't was silently dropped. Now returns `{rates, notes}` instead of a bare rates array — `notes` carries the same noise-filtered messages on a partial-success response too, shown as a hint right in the panel, so a question like this can answer itself (e.g. "carrier account not yet fully verified") instead of needing a guess next time.
+2. **"Seller info missing email or phone. Seller email and phone number required for USPS."** — hit trying an actual label purchase. `YeffoPrint_Shippo_Settings::get_ship_from_address()` never sent `email`/`phone` at all — Shippo/USPS require the *sender's* contact info on every label, not just the destination's. Email reuses WordPress's own `admin_email` (already configured); this store had no existing business-phone setting anywhere, so a new "Ship-from phone number" field was added to Settings → Shipping, alongside the rest of Shippo's config. `class-shippo-client.php::format_address()` now includes both when present, omitting them entirely (rather than sending empty strings) when blank, matching the same "don't send a field Shippo could flag as empty" reasoning as the address-validation fix above.
+
+Verify: get rates on an order where only some enabled carriers return a rate → confirm a hint appears explaining the others (not silence) → set a ship-from phone number in Settings → Shipping → purchase a real label → confirm it succeeds without a seller-contact error.
+

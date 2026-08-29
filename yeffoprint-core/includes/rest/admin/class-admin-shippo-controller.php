@@ -76,12 +76,12 @@ class YeffoPrint_Admin_Shippo_Controller {
 			);
 		}
 
-		$rates = $client->get_rates( $address_to, $parcel );
-		if ( is_wp_error( $rates ) ) {
-			return $rates;
+		$result = $client->get_rates( $address_to, $parcel );
+		if ( is_wp_error( $result ) ) {
+			return $result;
 		}
 
-		return rest_ensure_response( [ 'rates' => $rates ] );
+		return rest_ensure_response( $result );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */
