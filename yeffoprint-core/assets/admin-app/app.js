@@ -883,7 +883,7 @@
 			.then( function ( response ) {
 				button.disabled = false;
 				button.textContent = 'Get Rates';
-				renderShippoRates( order, panel, response.rates || [] );
+				renderShippoRates( order, panel, response.rates || [], response.notes || [] );
 			} )
 			.catch( function ( error ) {
 				button.disabled = false;
@@ -892,15 +892,27 @@
 			} );
 	}
 
-	function renderShippoRates( order, panel, rates ) {
+	/**
+	 * `notes` — Shippo's own per-carrier messages that survive noise
+	 * filtering (class-shippo-client.php's relevant_messages()), shown
+	 * even when other carriers DID return a rate. Direct question, after
+	 * enabling UPS in the Shippo dashboard: "it only has a few USPS rates
+	 * shown, how can I show UPS rates as well?" — previously any reason a
+	 * specific carrier didn't return a rate was silently dropped whenever
+	 * at least one other carrier succeeded; this is where that answer now
+	 * surfaces instead of needing a guess.
+	 */
+	function renderShippoRates( order, panel, rates, notes ) {
 		var ratesEl = panel.querySelector( '[data-yp-shippo-rates]' );
+		var notesHtml = notes.length ? '<p class="yp-panel__hint">' + notes.map( YP.escapeHtml ).join( ' ' ) + '</p>' : '';
 
 		if ( ! rates.length ) {
-			ratesEl.innerHTML = '<p class="yp-panel__hint">No rates came back for this address/package.</p>';
+			ratesEl.innerHTML = notesHtml || '<p class="yp-panel__hint">No rates came back for this address/package.</p>';
 			return;
 		}
 
 		ratesEl.innerHTML =
+			notesHtml +
 			'<table class="yp-tier-table"><thead><tr><th></th><th>Carrier</th><th>Service</th><th>Days</th><th>Price</th></tr></thead><tbody>' +
 			rates.map( function ( rate, index ) {
 				return '<tr>' +

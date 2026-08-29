@@ -123,6 +123,8 @@
 					'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
 					'<p class="yp-panel__hint">An independent rate-shopping/label-purchase panel, shown alongside the existing WooCommerce Shipping form on every order — nothing here replaces that. Get an API token from your <a href="https://apps.goshippo.com/settings/api" target="_blank" rel="noopener">Shippo dashboard</a>. Comparing rates is always free; purchasing a label is a real charge.</p>' +
 					'<div class="yp-field"><label for="yp-set-shippo-key">API Token</label><input type="password" autocomplete="off" id="yp-set-shippo-key" value="' + YP.escapeAttr( settings.shippo_api_key ) + '" placeholder="shippo_live_... or shippo_test_..." /></div>' +
+					'<div class="yp-field"><label for="yp-set-shippo-phone">Ship-from phone number</label><input type="tel" id="yp-set-shippo-phone" value="' + YP.escapeAttr( settings.shippo_ship_from_phone ) + '" placeholder="(555) 123-4567" /></div>' +
+					'<p class="yp-panel__hint">Required by Shippo/USPS on every label as the sender\'s contact info — a real label purchase fails without it.</p>' +
 					'<p class="yp-panel__hint">Default package — pre-fills the rate-shop form on every order, editable there when something is heavier or bigger. This is a starting estimate, not a measured value — correct it here once you\'ve weighed a real package.</p>' +
 					'<div class="yp-form__row">' +
 						'<div class="yp-field"><label for="yp-set-shippo-weight">Weight (oz)</label><input type="number" min="0.1" step="0.1" id="yp-set-shippo-weight" value="' + YP.escapeAttr( settings.shippo_default_package.weight_oz ) + '" /></div>' +
@@ -254,6 +256,7 @@
 				usps_consumer_key: viewEl.querySelector( '#yp-set-usps-key' ).value,
 				usps_consumer_secret: viewEl.querySelector( '#yp-set-usps-secret' ).value,
 				shippo_api_key: viewEl.querySelector( '#yp-set-shippo-key' ).value,
+				shippo_ship_from_phone: viewEl.querySelector( '#yp-set-shippo-phone' ).value,
 				shippo_default_weight_oz: parseFloat( viewEl.querySelector( '#yp-set-shippo-weight' ).value ) || 4,
 				shippo_default_length_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-length' ).value ) || 8,
 				shippo_default_width_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-width' ).value ) || 6,

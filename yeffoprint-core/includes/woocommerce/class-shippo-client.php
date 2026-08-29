@@ -30,7 +30,7 @@ class YeffoPrint_Shippo_Client {
 	/**
 	 * @param array $address_to {street1, street2, city, state, zip, country, name}
 	 * @param array $parcel {weight_oz, length_in, width_in, height_in}
-	 * @return array|\WP_Error List of {id, carrier_id, carrier_label, service, amount, currency, days} on success.
+	 * @return array{rates:array,notes:string[]}|\WP_Error
 	 */
 	public function get_rates( array $address_to, array $parcel ) {
 		$response = $this->call( 'POST', '/shipments/', [
@@ -51,31 +51,12 @@ class YeffoPrint_Shippo_Client {
 			return $response;
 		}
 
+		$notes = $this->relevant_messages( $response['messages'] ?? [] );
+
 		if ( 'SUCCESS' !== ( $response['status'] ?? '' ) || empty( $response['rates'] ) ) {
-			$messages = array_map(
-				static fn( $m ) => (string) ( $m['text'] ?? '' ),
-				$response['messages'] ?? []
-			);
-
-			// Every new Shippo account comes with a set of default sample
-			// carrier accounts (mostly international — Correos, DPD,
-			// Chronopost, Hermes UK, a Canada Post/DHL/UPS master
-			// account…) that reject a normal domestic US shipment with
-			// this exact wording on *every* request, success or not —
-			// found live, buried among ten of these next to the two
-			// genuine "must not be empty" address errors that actually
-			// caused this specific failure. Filtered out so a real error
-			// (an incomplete address, a rate that's since expired, …)
-			// reads as one clear sentence instead of a wall of unrelated
-			// per-carrier noise.
-			$messages = array_filter( $messages, static function ( string $text ): bool {
-				return false === strpos( $text, "doesn't support one or more shipment options" )
-					&& false === strpos( $text, 'Too Many Requests' );
-			} );
-
 			return new \WP_Error(
 				'yeffoprint_shippo_no_rates',
-				$messages ? implode( ' ', $messages ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
+				$notes ? implode( ' ', $notes ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
 			);
 		}
 
@@ -83,7 +64,43 @@ class YeffoPrint_Shippo_Client {
 
 		usort( $rates, static fn( $a, $b ) => $a['amount'] <=> $b['amount'] );
 
-		return $rates;
+		// A partial response — some rates came back, but not every
+		// enabled carrier account produced one — still carries a
+		// `messages` entry per carrier that came up empty. Direct
+		// question, after connecting a real UPS account in the Shippo
+		// dashboard: "it only has a few USPS rates shown, how can I show
+		// UPS rates as well?" Previously this was only ever read on the
+		// all-fail path, so the exact reason a specific carrier didn't
+		// return a rate (an incomplete carrier-account setup on Shippo's
+		// side, an unsupported service for this route, …) was silently
+		// dropped whenever at least one other carrier succeeded — surfaced
+		// here so that question can answer itself in the panel instead of
+		// needing a guess.
+		return [ 'rates' => $rates, 'notes' => $notes ];
+	}
+
+	/**
+	 * Every new Shippo account comes with a set of default sample carrier
+	 * accounts (mostly international — Correos, DPD, Chronopost, Hermes
+	 * UK, a Canada Post/DHL/UPS master account…) that reject a normal
+	 * domestic US shipment with this exact wording on *every* request,
+	 * success or not. Filtered out so a real message (an incomplete
+	 * address, a carrier account that's connected but not fully set up, a
+	 * rate that's since expired, …) reads as a short, useful note instead
+	 * of getting lost in a wall of unrelated per-carrier noise.
+	 *
+	 * @return string[]
+	 */
+	private function relevant_messages( array $raw_messages ): array {
+		$messages = array_map(
+			static fn( $m ) => (string) ( $m['text'] ?? '' ),
+			$raw_messages
+		);
+
+		return array_values( array_filter( $messages, static function ( string $text ): bool {
+			return false === strpos( $text, "doesn't support one or more shipment options" )
+				&& false === strpos( $text, 'Too Many Requests' );
+		} ) );
 	}
 
 	/** @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error */
@@ -134,7 +151,13 @@ class YeffoPrint_Shippo_Client {
 	}
 
 	private function format_address( array $address ): array {
-		return [
+		// email/phone are optional for address_to (the recipient) but
+		// required by Shippo/USPS for address_from (the sender) — see
+		// YeffoPrint_Shippo_Settings::get_ship_from_address()'s own
+		// docblock. Only included when present so an address_to with
+		// neither doesn't send empty strings Shippo could just as easily
+		// flag as "must not be empty" the way street1/zip already were.
+		return array_filter( [
 			'name'    => $address['name'] ?? '',
 			'street1' => $address['street1'] ?? '',
 			'street2' => $address['street2'] ?? '',
@@ -142,7 +165,9 @@ class YeffoPrint_Shippo_Client {
 			'state'   => $address['state'] ?? '',
 			'zip'     => $address['zip'] ?? '',
 			'country' => $address['country'] ?? '',
-		];
+			'email'   => $address['email'] ?? '',
+			'phone'   => $address['phone'] ?? '',
+		], static fn( $value, $key ) => '' !== $value || ! in_array( $key, [ 'email', 'phone' ], true ), ARRAY_FILTER_USE_BOTH );
 	}
 
 	/** @return array|\WP_Error */

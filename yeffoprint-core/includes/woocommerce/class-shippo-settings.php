@@ -36,6 +36,7 @@ class YeffoPrint_Shippo_Settings {
 	public const DEFAULT_LENGTH_IN_OPTION = 'yeffoprint_shippo_default_length_in';
 	public const DEFAULT_WIDTH_IN_OPTION  = 'yeffoprint_shippo_default_width_in';
 	public const DEFAULT_HEIGHT_IN_OPTION = 'yeffoprint_shippo_default_height_in';
+	public const SHIP_FROM_PHONE_OPTION   = 'yeffoprint_shippo_ship_from_phone';
 
 	// A padded 8x6 bubble mailer with a few sheets of vinyl labels inside —
 	// direct answer, "not sure how much the envelope weighs" — a starting
@@ -72,7 +73,18 @@ class YeffoPrint_Shippo_Settings {
 	 * own Settings → General store-address options rather than adding a
 	 * second place to maintain the same address.
 	 *
-	 * @return array{name:string,street1:string,street2:string,city:string,state:string,zip:string,country:string}
+	 * `email`/`phone` were added after a direct report purchasing a real
+	 * label: "Seller info missing email or phone. Seller email and phone
+	 * number required for USPS." — Shippo/USPS require the *sender's*
+	 * contact info on a label, not just the destination's, and this
+	 * class originally sent neither. Email reuses WordPress's own
+	 * `admin_email` (already configured, no new field needed); this
+	 * store has no existing business-phone setting anywhere, so
+	 * SHIP_FROM_PHONE_OPTION adds the one new field this actually
+	 * required (Settings → Shipping, alongside the rest of Shippo's
+	 * config).
+	 *
+	 * @return array{name:string,street1:string,street2:string,city:string,state:string,zip:string,country:string,email:string,phone:string}
 	 */
 	public static function get_ship_from_address(): array {
 		return [
@@ -83,6 +95,8 @@ class YeffoPrint_Shippo_Settings {
 			'state'   => (string) WC()->countries->get_base_state(),
 			'zip'     => (string) get_option( 'woocommerce_store_postcode', '' ),
 			'country' => (string) WC()->countries->get_base_country(),
+			'email'   => (string) get_option( 'admin_email', '' ),
+			'phone'   => (string) get_option( self::SHIP_FROM_PHONE_OPTION, '' ),
 		];
 	}
 }
