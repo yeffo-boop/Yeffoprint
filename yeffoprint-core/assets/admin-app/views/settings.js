@@ -117,6 +117,19 @@
 						'<div class="yp-field"><label for="yp-set-usps-key">USPS Consumer Key</label><input type="password" autocomplete="off" id="yp-set-usps-key" value="' + YP.escapeAttr( settings.usps_consumer_key ) + '" /></div>' +
 						'<div class="yp-field"><label for="yp-set-usps-secret">USPS Consumer Secret</label><input type="password" autocomplete="off" id="yp-set-usps-secret" value="' + YP.escapeAttr( settings.usps_consumer_secret ) + '" /></div>' +
 					'</div>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
+					'<p class="yp-panel__hint">An independent rate-shopping/label-purchase panel, shown alongside the existing WooCommerce Shipping form on every order — nothing here replaces that. Get an API token from your <a href="https://apps.goshippo.com/settings/api" target="_blank" rel="noopener">Shippo dashboard</a>. Comparing rates is always free; purchasing a label is a real charge.</p>' +
+					'<div class="yp-field"><label for="yp-set-shippo-key">API Token</label><input type="password" autocomplete="off" id="yp-set-shippo-key" value="' + YP.escapeAttr( settings.shippo_api_key ) + '" placeholder="shippo_live_... or shippo_test_..." /></div>' +
+					'<p class="yp-panel__hint">Default package — pre-fills the rate-shop form on every order, editable there when something is heavier or bigger. This is a starting estimate, not a measured value — correct it here once you\'ve weighed a real package.</p>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-shippo-weight">Weight (oz)</label><input type="number" min="0.1" step="0.1" id="yp-set-shippo-weight" value="' + YP.escapeAttr( settings.shippo_default_package.weight_oz ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-shippo-length">Length (in)</label><input type="number" min="0.1" step="0.1" id="yp-set-shippo-length" value="' + YP.escapeAttr( settings.shippo_default_package.length_in ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-shippo-width">Width (in)</label><input type="number" min="0.1" step="0.1" id="yp-set-shippo-width" value="' + YP.escapeAttr( settings.shippo_default_package.width_in ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-shippo-height">Height (in)</label><input type="number" min="0.1" step="0.1" id="yp-set-shippo-height" value="' + YP.escapeAttr( settings.shippo_default_package.height_in ) + '" /></div>' +
+					'</div>' +
 				'</div>';
 
 			var integrationsHtml =
@@ -240,6 +253,11 @@
 				ups_client_secret: viewEl.querySelector( '#yp-set-ups-secret' ).value,
 				usps_consumer_key: viewEl.querySelector( '#yp-set-usps-key' ).value,
 				usps_consumer_secret: viewEl.querySelector( '#yp-set-usps-secret' ).value,
+				shippo_api_key: viewEl.querySelector( '#yp-set-shippo-key' ).value,
+				shippo_default_weight_oz: parseFloat( viewEl.querySelector( '#yp-set-shippo-weight' ).value ) || 4,
+				shippo_default_length_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-length' ).value ) || 8,
+				shippo_default_width_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-width' ).value ) || 6,
+				shippo_default_height_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-height' ).value ) || 1,
 				contact_recipient_email: viewEl.querySelector( '#yp-set-contact-email' ).value,
 				splash_enabled: viewEl.querySelector( '#yp-set-splash-enabled' ).checked,
 				splash_image_id: parseInt( viewEl.querySelector( '[data-yp-splash-id]' ).value, 10 ) || 0,

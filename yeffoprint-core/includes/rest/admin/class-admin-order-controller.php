@@ -170,6 +170,11 @@ class YeffoPrint_Admin_Order_Controller {
 			// /wp-admin/ (unlike a normal admin page load, which already pulled it in), hence the
 			// explicit require below.
 			'shipping_label_available' => $this->is_shipping_plugin_active(),
+			// The independent Shippo panel (class-admin-shippo-controller.php) — direct request:
+			// "can we build something with the shippo API to replace it? ... I'd like to run
+			// alongside it a bit." Shown next to, not instead of, the row above.
+			'shippo_configured'        => YeffoPrint_Shippo_Settings::is_configured(),
+			'shippo_default_package'   => YeffoPrint_Shippo_Settings::get_default_package(),
 		];
 	}
 

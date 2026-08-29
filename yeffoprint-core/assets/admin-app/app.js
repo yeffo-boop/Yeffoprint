@@ -703,6 +703,7 @@
 			'</div>' +
 
 			wcOrderShippingLabelHtml( order ) +
+			shippoPanelHtml( order ) +
 
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Status</h2></div>' +
@@ -725,6 +726,8 @@
 				embedShippingLabel( order, bodyEl );
 			}
 		}
+
+		bindShippoPanel( order, bodyEl );
 	}
 
 	/**
@@ -803,6 +806,157 @@
 		} );
 
 		frameHost.appendChild( iframe );
+	}
+
+	/**
+	 * A second, independent rate-shop/label-purchase panel next to the
+	 * WooCommerce Shipping one above — direct request: "can we build
+	 * something with the shippo API to replace it? ... I'd like to run
+	 * alongside it a bit." Comparing rates never charges anything on the
+	 * Shippo account; only clicking "Purchase" does, which the warning
+	 * text and the confirm() in bindShippoPanel() below both make explicit
+	 * before it fires.
+	 */
+	function shippoPanelHtml( order ) {
+		if ( ! order.shippo_configured ) {
+			return (
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
+					'<p class="yp-panel__hint">An independent shipping-label option — add an API token under Settings &rarr; Shipping to turn this on for every order.</p>' +
+				'</div>'
+			);
+		}
+
+		var pkg = order.shippo_default_package;
+
+		return (
+			'<div class="yp-panel" data-yp-shippo-panel>' +
+				'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
+				'<p class="yp-panel__hint">Comparing rates below is free. Purchasing a label is a real charge against your Shippo balance/carrier accounts.</p>' +
+				'<div class="yp-form__row">' +
+					'<div class="yp-field"><label for="yp-shippo-weight">Weight (oz)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-weight" value="' + YP.escapeAttr( pkg.weight_oz ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-shippo-length">Length (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-length" value="' + YP.escapeAttr( pkg.length_in ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-shippo-width">Width (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-width" value="' + YP.escapeAttr( pkg.width_in ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-shippo-height">Height (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-height" value="' + YP.escapeAttr( pkg.height_in ) + '" /></div>' +
+				'</div>' +
+				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-get-rates>Get Rates</button>' +
+				'<div data-yp-shippo-rates></div>' +
+				'<div data-yp-shippo-error></div>' +
+				'<div data-yp-shippo-result></div>' +
+			'</div>'
+		);
+	}
+
+	function bindShippoPanel( order, bodyEl ) {
+		var panel = bodyEl.querySelector( '[data-yp-shippo-panel]' );
+		if ( ! panel ) {
+			return;
+		}
+
+		panel.querySelector( '[data-yp-shippo-get-rates]' ).addEventListener( 'click', function () {
+			fetchShippoRates( order, panel );
+		} );
+	}
+
+	function fetchShippoRates( order, panel ) {
+		var button = panel.querySelector( '[data-yp-shippo-get-rates]' );
+		var ratesEl = panel.querySelector( '[data-yp-shippo-rates]' );
+		var errorEl = panel.querySelector( '[data-yp-shippo-error]' );
+
+		var parcel = {
+			weight_oz: parseFloat( panel.querySelector( '#yp-shippo-weight' ).value ) || 0,
+			length_in: parseFloat( panel.querySelector( '#yp-shippo-length' ).value ) || 0,
+			width_in: parseFloat( panel.querySelector( '#yp-shippo-width' ).value ) || 0,
+			height_in: parseFloat( panel.querySelector( '#yp-shippo-height' ).value ) || 0
+		};
+
+		button.disabled = true;
+		button.textContent = 'Getting rates…';
+		errorEl.innerHTML = '';
+		ratesEl.innerHTML = '';
+
+		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/shippo/rates', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( parcel )
+		} )
+			.then( function ( response ) {
+				button.disabled = false;
+				button.textContent = 'Get Rates';
+				renderShippoRates( order, panel, response.rates || [] );
+			} )
+			.catch( function ( error ) {
+				button.disabled = false;
+				button.textContent = 'Get Rates';
+				errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+			} );
+	}
+
+	function renderShippoRates( order, panel, rates ) {
+		var ratesEl = panel.querySelector( '[data-yp-shippo-rates]' );
+
+		if ( ! rates.length ) {
+			ratesEl.innerHTML = '<p class="yp-panel__hint">No rates came back for this address/package.</p>';
+			return;
+		}
+
+		ratesEl.innerHTML =
+			'<table class="yp-tier-table"><thead><tr><th></th><th>Carrier</th><th>Service</th><th>Days</th><th>Price</th></tr></thead><tbody>' +
+			rates.map( function ( rate, index ) {
+				return '<tr>' +
+					'<td><input type="radio" name="yp-shippo-rate" value="' + YP.escapeAttr( rate.id ) + '"' + ( 0 === index ? ' checked' : '' ) + ' /></td>' +
+					'<td>' + YP.escapeHtml( rate.carrier_label ) + '</td>' +
+					'<td>' + YP.escapeHtml( rate.service ) + '</td>' +
+					'<td>' + ( rate.days ? rate.days + 'd' : '—' ) + '</td>' +
+					'<td>$' + rate.amount.toFixed( 2 ) + '</td>' +
+				'</tr>';
+			} ).join( '' ) +
+			'</tbody></table>' +
+			'<button type="button" class="wp-block-button__link is-style-accent" data-yp-shippo-purchase>Purchase Selected Label</button>';
+
+		ratesEl.querySelector( '[data-yp-shippo-purchase]' ).addEventListener( 'click', function () {
+			var selected = ratesEl.querySelector( 'input[name="yp-shippo-rate"]:checked' );
+			if ( ! selected ) {
+				return;
+			}
+			var rate = rates.filter( function ( r ) { return r.id === selected.value; } )[ 0 ];
+			if ( rate && window.confirm( 'Purchase this ' + rate.carrier_label + ' ' + rate.service + ' label for $' + rate.amount.toFixed( 2 ) + '? This charges your Shippo balance/carrier account immediately.' ) ) {
+				purchaseShippoLabel( order, panel, selected.value );
+			}
+		} );
+	}
+
+	function purchaseShippoLabel( order, panel, rateId ) {
+		var purchaseButton = panel.querySelector( '[data-yp-shippo-purchase]' );
+		var errorEl = panel.querySelector( '[data-yp-shippo-error]' );
+		var resultEl = panel.querySelector( '[data-yp-shippo-result]' );
+
+		purchaseButton.disabled = true;
+		purchaseButton.textContent = 'Purchasing…';
+		errorEl.innerHTML = '';
+
+		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/shippo/purchase', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( { rate_id: rateId } )
+		} )
+			.then( function ( response ) {
+				resultEl.innerHTML =
+					'<p class="yp-panel__hint"><strong>Label purchased.</strong> Tracking: ' + YP.escapeHtml( response.label.tracking_number ) + ' (' + YP.escapeHtml( response.label.carrier_label ) + ')' +
+					( response.label.label_url ? ' — <a href="' + YP.escapeAttr( response.label.label_url ) + '" target="_blank" rel="noopener">Print label</a>' : '' ) +
+					'</p>';
+				panel.querySelector( '[data-yp-shippo-rates]' ).innerHTML = '';
+				order.status = response.status;
+				var statusSelect = panel.parentNode ? panel.parentNode.querySelector( '[data-yp-wc-status]' ) : null;
+				if ( statusSelect ) {
+					statusSelect.value = response.status;
+				}
+			} )
+			.catch( function ( error ) {
+				purchaseButton.disabled = false;
+				purchaseButton.textContent = 'Purchase Selected Label';
+				errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+			} );
 	}
 
 	function saveWcOrderStatus( order, drawer, bodyEl ) {
