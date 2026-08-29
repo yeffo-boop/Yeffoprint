@@ -67,6 +67,12 @@ class YeffoPrint_Telegram_Order_Lookup {
 			$lines[] = __( 'Tracking:', 'yeffoprint-core' );
 			foreach ( $shipments as $shipment ) {
 				$lines[] = sprintf( '%1$s %2$s', $shipment['carrier_label'], $shipment['tracking_number'] );
+
+				$status_line = self::live_status_line( $shipment );
+				if ( $status_line ) {
+					$lines[] = $status_line;
+				}
+
 				if ( $shipment['carrier_url'] ) {
 					$lines[] = $shipment['carrier_url'];
 				}
@@ -96,6 +102,37 @@ class YeffoPrint_Telegram_Order_Lookup {
 	 */
 	public static function plain_total( \WC_Order $order ): string {
 		return html_entity_decode( wp_strip_all_tags( $order->get_formatted_order_total() ), ENT_QUOTES, 'UTF-8' );
+	}
+
+	/**
+	 * Live "Status: ..." line for one shipment, straight from the
+	 * carrier — direct request: "if someone wants to check the status of
+	 * an order that's shipped it will reply with the current status from
+	 * the carrier." Reuses YeffoPrint_Order_Tracking::live_events(), the
+	 * exact same lookup (and its 30-minute cache) the customer-facing
+	 * /track-order/ page already uses, so a Telegram reply and a page
+	 * load asking about the same shipment within that window share one
+	 * carrier API call instead of making two. Returns '' rather than an
+	 * error line when no provider is configured or the lookup fails —
+	 * the bare tracking number + carrier link already printed above it
+	 * is still a complete, useful answer on its own.
+	 */
+	private static function live_status_line( array $shipment ): string {
+		$events = YeffoPrint_Order_Tracking::live_events( $shipment );
+		if ( ! $events ) {
+			return '';
+		}
+
+		$latest = $events[0];
+		$text   = '' !== $latest['description']
+			? $latest['description']
+			: ucwords( strtolower( str_replace( '_', ' ', $latest['status'] ) ) );
+
+		if ( '' !== $latest['location'] ) {
+			$text .= ' — ' . $latest['location'];
+		}
+
+		return sprintf( /* translators: %s: live status text from the carrier, e.g. "Delivered — Spokane, WA" */ __( 'Status: %s', 'yeffoprint-core' ), $text );
 	}
 
 	/** The linked Custom Order (yp_custom_order) record's own production status, if this WC order came from that flow — separate pipeline from WooCommerce's order status, per PROJECT_SPEC §13. */

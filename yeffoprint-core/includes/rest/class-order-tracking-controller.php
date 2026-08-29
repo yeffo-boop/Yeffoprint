@@ -14,9 +14,6 @@ class YeffoPrint_Order_Tracking_Controller {
 
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
-	/** Live carrier lookups are cached per tracking number — no reason to call UPS/USPS again for every page view/refresh in this window. */
-	private const EVENTS_CACHE_TTL = 30 * MINUTE_IN_SECONDS;
-
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
 	}
@@ -72,35 +69,14 @@ class YeffoPrint_Order_Tracking_Controller {
 		] );
 	}
 
+	/**
+	 * Direct link ($shipment['carrier_url'], already present) is always
+	 * the fallback the front-end shows when `events` comes back empty —
+	 * no configured provider or a failed live lookup is never the reason
+	 * a customer sees a broken page, just a plainer one.
+	 */
 	private function with_live_events( array $shipment ): array {
-		$registry = new YeffoPrint_Tracking_Provider_Registry();
-
-		if ( ! $registry->is_configured( $shipment['carrier_id'] ) ) {
-			$shipment['events'] = [];
-			return $shipment;
-		}
-
-		$cache_key = 'yeffoprint_tracking_' . md5( $shipment['carrier_id'] . '_' . $shipment['tracking_number'] );
-		$cached    = get_transient( $cache_key );
-
-		if ( is_array( $cached ) ) {
-			$shipment['events'] = $cached;
-			return $shipment;
-		}
-
-		try {
-			$events = $registry->get( $shipment['carrier_id'] )->get_events( $shipment['tracking_number'] );
-		} catch ( YeffoPrint_Tracking_Exception $e ) {
-			// The carrier's own direct link ($shipment['carrier_url'],
-			// already present) is always the fallback the front-end
-			// shows when `events` comes back empty — a failed live
-			// lookup is never the reason a customer sees a broken page,
-			// just a plainer one.
-			$events = [];
-		}
-
-		set_transient( $cache_key, $events, self::EVENTS_CACHE_TTL );
-		$shipment['events'] = $events;
+		$shipment['events'] = YeffoPrint_Order_Tracking::live_events( $shipment );
 
 		return $shipment;
 	}
