@@ -56,9 +56,26 @@ class YeffoPrint_Shippo_Client {
 				static fn( $m ) => (string) ( $m['text'] ?? '' ),
 				$response['messages'] ?? []
 			);
+
+			// Every new Shippo account comes with a set of default sample
+			// carrier accounts (mostly international — Correos, DPD,
+			// Chronopost, Hermes UK, a Canada Post/DHL/UPS master
+			// account…) that reject a normal domestic US shipment with
+			// this exact wording on *every* request, success or not —
+			// found live, buried among ten of these next to the two
+			// genuine "must not be empty" address errors that actually
+			// caused this specific failure. Filtered out so a real error
+			// (an incomplete address, a rate that's since expired, …)
+			// reads as one clear sentence instead of a wall of unrelated
+			// per-carrier noise.
+			$messages = array_filter( $messages, static function ( string $text ): bool {
+				return false === strpos( $text, "doesn't support one or more shipment options" )
+					&& false === strpos( $text, 'Too Many Requests' );
+			} );
+
 			return new \WP_Error(
 				'yeffoprint_shippo_no_rates',
-				$messages ? implode( ' ', array_filter( $messages ) ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
+				$messages ? implode( ' ', $messages ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
 			);
 		}
 
