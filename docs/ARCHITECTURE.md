@@ -1282,3 +1282,11 @@ Wrapped the whole body of `trigger()` in a `try`/`catch ( \Throwable $e )`, logg
 
 Verify: purchase a shipping label on an order in Processing or In Production → confirm the order lands on "Shipped" and the email sends → if a future bug does appear in this email's content code, confirm it logs to WooCommerce → Status → Logs (source: `yeffoprint-shipped-email`) instead of taking down the request.
 
+### Follow-up: manually marking an order Shipped from the dropdown didn't send the email (direct report: "I also manually marked the order shipped and it didn't send the email")
+
+`trigger()` originally only called `send_notification()` when `YeffoPrint_Order_Tracking::get_shipments()` found real label/tracking data on the order — deliberately, to avoid sending a "shipped" email with an empty shipping-details box when staff pick "Shipped" from the dropdown by hand with no label ever purchased through WooCommerce Shipping. That guard was too strict: a manual status change to "Shipped" is itself a real "it shipped" signal (e.g. it went out without a label purchased through this system), and the customer should still hear about it.
+
+Removed the `get_shipments()` gate — `trigger()` now sends on any transition into "shipped", full stop. No template changes were needed: `customer-shipped-order.php` (and its plain-text counterpart) already wrap the shipping-details box in `if ( $shipments )`, so an order with no real tracking data still gets a clean "your order has shipped!" email, just without the carrier/tracking section (and without the "Track your order" button — `render_tracking_button()` already skips itself the same way when there's nothing to track).
+
+Verify: manually change an order's status to "Shipped" from the drawer's own dropdown, on an order with no shipping label ever purchased → confirm the customer still receives "Your order has shipped!" with no shipping-details box or tracking button → separately, purchase a real label → confirm the email includes the carrier/tracking section as before.
+
