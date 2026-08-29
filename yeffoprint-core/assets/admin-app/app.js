@@ -629,7 +629,11 @@
 	 */
 	function openWcOrderDrawer( id, autoPrintLabel ) {
 		var drawer = document.createElement( 'div' );
-		drawer.className = 'yp-drawer yp-drawer--wide';
+		// --center (global.css's own splash-screen modal treatment) +
+		// --wide (widened further specifically for this combination —
+		// records.css) together, direct request: "move the whole order
+		// screen from a sidebar to a modal window so it's bigger."
+		drawer.className = 'yp-drawer yp-drawer--wide yp-drawer--center';
 		drawer.setAttribute( 'aria-hidden', 'true' );
 		drawer.innerHTML =
 			'<div class="yp-drawer__backdrop"></div>' +
@@ -693,26 +697,39 @@
 		}
 		rowsHtml += wcOrderRow( 'Date', order.date ? new Date( order.date ).toLocaleString() : '—' );
 
+		// Two columns now that the modal (records.css's
+		// .yp-drawer--wide.yp-drawer--center override) has the room for
+		// them: order/items/status on the left (the "what was ordered"
+		// story, read top to bottom), both shipping panels stacked on
+		// the right (the "get it out the door" actions) — rather than
+		// one long list where the two shipping panels used to push
+		// Status halfway down the sidebar.
 		bodyEl.innerHTML =
-			'<div class="yp-record-card"><table class="yp-record-table"><tbody>' + rowsHtml + '</tbody></table></div>' +
+			'<div class="yp-order-detail-grid">' +
+				'<div>' +
+					'<div class="yp-record-card"><table class="yp-record-table"><tbody>' + rowsHtml + '</tbody></table></div>' +
 
-			'<div class="yp-panel">' +
-				'<div class="yp-panel__head"><h2>Items</h2></div>' +
-				wcOrderItemsHtml( order.items ) +
-				'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
-			'</div>' +
+					'<div class="yp-panel">' +
+						'<div class="yp-panel__head"><h2>Items</h2></div>' +
+						wcOrderItemsHtml( order.items ) +
+						'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
+					'</div>' +
 
-			wcOrderShippingLabelHtml( order ) +
-			shippoPanelHtml( order ) +
+					'<div class="yp-panel">' +
+						'<div class="yp-panel__head"><h2>Status</h2></div>' +
+						'<div class="yp-form__row"><div class="yp-field"><select data-yp-wc-status>' +
+							Object.keys( order.statuses ).map( function ( key ) {
+								return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
+							} ).join( '' ) +
+						'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
+						'<div data-yp-wc-status-error></div>' +
+					'</div>' +
+				'</div>' +
 
-			'<div class="yp-panel">' +
-				'<div class="yp-panel__head"><h2>Status</h2></div>' +
-				'<div class="yp-form__row"><div class="yp-field"><select data-yp-wc-status>' +
-					Object.keys( order.statuses ).map( function ( key ) {
-						return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
-					} ).join( '' ) +
-				'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
-				'<div data-yp-wc-status-error></div>' +
+				'<div>' +
+					wcOrderShippingLabelHtml( order ) +
+					shippoPanelHtml( order ) +
+				'</div>' +
 			'</div>' +
 
 			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
@@ -911,20 +928,73 @@
 			return;
 		}
 
+		// One pill per carrier actually present in this response — direct
+		// request: "I'd like to be able to filter carriers from shippo."
+		// Built from the rates themselves rather than a fixed USPS/UPS/
+		// FedEx/DHL list, so a carrier this store hasn't connected yet
+		// never shows an empty, useless filter option.
+		var carriers = [];
+		rates.forEach( function ( rate ) {
+			if ( carriers.indexOf( rate.carrier_label ) === -1 ) {
+				carriers.push( rate.carrier_label );
+			}
+		} );
+
+		var activeCarrier = null; // null = All.
+
 		ratesEl.innerHTML =
 			notesHtml +
-			'<table class="yp-tier-table"><thead><tr><th></th><th>Carrier</th><th>Service</th><th>Days</th><th>Price</th></tr></thead><tbody>' +
-			rates.map( function ( rate, index ) {
-				return '<tr>' +
-					'<td><input type="radio" name="yp-shippo-rate" value="' + YP.escapeAttr( rate.id ) + '"' + ( 0 === index ? ' checked' : '' ) + ' /></td>' +
-					'<td>' + YP.escapeHtml( rate.carrier_label ) + '</td>' +
-					'<td>' + YP.escapeHtml( rate.service ) + '</td>' +
-					'<td>' + ( rate.days ? rate.days + 'd' : '—' ) + '</td>' +
-					'<td>$' + rate.amount.toFixed( 2 ) + '</td>' +
-				'</tr>';
-			} ).join( '' ) +
-			'</tbody></table>' +
+			( carriers.length > 1 ?
+				'<div class="yp-carrier-filter">' +
+					'<button type="button" class="yp-carrier-filter__pill is-active" data-yp-carrier-pill="">All</button>' +
+					carriers.map( function ( carrier ) {
+						return '<button type="button" class="yp-carrier-filter__pill" data-yp-carrier-pill="' + YP.escapeAttr( carrier ) + '">' + YP.escapeHtml( carrier ) + '</button>';
+					} ).join( '' ) +
+				'</div>'
+				: '' ) +
+			'<div data-yp-rate-list></div>' +
 			'<button type="button" class="wp-block-button__link is-style-accent" data-yp-shippo-purchase>Purchase Selected Label</button>';
+
+		function renderRateList() {
+			var listEl = ratesEl.querySelector( '[data-yp-rate-list]' );
+			var visible = activeCarrier ? rates.filter( function ( r ) { return r.carrier_label === activeCarrier; } ) : rates;
+			var previouslySelected = listEl.querySelector( 'input:checked' );
+			var previousId = previouslySelected ? previouslySelected.value : null;
+
+			listEl.innerHTML = '<div class="yp-rate-list">' +
+				visible.map( function ( rate, index ) {
+					var checked = previousId ? rate.id === previousId : 0 === index;
+					return (
+						'<label class="yp-rate-card' + ( checked ? ' is-selected' : '' ) + '">' +
+							'<input type="radio" name="yp-shippo-rate" value="' + YP.escapeAttr( rate.id ) + '"' + ( checked ? ' checked' : '' ) + ' />' +
+							'<span class="yp-rate-card__body">' +
+								'<span class="yp-rate-card__carrier">' + YP.escapeHtml( rate.carrier_label ) + '</span> ' +
+								'<span class="yp-rate-card__service">' + YP.escapeHtml( rate.service ) + '</span>' +
+							'</span>' +
+							'<span class="yp-rate-card__days">' + ( rate.days ? rate.days + ( 1 === rate.days ? ' day' : ' days' ) : '—' ) + '</span>' +
+							'<span class="yp-rate-card__price">$' + rate.amount.toFixed( 2 ) + '</span>' +
+						'</label>'
+					);
+				} ).join( '' ) +
+			'</div>';
+
+			listEl.querySelectorAll( '.yp-rate-card' ).forEach( function ( card ) {
+				card.addEventListener( 'click', function () {
+					listEl.querySelectorAll( '.yp-rate-card' ).forEach( function ( c ) { c.classList.remove( 'is-selected' ); } );
+					card.classList.add( 'is-selected' );
+				} );
+			} );
+		}
+
+		renderRateList();
+
+		ratesEl.querySelectorAll( '[data-yp-carrier-pill]' ).forEach( function ( pill ) {
+			pill.addEventListener( 'click', function () {
+				activeCarrier = pill.getAttribute( 'data-yp-carrier-pill' ) || null;
+				ratesEl.querySelectorAll( '[data-yp-carrier-pill]' ).forEach( function ( p ) { p.classList.toggle( 'is-active', p === pill ); } );
+				renderRateList();
+			} );
+		} );
 
 		ratesEl.querySelector( '[data-yp-shippo-purchase]' ).addEventListener( 'click', function () {
 			var selected = ratesEl.querySelector( 'input[name="yp-shippo-rate"]:checked' );
@@ -959,7 +1029,13 @@
 					'</p>';
 				panel.querySelector( '[data-yp-shippo-rates]' ).innerHTML = '';
 				order.status = response.status;
-				var statusSelect = panel.parentNode ? panel.parentNode.querySelector( '[data-yp-wc-status]' ) : null;
+				// Status now lives in the grid's other column (see
+				// renderWcOrderDetail()'s two-column layout) — walking up
+				// to the shared drawer body ([data-yp-body]) rather than
+				// panel.parentNode finds it regardless of which column
+				// either element is in.
+				var body = panel.closest( '[data-yp-body]' );
+				var statusSelect = body ? body.querySelector( '[data-yp-wc-status]' ) : null;
 				if ( statusSelect ) {
 					statusSelect.value = response.status;
 				}
