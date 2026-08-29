@@ -1274,3 +1274,11 @@ Moved the `require_once` for `class-email-customer-shipped-order.php` out of the
 
 Verify: confirm the site loads without a critical error → confirm "Shipped order" still appears under Settings → Emails → confirm the email still sends correctly on a real shipped order.
 
+### Follow-up: harden the shipped-order email against crashing the order-status save itself (direct report: printed a shipping label on an in-production order and its status never advanced to Shipped)
+
+`YeffoPrint_Email_Customer_Shipped_Order::trigger()` runs synchronously inside `WC_Order::status_transition()`, itself called from `$order->save()` — the very save that had just persisted the "shipped" status to the DB. WooCommerce's own core emails only ever reach their `trigger()` via `WC_Emails::send_transactional_email()`'s own try/catch (`class-wc-emails.php`); hooking the raw `woocommerce_order_status_{status}` action directly, the way this class does (mirroring how core's own per-email classes are *dispatched*, but without going through that wrapper), bypassed that protection. A fatal anywhere in this email's own content/template code could take the whole save request down mid-flight, which could plausibly explain a shipping-label print appearing to leave an order stuck without the dashboard ever reflecting "Shipped."
+
+Wrapped the whole body of `trigger()` in a `try`/`catch ( \Throwable $e )`, logging via `wc_get_logger()` on failure instead of letting it propagate — a bug in this one email's own code can now only cost that email, never the order save or the request it runs inside.
+
+Verify: purchase a shipping label on an order in Processing or In Production → confirm the order lands on "Shipped" and the email sends → if a future bug does appear in this email's content code, confirm it logs to WooCommerce → Status → Logs (source: `yeffoprint-shipped-email`) instead of taking down the request.
+

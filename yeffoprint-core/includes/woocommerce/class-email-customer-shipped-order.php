@@ -61,29 +61,48 @@ class YeffoPrint_Email_Customer_Shipped_Order extends \WC_Email {
 	 * @param \WC_Order|false $order Order object.
 	 */
 	public function trigger( $order_id, $order = false ) {
-		$this->setup_locale();
+		// This fires from inside WC_Order::status_transition(), itself
+		// called synchronously from $order->save() — the same save that
+		// just persisted the "shipped" status to the DB. WooCommerce's
+		// own core emails only ever reach this point via
+		// WC_Emails::send_transactional_email()'s own try/catch (see
+		// class-wc-emails.php); hooking the raw woocommerce_order_status_
+		// {status} action directly the way this class (and WC's own
+		// per-email classes) do bypasses that wrapper entirely. Wrapping
+		// the whole thing here means a bug in this email's own
+		// content/template code can never again crash the order save
+		// that's already succeeded by the time this runs — it can only
+		// cost this one email, not the status change or the request.
+		try {
+			$this->setup_locale();
 
-		if ( $order_id && ! is_a( $order, \WC_Order::class ) ) {
-			$order = wc_get_order( $order_id );
+			if ( $order_id && ! is_a( $order, \WC_Order::class ) ) {
+				$order = wc_get_order( $order_id );
+			}
+
+			if ( is_a( $order, \WC_Order::class ) ) {
+				$this->object                         = $order;
+				$this->recipient                      = $this->object->get_billing_email();
+				$this->placeholders['{order_date}']   = wc_format_datetime( $this->object->get_date_created() );
+				$this->placeholders['{order_number}'] = $this->object->get_order_number();
+			}
+
+			// Staff can pick "Shipped" from the status dropdown by hand,
+			// with no real label ever purchased — this guards against
+			// sending an email with an empty shipping-details box (no
+			// carrier, no tracking number, nothing to show) in that case.
+			// Same source of truth render_tracking_button() already checks.
+			if ( is_a( $this->object, \WC_Order::class ) && YeffoPrint_Order_Tracking::get_shipments( $this->object ) ) {
+				$this->send_notification();
+			}
+
+			$this->restore_locale();
+		} catch ( \Throwable $e ) {
+			wc_get_logger()->error(
+				'Shipped-order email failed to send: ' . $e->getMessage(),
+				[ 'source' => 'yeffoprint-shipped-email', 'order_id' => $order_id ]
+			);
 		}
-
-		if ( is_a( $order, \WC_Order::class ) ) {
-			$this->object                         = $order;
-			$this->recipient                      = $this->object->get_billing_email();
-			$this->placeholders['{order_date}']   = wc_format_datetime( $this->object->get_date_created() );
-			$this->placeholders['{order_number}'] = $this->object->get_order_number();
-		}
-
-		// Staff can pick "Shipped" from the status dropdown by hand,
-		// with no real label ever purchased — this guards against
-		// sending an email with an empty shipping-details box (no
-		// carrier, no tracking number, nothing to show) in that case.
-		// Same source of truth render_tracking_button() already checks.
-		if ( is_a( $this->object, \WC_Order::class ) && YeffoPrint_Order_Tracking::get_shipments( $this->object ) ) {
-			$this->send_notification();
-		}
-
-		$this->restore_locale();
 	}
 
 	public function get_content_html() {
