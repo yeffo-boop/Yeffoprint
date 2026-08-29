@@ -151,15 +151,33 @@ class YeffoPrint_Admin_Order_Controller {
 			'total'                => (float) $order->get_total(),
 			'edit_url'             => $order->get_edit_order_url(),
 			// Direct request: print a real shipping label from this drawer, "without having to go to
-			// WooCommerce" — the WooCommerce Shipping plugin (Automattic\WCShipping\Loader, already
-			// active on this store) only ever renders its label-purchase UI as a meta box
-			// (#woocommerce-order-label) on the classic order edit screen; there's no public API to
-			// drive rate-shopping/label purchase from outside it. Rather than reimplement that (a large
-			// proprietary React app — rates, customs forms, payment, printing), the frontend embeds that
-			// exact meta box via a same-origin iframe onto `edit_url` and hides the surrounding chrome
-			// with injected CSS, so this flag just tells it whether that plugin is even active.
-			'shipping_label_available' => class_exists( '\Automattic\WCShipping\Loader' ),
+			// WooCommerce" — the WooCommerce Shipping plugin only ever renders its label-purchase UI
+			// as a meta box (#woocommerce-order-label) on the classic order edit screen; there's no
+			// public API to drive rate-shopping/label purchase from outside it. Rather than
+			// reimplement that (a large proprietary React app — rates, customs forms, payment,
+			// printing), the frontend embeds that exact meta box via a same-origin iframe onto
+			// `edit_url` and hides the surrounding chrome with injected CSS, so this flag just tells
+			// it whether that plugin is even active.
+			//
+			// Direct bug report: this originally checked class_exists( '\Automattic\WCShipping\Loader' )
+			// — that fully-qualified class name is specific to one version of the plugin's internal
+			// code, and came back false on the live site even with the plugin genuinely active (its
+			// meta box rendered fine on the classic screen) — the installed version's internal
+			// structure just didn't match what this checked for, so every "the panel exists but is
+			// hidden" run looked identical to "the plugin genuinely isn't active." is_plugin_active()
+			// asks WordPress directly instead — the exact same source of truth the Plugins screen's
+			// own "Active" label reads from, version-independent. It isn't autoloaded outside
+			// /wp-admin/ (unlike a normal admin page load, which already pulled it in), hence the
+			// explicit require below.
+			'shipping_label_available' => $this->is_shipping_plugin_active(),
 		];
+	}
+
+	private function is_shipping_plugin_active(): bool {
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+		return is_plugin_active( 'woocommerce-shipping/woocommerce-shipping.php' );
 	}
 
 	private function item_payload( \WC_Order_Item $item ): ?array {
