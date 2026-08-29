@@ -1298,3 +1298,15 @@ Rather than guess further blind, added logging: every `trigger()` call now write
 
 Verify: manually change an order's status to "Shipped" → confirm a new log entry appears under WooCommerce → Status → Logs with source `yeffoprint-shipped-email` showing the actual enabled/recipient/shipments/sent values for that attempt.
 
+## Fix: root cause found — `YeffoPrint_Order_Tracking` was reading a legacy, mostly-empty WooCommerce Shipping meta key (direct report: manual "Shipped" email sent, `shipments: 0` in the log, "but there's not tracking data in it even though there is shipment tracking attached to that order in woocommerce")
+
+The diagnostic logging above paid off immediately: it showed the shipped-order email *did* send, but `YeffoPrint_Order_Tracking::get_shipments()` found zero shipments on an order with a real, confirmed-attached label. Traced into the actual installed `woocommerce-shipping` plugin source (`class-wc-connect-service-settings-store.php`): this version has migrated label storage to a new order-meta key, `wcshipping_labels` — `get_label_order_meta_data( $order_id, $use_legacy_key = false )` reads that by default now, with the original `wc_connect_labels` key kept only for orders WC Shipping's own `LegacyLabelMigrator` hasn't converted, read only when `$use_legacy_key` is explicitly `true`. `class-order-tracking.php` had only ever read `wc_connect_labels`, so it silently found nothing on every current-generation label — which means this bug was never specific to the new shipped-order email at all. It's been silently breaking, since the day `class-order-tracking.php` shipped:
+
+- `class-order-shipment-status.php`'s auto-advance-to-"Shipped" detection (never fired off a real label — every automatic advance the earlier "printing a shipping label" fixes were meant to restore was actually still broken)
+- The "Track your order" button that's supposed to appear on *every* customer-facing order email the moment a shipment exists
+- Now also the new shipped-order email's carrier/tracking box
+
+Fixed at the source: `get_shipments()` now reads `wcshipping_labels` first, falling back to the legacy `wc_connect_labels` only if that's empty — covering both current-generation labels and any old, unmigrated order. Confirmed both meta keys share the identical entry shape (`tracking`/`carrier_id`/`refund`/etc.) directly against that plugin's own read/write code, so no other change was needed — `render_tracking_button()`, `maybe_advance_to_shipped()`, and the shipped-order email all read through this same one function and are all fixed by the same one-key change.
+
+Verify: on an order with a real WooCommerce Shipping label already purchased, confirm `YeffoPrint_Order_Tracking::get_shipments()` now returns it (the `yeffoprint-shipped-email` log's `shipments:` count on a fresh "Shipped" transition should be > 0) → confirm the shipped-order email now shows the carrier/tracking box → confirm the "Track your order" button now appears on other customer emails (e.g. Processing) for orders with a label → separately, purchase a brand-new label going forward and confirm the order still auto-advances to "Shipped" as expected.
+

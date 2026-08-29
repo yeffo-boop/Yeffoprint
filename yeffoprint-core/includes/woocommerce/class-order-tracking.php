@@ -6,24 +6,40 @@
  * track their order."
  *
  * Deliberately reads the *existing* "WooCommerce Shipping" plugin's own
- * label data (`wc_connect_labels` order meta — the plugin the store
- * already uses to buy USPS/UPS labels and that already attaches the
- * tracking number to the order) rather than adding a second, competing
- * place to enter a tracking number. Staff keep doing exactly what they
- * do today; this just reads what's already there.
+ * label data — the plugin the store already uses to buy USPS/UPS labels
+ * and that already attaches the tracking number to the order — rather
+ * than adding a second, competing place to enter a tracking number.
+ * Staff keep doing exactly what they do today; this just reads what's
+ * already there.
  *
  * The tracking page itself needs no new guest-access token, either —
  * WooCommerce already generates a per-order `order_key` for guest
  * checkout (the same one its own "View order"/"Pay for order" links use)
  * and stores it on every order regardless of gateway, so reusing it here
  * is one fewer secret to generate/store/rotate.
+ *
+ * Bug found live: the site's installed WooCommerce Shipping version has
+ * migrated its label storage to a new meta key, `wcshipping_labels`
+ * (see its own class-wc-connect-service-settings-store.php ::
+ * get_label_order_meta_data()'s `$use_legacy_key = false` default) —
+ * `wc_connect_labels` is now legacy-only, read only when that param is
+ * explicitly true (old orders WC Shipping's own LegacyLabelMigrator
+ * hasn't converted yet). This class originally only read the legacy key,
+ * so it silently found nothing on every current-generation label — no
+ * auto-advance to "Shipped", no "Track your order" button on any
+ * customer email, and no shipping-details box on the new shipped-order
+ * email, despite real labels existing. Both keys share the same entry
+ * shape (`tracking`/`carrier_id`/`refund`/etc. — confirmed against that
+ * same settings-store class's own read/write code), so this now checks
+ * the current key first and falls back to the legacy one.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Order_Tracking {
 
-	private const LABELS_META = 'wc_connect_labels';
+	private const LABELS_META        = 'wcshipping_labels';
+	private const LEGACY_LABELS_META = 'wc_connect_labels';
 
 	/**
 	 * Known "WooCommerce Shipping" carrier ids, lowercased. Only USPS and
@@ -83,6 +99,9 @@ class YeffoPrint_Order_Tracking {
 	 */
 	public static function get_shipments( \WC_Order $order ): array {
 		$labels = $order->get_meta( self::LABELS_META, true );
+		if ( ! is_array( $labels ) || ! $labels ) {
+			$labels = $order->get_meta( self::LEGACY_LABELS_META, true );
+		}
 		if ( ! is_array( $labels ) ) {
 			return [];
 		}
