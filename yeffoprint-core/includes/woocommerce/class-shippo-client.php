@@ -107,19 +107,33 @@ class YeffoPrint_Shippo_Client {
 			return $response;
 		}
 
-		// Shippo's documented shape: `tracking_status` is the current/latest
-		// state, `tracking_history` the full timeline — `tracking_status` is
-		// normally already `tracking_history`'s own newest entry, but it's
-		// folded in here too as a safety net (deduped below on status+
-		// timestamp) in case some carrier/account combination ever omits it
-		// from the history array, so a shipment with a real current status
-		// never comes back reporting zero events.
-		$history = $response['tracking_history'] ?? [];
+		return self::parse_tracking_payload( $response );
+	}
+
+	/**
+	 * The parsing half of track() above, split out so it can also read a
+	 * `track_updated` webhook's `data` field directly (class-shippo-
+	 * webhook-controller.php) — Shippo's docs describe that payload as
+	 * the identical `tracking_status`/`tracking_history` shape a live GET
+	 * to /tracks/ already returns, just pushed instead of polled. One
+	 * parser, two ways of getting the raw data to it.
+	 *
+	 * @return array{status:string,events:array{status:string,description:string,location:string,timestamp:string}[]}
+	 */
+	public static function parse_tracking_payload( array $payload ): array {
+		// `tracking_status` is the current/latest state, `tracking_history`
+		// the full timeline — `tracking_status` is normally already
+		// `tracking_history`'s own newest entry, but it's folded in here too
+		// as a safety net (deduped below on status+timestamp) in case some
+		// carrier/account combination ever omits it from the history array,
+		// so a shipment with a real current status never comes back
+		// reporting zero events.
+		$history = $payload['tracking_history'] ?? [];
 		if ( ! is_array( $history ) ) {
 			$history = [];
 		}
-		if ( is_array( $response['tracking_status'] ?? null ) ) {
-			$history[] = $response['tracking_status'];
+		if ( is_array( $payload['tracking_status'] ?? null ) ) {
+			$history[] = $payload['tracking_status'];
 		}
 
 		if ( ! $history ) {
@@ -145,7 +159,7 @@ class YeffoPrint_Shippo_Client {
 			$events[] = [
 				'status'      => $status,
 				'description' => (string) ( $raw['status_details'] ?? '' ),
-				'location'    => $this->format_tracking_location( is_array( $raw['location'] ?? null ) ? $raw['location'] : [] ),
+				'location'    => self::format_tracking_location( is_array( $raw['location'] ?? null ) ? $raw['location'] : [] ),
 				'timestamp'   => $timestamp,
 			];
 		}
@@ -156,11 +170,39 @@ class YeffoPrint_Shippo_Client {
 		];
 	}
 
-	private function format_tracking_location( array $location ): string {
+	private static function format_tracking_location( array $location ): string {
 		$city  = trim( (string) ( $location['city'] ?? '' ) );
 		$state = trim( (string) ( $location['state'] ?? '' ) );
 
 		return $city . ( '' !== $city && '' !== $state ? ', ' : '' ) . $state;
+	}
+
+	/**
+	 * Registers this store's webhook URL with Shippo for the
+	 * `track_updated` event — direct question: "Shippo support webhooks
+	 * for tracking updates whenever a package status changes. Would that
+	 * be better?" Yes for freshness and API-call volume versus the
+	 * existing hourly poll (class-order-delivery-status.php), which
+	 * stays in place regardless as a reconciliation net for a webhook
+	 * call that never arrives.
+	 *
+	 * Best-effort: unlike /shipments/, /tracks/, and /transactions/ (all
+	 * exercised against a real account this session), this endpoint's
+	 * exact request/response shape is a documented-but-unverified read of
+	 * Shippo's webhook-management API. class-shippo-webhook-sync.php
+	 * treats a WP_Error here as informational, not fatal — the webhook
+	 * URL is always shown in Settings too, so a wrong guess here just
+	 * means the admin adds it by hand in the Shippo dashboard instead of
+	 * it happening automatically.
+	 *
+	 * @return array|\WP_Error
+	 */
+	public function register_webhook( string $url ) {
+		return $this->call( 'POST', '/webhooks/', [
+			'event'   => 'track_updated',
+			'url'     => $url,
+			'is_test' => false,
+		] );
 	}
 
 	/** @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error */
