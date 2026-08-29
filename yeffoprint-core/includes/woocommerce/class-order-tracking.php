@@ -32,6 +32,18 @@
  * shape (`tracking`/`carrier_id`/`refund`/etc. — confirmed against that
  * same settings-store class's own read/write code), so this now checks
  * the current key first and falls back to the legacy one.
+ *
+ * A third source, `SHIPPO_LABELS_META`, holds labels purchased through
+ * the newer, independent Shippo integration (class-shippo-client.php,
+ * class-admin-shippo-controller.php) — direct request: "can we build
+ * something with the shippo API to replace it? ... I'd like to run
+ * alongside it a bit." Deliberately written in the exact same per-entry
+ * shape (`tracking`/`carrier_id`/`refund`) as WC Shipping's own labels,
+ * so it merges into the same loop below with no special-casing — every
+ * downstream reader of get_shipments() (this class's own tracking
+ * button, class-order-shipment-status.php's auto-advance, the
+ * shipped-order email) picks up a Shippo-purchased label exactly like a
+ * WC Shipping one, with zero changes to any of them.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -40,6 +52,7 @@ class YeffoPrint_Order_Tracking {
 
 	private const LABELS_META        = 'wcshipping_labels';
 	private const LEGACY_LABELS_META = 'wc_connect_labels';
+	private const SHIPPO_LABELS_META = 'yeffoprint_shippo_labels';
 
 	/**
 	 * Known "WooCommerce Shipping" carrier ids, lowercased. Only USPS and
@@ -103,7 +116,12 @@ class YeffoPrint_Order_Tracking {
 			$labels = $order->get_meta( self::LEGACY_LABELS_META, true );
 		}
 		if ( ! is_array( $labels ) ) {
-			return [];
+			$labels = [];
+		}
+
+		$shippo_labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
+		if ( is_array( $shippo_labels ) ) {
+			$labels = array_merge( $labels, $shippo_labels );
 		}
 
 		$shipments = [];
@@ -136,6 +154,26 @@ class YeffoPrint_Order_Tracking {
 
 	public static function carrier_label( string $carrier_id ): string {
 		return self::CARRIER_LABELS[ $carrier_id ] ?? strtoupper( $carrier_id );
+	}
+
+	/**
+	 * Appends a Shippo-purchased label to the order — the write side of
+	 * SHIPPO_LABELS_META above. Does not save() the order; callers (e.g.
+	 * class-admin-shippo-controller.php) do that themselves once, so a
+	 * single save() also carries the order-status auto-advance and any
+	 * other meta changes made in the same request.
+	 */
+	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url ): void {
+		$labels   = $order->get_meta( self::SHIPPO_LABELS_META, true );
+		$labels   = is_array( $labels ) ? $labels : [];
+		$labels[] = [
+			'tracking'   => $tracking_number,
+			'carrier_id' => $carrier_id,
+			'label_url'  => $label_url,
+			'refund'     => [],
+		];
+
+		$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );
 	}
 
 	/**

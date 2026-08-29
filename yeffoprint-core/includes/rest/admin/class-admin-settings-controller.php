@@ -57,6 +57,12 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::USPS_CONSUMER_KEY_OPTION, sanitize_text_field( (string) ( $params['usps_consumer_key'] ?? '' ) ) );
 		update_option( $M::USPS_CONSUMER_SECRET_OPTION, sanitize_text_field( (string) ( $params['usps_consumer_secret'] ?? '' ) ) );
 
+		update_option( YeffoPrint_Shippo_Settings::API_KEY_OPTION, sanitize_text_field( (string) ( $params['shippo_api_key'] ?? '' ) ) );
+		update_option( YeffoPrint_Shippo_Settings::DEFAULT_WEIGHT_OZ_OPTION, max( 0.1, (float) ( $params['shippo_default_weight_oz'] ?? 4 ) ) );
+		update_option( YeffoPrint_Shippo_Settings::DEFAULT_LENGTH_IN_OPTION, max( 0.1, (float) ( $params['shippo_default_length_in'] ?? 8 ) ) );
+		update_option( YeffoPrint_Shippo_Settings::DEFAULT_WIDTH_IN_OPTION, max( 0.1, (float) ( $params['shippo_default_width_in'] ?? 6 ) ) );
+		update_option( YeffoPrint_Shippo_Settings::DEFAULT_HEIGHT_IN_OPTION, max( 0.1, (float) ( $params['shippo_default_height_in'] ?? 1 ) ) );
+
 		update_option( $M::LIVE_PREVIEW_ENABLED_OPTION, (bool) ( $params['live_preview_enabled'] ?? false ) );
 
 		update_option( $M::PROMO_ENABLED_OPTION, (bool) ( $params['promo_enabled'] ?? false ) );
@@ -110,6 +116,8 @@ class YeffoPrint_Admin_Settings_Controller {
 			'ups_client_secret'          => (string) get_option( $M::UPS_CLIENT_SECRET_OPTION, '' ),
 			'usps_consumer_key'          => (string) get_option( $M::USPS_CONSUMER_KEY_OPTION, '' ),
 			'usps_consumer_secret'       => (string) get_option( $M::USPS_CONSUMER_SECRET_OPTION, '' ),
+			'shippo_api_key'             => YeffoPrint_Shippo_Settings::get_api_key(),
+			'shippo_default_package'     => YeffoPrint_Shippo_Settings::get_default_package(),
 			'live_preview_enabled'       => (bool) get_option( $M::LIVE_PREVIEW_ENABLED_OPTION, true ),
 			'promo_enabled'              => (bool) get_option( $M::PROMO_ENABLED_OPTION, false ),
 			'promo_banners'              => $M::get_promo_banners(),
