@@ -126,6 +126,13 @@ class YeffoPrint_Order_Shipment_Status {
 		}
 
 		$order->update_meta_data( self::SHIPMENT_FINGERPRINT_META, $fingerprint );
+
+		// Same moment new shipment data exists is the cheapest moment to
+		// index it — see YeffoPrint_Order_Tracking::index_shipments()'s own
+		// docblock (Shippo webhook support: a track_updated payload names a
+		// tracking number, never an order, so this is what routes it back).
+		YeffoPrint_Order_Tracking::index_shipments( $order );
+
 		$order->set_status( self::STATUS, __( 'A shipping label was purchased — tracking number attached.', 'yeffoprint-core' ) );
 		// set_status() alone doesn't persist or fire the status-transition
 		// hooks — save() does both. This re-enters this exact method via

@@ -17,6 +17,13 @@
  * A manual "Check tracking now" button (class-admin-dashboard-
  * controller.php's refresh_tracking()) exists alongside the sweep for
  * whenever staff don't want to wait for the next hourly run.
+ *
+ * A third path in besides the sweep and the manual button: Shippo's own
+ * `track_updated` webhook (class-shippo-webhook-controller.php) calls
+ * record_live_status() directly with data Shippo already pushed, no
+ * poll needed — direct question: "Shippo support webhooks for tracking
+ * updates... would that be better?" The sweep keeps running regardless,
+ * as a reconciliation net for whenever a webhook call never arrives.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -84,10 +91,15 @@ class YeffoPrint_Order_Delivery_Status {
 			return;
 		}
 
+		// Backfills the reverse tracking-number index for every order
+		// already Shipped before webhook support existed (or that hasn't
+		// re-saved since) — every order that ever reaches this sweep gets
+		// indexed within the hour even without a fresh fingerprint change.
+		// See YeffoPrint_Order_Tracking::index_shipments()'s own docblock.
+		$changed  = YeffoPrint_Order_Tracking::index_shipments( $order );
 		$registry = new YeffoPrint_Tracking_Provider_Registry();
 		$statuses = $order->get_meta( self::TRACKING_STATUS_META, true );
 		$statuses = is_array( $statuses ) ? $statuses : [];
-		$changed  = false;
 
 		foreach ( $shipments as $shipment ) {
 			$provider = $registry->get( $shipment['carrier_id'] );
@@ -101,13 +113,7 @@ class YeffoPrint_Order_Delivery_Status {
 				continue; // A transient lookup failure shouldn't clobber a known-good status with "unknown".
 			}
 
-			$latest = $events[0] ?? null;
-
-			$statuses[ $shipment['tracking_number'] ] = [
-				'status'      => $latest ? strtoupper( (string) $latest['status'] ) : 'UNKNOWN',
-				'description' => $latest ? (string) $latest['description'] : '',
-				'checked_at'  => time(),
-			];
+			$statuses[ $shipment['tracking_number'] ] = self::status_entry( $events );
 			$changed = true;
 		}
 
@@ -117,6 +123,46 @@ class YeffoPrint_Order_Delivery_Status {
 		}
 
 		$this->maybe_complete( $order, $shipments, $statuses );
+	}
+
+	/**
+	 * The webhook path: Shippo already pushed this shipment's current
+	 * events (class-shippo-webhook-controller.php parsed them out of the
+	 * `track_updated` payload) — no provider lookup, no live API call,
+	 * just record what was given and check for delivery-completion the
+	 * same way the sweep does. A shipment the order doesn't currently
+	 * recognize (a stale index entry from a since-voided/replaced label —
+	 * see index_shipments()'s own note on never removing old entries) is
+	 * a no-op rather than an error: nothing on this order actually
+	 * changed, so there's nothing to save or re-check.
+	 */
+	public function record_live_status( \WC_Order $order, string $tracking_number, array $events ): void {
+		$shipments = YeffoPrint_Order_Tracking::get_shipments( $order );
+		$is_current = in_array( $tracking_number, array_column( $shipments, 'tracking_number' ), true );
+		if ( ! $is_current ) {
+			return;
+		}
+
+		$statuses = $order->get_meta( self::TRACKING_STATUS_META, true );
+		$statuses = is_array( $statuses ) ? $statuses : [];
+
+		$statuses[ $tracking_number ] = self::status_entry( $events );
+
+		$order->update_meta_data( self::TRACKING_STATUS_META, $statuses );
+		$order->save();
+
+		$this->maybe_complete( $order, $shipments, $statuses );
+	}
+
+	/** @return array{status:string,description:string,checked_at:int} */
+	private static function status_entry( array $events ): array {
+		$latest = $events[0] ?? null;
+
+		return [
+			'status'      => $latest ? strtoupper( (string) $latest['status'] ) : 'UNKNOWN',
+			'description' => $latest ? (string) $latest['description'] : '',
+			'checked_at'  => time(),
+		];
 	}
 
 	/**

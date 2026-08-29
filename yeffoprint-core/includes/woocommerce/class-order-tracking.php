@@ -64,6 +64,16 @@ class YeffoPrint_Order_Tracking {
 	private const LIVE_EVENTS_CACHE_TTL = 30 * MINUTE_IN_SECONDS;
 
 	/**
+	 * Reverse index: tracking_number -> order id, one meta row per
+	 * shipment (add_meta_data(..., unique=false) below), needed because
+	 * a Shippo `track_updated` webhook only ever names a carrier +
+	 * tracking number, never an order — see find_order_by_tracking_
+	 * number(). Kept as its own small index rather than a full-table
+	 * scan on every webhook call.
+	 */
+	private const TRACKING_INDEX_META = '_yp_tracking_number_index';
+
+	/**
 	 * Known "WooCommerce Shipping" carrier ids, lowercased. Only USPS and
 	 * UPS matter here (the two carriers this store actually ships with —
 	 * direct request), but FedEx/DHL are included too since WC Shipping
@@ -163,6 +173,69 @@ class YeffoPrint_Order_Tracking {
 
 	public static function carrier_label( string $carrier_id ): string {
 		return self::CARRIER_LABELS[ $carrier_id ] ?? strtoupper( $carrier_id );
+	}
+
+	/**
+	 * Writes this order's current shipments into TRACKING_INDEX_META,
+	 * skipping any tracking number already indexed (checked against the
+	 * existing rows, not overwritten) so calling this repeatedly — every
+	 * hourly sweep, plus the moment a shipment fingerprint changes
+	 * (class-order-shipment-status.php) — never piles up duplicate rows.
+	 * Does not save() the order; callers already have their own save()
+	 * for the same request (or, like the sweep, only save when something
+	 * actually changed) — the returned bool tells them whether this
+	 * added anything, so it can join that same decision.
+	 *
+	 * Never removes an old row — if a label is later voided/refunded
+	 * (get_shipments() already excludes those going forward), its
+	 * tracking number stays indexed but harmlessly so: a stray webhook
+	 * for it still resolves to the right order, and
+	 * YeffoPrint_Order_Delivery_Status::record_live_status() ignores any
+	 * tracking number that's no longer in get_shipments()'s current list.
+	 *
+	 * @return bool Whether any new tracking number was indexed.
+	 */
+	public static function index_shipments( \WC_Order $order ): bool {
+		$existing = array_map(
+			static fn( $meta ) => $meta->value,
+			$order->get_meta( self::TRACKING_INDEX_META, false )
+		);
+
+		$added = false;
+		foreach ( self::get_shipments( $order ) as $shipment ) {
+			if ( ! in_array( $shipment['tracking_number'], $existing, true ) ) {
+				$order->add_meta_data( self::TRACKING_INDEX_META, $shipment['tracking_number'], false );
+				$added = true;
+			}
+		}
+
+		return $added;
+	}
+
+	/**
+	 * The other side of index_shipments() — direct request behind Shippo
+	 * webhook support: a `track_updated` payload only ever names a
+	 * carrier + tracking number, so this is how class-shippo-webhook-
+	 * controller.php resolves it back to a real order. Returns null for
+	 * a tracking number this store never indexed (not yet swept/saved
+	 * since this feature shipped, or genuinely not one of ours) — the
+	 * caller treats that as "nothing to update," never an error.
+	 */
+	public static function find_order_by_tracking_number( string $tracking_number ): ?\WC_Order {
+		if ( ! function_exists( 'wc_get_orders' ) || '' === $tracking_number ) {
+			return null;
+		}
+
+		$order_ids = wc_get_orders( [
+			'meta_key'   => self::TRACKING_INDEX_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- a small, purpose-built index, not an ad hoc query.
+			'meta_value' => $tracking_number, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			'limit'      => 1,
+			'return'     => 'ids',
+		] );
+
+		$order = $order_ids ? wc_get_order( $order_ids[0] ) : false;
+
+		return $order instanceof \WC_Order ? $order : null;
 	}
 
 	/**

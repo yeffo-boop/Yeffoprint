@@ -132,6 +132,13 @@
 						'<div class="yp-field"><label for="yp-set-shippo-width">Width (in)</label><input type="number" min="0.1" step="0.1" id="yp-set-shippo-width" value="' + YP.escapeAttr( settings.shippo_default_package.width_in ) + '" /></div>' +
 						'<div class="yp-field"><label for="yp-set-shippo-height">Height (in)</label><input type="number" min="0.1" step="0.1" id="yp-set-shippo-height" value="' + YP.escapeAttr( settings.shippo_default_package.height_in ) + '" /></div>' +
 					'</div>' +
+					// Direct request: "Shippo support webhooks for tracking updates
+					// whenever a package status changes. Would that be better?" —
+					// registered automatically on save when possible; this URL is
+					// shown either way so it can be pasted into the Shippo dashboard
+					// by hand (Settings → API → Webhooks) if that didn't take.
+					'<p class="yp-panel__hint">Tracking webhook endpoint (auto-registers with Shippo when you save an API token above; event type <code>track_updated</code>): <code>' + YP.escapeHtml( settings.shippo_webhook_url ) + '</code></p>' +
+					( settings.shippo_webhook_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.shippo_webhook_status ) + '</p>' : '' ) +
 				'</div>';
 
 			var integrationsHtml =

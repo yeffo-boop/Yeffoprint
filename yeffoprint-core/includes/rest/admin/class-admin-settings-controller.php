@@ -120,6 +120,8 @@ class YeffoPrint_Admin_Settings_Controller {
 			'shippo_api_key'             => YeffoPrint_Shippo_Settings::get_api_key(),
 			'shippo_ship_from_phone'     => (string) get_option( YeffoPrint_Shippo_Settings::SHIP_FROM_PHONE_OPTION, '' ),
 			'shippo_default_package'     => YeffoPrint_Shippo_Settings::get_default_package(),
+			'shippo_webhook_url'         => esc_url_raw( YeffoPrint_Shippo_Webhook_Secret::webhook_url() ),
+			'shippo_webhook_status'      => YeffoPrint_Shippo_Webhook_Sync::last_message(),
 			'live_preview_enabled'       => (bool) get_option( $M::LIVE_PREVIEW_ENABLED_OPTION, true ),
 			'promo_enabled'              => (bool) get_option( $M::PROMO_ENABLED_OPTION, false ),
 			'promo_banners'              => $M::get_promo_banners(),
