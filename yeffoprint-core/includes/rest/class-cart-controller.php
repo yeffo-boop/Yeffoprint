@@ -108,6 +108,38 @@ class YeffoPrint_Cart_Controller {
 
 		$total_quantity = array_sum( array_column( $variants, 'quantity' ) );
 
+		// Root cause found (diagnostic logging below confirmed the server
+		// always received/summed every batch row correctly — the loss
+		// happened after that): WC_Cart::generate_cart_id() hashes
+		// product + size + material + variants to decide whether an add
+		// is "the same line item" as something already in the cart. When
+		// a customer adds a second batch for the same template/size/
+		// material, WC_Cart::add_to_cart() (class-wc-cart.php) treats a
+		// hash match as "already in cart" and *only* bumps its own
+		// internal quantity counter — it never touches the VARIANTS/
+		// TOTAL_QTY meta this site actually displays and prices from. The
+		// result: every new batch after the first silently vanished into
+		// an invisible counter nobody reads, while the cart kept showing
+		// whatever the very first add's data was. Same mechanism, same
+		// fix already in place for Custom Design's own batch rows —
+		// CUSTOM_ORDER_ROW_INDEX's own docblock (class-cart-item-keys.php)
+		// — this class's docblock claimed the Template flow didn't need
+		// it since a batch is "one call, never split," which is true but
+		// beside the point: two *separate* Add to Cart clicks for the
+		// same template/size/material are still two separate calls that
+		// can hash identically. A `uniqid()` per add guarantees every
+		// fresh submission gets its own line item; editing an existing
+		// batch still goes through the explicit edit_key remove-then-add
+		// path below, untouched by this.
+		$cart_item_data = [
+			YeffoPrint_Cart_Item_Keys::TEMPLATE_ID => $template_id,
+			YeffoPrint_Cart_Item_Keys::SIZE_ID     => $size_id,
+			YeffoPrint_Cart_Item_Keys::MATERIAL_ID => $material_id,
+			YeffoPrint_Cart_Item_Keys::VARIANTS    => $variants,
+			YeffoPrint_Cart_Item_Keys::TOTAL_QTY   => $total_quantity,
+			'yp_unique_add'                        => uniqid( '', true ),
+		];
+
 		// Direct report: submitting 3 batch rows (30 total) landed in the
 		// cart as a single 10-label line item — every step of this
 		// function reads correctly on paper (sanitize_variants() doesn't
@@ -133,13 +165,7 @@ class YeffoPrint_Cart_Controller {
 		}
 
 		YeffoPrint_Cart_Pricing::allow_next_add( true );
-		$cart_item_key = WC()->cart->add_to_cart( $product_id, $total_quantity, 0, [], [
-			YeffoPrint_Cart_Item_Keys::TEMPLATE_ID => $template_id,
-			YeffoPrint_Cart_Item_Keys::SIZE_ID     => $size_id,
-			YeffoPrint_Cart_Item_Keys::MATERIAL_ID => $material_id,
-			YeffoPrint_Cart_Item_Keys::VARIANTS    => $variants,
-			YeffoPrint_Cart_Item_Keys::TOTAL_QTY   => $total_quantity,
-		] );
+		$cart_item_key = WC()->cart->add_to_cart( $product_id, $total_quantity, 0, [], $cart_item_data );
 		YeffoPrint_Cart_Pricing::allow_next_add( false );
 
 		if ( ! $cart_item_key ) {

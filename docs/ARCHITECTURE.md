@@ -1363,3 +1363,13 @@ Also reported in the same conversation, possibly related: the checkout page show
 
 Verify: reproduce the batch add with 2+ rows → check WooCommerce → Status → Logs for a `yeffoprint-cart-batches` entry on that request → confirm whether raw/sanitized counts match what was actually submitted.
 
+### Follow-up: root cause found and fixed — a later batch was silently merging into an earlier cart item
+
+The diagnostic logging above paid off immediately: the log confirmed the server received and summed all 3 batch rows correctly (`total_quantity: 30`), yet the cart still showed only 10. That pinned the loss to somewhere inside/after `WC()->cart->add_to_cart()` itself.
+
+Root cause: `WC_Cart::generate_cart_id()` (`class-wc-cart.php`) hashes product + size + material + variants to decide whether an `add_to_cart()` call is "the same line item" as something already in the cart. Two *separate* Add to Cart submissions for the same template/size/material hash identically whenever WooCommerce's own merge path is taken — and when it is, `WC_Cart::add_to_cart()` only bumps its own internal quantity counter on the existing item; it never touches that item's `VARIANTS`/`TOTAL_QTY` custom meta, which is the only place this site actually reads quantity/customization from for display and pricing. A second (or third) batch submission was landing exactly here: matching an item already in the cart from an earlier add, silently discarded except for an invisible counter nobody reads.
+
+This is the *exact* mechanism `CUSTOM_ORDER_ROW_INDEX` (`class-cart-item-keys.php`) already exists to prevent for Custom Design's own batch rows — this class's own docblock had incorrectly claimed the Template flow didn't need the same protection, reasoning that a batch is "one call, never split" (true, but beside the point — the vulnerability is between *separate* calls, not within one). Fixed the same way: `class-cart-controller.php::add()` now writes a fresh `uniqid()` into `$cart_item_data` on every Template add, guaranteeing a unique hash so a plain Add to Cart can never silently merge into an existing line. The explicit `edit_key` remove-then-add path (used by "Edit customization") is untouched by this — that was already the correct, intentional way to modify an existing batch.
+
+Verify: on a cart that already has a Template batch in it, add a *different* batch for the same template/size/material → confirm it creates a genuinely new, separate cart line (not a merge) → confirm each line's own quantity/variants display correctly and independently → confirm "Edit customization" on an existing line still correctly replaces that same line rather than adding a new one.
+
