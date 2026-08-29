@@ -106,7 +106,6 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-tracking.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-production-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipment-status.php';
-		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-email-customer-shipped-order.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipped-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
