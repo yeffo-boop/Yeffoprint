@@ -463,13 +463,13 @@
 		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false };
 	}
 
-	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction, clickAttr ) {
+	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction, clickAttr, actionHeader ) {
 		var body;
 		if ( ! rows.length ) {
 			body = '<p class="yp-field__hint">Nothing here right now.</p>';
 		} else {
 			body =
-				'<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th>' + ( rowAction ? '<th></th>' : '' ) + '</tr></thead><tbody>' +
+				'<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th>' + ( rowAction ? '<th>' + YP.escapeHtml( actionHeader || '' ) + '</th>' : '' ) + '</tr></thead><tbody>' +
 					rows.map( function ( row ) {
 						var age = daysAgoLabel( row.date, dueDateDays );
 						var label = onOrderClick
@@ -525,12 +525,25 @@
 			'</tbody></table>'
 			: '<p class="yp-field__hint">Nothing here right now.</p>';
 
+		/**
+		 * Direct report: clicking "Send to Printer" moved an order to
+		 * "In Production" (class-order-production-status.php) but this
+		 * panel's REST query only ever asked for "processing" orders, so
+		 * the row just vanished — staff lost track of it. Now the query
+		 * includes both statuses (class-admin-dashboard-controller.php's
+		 * pending_wc_orders()), so this only offers the button on rows
+		 * still actually in Processing; an already-sent row shows a
+		 * status pill in the same column instead.
+		 */
 		function sendToPrinterButtonHtml( row ) {
+			if ( 'processing' !== row.status ) {
+				return '<span class="yp-pill yp-pill--good">' + YP.escapeHtml( row.status_label ) + '</span>';
+			}
 			return '<button type="button" class="wp-block-button__link is-style-outline yp-row-action" style="padding:4px 10px;font-size:12px;" data-yp-send-to-printer="' + row.id + '">Send to Printer</button>';
 		}
 
 		el.innerHTML =
-			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped.', summary.pending_orders_url, summary.pending_orders, dueDateDays, true, sendToPrinterButtonHtml, 'data-yp-wc-order' ) +
+			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped — processing or in production.', summary.pending_orders_url, summary.pending_orders, dueDateDays, true, sendToPrinterButtonHtml, 'data-yp-wc-order', 'Status' ) +
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Shipped Packages</h2></div>' +
 				'<p class="yp-panel__hint">Shipped, not yet delivered — every label with a tracking number currently in transit.</p>' +

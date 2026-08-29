@@ -60,13 +60,22 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		return admin_url( 'edit.php?post_type=shop_order' );
 	}
 
+	/**
+	 * Direct report: the "Send to Printer" button used to make a row
+	 * vanish from this panel entirely, since it only ever queried
+	 * "processing" — once an order moved to "In Production"
+	 * (class-order-production-status.php), staff lost track of it here.
+	 * Now queries both pipeline stages before Shipped, and returns each
+	 * row's own status so the frontend can show which is which and only
+	 * offer "Send to Printer" on the ones still actually in Processing.
+	 */
 	private function pending_wc_orders(): array {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			return [];
 		}
 
 		$orders = wc_get_orders( [
-			'status'  => 'processing',
+			'status'  => [ 'processing', YeffoPrint_Order_Production_Status::STATUS ],
 			'limit'   => self::ROW_LIMIT,
 			'orderby' => 'date',
 			'order'   => 'ASC',
@@ -75,12 +84,14 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		return array_map( function ( \WC_Order $order ) {
 			$date = $order->get_date_created();
 			return [
-				'id'       => $order->get_id(),
+				'id'           => $order->get_id(),
 				/* translators: %s: order number */
-				'label'    => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
-				'customer' => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
-				'edit_url' => $order->get_edit_order_url(),
-				'date'     => $date ? $date->date( 'c' ) : null,
+				'label'        => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
+				'customer'     => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
+				'edit_url'     => $order->get_edit_order_url(),
+				'date'         => $date ? $date->date( 'c' ) : null,
+				'status'       => $order->get_status(),
+				'status_label' => wc_get_order_status_name( $order->get_status() ),
 			];
 		}, $orders );
 	}
