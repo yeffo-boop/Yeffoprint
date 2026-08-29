@@ -496,21 +496,69 @@
 		);
 	}
 
+	/**
+	 * Shippo's live-tracking status vocabulary (class-shippo-client.php's
+	 * track(), UPPERCASE) mapped to a pill — direct request: "I want live
+	 * tracking to show... so I can keep track of any packages that are
+	 * taking too long to deliver or get lost in transit." FAILURE/RETURNED
+	 * are exactly that signal, so they get the same crit (red) treatment
+	 * as an overdue date elsewhere on this dashboard; DELIVERED barely
+	 * matters here in practice since a delivered order drops off this
+	 * whole panel the moment the next sweep marks it Completed, but is
+	 * still handled for the brief window between "Shippo confirms
+	 * delivered" and "the next hourly sweep runs."
+	 */
+	var TRACKING_STATUS_LABELS = {
+		DELIVERED:   [ 'Delivered', 'good' ],
+		TRANSIT:     [ 'In Transit', 'neutral' ],
+		PRE_TRANSIT: [ 'Label Created', 'neutral' ],
+		FAILURE:     [ 'Delivery Failed', 'crit' ],
+		RETURNED:    [ 'Returned to Sender', 'crit' ],
+		UNKNOWN:     [ 'Unknown', 'neutral' ]
+	};
+
+	function trackingStatusPillHtml( status ) {
+		var entry = TRACKING_STATUS_LABELS[ status ] || null;
+		if ( ! entry ) {
+			return '<span class="yp-pill yp-pill--neutral">Not checked yet</span>';
+		}
+		return '<span class="yp-pill yp-pill--' + entry[ 1 ] + '">' + YP.escapeHtml( entry[ 0 ] ) + '</span>';
+	}
+
+	function timeAgoLabel( unixSeconds ) {
+		if ( ! unixSeconds ) {
+			return '';
+		}
+		var minutes = Math.round( ( Date.now() / 1000 - unixSeconds ) / 60 );
+		if ( minutes < 1 ) {
+			return 'checked just now';
+		}
+		if ( minutes < 60 ) {
+			return 'checked ' + minutes + ( 1 === minutes ? ' min ago' : ' mins ago' );
+		}
+		var hours = Math.round( minutes / 60 );
+		return 'checked ' + hours + ( 1 === hours ? ' hour ago' : ' hours ago' );
+	}
+
 	function renderDashboardSummary( summary, el ) {
 		var dueDateDays = summary.due_date_days;
 
 		var shippedBody = summary.shipped_packages.length
-			? '<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Carrier</th><th>Tracking #</th></tr></thead><tbody>' +
+			? '<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Carrier</th><th>Tracking #</th><th>Status</th></tr></thead><tbody>' +
 				summary.shipped_packages.map( function ( pkg ) {
 					var tracking = pkg.tracking_url
 						? '<a href="' + YP.escapeAttr( pkg.tracking_url ) + '" target="_blank" rel="noopener noreferrer">' + YP.escapeHtml( pkg.tracking_number ) + '</a>'
 						: YP.escapeHtml( pkg.tracking_number );
+					var checkedAgo = timeAgoLabel( pkg.tracking_checked_at );
 					return (
 						'<tr>' +
 							'<td><a href="' + YP.escapeAttr( pkg.edit_url ) + '">' + YP.escapeHtml( pkg.order_label ) + '</a></td>' +
 							'<td>' + YP.escapeHtml( pkg.customer || '—' ) + '</td>' +
 							'<td><span class="yp-chip">' + YP.escapeHtml( pkg.carrier_label || '—' ) + '</span></td>' +
 							'<td>' + tracking + '</td>' +
+							'<td>' + trackingStatusPillHtml( pkg.tracking_status ) +
+								( checkedAgo ? '<div class="yp-record-name__sub">' + YP.escapeHtml( checkedAgo ) + '</div>' : '' ) +
+							'</td>' +
 						'</tr>'
 					);
 				} ).join( '' ) +
@@ -559,8 +607,8 @@
 		el.innerHTML =
 			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped — processing or in production.', summary.pending_orders_url, summary.pending_orders, dueDateDays, true, sendToPrinterButtonHtml, 'data-yp-wc-order', 'Status' ) +
 			'<div class="yp-panel">' +
-				'<div class="yp-panel__head"><h2>Shipped Packages</h2></div>' +
-				'<p class="yp-panel__hint">Shipped, not yet delivered — every label with a tracking number currently in transit.</p>' +
+				'<div class="yp-panel__head"><h2>Shipped Packages</h2><button type="button" class="yp-row-action" data-yp-refresh-tracking>Check tracking now</button></div>' +
+				'<p class="yp-panel__hint">Shipped, not yet delivered — every label with a tracking number currently in transit. Delivered packages automatically move the order to Completed and drop off this list.</p>' +
 				shippedBody +
 			'</div>' +
 			dashboardSectionHtml( 'Pending Proofs', 'Custom orders staff still owes a proof — brand new, or the customer just requested changes.', '#/orders', summary.pending_proofs, dueDateDays, true ) +
@@ -603,6 +651,21 @@
 					} );
 			} );
 		} );
+
+		var refreshTrackingButton = el.querySelector( '[data-yp-refresh-tracking]' );
+		if ( refreshTrackingButton ) {
+			refreshTrackingButton.addEventListener( 'click', function () {
+				refreshTrackingButton.disabled = true;
+				refreshTrackingButton.textContent = 'Checking…';
+				YP.request( yeffoprintAdminApp.restUrl + 'admin/dashboard/refresh-tracking', { method: 'POST' } )
+					.then( function ( summary ) { renderDashboardSummary( summary, el ); } )
+					.catch( function ( error ) {
+						refreshTrackingButton.disabled = false;
+						refreshTrackingButton.textContent = 'Check tracking now';
+						window.alert( 'Couldn’t refresh tracking: ' + error.message );
+					} );
+			} );
+		}
 	}
 
 	/* ---------- Pending Orders detail drawer ----------

@@ -69,4 +69,10 @@ register_activation_hook( __FILE__, function () {
 register_deactivation_hook( __FILE__, function () {
 	require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-reminder-scheduler.php';
 	YeffoPrint_Proof_Reminder_Scheduler::unschedule();
+
+	// Same reasoning as the proof-reminder sweep above — otherwise the
+	// delivery-tracking cron event just keeps firing hourly with nothing
+	// listening once the plugin's files are gone.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delivery-status.php';
+	YeffoPrint_Order_Delivery_Status::unschedule();
 } );
