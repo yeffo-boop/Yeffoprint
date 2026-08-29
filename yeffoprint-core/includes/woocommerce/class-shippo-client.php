@@ -83,24 +83,33 @@ class YeffoPrint_Shippo_Client {
 	 * Every new Shippo account comes with a set of default sample carrier
 	 * accounts (mostly international — Correos, DPD, Chronopost, Hermes
 	 * UK, a Canada Post/DHL/UPS master account…) that reject a normal
-	 * domestic US shipment with this exact wording on *every* request,
-	 * success or not. Filtered out so a real message (an incomplete
-	 * address, a carrier account that's connected but not fully set up, a
-	 * rate that's since expired, …) reads as a short, useful note instead
-	 * of getting lost in a wall of unrelated per-carrier noise.
+	 * domestic US shipment with byte-identical wording on *every*
+	 * request, one message per sample account — a dozen duplicate lines
+	 * that used to bury the one or two genuine, distinct messages (an
+	 * incomplete address, a real carrier account connected but not fully
+	 * set up, …). Previously this filtered out any message containing
+	 * that shared sample-account wording outright — but a real, connected
+	 * account can return the exact same generic wording for its own
+	 * reason (e.g. a service level like UPS 2nd Day Air that isn't
+	 * enabled on that carrier account), and pattern-matching the text
+	 * silently dropped that too. Deduping instead of pattern-matching
+	 * collapses the dozen identical sample-account lines down to one
+	 * without discarding a real carrier's message just because it shares
+	 * the same wording.
 	 *
 	 * @return string[]
 	 */
 	private function relevant_messages( array $raw_messages ): array {
 		$messages = array_map(
-			static fn( $m ) => (string) ( $m['text'] ?? '' ),
+			static fn( $m ) => trim( (string) ( $m['text'] ?? '' ) ),
 			$raw_messages
 		);
 
-		return array_values( array_filter( $messages, static function ( string $text ): bool {
-			return false === strpos( $text, "doesn't support one or more shipment options" )
-				&& false === strpos( $text, 'Too Many Requests' );
-		} ) );
+		$messages = array_filter( $messages, static function ( string $text ): bool {
+			return '' !== $text && false === strpos( $text, 'Too Many Requests' );
+		} );
+
+		return array_values( array_unique( $messages ) );
 	}
 
 	/** @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error */
