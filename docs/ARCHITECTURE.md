@@ -1325,3 +1325,11 @@ Live tracking-status pull (Shippo's Track API) into the dashboard's existing Shi
 
 Verify: paste a Shippo API token into Settings → Shipping, save → open an order in the drawer, confirm a "Shippo (Beta)" panel now appears next to the existing WooCommerce Shipping one → adjust the default package if needed, click Get Rates, confirm real rates come back cheapest-first with no charge → select one, click Purchase, confirm the browser's own confirmation dialog states the exact price before anything fires → confirm the label purchases, the tracking number/print link show, and (if the order was Processing/In Production) its status auto-advances to Shipped with the shipped-order email sending, same as a WooCommerce Shipping label would.
 
+## Fix: cart quantity read as "1" instead of "10" (direct report, with a screenshot)
+
+`global.css`'s blanket form-field rule (`input:not([type="checkbox"])...{ width: 100%; padding: 0.75rem 1rem; font-size: --medium }`, meant for real text fields like login/checkout inputs) was also landing on WooCommerce Blocks' own small, fixed-width cart quantity `<input type="number">` — 1rem of left+right padding at medium size left no room for a second digit in that narrow stepper box, so a quantity of 10 clipped down to showing just "1".
+
+Added a targeted override for `.wc-block-components-quantity-selector__input` (`woocommerce.css`, same file as this theme's other WC Blocks-specific overrides) — fixed 3rem width instead of 100%, smaller padding/font-size, centered text — sized to comfortably fit two digits instead of inheriting the blanket rule meant for full-width fields.
+
+Verify: add a line item to the cart with quantity ≥ 10 → confirm the full two-digit number is visible in the quantity box, not clipped.
+

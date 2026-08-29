@@ -214,6 +214,22 @@
 	margin-top: var(--wp--preset--spacing--sm);
 }
 
+/* Direct report, with a screenshot: the cart quantity stepper's "10"
+   read as "1" — global.css's own blanket `input { width: 100%; padding:
+   0.75rem 1rem; font-size: --medium }` rule (meant for real text
+   fields) was also landing on WC Blocks' own small, fixed-width
+   quantity `<input type="number">`, and 1rem of left+right padding at
+   medium size left no room for a second digit in that narrow box, so
+   it clipped/overflowed instead of wrapping. Scaled down and
+   fixed-width instead of 100%, sized to comfortably fit two digits,
+   centered to match WC Blocks' own −/input/+ layout. */
+.wc-block-components-quantity-selector__input {
+	width: 3rem !important;
+	padding: 0.4rem 0.25rem !important;
+	font-size: var(--wp--preset--font-size--small) !important;
+	text-align: center !important;
+}
+
 /* WooCommerce Blocks' own default stylesheet puts a card treatment
    (border/background/box-shadow) on the checkout/cart root and on the
    left "fields" column out of the box — invisible on this site until
