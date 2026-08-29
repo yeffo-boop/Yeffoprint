@@ -1353,3 +1353,13 @@ Two more direct reports on the same feature, both fixed together:
 
 Verify: get rates on an order where only some enabled carriers return a rate → confirm a hint appears explaining the others (not silence) → set a ship-from phone number in Settings → Shipping → purchase a real label → confirm it succeeds without a seller-contact error.
 
+## Diagnostic logging: Template batch cart-add only reflecting one batch (direct report: "When I add several 'batches' of a label, it only sends the first batch to the cart")
+
+Confirmed via the browser's Network tab: the actual request to `cart/add` correctly carried all 3 batch rows (3 variants, quantity 10 each — 30 total), but the resulting cart line showed only "10 labels," matching a single variant's worth. Read through the entire pipeline by hand — `configurator.js`'s `submitAddToCart()` (maps every entry in `state.variants`), `YeffoPrint_Field_Schema::sanitize_variants()` (loops and appends every valid row, no early return on the success path), `class-cart-controller.php::add()`'s own `array_sum(array_column($variants, 'quantity'))`, and `WC_Cart::add_to_cart()` itself (no silent stock-based quantity clamping — an insufficient-stock request throws, it doesn't reduce and continue) — every one of these reads correctly on its own, so nothing pinpointed where 30 becomes 10.
+
+Added logging to `class-cart-controller.php::add()`, right after `sanitize_variants()` returns: every `cart/add` request now logs the raw submitted variant count, the sanitized/kept variant count, and the computed total quantity to WooCommerce → Status → Logs (source `yeffoprint-cart-batches`). The next occurrence will show directly whether the request body itself already only carried 1 variant by the time PHP received it (a request-parsing issue) or whether `sanitize_variants()`/`array_sum()` genuinely dropped rows despite reading correctly (something more subtle to dig into).
+
+Also reported in the same conversation, possibly related: the checkout page shows the cart correctly, but navigating away and the cart appears empty — a guest session/cookie or page-caching symptom, still under investigation, not yet root-caused.
+
+Verify: reproduce the batch add with 2+ rows → check WooCommerce → Status → Logs for a `yeffoprint-cart-batches` entry on that request → confirm whether raw/sanitized counts match what was actually submitted.
+

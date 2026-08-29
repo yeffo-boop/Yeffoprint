@@ -100,12 +100,32 @@ class YeffoPrint_Cart_Controller {
 			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$variants = YeffoPrint_Field_Schema::sanitize_variants( $request->get_param( 'variants' ), YeffoPrint_Field_Schema::get( $template_id ) );
+		$raw_variants = $request->get_param( 'variants' );
+		$variants     = YeffoPrint_Field_Schema::sanitize_variants( $raw_variants, YeffoPrint_Field_Schema::get( $template_id ) );
 		if ( is_wp_error( $variants ) ) {
 			return $variants;
 		}
 
 		$total_quantity = array_sum( array_column( $variants, 'quantity' ) );
+
+		// Direct report: submitting 3 batch rows (30 total) landed in the
+		// cart as a single 10-label line item — every step of this
+		// function reads correctly on paper (sanitize_variants() doesn't
+		// truncate, array_sum() doesn't dedupe), so rather than guess
+		// further blind, log exactly what this request received and
+		// computed. WooCommerce -> Status -> Logs, source
+		// "yeffoprint-cart-batches", is where the next occurrence shows
+		// up with the actual counts.
+		wc_get_logger()->info(
+			sprintf(
+				'cart/add for template #%d — raw variants: %d, sanitized variants: %d, total_quantity: %d',
+				$template_id,
+				is_array( $raw_variants ) ? count( $raw_variants ) : -1,
+				count( $variants ),
+				$total_quantity
+			),
+			[ 'source' => 'yeffoprint-cart-batches' ]
+		);
 
 		$edit_key = (string) $request->get_param( 'edit_key' );
 		if ( $edit_key && WC()->cart->get_cart_item( $edit_key ) ) {
