@@ -970,7 +970,7 @@
 			.then( function ( response ) {
 				button.disabled = false;
 				button.textContent = 'Get Rates';
-				renderShippoRates( order, panel, response.rates || [], response.notes || [] );
+				renderShippoRates( order, panel, response.rates || [] );
 			} )
 			.catch( function ( error ) {
 				button.disabled = false;
@@ -980,31 +980,57 @@
 	}
 
 	/**
-	 * `notes` — Shippo's own per-carrier messages that survive noise
-	 * filtering/deduping (class-shippo-client.php's relevant_messages()),
-	 * shown even when other carriers DID return a rate. Direct question,
-	 * after enabling UPS in the Shippo dashboard: "it only has a few USPS
-	 * rates shown, how can I show UPS rates as well?" — previously any
-	 * reason a specific carrier didn't return a rate was silently dropped
-	 * whenever at least one other carrier succeeded; this is where that
-	 * answer now surfaces instead of needing a guess. Rendered as its own
-	 * bordered callout (not a plain hint line) after a follow-up report —
-	 * a missing service level (e.g. UPS 2nd Day Air not enabled on the
-	 * Shippo carrier account) is easy to miss as a single line of muted
-	 * text sitting above a list of rate cards.
+	 * Best-guess match between the rates Shippo returned and whatever the
+	 * customer actually picked at checkout (order.shipping_method — the
+	 * same string already shown on the WooCommerce Shipping panel's own
+	 * "Customer selected" line) — direct request: "make the default
+	 * shipping selection whatever the customer selected... the default
+	 * should match what they picked." A carrier-name match alone counts
+	 * for less than a service-name match (a carrier match is common and
+	 * weak on its own — e.g. "USPS" appears in most USPS service names —
+	 * while a service-name match like "Priority Mail" is far more
+	 * specific), so the two are weighted differently rather than treated
+	 * as equally good signals. Returns null (falls back to cheapest, the
+	 * existing default) when nothing matches at all — e.g. a generic
+	 * WooCommerce method like "Flat rate" or "Local pickup" was chosen,
+	 * which no Shippo rate could ever legitimately match.
 	 */
-	function renderShippoRates( order, panel, rates, notes ) {
+	function findBestMatchingRateId( rates, shippingMethod ) {
+		if ( ! shippingMethod ) {
+			return null;
+		}
+		var haystack = shippingMethod.toLowerCase();
+		var bestId = null;
+		var bestScore = 0;
+
+		rates.forEach( function ( rate ) {
+			var carrier = ( rate.carrier_label || '' ).toLowerCase();
+			var service = ( rate.service || '' ).toLowerCase();
+			var score = 0;
+			if ( carrier && haystack.indexOf( carrier ) !== -1 ) {
+				score += 1;
+			}
+			if ( service && haystack.indexOf( service ) !== -1 ) {
+				score += 2;
+			}
+			if ( score > bestScore ) {
+				bestScore = score;
+				bestId = rate.id;
+			}
+		} );
+
+		return bestScore > 0 ? bestId : null;
+	}
+
+	function renderShippoRates( order, panel, rates ) {
 		var ratesEl = panel.querySelector( '[data-yp-shippo-rates]' );
-		var notesHtml = notes.length ?
-			'<div class="yp-shippo-notes"><p class="yp-shippo-notes__title">Notes from Shippo</p><ul>' +
-				notes.map( function ( note ) { return '<li>' + YP.escapeHtml( note ) + '</li>'; } ).join( '' ) +
-			'</ul></div>'
-			: '';
 
 		if ( ! rates.length ) {
-			ratesEl.innerHTML = notesHtml || '<p class="yp-panel__hint">No rates came back for this address/package.</p>';
+			ratesEl.innerHTML = '<p class="yp-panel__hint">No rates came back for this address/package.</p>';
 			return;
 		}
+
+		var bestMatchId = findBestMatchingRateId( rates, order.shipping_method );
 
 		// One pill per carrier actually present in this response — direct
 		// request: "I'd like to be able to filter carriers from shippo."
@@ -1021,7 +1047,6 @@
 		var activeCarrier = null; // null = All.
 
 		ratesEl.innerHTML =
-			notesHtml +
 			( carriers.length > 1 ?
 				'<div class="yp-carrier-filter">' +
 					'<button type="button" class="yp-carrier-filter__pill is-active" data-yp-carrier-pill="">All</button>' +
@@ -1039,15 +1064,28 @@
 			var previouslySelected = listEl.querySelector( 'input:checked' );
 			var previousId = previouslySelected ? previouslySelected.value : null;
 
+			// Preference order for which rate starts checked: whatever was
+			// already selected before this render (e.g. switching carrier
+			// filter pills, so a manual choice survives that) → the rate
+			// that best matches what the customer picked at checkout → the
+			// cheapest (rates arrive pre-sorted ascending, so that's index 0).
+			// Falls through to the next preference whenever the preferred
+			// choice isn't even in the currently filtered/visible list.
+			var isVisible = function ( id ) { return visible.some( function ( r ) { return r.id === id; } ); };
+			var defaultId = previousId && isVisible( previousId )
+				? previousId
+				: ( bestMatchId && isVisible( bestMatchId ) ? bestMatchId : null );
+
 			listEl.innerHTML = '<div class="yp-rate-list">' +
 				visible.map( function ( rate, index ) {
-					var checked = previousId ? rate.id === previousId : 0 === index;
+					var checked = defaultId ? rate.id === defaultId : 0 === index;
 					return (
 						'<label class="yp-rate-card' + ( checked ? ' is-selected' : '' ) + '">' +
 							'<input type="radio" name="yp-shippo-rate" value="' + YP.escapeAttr( rate.id ) + '"' + ( checked ? ' checked' : '' ) + ' />' +
 							'<span class="yp-rate-card__body">' +
 								'<span class="yp-rate-card__carrier">' + YP.escapeHtml( rate.carrier_label ) + '</span> ' +
 								'<span class="yp-rate-card__service">' + YP.escapeHtml( rate.service ) + '</span>' +
+								( rate.id === bestMatchId ? '<span class="yp-rate-card__match">Matches customer’s choice</span>' : '' ) +
 							'</span>' +
 							'<span class="yp-rate-card__days">' + ( rate.days ? rate.days + ( 1 === rate.days ? ' day' : ' days' ) : '—' ) + '</span>' +
 							'<span class="yp-rate-card__price">$' + rate.amount.toFixed( 2 ) + '</span>' +
