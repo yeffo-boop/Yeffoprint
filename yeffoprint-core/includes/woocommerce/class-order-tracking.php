@@ -55,6 +55,15 @@ class YeffoPrint_Order_Tracking {
 	private const SHIPPO_LABELS_META = 'yeffoprint_shippo_labels';
 
 	/**
+	 * Shared by every live-tracking consumer (the /track-order/ page,
+	 * the Telegram bot's order-status reply — direct request: "reply
+	 * with the current status from the carrier") so a lookup one of them
+	 * already made is reused by the other within this window instead of
+	 * hitting the carrier's API twice for the same shipment.
+	 */
+	private const LIVE_EVENTS_CACHE_TTL = 30 * MINUTE_IN_SECONDS;
+
+	/**
 	 * Known "WooCommerce Shipping" carrier ids, lowercased. Only USPS and
 	 * UPS matter here (the two carriers this store actually ships with —
 	 * direct request), but FedEx/DHL are included too since WC Shipping
@@ -195,6 +204,47 @@ class YeffoPrint_Order_Tracking {
 			default:
 				return '';
 		}
+	}
+
+	/**
+	 * Live carrier events for one shipment (class-tracking-provider-
+	 * registry.php — Shippo-backed when configured, falling back to a
+	 * carrier-native USPS/UPS provider otherwise), cached for
+	 * LIVE_EVENTS_CACHE_TTL. Shared by every consumer that wants "what's
+	 * actually happening with this package right now" rather than just
+	 * a bare tracking number: the /track-order/ page and, direct
+	 * request, the Telegram bot's order-status reply — a lookup either
+	 * one already made for a given shipment is reused by the other
+	 * within that window instead of hitting the carrier twice.
+	 *
+	 * @return array{status:string,description:string,location:string,timestamp:string}[]
+	 *   Newest first, empty when no provider is configured for this
+	 *   carrier or the lookup failed — never an error, since every
+	 *   caller already has carrier_direct_url() as a complete fallback.
+	 */
+	public static function live_events( array $shipment ): array {
+		$registry = new YeffoPrint_Tracking_Provider_Registry();
+		$provider = $registry->get( $shipment['carrier_id'] );
+
+		if ( ! $provider || ! $provider->is_configured() ) {
+			return [];
+		}
+
+		$cache_key = 'yeffoprint_tracking_' . md5( $shipment['carrier_id'] . '_' . $shipment['tracking_number'] );
+		$cached    = get_transient( $cache_key );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		try {
+			$events = $provider->get_events( $shipment['tracking_number'] );
+		} catch ( YeffoPrint_Tracking_Exception $e ) {
+			$events = [];
+		}
+
+		set_transient( $cache_key, $events, self::LIVE_EVENTS_CACHE_TTL );
+
+		return $events;
 	}
 
 	/** The exact, ready-to-click link an order's own emails/pages use — empty if there's nothing to track yet. */
