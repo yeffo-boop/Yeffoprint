@@ -128,16 +128,53 @@ class YeffoPrint_Shippo_Client {
 	 * @return string[]
 	 */
 	private function relevant_messages( array $raw_messages ): array {
-		$messages = array_map(
-			static fn( $m ) => trim( (string) ( $m['text'] ?? '' ) ),
-			$raw_messages
-		);
+		// Diagnostic, kept in place rather than removed after this round —
+		// direct question: "how do I know which carrier is giving these
+		// messages?" Shippo's message objects carry a `source` field this
+		// class previously discarded entirely (only ever read `text`); the
+		// prefixing below is built on the assumption that `source` names
+		// the carrier (Shippo's documented shape). Logging the untouched
+		// raw array here means if that assumption is ever wrong for some
+		// message shape this store's carrier accounts produce, the next
+		// report already has the real field names to fix it from instead
+		// of needing another round of "please reproduce and share logs".
+		if ( $raw_messages && function_exists( 'wc_get_logger' ) ) {
+			wc_get_logger()->info(
+				'Shippo raw shipment messages: ' . wp_json_encode( $raw_messages ),
+				[ 'source' => 'yeffoprint-shippo-messages' ]
+			);
+		}
+
+		$messages = array_map( [ $this, 'format_message' ], $raw_messages );
 
 		$messages = array_filter( $messages, static function ( string $text ): bool {
 			return '' !== $text && false === strpos( $text, 'Too Many Requests' );
 		} );
 
 		return array_values( array_unique( $messages ) );
+	}
+
+	/**
+	 * Prefixes a message with the carrier it came from when Shippo names
+	 * one (its `source` field) — a generic shipment-level note (source is
+	 * empty or literally "Shippo") stays bare, since there's nothing
+	 * carrier-specific to attribute it to.
+	 */
+	private function format_message( array $message ): string {
+		$text = trim( (string) ( $message['text'] ?? '' ) );
+		if ( '' === $text ) {
+			return '';
+		}
+
+		$source = trim( (string) ( $message['source'] ?? '' ) );
+		if ( '' === $source || 'shippo' === strtolower( $source ) ) {
+			return $text;
+		}
+
+		$carrier_id = sanitize_key( str_replace( ' ', '_', strtolower( $source ) ) );
+		$label      = YeffoPrint_Order_Tracking::carrier_label( $carrier_id );
+
+		return $label . ': ' . $text;
 	}
 
 	/** @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error */
