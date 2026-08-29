@@ -79,13 +79,39 @@ class YeffoPrint_Order_Shipment_Status {
 
 	/**
 	 * Fires on every order save — cheap for the overwhelming majority of
-	 * them, since the very first check (status must currently be
-	 * "processing") throws out every order this doesn't apply to before
-	 * touching anything else. Everything it reads (order meta already
-	 * loaded on $order) is local — no API calls here.
+	 * them, since the very first check (status must be one this applies
+	 * to) throws out every order this doesn't apply to before touching
+	 * anything else. Everything it reads (order meta already loaded on
+	 * $order) is local — no API calls here.
+	 *
+	 * Direct bug report: "when I print a shipping label, it should
+	 * change the status to shipped, but instead it marked it completed."
+	 * Two separate causes, both fixed here:
+	 *
+	 * 1. This originally only checked for "processing" — but
+	 *    class-order-production-status.php's own "Send to Printer"
+	 *    button moves an order to "in-production" *before* staff ever
+	 *    gets to print a label, so by the time a label actually exists,
+	 *    the order was never "processing" anymore and this silently
+	 *    never fired. Now accepts "in-production" too.
+	 *
+	 * 2. WooCommerce Shipping's own label-purchase form has its own
+	 *    "After purchasing a label, mark this order as complete and
+	 *    notify the customer" option — when checked (its own UI, not
+	 *    anything this plugin renders), it calls WooCommerce's native
+	 *    complete-order action directly, landing the order on
+	 *    "completed" without ever passing through this store's own
+	 *    "shipped" status in between. Since this hook fires on every
+	 *    save (including that one), also accepting "completed" as a
+	 *    starting point here redirects that specific jump back to
+	 *    "shipped" — the moment a *new* shipment fingerprint shows up on
+	 *    an order that's suddenly "completed", it's this exact case, not
+	 *    a deliberate later "mark complete" (which the fingerprint-match
+	 *    guard below already lets stand undisturbed, since by then the
+	 *    fingerprint is unchanged).
 	 */
 	public function maybe_advance_to_shipped( \WC_Order $order ): void {
-		if ( 'processing' !== $order->get_status() ) {
+		if ( ! in_array( $order->get_status(), [ 'processing', YeffoPrint_Order_Production_Status::STATUS, 'completed' ], true ) ) {
 			return;
 		}
 
