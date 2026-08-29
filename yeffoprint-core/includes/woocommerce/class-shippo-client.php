@@ -30,7 +30,7 @@ class YeffoPrint_Shippo_Client {
 	/**
 	 * @param array $address_to {street1, street2, city, state, zip, country, name}
 	 * @param array $parcel {weight_oz, length_in, width_in, height_in}
-	 * @return array{rates:array,notes:string[]}|\WP_Error
+	 * @return array{rates:array}|\WP_Error
 	 */
 	public function get_rates( array $address_to, array $parcel ) {
 		$response = $this->call( 'POST', '/shipments/', [
@@ -51,29 +51,23 @@ class YeffoPrint_Shippo_Client {
 			return $response;
 		}
 
-		$notes = $this->relevant_messages( $response['messages'] ?? [] );
-
 		if ( 'SUCCESS' !== ( $response['status'] ?? '' ) ) {
-			return new \WP_Error(
-				'yeffoprint_shippo_no_rates',
-				$notes ? implode( ' ', $notes ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
-			);
+			return new \WP_Error( 'yeffoprint_shippo_no_rates', __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' ) );
 		}
 
 		$raw_rates   = $response['rates'] ?? [];
 		$shipment_id = (string) ( $response['object_id'] ?? '' );
 
-		// Direct report, after ruling out any code-side rate limit: "should
-		// there be more [UPS options]?" — `async: false` above asks Shippo
-		// to answer synchronously, but Shippo's own docs describe that
-		// synchronous response as a snapshot: a carrier that's slow to
-		// respond (UPS is a known one) can still be missing from it even
-		// though the shipment itself was created successfully. A follow-up
-		// call to the shipment's own rates endpoint picks up whatever's
-		// landed since, unioned with the original snapshot by rate id so a
-		// rate present in one response but not the other (either order) is
-		// never dropped — a slow/failed follow-up call degrades back to the
-		// original snapshot instead of losing rates that were already there.
+		// `async: false` above asks Shippo to answer synchronously, but
+		// Shippo's own docs describe that synchronous response as a
+		// snapshot: a carrier that's slow to respond can still be missing
+		// from it even though the shipment itself was created successfully.
+		// A follow-up call to the shipment's own rates endpoint picks up
+		// whatever's landed since, unioned with the original snapshot by
+		// rate id so a rate present in one response but not the other
+		// (either order) is never dropped — a slow/failed follow-up call
+		// degrades back to the original snapshot instead of losing rates
+		// that were already there.
 		if ( '' !== $shipment_id ) {
 			$follow_up = $this->call( 'GET', '/shipments/' . rawurlencode( $shipment_id ) . '/rates' );
 			if ( ! is_wp_error( $follow_up ) && ! empty( $follow_up['results'] ) ) {
@@ -82,99 +76,14 @@ class YeffoPrint_Shippo_Client {
 		}
 
 		if ( empty( $raw_rates ) ) {
-			return new \WP_Error(
-				'yeffoprint_shippo_no_rates',
-				$notes ? implode( ' ', $notes ) : __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' )
-			);
+			return new \WP_Error( 'yeffoprint_shippo_no_rates', __( 'Shippo returned no rates for this address/package.', 'yeffoprint-core' ) );
 		}
 
 		$rates = array_map( [ $this, 'normalize_rate' ], $raw_rates );
 
 		usort( $rates, static fn( $a, $b ) => $a['amount'] <=> $b['amount'] );
 
-		// A partial response — some rates came back, but not every
-		// enabled carrier account produced one — still carries a
-		// `messages` entry per carrier that came up empty. Direct
-		// question, after connecting a real UPS account in the Shippo
-		// dashboard: "it only has a few USPS rates shown, how can I show
-		// UPS rates as well?" Previously this was only ever read on the
-		// all-fail path, so the exact reason a specific carrier didn't
-		// return a rate (an incomplete carrier-account setup on Shippo's
-		// side, an unsupported service for this route, …) was silently
-		// dropped whenever at least one other carrier succeeded — surfaced
-		// here so that question can answer itself in the panel instead of
-		// needing a guess.
-		return [ 'rates' => $rates, 'notes' => $notes ];
-	}
-
-	/**
-	 * Every new Shippo account comes with a set of default sample carrier
-	 * accounts (mostly international — Correos, DPD, Chronopost, Hermes
-	 * UK, a Canada Post/DHL/UPS master account…) that reject a normal
-	 * domestic US shipment with byte-identical wording on *every*
-	 * request, one message per sample account — a dozen duplicate lines
-	 * that used to bury the one or two genuine, distinct messages (an
-	 * incomplete address, a real carrier account connected but not fully
-	 * set up, …). Previously this filtered out any message containing
-	 * that shared sample-account wording outright — but a real, connected
-	 * account can return the exact same generic wording for its own
-	 * reason (e.g. a service level like UPS 2nd Day Air that isn't
-	 * enabled on that carrier account), and pattern-matching the text
-	 * silently dropped that too. Deduping instead of pattern-matching
-	 * collapses the dozen identical sample-account lines down to one
-	 * without discarding a real carrier's message just because it shares
-	 * the same wording.
-	 *
-	 * @return string[]
-	 */
-	private function relevant_messages( array $raw_messages ): array {
-		// Diagnostic, kept in place rather than removed after this round —
-		// direct question: "how do I know which carrier is giving these
-		// messages?" Shippo's message objects carry a `source` field this
-		// class previously discarded entirely (only ever read `text`); the
-		// prefixing below is built on the assumption that `source` names
-		// the carrier (Shippo's documented shape). Logging the untouched
-		// raw array here means if that assumption is ever wrong for some
-		// message shape this store's carrier accounts produce, the next
-		// report already has the real field names to fix it from instead
-		// of needing another round of "please reproduce and share logs".
-		if ( $raw_messages && function_exists( 'wc_get_logger' ) ) {
-			wc_get_logger()->info(
-				'Shippo raw shipment messages: ' . wp_json_encode( $raw_messages ),
-				[ 'source' => 'yeffoprint-shippo-messages' ]
-			);
-		}
-
-		$messages = array_map( [ $this, 'format_message' ], $raw_messages );
-
-		$messages = array_filter( $messages, static function ( string $text ): bool {
-			return '' !== $text && false === strpos( $text, 'Too Many Requests' );
-		} );
-
-		return array_values( array_unique( $messages ) );
-	}
-
-	/**
-	 * Prefixes a message with the carrier it came from when Shippo names
-	 * one (its `source` field) — a generic shipment-level note (source is
-	 * empty or literally "Shippo") stays bare, since there's nothing
-	 * carrier-specific to attribute it to.
-	 */
-	private function format_message( array $message ): string {
-		$text = trim( (string) ( $message['text'] ?? '' ) );
-		if ( '' === $text ) {
-			return '';
-		}
-
-		$source = trim( (string) ( $message['source'] ?? '' ) );
-		if ( '' === $source || 'shippo' === strtolower( $source ) ) {
-			return $text;
-		}
-
-		$carrier_id = sanitize_key( str_replace( ' ', '_', strtolower( $source ) ) );
-		$label      = YeffoPrint_Order_Tracking::carrier_label( $carrier_id );
-
-		return $label . ': ' . $text;
+		return [ 'rates' => $rates ];
 	}
 
 	/**
