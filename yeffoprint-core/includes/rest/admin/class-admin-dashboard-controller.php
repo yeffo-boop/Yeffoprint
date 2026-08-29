@@ -39,14 +39,28 @@ class YeffoPrint_Admin_Dashboard_Controller {
 
 	public function get_summary(): \WP_REST_Response {
 		return rest_ensure_response( [
-			'due_date_days'           => YeffoPrint_Dashboard_Widgets::due_date_days(),
-			'pending_orders'          => $this->pending_wc_orders(),
-			'pending_orders_url'      => $this->orders_list_url(),
-			'shipped_packages'        => $this->shipped_packages(),
-			'pending_proofs'          => $this->custom_orders_by_status( 'design_in_progress' ),
-			'awaiting_approval'       => $this->custom_orders_by_status( 'awaiting_approval' ),
-			'maintenance_subscribers' => $this->maintenance_subscribers(),
+			'due_date_days'             => YeffoPrint_Dashboard_Widgets::due_date_days(),
+			'pending_orders'            => $this->pending_wc_orders(),
+			'pending_orders_url'        => $this->orders_list_url(),
+			'shipped_packages'          => $this->shipped_packages(),
+			'pending_proofs'            => $this->custom_orders_by_status( 'design_in_progress' ),
+			'awaiting_approval'         => $this->custom_orders_by_status( 'awaiting_approval' ),
+			'maintenance_subscribers'   => $this->maintenance_subscribers(),
+			// Site-wide (not per-row) — direct request: an In Production row's action
+			// column offers "Print Shipping Label" (opening straight into the same
+			// embedded WooCommerce Shipping form the drawer's own Shipping Label panel
+			// uses, class-admin-order-controller.php's detail_payload()) instead of a
+			// plain status pill, but only when that plugin is actually active.
+			'shipping_label_available' => $this->is_shipping_plugin_active(),
 		] );
+	}
+
+	/** Same is_plugin_active() check as class-admin-order-controller.php's own is_shipping_plugin_active() — duplicated rather than shared, matching orders_list_url() above already duplicating YeffoPrint_Dashboard_Widgets' own HPOS check; this is a site-wide flag here (one value for the whole summary), not per-order like that controller's own use of it. */
+	private function is_shipping_plugin_active(): bool {
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+		return is_plugin_active( 'woocommerce-shipping/woocommerce-shipping.php' );
 	}
 
 	/** Same HPOS-aware link YeffoPrint_Dashboard_Widgets::orders_list_url() builds — WooCommerce orders aren't part of this app's own rewrite, so this always points back out to classic wp-admin. */

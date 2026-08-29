@@ -531,12 +531,26 @@
 		 * panel's REST query only ever asked for "processing" orders, so
 		 * the row just vanished — staff lost track of it. Now the query
 		 * includes both statuses (class-admin-dashboard-controller.php's
-		 * pending_wc_orders()), so this only offers the button on rows
-		 * still actually in Processing; an already-sent row shows a
-		 * status pill in the same column instead.
+		 * pending_wc_orders()), so this only offers the Send to Printer
+		 * button on rows still actually in Processing.
+		 *
+		 * Follow-up direct request: an In Production row's status pill
+		 * alone wasn't enough — staff wanted the same one-click
+		 * convenience for the *next* pipeline step, printing the actual
+		 * shipping label, without opening the drawer first. When
+		 * WooCommerce Shipping is active (summary.shipping_label_available,
+		 * the same site-wide check the drawer's own panel already gates
+		 * on), an In Production row gets a "Print Shipping Label" button
+		 * instead of a plain pill; clicking it opens the drawer and
+		 * immediately triggers the same embed the drawer's own button
+		 * would (openWcOrderDrawer()'s autoPrintLabel param). Falls back
+		 * to the plain pill only when that plugin isn't active at all.
 		 */
 		function sendToPrinterButtonHtml( row ) {
 			if ( 'processing' !== row.status ) {
+				if ( summary.shipping_label_available ) {
+					return '<button type="button" class="wp-block-button__link is-style-outline yp-row-action" style="padding:4px 10px;font-size:12px;" data-yp-print-label-row="' + row.id + '">Print Shipping Label</button>';
+				}
 				return '<span class="yp-pill yp-pill--good">' + YP.escapeHtml( row.status_label ) + '</span>';
 			}
 			return '<button type="button" class="wp-block-button__link is-style-outline yp-row-action" style="padding:4px 10px;font-size:12px;" data-yp-send-to-printer="' + row.id + '">Send to Printer</button>';
@@ -569,6 +583,12 @@
 			} );
 		} );
 
+		el.querySelectorAll( '[data-yp-print-label-row]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-print-label-row' ), 10 ), true );
+			} );
+		} );
+
 		el.querySelectorAll( '[data-yp-send-to-printer]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
 				var orderId = button.getAttribute( 'data-yp-send-to-printer' );
@@ -596,7 +616,18 @@
 		return '<tr><th>' + YP.escapeHtml( label ) + '</th><td>' + valueHtml + '</td></tr>';
 	}
 
-	function openWcOrderDrawer( id ) {
+	/**
+	 * `autoPrintLabel` (direct request) — the dashboard's Pending Orders
+	 * panel offers a one-click "Print Shipping Label" button on an
+	 * In Production row, matching the existing one-click "Send to
+	 * Printer" on a Processing row (renderDashboardSummary() below).
+	 * Rather than duplicate the drawer/embed logic for a dashboard-only
+	 * shortcut, this just opens the same drawer and, once loaded,
+	 * immediately triggers the same embedShippingLabel() the drawer's
+	 * own "Print Shipping Label" button calls — skipping the extra click
+	 * inside the drawer, not a different code path.
+	 */
+	function openWcOrderDrawer( id, autoPrintLabel ) {
 		var drawer = document.createElement( 'div' );
 		drawer.className = 'yp-drawer yp-drawer--wide';
 		drawer.setAttribute( 'aria-hidden', 'true' );
@@ -613,13 +644,13 @@
 		YP.initDrawer( drawer );
 		YP.openDrawer( drawer );
 
-		loadWcOrderDetail( id, drawer );
+		loadWcOrderDetail( id, drawer, autoPrintLabel );
 	}
 
-	function loadWcOrderDetail( id, drawer ) {
+	function loadWcOrderDetail( id, drawer, autoPrintLabel ) {
 		var bodyEl = drawer.querySelector( '[data-yp-body]' );
 		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + id )
-			.then( function ( order ) { renderWcOrderDetail( order, drawer, bodyEl ); } )
+			.then( function ( order ) { renderWcOrderDetail( order, drawer, bodyEl, autoPrintLabel ); } )
 			.catch( function ( error ) {
 				bodyEl.innerHTML = '<p class="yp-form__error">Couldn’t load this order: ' + YP.escapeHtml( error.message ) + '</p>';
 			} );
@@ -649,7 +680,7 @@
 		'</tbody></table>';
 	}
 
-	function renderWcOrderDetail( order, drawer, bodyEl ) {
+	function renderWcOrderDetail( order, drawer, bodyEl, autoPrintLabel ) {
 		var rowsHtml = wcOrderRow(
 			'Customer',
 			YP.escapeHtml( order.customer_name || '' ) + ( order.customer_email ? ' — <a href="mailto:' + YP.escapeAttr( order.customer_email ) + '">' + YP.escapeHtml( order.customer_email ) + '</a>' : '' ) +
@@ -690,6 +721,9 @@
 		var printButton = bodyEl.querySelector( '[data-yp-print-label]' );
 		if ( printButton ) {
 			printButton.addEventListener( 'click', function () { embedShippingLabel( order, bodyEl ); } );
+			if ( autoPrintLabel ) {
+				embedShippingLabel( order, bodyEl );
+			}
 		}
 	}
 
