@@ -100,8 +100,35 @@ class YeffoPrint_Email_Customer_Shipped_Order extends \WC_Email {
 			// the shipping-details box conditionally (`if ( $shipments )`),
 			// so this degrades gracefully to a shipped notice with no
 			// carrier/tracking section rather than an empty one.
+			//
+			// Direct report on a *second* order that DID already have real
+			// tracking data attached: still no email, even though the
+			// get_shipments() gate above was already removed by that
+			// point. Every angle checked by hand (is_enabled() defaults,
+			// get_recipient()/is_email() filtering, hook-registration
+			// timing relative to WC_Emails::instance()) reads correct — so
+			// rather than guess further blind, log every attempt's actual
+			// runtime state. WooCommerce → Status → Logs, source
+			// "yeffoprint-shipped-email", is where the next occurrence
+			// shows up in a fresh log entry.
 			if ( is_a( $this->object, \WC_Order::class ) ) {
-				$this->send_notification();
+				$result = $this->send_notification();
+				wc_get_logger()->info(
+					sprintf(
+						'trigger() ran for order #%d — enabled: %s, recipient: %s, shipments: %d, sent: %s',
+						$this->object->get_id(),
+						$this->is_enabled() ? 'yes' : 'no',
+						$this->get_recipient() ?: '(none)',
+						count( YeffoPrint_Order_Tracking::get_shipments( $this->object ) ),
+						$result ? 'yes' : 'no'
+					),
+					[ 'source' => 'yeffoprint-shipped-email' ]
+				);
+			} else {
+				wc_get_logger()->info(
+					sprintf( 'trigger() ran with no resolvable order (order_id: %s)', $order_id ),
+					[ 'source' => 'yeffoprint-shipped-email' ]
+				);
 			}
 
 			$this->restore_locale();

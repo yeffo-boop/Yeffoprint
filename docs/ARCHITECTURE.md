@@ -1290,3 +1290,11 @@ Removed the `get_shipments()` gate — `trigger()` now sends on any transition i
 
 Verify: manually change an order's status to "Shipped" from the drawer's own dropdown, on an order with no shipping label ever purchased → confirm the customer still receives "Your order has shipped!" with no shipping-details box or tracking button → separately, purchase a real label → confirm the email includes the carrier/tracking section as before.
 
+### Follow-up: still no email on a second order that *did* have real tracking data attached (direct report, after the fix above)
+
+Every angle checked by hand read correct: `is_enabled()`'s default (`WC_Email::init_form_fields()`'s own `'enabled' => 'yes'` default), `get_recipient()`'s `is_email()` filtering, and the hook-registration timing (this plugin's own `class-admin-order-controller.php::save_status()` changes status via a REST route, and `WC_Emails::instance()` is initialized on `rest_api_init` by WooCommerce core's own `register_wp_admin_settings()` — so the `woocommerce_order_status_shipped` hook should already be registered by the time the transition fires). None of that pointed at a concrete bug without live evidence.
+
+Rather than guess further blind, added logging: every `trigger()` call now writes an entry to WooCommerce → Status → Logs (source `yeffoprint-shipped-email`) recording the order ID, whether the email was enabled, its resolved recipient, how many shipments `YeffoPrint_Order_Tracking::get_shipments()` found, and whether `send_notification()` reported success — win or skip, not just failure. The next occurrence should show up there with the actual runtime state instead of needing another round of speculation.
+
+Verify: manually change an order's status to "Shipped" → confirm a new log entry appears under WooCommerce → Status → Logs with source `yeffoprint-shipped-email` showing the actual enabled/recipient/shipments/sent values for that attempt.
+
