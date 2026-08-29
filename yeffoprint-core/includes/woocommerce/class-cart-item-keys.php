@@ -17,9 +17,24 @@
  * its own size/material and this store's line-item model has no way to
  * represent that within a single item. All of a custom order's rows
  * (plus its fee item, when one exists) share the same CUSTOM_ORDER_ID.
- * See CUSTOM_ORDER_ROW_INDEX below. The regular Template flow
- * (class-cart-controller.php) is untouched by this — its batches still
- * never split.
+ * See CUSTOM_ORDER_ROW_INDEX below.
+ *
+ * The Template flow (class-cart-controller.php) still never splits a
+ * single batch across line items, but it needs the *same* per-add
+ * uniqueness CUSTOM_ORDER_ROW_INDEX exists for below, for a different
+ * reason: WC_Cart::generate_cart_id() hashes product + this data to
+ * decide whether an add_to_cart() call is "the same line item" as one
+ * already in the cart, and two *separate* Add to Cart submissions for
+ * the same template/size/material hash identically. Found live —
+ * direct report: "When I add several 'batches' of a label, it only
+ * sends the first batch to the cart" — a second batch's add_to_cart()
+ * call matched an already-in-cart item's hash, so WC only bumped its
+ * internal quantity counter and never touched that item's VARIANTS/
+ * TOTAL_QTY, silently discarding the new batch's actual data. Fixed by
+ * writing a fresh `uniqid()` into $cart_item_data on every Template add
+ * (inline in class-cart-controller.php, not worth its own named
+ * constant here the way CUSTOM_ORDER_ROW_INDEX's value is actually
+ * read back elsewhere).
  */
 
 defined( 'ABSPATH' ) || exit;
