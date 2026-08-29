@@ -880,11 +880,18 @@
 		var ratesEl = panel.querySelector( '[data-yp-shippo-rates]' );
 		var errorEl = panel.querySelector( '[data-yp-shippo-error]' );
 
+		// Falls back to the order's own default package (already the value
+		// every field starts pre-filled with) rather than 0 if a field gets
+		// cleared — a 0-weight/0-dimension parcel is malformed enough that
+		// UPS can quietly drop premium service levels for it entirely
+		// instead of erroring, so this is worth guarding even though the
+		// fields are never blank on a fresh panel.
+		var defaults = order.shippo_default_package;
 		var parcel = {
-			weight_oz: parseFloat( panel.querySelector( '#yp-shippo-weight' ).value ) || 0,
-			length_in: parseFloat( panel.querySelector( '#yp-shippo-length' ).value ) || 0,
-			width_in: parseFloat( panel.querySelector( '#yp-shippo-width' ).value ) || 0,
-			height_in: parseFloat( panel.querySelector( '#yp-shippo-height' ).value ) || 0
+			weight_oz: parseFloat( panel.querySelector( '#yp-shippo-weight' ).value ) || defaults.weight_oz,
+			length_in: parseFloat( panel.querySelector( '#yp-shippo-length' ).value ) || defaults.length_in,
+			width_in: parseFloat( panel.querySelector( '#yp-shippo-width' ).value ) || defaults.width_in,
+			height_in: parseFloat( panel.querySelector( '#yp-shippo-height' ).value ) || defaults.height_in
 		};
 
 		button.disabled = true;
