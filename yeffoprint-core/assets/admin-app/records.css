@@ -595,3 +595,44 @@
 	color: var(--wp--preset--color--near-black);
 	white-space: nowrap;
 }
+
+/*
+ * Shippo's own per-carrier messages (class-shippo-client.php's
+ * relevant_messages(), deduped) — a bordered callout instead of a plain
+ * .yp-panel__hint line, so a reason for a missing rate (e.g. a service
+ * level not enabled on that carrier account) doesn't just blend into
+ * muted text above the rate cards.
+ */
+.yp-shippo-notes {
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-left: 3px solid var(--wp--preset--color--near-black);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.65rem 0.9rem;
+	margin: 0 0 1rem;
+}
+
+.yp-shippo-notes__title {
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wp--preset--color--charcoal);
+	margin: 0 0 0.35rem;
+}
+
+.yp-shippo-notes ul {
+	list-style: disc;
+	margin: 0;
+	padding-left: 1.1rem;
+}
+
+.yp-shippo-notes li {
+	font-size: 0.82rem;
+	color: var(--wp--preset--color--charcoal);
+	line-height: 1.4;
+}
+
+.yp-shippo-notes li + li {
+	margin-top: 0.25rem;
+}

@@ -911,17 +911,25 @@
 
 	/**
 	 * `notes` — Shippo's own per-carrier messages that survive noise
-	 * filtering (class-shippo-client.php's relevant_messages()), shown
-	 * even when other carriers DID return a rate. Direct question, after
-	 * enabling UPS in the Shippo dashboard: "it only has a few USPS rates
-	 * shown, how can I show UPS rates as well?" — previously any reason a
-	 * specific carrier didn't return a rate was silently dropped whenever
-	 * at least one other carrier succeeded; this is where that answer now
-	 * surfaces instead of needing a guess.
+	 * filtering/deduping (class-shippo-client.php's relevant_messages()),
+	 * shown even when other carriers DID return a rate. Direct question,
+	 * after enabling UPS in the Shippo dashboard: "it only has a few USPS
+	 * rates shown, how can I show UPS rates as well?" — previously any
+	 * reason a specific carrier didn't return a rate was silently dropped
+	 * whenever at least one other carrier succeeded; this is where that
+	 * answer now surfaces instead of needing a guess. Rendered as its own
+	 * bordered callout (not a plain hint line) after a follow-up report —
+	 * a missing service level (e.g. UPS 2nd Day Air not enabled on the
+	 * Shippo carrier account) is easy to miss as a single line of muted
+	 * text sitting above a list of rate cards.
 	 */
 	function renderShippoRates( order, panel, rates, notes ) {
 		var ratesEl = panel.querySelector( '[data-yp-shippo-rates]' );
-		var notesHtml = notes.length ? '<p class="yp-panel__hint">' + notes.map( YP.escapeHtml ).join( ' ' ) + '</p>' : '';
+		var notesHtml = notes.length ?
+			'<div class="yp-shippo-notes"><p class="yp-shippo-notes__title">Notes from Shippo</p><ul>' +
+				notes.map( function ( note ) { return '<li>' + YP.escapeHtml( note ) + '</li>'; } ).join( '' ) +
+			'</ul></div>'
+			: '';
 
 		if ( ! rates.length ) {
 			ratesEl.innerHTML = notesHtml || '<p class="yp-panel__hint">No rates came back for this address/package.</p>';
