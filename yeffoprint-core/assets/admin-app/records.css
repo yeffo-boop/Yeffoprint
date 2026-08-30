@@ -85,13 +85,40 @@
 	overflow-wrap: anywhere;
 }
 
+/**
+ * Direct report, with a screenshot: on the order-detail Items table, a
+ * line item's Qty/Total values appeared to float in the middle of the
+ * (now much taller, thanks to the meta grid below the item name) row,
+ * visually intruding on the item's own name/meta text instead of sitting
+ * next to it. The default `vertical-align: middle` (above) is exactly
+ * right for every other .yp-record-table, where a row's cells are all
+ * roughly the same single-line height — middle vs. top look identical
+ * there. It only becomes a problem when one cell (Item, here) is much
+ * taller than its row-mates, which is unique to this table. Scoped to
+ * its own modifier for the same reason as .yp-record-table--wrap above:
+ * a blanket change to every .yp-record-table risked an unreviewed
+ * regression on tables this was never meant to touch.
+ */
+.yp-record-table--top td {
+	vertical-align: top;
+}
+
 .yp-record-table tr:hover td {
 	background: var(--wp--preset--color--warm-white);
 }
 
 .yp-record-name {
 	display: flex;
-	align-items: center;
+	/* flex-start, not center: identical to center for every list screen's
+	   single-line name (the common case — swatch and text are the same
+	   height there, so this makes no visible difference), but on the
+	   order-detail Items table the text side can grow much taller than
+	   the swatch (item name + a stacked Size/Material/Customization meta
+	   list below it) — direct report, with a screenshot: centering swatch
+	   inside a tall list-row was carrying that block visually away from
+	   the item's own title into the middle of its meta list. flex-start
+	   keeps the swatch pinned to the title, same as any list-row icon. */
+	align-items: flex-start;
 	gap: 0.75rem;
 	font-weight: 600;
 }
