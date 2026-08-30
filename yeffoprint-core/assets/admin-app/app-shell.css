@@ -222,6 +222,9 @@ body.yeffoprint-app h3 {
 .yp-app__title {
 	font-size: 1.35rem;
 	font-weight: 700;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /* Hamburger toggle for the off-canvas nav below 860px — hidden above
@@ -376,5 +379,23 @@ body.yeffoprint-app h3 {
 	.yp-app__nav-backdrop.is-open {
 		display: block;
 		opacity: 1;
+	}
+
+	/* Mobile audit: --spacing--lg (2.5rem/40px) padding on all sides of
+	   .yp-app__topbar/.yp-app__view is a reasonable amount of breathing
+	   room on desktop, but on a phone it eats a large share of the
+	   viewport before any real content starts, and on the topbar
+	   specifically — hamburger + title + connection status all sharing
+	   one row — it can leave too little room for the title before things
+	   crowd or clip. Tightened here, not changed at the source, so
+	   desktop is untouched. */
+	.yp-app__topbar {
+		padding: 0.85rem var(--wp--preset--spacing--sm);
+		flex-wrap: wrap;
+		row-gap: 0.4rem;
+	}
+
+	.yp-app__view {
+		padding: var(--wp--preset--spacing--sm);
 	}
 }

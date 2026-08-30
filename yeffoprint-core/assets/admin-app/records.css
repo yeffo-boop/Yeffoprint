@@ -122,6 +122,31 @@
 	color: var(--wp--preset--color--near-black);
 }
 
+/* Bigger tap target on a touch device specifically, not just a narrow
+   viewport — a tablet can be plenty wide and still be touch-only.
+   Every list screen's Edit/Delete/etc. row action shares this class, so
+   fixing it here covers all of them at once. */
+@media (pointer: coarse) {
+	.yp-row-action {
+		padding: 0.55rem 0.7rem;
+		min-height: 2.25rem;
+	}
+
+	/* app.js's Dashboard "Print Shipping Label"/"Send to Printer" buttons
+	   carry an inline style="padding:4px 10px;font-size:12px" to stay
+	   compact in a dense desktop table row — !important is the only way
+	   to win against an inline style's specificity, which is exactly
+	   what this is for: touch usability overriding a deliberately
+	   compact desktop-only style, not fighting content this app doesn't
+	   control. */
+	[data-yp-print-label-row],
+	[data-yp-send-to-printer] {
+		padding: 0.55rem 0.7rem !important;
+		font-size: 0.85rem !important;
+		min-height: 2.25rem;
+	}
+}
+
 .yp-row-action:disabled {
 	opacity: 0.35;
 	cursor: not-allowed;
@@ -327,6 +352,19 @@
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	padding: var(--wp--preset--spacing--md);
 	margin-bottom: var(--wp--preset--spacing--sm);
+	/* Mobile audit: several screens (Dashboard's own panels, Orders'
+	   nested batch tables, Rewards history, Pricing/Settings tier
+	   tables, Manual Order) render a .yp-record-table/.yp-tier-table
+	   straight into a .yp-panel with no wrapper of their own — unlike
+	   every list screen's .yp-record-card, which already handles this
+	   the same way. A wide table (five columns on Shipped Packages, for
+	   one) would otherwise either get clipped or force the whole page to
+	   scroll sideways on a phone. Fixed once here rather than at each of
+	   those call sites — auto-layout tables with width:100% still grow
+	   past that when their content needs to, so this activates exactly
+	   when (and only when) a panel's content is actually too wide, with
+	   no visible effect on the many panels that never hit that case. */
+	overflow-x: auto;
 }
 
 .yp-panel__head {
