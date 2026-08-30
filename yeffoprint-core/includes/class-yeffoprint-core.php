@@ -311,11 +311,13 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-pages-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-web-design-packages-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-telegram-setup-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-material-guide-backfill-command.php';
 			( new YeffoPrint_Seed_Command() )->register();
 			( new YeffoPrint_Shipping_Setup_Command() )->register();
 			( new YeffoPrint_Pages_Setup_Command() )->register();
 			( new YeffoPrint_Web_Design_Packages_Setup_Command() )->register();
 			( new YeffoPrint_Telegram_Setup_Command() )->register();
+			( new YeffoPrint_Material_Guide_Backfill_Command() )->register();
 		}
 	}
 }
