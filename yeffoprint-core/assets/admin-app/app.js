@@ -739,7 +739,7 @@
 		if ( ! items.length ) {
 			return '<p class="yp-field__hint">No line items.</p>';
 		}
-		return '<table class="yp-record-table"><thead><tr><th>Item</th><th>Qty</th><th>Total</th></tr></thead><tbody>' +
+		return '<table class="yp-record-table yp-record-table--top"><thead><tr><th>Item</th><th>Qty</th><th>Total</th></tr></thead><tbody>' +
 			items.map( function ( item ) {
 				var metaHtml = item.meta.length
 					? '<dl class="yp-order-item-meta">' +
