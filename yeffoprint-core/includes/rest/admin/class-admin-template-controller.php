@@ -81,7 +81,15 @@ class YeffoPrint_Admin_Template_Controller {
 		update_post_meta( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_SIZES, $compatible_sizes );
 		update_post_meta( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS, $compatible_materials );
 
-		YeffoPrint_Field_Schema::update( $post_id, is_array( $params['field_schema'] ?? null ) ? $params['field_schema'] : [] );
+		// Skipped, not just overridden on the next read, whenever a shared
+		// default preset is active for this Template — the admin app's own
+		// editor already renders read-only in that case (views/templates.js),
+		// but a stale tab or a direct API call could still submit a
+		// field_schema here; writing it would silently drift from what's
+		// actually shown/used everywhere else, for no benefit.
+		if ( ! YeffoPrint_Field_Schema::is_shared_for_template( $post_id ) ) {
+			YeffoPrint_Field_Schema::update( $post_id, is_array( $params['field_schema'] ?? null ) ? $params['field_schema'] : [] );
+		}
 
 		return rest_ensure_response( $this->template_payload( $post_id ) );
 	}

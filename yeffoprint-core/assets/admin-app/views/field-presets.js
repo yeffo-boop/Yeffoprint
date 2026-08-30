@@ -73,9 +73,10 @@
 
 			rowsEl.innerHTML = filtered.map( function ( preset ) {
 				var isPublished = 'publish' === preset.status;
+				var isDefault = !! ( yeffoprintAdminApp.defaultFieldPreset && yeffoprintAdminApp.defaultFieldPreset.id === preset.id );
 				return (
 					'<tr data-id="' + preset.id + '">' +
-						'<td><div class="yp-record-name">' + YP.escapeHtml( preset.title.raw ) + '</div></td>' +
+						'<td><div class="yp-record-name">' + YP.escapeHtml( preset.title.raw ) + ( isDefault ? ' <span class="yp-pill yp-pill--good">Used by every Template</span>' : '' ) + '</div></td>' +
 						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span></td>' +
 						'<td class="yp-row-actions">' +
 							'<button type="button" class="yp-row-action" data-yp-edit="' + preset.id + '">Edit</button>' +
@@ -104,7 +105,22 @@
 		}
 
 		function deletePreset( preset ) {
-			if ( ! preset || ! window.confirm( 'Delete "' + preset.title.raw + '"? This moves it to Trash — it can be restored from Field Presets → Trash in wp-admin if needed. Templates that already inserted this preset\'s fields keep their own copy and are unaffected.' ) ) {
+			if ( ! preset ) {
+				return;
+			}
+
+			var isDefault = !! ( yeffoprintAdminApp.defaultFieldPreset && yeffoprintAdminApp.defaultFieldPreset.id === preset.id );
+			// The "Templates keep their own copy" reassurance below only
+			// holds for a preset nobody designated shared (Settings →
+			// Label Configurator) — deleting *that* one is exactly the
+			// "adds/removes from every template" mechanism working as
+			// designed, just in reverse, so it gets its own clear warning
+			// instead of the normal, much gentler message.
+			var message = isDefault
+				? 'Delete "' + preset.title.raw + '"? This is the shared preset every Template currently gets its fields from (Settings → Label Configurator) — deleting it means every Template falls back to whatever fields it had before that was turned on (empty, for any Template created since). Pick a different shared preset in Settings first if that’s not what you want.'
+				: 'Delete "' + preset.title.raw + '"? This moves it to Trash — it can be restored from Field Presets → Trash in wp-admin if needed. Templates that already inserted this preset\'s fields keep their own copy and are unaffected.';
+
+			if ( ! window.confirm( message ) ) {
 				return;
 			}
 			YP.request( endpoint( '/' + preset.id ), { method: 'DELETE' } )

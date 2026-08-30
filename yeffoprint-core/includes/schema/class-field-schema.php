@@ -261,8 +261,9 @@ class YeffoPrint_Field_Schema {
 		return min( self::QR_MAX_CHARS, max( $max_chars, self::QR_MIN_MAX_CHARS ) );
 	}
 
-	public static function get( int $template_id ): array {
-		$stored = get_post_meta( $template_id, self::META_KEY, true );
+	public static function get( int $post_id ): array {
+		$effective_id = self::resolve_effective_id( $post_id );
+		$stored = get_post_meta( $effective_id, self::META_KEY, true );
 		$decoded = is_string( $stored ) && '' !== $stored ? json_decode( $stored, true ) : [];
 
 		if ( ! is_array( $decoded ) ) {
@@ -277,6 +278,76 @@ class YeffoPrint_Field_Schema {
 		unset( $field );
 
 		return $decoded;
+	}
+
+	/**
+	 * Direct request: "I want every template to use the default template
+	 * preset I made... IF I add a field there, it adds to all templates."
+	 * A designated yp_field_preset (Settings → Label Configurator,
+	 * YeffoPrint_Admin_Menu::DEFAULT_FIELD_PRESET_ID_OPTION) becomes the
+	 * single live source every yp_template reads through — not a
+	 * one-time copy like "Insert Preset" already was (that stays
+	 * unchanged, and still makes sense for anyone who wants a starting
+	 * point rather than a permanent link). Every one of get()'s ~11
+	 * call sites (configurator, cart/checkout validation, the checkout
+	 * snapshot, admin editors, pricing display, …) goes through this one
+	 * function, so this is the only place the "shared schema" behavior
+	 * has to be implemented — nothing else needed to change.
+	 *
+	 * Deliberately keyed off post type, not a passed-in flag: a Field
+	 * Preset's own editor also calls get() (to load ITS OWN fields for
+	 * editing) — redirecting that too would make it impossible to ever
+	 * edit the designated preset's fields at all. Falls back to
+	 * $post_id unchanged whenever no default is configured, or the
+	 * configured one has since been trashed/deleted — never a hard
+	 * failure, just reverts to that Template's own (pre-existing, and
+	 * therefore never destroyed by turning this feature on or off)
+	 * stored field_schema.
+	 */
+	private static function resolve_effective_id( int $post_id ): int {
+		if ( 'yp_template' !== get_post_type( $post_id ) ) {
+			return $post_id;
+		}
+
+		$default_id = self::get_default_preset_id();
+		return ( $default_id && get_post( $default_id ) ) ? $default_id : $post_id;
+	}
+
+	public static function get_default_preset_id(): int {
+		return (int) get_option( YeffoPrint_Admin_Menu::DEFAULT_FIELD_PRESET_ID_OPTION, 0 );
+	}
+
+	/** True only for an actual yp_template whose fields are currently sourced from the shared default preset — used by class-admin-template-controller.php to skip writing a Template's own (now-moot) field_schema on save, rather than letting it silently drift from what's actually shown. */
+	public static function is_shared_for_template( int $post_id ): bool {
+		return 'yp_template' === get_post_type( $post_id ) && self::resolve_effective_id( $post_id ) !== $post_id;
+	}
+
+	/**
+	 * The designated default preset's own summary — null when none is
+	 * configured, or the configured id no longer points at a real
+	 * yp_field_preset. Localized once for the whole admin app
+	 * (class-admin-app.php) so views/templates.js knows, before any
+	 * Template's own REST call, whether to render the interactive
+	 * field-schema editor or a read-only "these fields are shared" view.
+	 *
+	 * @return array{id:int, title:string, fields:array}|null
+	 */
+	public static function default_preset(): ?array {
+		$default_id = self::get_default_preset_id();
+		if ( ! $default_id ) {
+			return null;
+		}
+
+		$post = get_post( $default_id );
+		if ( ! $post || 'yp_field_preset' !== $post->post_type ) {
+			return null;
+		}
+
+		return [
+			'id'     => $default_id,
+			'title'  => $post->post_title,
+			'fields' => self::get( $default_id ),
+		];
 	}
 
 	/**

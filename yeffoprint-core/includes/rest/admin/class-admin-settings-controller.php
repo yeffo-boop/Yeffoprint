@@ -66,6 +66,16 @@ class YeffoPrint_Admin_Settings_Controller {
 
 		update_option( $M::LIVE_PREVIEW_ENABLED_OPTION, (bool) ( $params['live_preview_enabled'] ?? false ) );
 
+		// 0 is "off" (every Template keeps its own fields) — validated
+		// against a real, current yp_field_preset rather than trusted
+		// outright, same defense class-field-schema.php's own read-side
+		// resolve_effective_id() already applies.
+		$default_field_preset_id = absint( $params['default_field_preset_id'] ?? 0 );
+		if ( $default_field_preset_id && 'yp_field_preset' !== get_post_type( $default_field_preset_id ) ) {
+			$default_field_preset_id = 0;
+		}
+		update_option( $M::DEFAULT_FIELD_PRESET_ID_OPTION, $default_field_preset_id );
+
 		update_option( $M::PROMO_ENABLED_OPTION, (bool) ( $params['promo_enabled'] ?? false ) );
 		$M::save_promo_banners( is_array( $params['promo_banners'] ?? null ) ? $params['promo_banners'] : [] );
 
@@ -123,6 +133,13 @@ class YeffoPrint_Admin_Settings_Controller {
 			'shippo_webhook_url'         => esc_url_raw( YeffoPrint_Shippo_Webhook_Secret::webhook_url() ),
 			'shippo_webhook_status'      => YeffoPrint_Shippo_Webhook_Sync::last_message(),
 			'live_preview_enabled'       => (bool) get_option( $M::LIVE_PREVIEW_ENABLED_OPTION, true ),
+			'default_field_preset_id'    => (int) get_option( $M::DEFAULT_FIELD_PRESET_ID_OPTION, 0 ),
+			// {id, title} per published preset, for the dropdown — reuses
+			// get_presets() (already built for the Template editor's
+			// "Insert Preset" list) rather than a second query.
+			'field_presets'              => array_map( static function ( array $preset ): array {
+				return [ 'id' => $preset['id'], 'title' => $preset['name'] ];
+			}, YeffoPrint_Field_Schema::get_presets() ),
 			'promo_enabled'              => (bool) get_option( $M::PROMO_ENABLED_OPTION, false ),
 			'promo_banners'              => $M::get_promo_banners(),
 			'promo_themes'               => $promo_themes,
