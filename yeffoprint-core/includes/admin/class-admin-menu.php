@@ -196,6 +196,20 @@ class YeffoPrint_Admin_Menu {
 	const TELEGRAM_ENABLED_OPTION   = 'yeffoprint_telegram_enabled';
 
 	/**
+	 * Also read by class-telegram-settings.php. The bot's public
+	 * @handle (e.g. "yeffoprint_bot") — separate from the bot token
+	 * above, which is a secret and never appears in a public URL. Direct
+	 * request: a "Chat on Telegram" link/badge on the homepage and in
+	 * order emails, both needing a real t.me/ URL. Not derivable from
+	 * the token itself (Telegram's own getMe API call would return it,
+	 * but that's an extra live API round-trip on every page/email render
+	 * for a value that essentially never changes), so it's just typed in
+	 * once here instead — one source of truth for both surfaces.
+	 */
+	const TELEGRAM_BOT_USERNAME_OPTION  = 'yeffoprint_telegram_bot_username';
+	const TELEGRAM_BOT_USERNAME_DEFAULT = 'yeffoprint_bot';
+
+	/**
 	 * Also read by class-telegram-admin-alerts.php — same reasoning as
 	 * the Telegram options above. A new paid order (or custom design
 	 * request) and a Contact form submission get pushed here. Message

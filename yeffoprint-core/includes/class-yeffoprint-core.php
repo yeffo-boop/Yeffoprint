@@ -134,6 +134,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-account-link.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-callback-handler.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-login.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-order-email-badge.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-telegram-webhook-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
@@ -199,6 +200,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
 		new YeffoPrint_Telegram_Login();
+		new YeffoPrint_Telegram_Order_Email_Badge();
 		new YeffoPrint_Proof_Reminder_Scheduler();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a

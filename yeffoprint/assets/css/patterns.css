@@ -989,6 +989,67 @@
 	pointer-events: none;
 }
 
+/* ---------- Telegram bot promo ---------- */
+
+.yp-telegram-promo {
+	border-radius: var(--wp--custom--radius--container);
+	padding: var(--wp--preset--spacing--lg);
+	gap: var(--wp--preset--spacing--md);
+}
+
+/* Combined with .yp-section--dark (above) for its already-correct
+   near-white text, cyan eyebrow, and inverted-button rules — reused
+   here rather than redefined. Its own near-black + radial-wash
+   background is built for a full-bleed section, though, which doesn't
+   fit this rounded card, so both get replaced with the same navy
+   gradient the admin app's own nav already uses (a "screen" the bot
+   mascot sits on, not a fresh invented color). */
+.yp-telegram-promo.yp-section--dark {
+	background: var(--wp--custom--gradient-navy);
+}
+
+.yp-telegram-promo.yp-section--dark::before {
+	content: none;
+}
+
+.yp-telegram-promo p {
+	opacity: 0.82;
+}
+
+.yp-telegram-promo__button .wp-block-button__link {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.yp-telegram-promo__button svg {
+	width: 17px;
+	height: 17px;
+	flex-shrink: 0;
+}
+
+.yp-telegram-promo__art {
+	flex-shrink: 0;
+	width: 150px;
+}
+
+.yp-telegram-promo__art svg {
+	display: block;
+	width: 100%;
+	filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.3));
+}
+
+@media (max-width: 620px) {
+	.yp-telegram-promo {
+		justify-content: center !important;
+		text-align: center;
+	}
+
+	.yp-telegram-promo .wp-block-buttons {
+		justify-content: center;
+	}
+}
+
 /* ---------- Reviews ---------- */
 
 .yp-reviews-grid {
