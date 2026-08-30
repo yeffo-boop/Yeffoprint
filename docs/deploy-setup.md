@@ -116,3 +116,47 @@ one this was built on) — merge that into `Prod` once you're happy with
 it, and the cron job picks it up on its next run (within the interval
 set in Step 3).
 
+## Step 5 — Move WP-Cron off page loads
+
+Direct concern: "I'm concerned the site is getting a bit slower with
+these new features being added." By default, WordPress runs its
+scheduled jobs (WP-Cron) by spawning a loopback HTTP request the moment
+any visitor loads a page after a job's due time — that request ties up
+a full PHP worker for however long the job takes, competing with real
+visitor requests for the same limited worker pool. On a small
+self-hosted server that's genuine, felt contention, not just a
+theoretical concern — and this project now has two hourly jobs
+(proof-approval reminders, and a delivery-tracking sweep that makes a
+real outbound HTTP call per shipped order, the heavier of the two).
+
+`wp-content/mu-plugins/disable-wp-cron.php` (ships through the same
+git-pull deploy as everything else — see that file's own docblock for
+why this couldn't be a wp-config.php constant instead) turns off that
+default, page-load-triggered spawning. That alone doesn't run anything
+anymore, though — something now has to trigger `wp-cron.php` on a real
+schedule instead. Add a second line to the same crontab from Step 3:
+
+```bash
+crontab -e
+```
+
+```cron
+*/5 * * * * curl -s --max-time 30 "https://your-domain.example/wp-cron.php?doing_wp_cron" > /dev/null 2>&1
+```
+
+Replace `your-domain.example` with the site's real domain. Every 5
+minutes is a reasonable default here too — the hourly jobs still only
+actually run once their own schedule is due; this just makes sure
+*something* checks in often enough for that to happen close to on time,
+without ever waiting on a real visitor to trigger it. If WP-CLI is
+already installed on this server, `wp cron event run --due-now --path=/path/to/wordpress`
+works as a drop-in replacement for the `curl` line — it runs cron
+in-process rather than over HTTP, marginally more efficient, but not
+required.
+
+To confirm it's working: `wp cron event list --path=/path/to/wordpress`
+should show `yeffoprint_proof_reminder_sweep` and
+`yeffoprint_delivery_tracking_sweep` with a `next_run` that keeps
+advancing on its own hourly schedule, not stuck in the past waiting for
+a page load.
+
