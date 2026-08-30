@@ -155,6 +155,8 @@
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-enabled"' + ( settings.telegram_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-enabled">Bot is active</label></div>' +
 					'<div class="yp-field"><label for="yp-set-telegram-token">Bot token</label><input type="password" autocomplete="off" id="yp-set-telegram-token" value="' + YP.escapeAttr( settings.telegram_bot_token ) + '" placeholder="123456789:AA..." /></div>' +
 					( settings.telegram_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.telegram_status ) + '</p>' : '' ) +
+					'<div class="yp-field"><label for="yp-set-telegram-username">Public @username</label><input type="text" id="yp-set-telegram-username" value="' + YP.escapeAttr( settings.telegram_bot_username ) + '" placeholder="yeffoprint_bot" /></div>' +
+					'<p class="yp-panel__hint">The bot\'s public handle from @BotFather (no "@") — powers the "Chat on Telegram" link on the homepage and in order emails. Separate from the token above, which is private and never shown to customers.</p>' +
 					'<div class="yp-field"><label for="yp-set-telegram-admin-chat-id">Your chat ID (for alerts)</label><input type="text" id="yp-set-telegram-admin-chat-id" value="' + YP.escapeAttr( settings.telegram_admin_chat_id ) + '" placeholder="123456789" /></div>' +
 					'<p class="yp-panel__hint">Message <code>/whoami</code> to the bot from your own Telegram to get this number. New paid orders, custom design requests, and Contact form messages get sent here.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-login-enabled"' + ( settings.telegram_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-login-enabled">Log in with Telegram</label></div>' +
@@ -283,6 +285,7 @@
 				maintenance_payment_link: viewEl.querySelector( '#yp-set-maint-link' ).value,
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
+				telegram_bot_username: viewEl.querySelector( '#yp-set-telegram-username' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,
 				telegram_admin_chat_id: viewEl.querySelector( '#yp-set-telegram-admin-chat-id' ).value,
 				telegram_login_enabled: viewEl.querySelector( '#yp-set-telegram-login-enabled' ).checked,

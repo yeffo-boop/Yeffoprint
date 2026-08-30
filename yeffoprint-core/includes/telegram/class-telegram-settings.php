@@ -30,4 +30,20 @@ class YeffoPrint_Telegram_Settings {
 	public static function is_enabled(): bool {
 		return (bool) get_option( YeffoPrint_Admin_Menu::TELEGRAM_ENABLED_OPTION, false );
 	}
+
+	/** The bot's public @handle, without the "@" — e.g. "yeffoprint_bot". */
+	public static function get_bot_username(): string {
+		return ltrim( (string) get_option( YeffoPrint_Admin_Menu::TELEGRAM_BOT_USERNAME_OPTION, YeffoPrint_Admin_Menu::TELEGRAM_BOT_USERNAME_DEFAULT ), '@' );
+	}
+
+	/**
+	 * A real t.me/ link to the bot, ready to drop into a "Chat on
+	 * Telegram" button/badge — null whenever no username is configured
+	 * yet, so a caller can simply skip rendering the link rather than
+	 * pointing it at a broken URL.
+	 */
+	public static function public_url(): ?string {
+		$username = self::get_bot_username();
+		return $username ? 'https://t.me/' . rawurlencode( $username ) : null;
+	}
 }

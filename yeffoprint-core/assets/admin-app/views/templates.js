@@ -351,6 +351,7 @@
 							previewBehaviors: yeffoprintAdminApp.fieldSchema.previewBehaviors,
 							qrMinMaxChars: yeffoprintAdminApp.fieldSchema.qrMinMaxChars,
 							qrMaxChars: yeffoprintAdminApp.fieldSchema.qrMaxChars,
+							cornerStyleOptions: yeffoprintAdminApp.fieldSchema.cornerStyleOptions,
 							previewImageUrl: pendingPreviewUrl,
 							presets: results2[ 1 ],
 							i18n: {
