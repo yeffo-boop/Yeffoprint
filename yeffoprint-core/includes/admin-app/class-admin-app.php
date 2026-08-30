@@ -150,6 +150,12 @@ class YeffoPrint_Admin_App {
 			],
 			'badges'                  => $badges,
 			'previewFontSuggestions' => YeffoPrint_Template_Meta::PREVIEW_FONT_SUGGESTIONS,
+			// Direct request: "I want to use the default template preset I
+			// made... IF I add a field there, it adds to all templates."
+			// null when no default is configured (Settings → Label
+			// Configurator) — views/templates.js falls back to today's
+			// per-Template interactive editor in that case, unchanged.
+			'defaultFieldPreset'     => YeffoPrint_Field_Schema::default_preset(),
 			// Custom Orders' status filter dropdown (Phase 6) needs this
 			// before any order has loaded — same "list screen needs it
 			// before the first detail response could carry it" reasoning

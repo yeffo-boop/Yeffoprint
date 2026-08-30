@@ -44,8 +44,36 @@
 		return yeffoprintAdminApp.restUrl + 'admin/template/' + id;
 	}
 
+	/** Read-only stand-in for the interactive field-schema-editor.js widget, shown instead of it whenever a shared default preset (Settings → Label Configurator) is active — see sharedPreset above. */
+	function renderSharedFieldsReadOnly( container, preset ) {
+		container.innerHTML =
+			'<p class="yp-field__hint">Every template shares these fields from the <strong>' + YP.escapeHtml( preset.title ) + '</strong> preset. Add, edit, or remove a field there and it applies here automatically. <a href="#/field-presets">Manage shared fields &rarr;</a></p>' +
+			( preset.fields.length
+				? '<table class="yp-record-table"><thead><tr><th>Label</th><th>Type</th><th>Required</th></tr></thead><tbody>' +
+					preset.fields.map( function ( field ) {
+						return (
+							'<tr>' +
+								'<td>' + YP.escapeHtml( field.label ) + '</td>' +
+								'<td>' + YP.escapeHtml( yeffoprintAdminApp.fieldSchema.types[ field.type ] || field.type ) + '</td>' +
+								'<td>' + ( field.required ? 'Yes' : 'No' ) + '</td>' +
+							'</tr>'
+						);
+					} ).join( '' ) +
+				'</tbody></table>'
+				: '<p class="yp-field__hint">The shared preset has no fields yet.</p>' );
+	}
+
 	YP.views.templates = function ( viewEl ) {
 		var allTemplates = [];
+		// Direct request: "I want to use the default template preset I
+		// made as the template for all current and future labels. IF I
+		// add a field there, it adds to all templates." Non-null means a
+		// shared Field Preset is active site-wide (Settings → Label
+		// Configurator) — every Template's editor below renders the fields
+		// read-only instead of the interactive repeater, since editing them
+		// per-Template would be silently discarded on save anyway
+		// (class-admin-template-controller.php's own guard).
+		var sharedPreset = yeffoprintAdminApp.defaultFieldPreset || null;
 
 		viewEl.innerHTML =
 			'<p class="yp-app__intro">Every label design customers can pick from — artwork, customization fields, and which Sizes/Materials each one supports.</p>' +
@@ -290,7 +318,7 @@
 					? YP.request( adminEndpoint( template.id ) )
 					: Promise.resolve( { compatible_sizes: [], compatible_materials: [], field_schema: [] } );
 
-				var loadPresets = presetPosts.length
+				var loadPresets = ( ! sharedPreset && presetPosts.length )
 					? Promise.all( presetPosts.map( function ( p ) {
 						return YP.request( yeffoprintAdminApp.restUrl + 'admin/field-preset/' + p.id ).then( function ( data ) {
 							return { id: p.id, name: p.title.rendered, fields: data.field_schema || [] };
@@ -302,25 +330,38 @@
 					renderChecklist( drawer.querySelector( '[data-yp-sizes-checklist]' ), sizes, results2[ 0 ].compatible_sizes, 'compat-size' );
 					renderChecklist( drawer.querySelector( '[data-yp-materials-checklist]' ), materials, results2[ 0 ].compatible_materials, 'compat-material' );
 
-					fieldSchemaEditor = YP.createFieldSchemaEditor( {
-						container: drawer.querySelector( '[data-yp-field-schema-container]' ),
-						fields: results2[ 0 ].field_schema,
-						types: yeffoprintAdminApp.fieldSchema.types,
-						alignments: yeffoprintAdminApp.fieldSchema.alignments,
-						formattingRules: yeffoprintAdminApp.fieldSchema.formattingRules,
-						previewBehaviors: yeffoprintAdminApp.fieldSchema.previewBehaviors,
-						qrMinMaxChars: yeffoprintAdminApp.fieldSchema.qrMinMaxChars,
-						qrMaxChars: yeffoprintAdminApp.fieldSchema.qrMaxChars,
-						previewImageUrl: pendingPreviewUrl,
-						presets: results2[ 1 ],
-						i18n: {
-							empty: 'No customization fields yet. Add one below.',
-							noPreview: 'Set an artwork image above to preview and drag-position fields here.',
-							dragHint: 'Drag a label to reposition it on the artwork, or set exact percentages below. Click a label first, then use the arrow keys to nudge it precisely (hold Shift for bigger steps).',
-							insertPreset: 'Insert Preset',
-							selectPreset: '— Select a preset —'
-						}
-					} );
+					if ( sharedPreset ) {
+						renderSharedFieldsReadOnly( drawer.querySelector( '[data-yp-field-schema-container]' ), sharedPreset );
+						// Shape-compatible stand-in for the real editor's own
+						// return value (save()'s getFields() callback below
+						// doesn't know or care which one it's calling) — the
+						// server ignores whatever field_schema this sends for
+						// a Template anyway once a shared preset is active
+						// (class-admin-template-controller.php), so sending
+						// the correct, already-shared list back is just tidy,
+						// not load-bearing.
+						fieldSchemaEditor = { getFields: function () { return sharedPreset.fields; } };
+					} else {
+						fieldSchemaEditor = YP.createFieldSchemaEditor( {
+							container: drawer.querySelector( '[data-yp-field-schema-container]' ),
+							fields: results2[ 0 ].field_schema,
+							types: yeffoprintAdminApp.fieldSchema.types,
+							alignments: yeffoprintAdminApp.fieldSchema.alignments,
+							formattingRules: yeffoprintAdminApp.fieldSchema.formattingRules,
+							previewBehaviors: yeffoprintAdminApp.fieldSchema.previewBehaviors,
+							qrMinMaxChars: yeffoprintAdminApp.fieldSchema.qrMinMaxChars,
+							qrMaxChars: yeffoprintAdminApp.fieldSchema.qrMaxChars,
+							previewImageUrl: pendingPreviewUrl,
+							presets: results2[ 1 ],
+							i18n: {
+								empty: 'No customization fields yet. Add one below.',
+								noPreview: 'Set an artwork image above to preview and drag-position fields here.',
+								dragHint: 'Drag a label to reposition it on the artwork, or set exact percentages below. Click a label first, then use the arrow keys to nudge it precisely (hold Shift for bigger steps).',
+								insertPreset: 'Insert Preset',
+								selectPreset: '— Select a preset —'
+							}
+						} );
+					}
 
 					saveButtonEl.disabled = false;
 				} );

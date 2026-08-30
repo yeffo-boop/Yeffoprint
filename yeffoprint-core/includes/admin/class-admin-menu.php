@@ -100,6 +100,20 @@ class YeffoPrint_Admin_Menu {
 	const LIVE_PREVIEW_ENABLED_OPTION = 'yeffoprint_live_preview_enabled';
 
 	/**
+	 * Also read by class-field-schema.php. Direct request: "I want to
+	 * use the default template preset I made as the template for all
+	 * current and future labels. IF I add a field there, it adds to all
+	 * templates." Stores a yp_field_preset post id; when set, every
+	 * yp_template reads that preset's field_schema instead of its own
+	 * (YeffoPrint_Field_Schema::resolve_effective_id()) — a live
+	 * override read at fetch time, not a one-time copy like the
+	 * existing "Insert Preset" feature. 0 (the default) means off: every
+	 * Template keeps its own independent fields, unchanged from before
+	 * this option existed.
+	 */
+	const DEFAULT_FIELD_PRESET_ID_OPTION = 'yeffoprint_default_field_preset_id';
+
+	/**
 	 * Also read by yeffoprint/blocks/promo-banner's render.php — same
 	 * reasoning as the options above. Direct request: a homepage promo
 	 * banner an admin can turn on and pick a theme for

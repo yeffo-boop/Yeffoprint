@@ -97,6 +97,13 @@
 					'<div class="yp-panel__head"><h2>Label Configurator</h2></div>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-live-preview"' + ( settings.live_preview_enabled ? ' checked' : '' ) + ' /><label for="yp-set-live-preview">Show customers the live, per-keystroke text preview on Label View</label></div>' +
 					'<p class="yp-panel__hint">Turn off while adjusting field alignment on a Template so customers don’t see not-yet-correct positioning. Everything else keeps working either way.</p>' +
+					'<div class="yp-field"><label for="yp-set-default-field-preset">Shared customization fields</label><select id="yp-set-default-field-preset">' +
+						'<option value="0">— Off: each Template has its own fields —</option>' +
+						settings.field_presets.map( function ( preset ) {
+							return '<option value="' + preset.id + '"' + ( settings.default_field_preset_id === preset.id ? ' selected' : '' ) + '>' + YP.escapeHtml( preset.title ) + '</option>';
+						} ).join( '' ) +
+					'</select></div>' +
+					'<p class="yp-panel__hint">When set, every Template — current and future — uses this one Field Preset’s fields instead of its own. Add, edit, or remove a field on that preset (Field Presets screen) and it applies everywhere at once, immediately.</p>' +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -258,6 +265,7 @@
 				promo_enabled: viewEl.querySelector( '#yp-set-promo-enabled' ).checked,
 				promo_banners: promoBanners,
 				live_preview_enabled: viewEl.querySelector( '#yp-set-live-preview' ).checked,
+				default_field_preset_id: parseInt( viewEl.querySelector( '#yp-set-default-field-preset' ).value, 10 ) || 0,
 				ups_client_id: viewEl.querySelector( '#yp-set-ups-id' ).value,
 				ups_client_secret: viewEl.querySelector( '#yp-set-ups-secret' ).value,
 				usps_consumer_key: viewEl.querySelector( '#yp-set-usps-key' ).value,
