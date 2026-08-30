@@ -735,153 +735,68 @@ add_filter( 'login_redirect', function ( $redirect_to, $requested_redirect_to, $
 }, 10, 3 );
 
 /**
- * The Material Guide's per-material copy plus its resolved live data
- * (real photo, thickness-derived spec) — shared by the guide itself
+ * The Material Guide's per-material data — shared by the guide itself
  * (patterns/material-guide.php, on the How It Works page) and the
  * label configurator's Material info modal
  * (patterns/material-info-modal.php), so "the material information"
  * only exists in one place and the two surfaces can't drift apart.
  *
- * The business copy (name/body/note) is still deliberately hardcoded
- * here rather than derived from a Material record's own post_content
- * blurb — see material-guide.php's own docblock for why. Only the
- * data-fetching (matching each entry's slug against a published
- * yp_material record for its photo/thickness) moved here; both
- * patterns' own rendering stayed where it was.
+ * V6, direct request: "make that dynamic so I can add/remove materials
+ * from the dashboard and they add/remove from that page." Earlier
+ * versions of this function started from a hardcoded list of six
+ * materials and tried to match each one to a live yp_material record
+ * for its photo — which meant a material removed from the dashboard
+ * kept showing here regardless (nothing to "remove" from), and a new
+ * one added there never showed up at all until someone edited this
+ * file. That's backwards for admin-managed content. This now queries
+ * published yp_material records directly, the same source of truth
+ * the configurator's own material picker and the (now-removed)
+ * homepage swatch grid always read from — add, remove, publish, or
+ * unpublish one in the dashboard and this list follows immediately,
+ * same ordering (menu_order, i.e. drag-to-reorder on the Materials
+ * screen) as everywhere else Materials are listed.
  *
- * V5 fix (direct report: "matte white and glossy white don't show
- * pictures... added prism... still has the placeholder"): the record
- * lookup used to be a single get_posts( [ 'name' => $slug ] ) query
- * per entry — an exact post_name match. That's brittle against a very
- * common WordPress gotcha this site had actually hit: trashing and
- * recreating a same-titled Material (e.g. re-uploading its photo by
- * making a fresh post) leaves the old slug reserved by the trashed
- * post, so the new one silently gets "-2" appended — "glossy-white"
- * becomes "glossy-white-2" with nobody touching the slug field on
- * purpose. Every published yp_material is now loaded once up front and
- * indexed by its post_name AND its sanitize_title()'d post_title, each
- * with any trailing "-<n>" WordPress disambiguation suffix stripped —
- * so a record still matches this file's hardcoded "glossy-white" entry
- * whether its real slug is "glossy-white", "glossy-white-2", or its
- * title alone still reads "Glossy White".
+ * The business copy that used to be hardcoded per material now comes
+ * from the record itself: `body` is the Material's own Description
+ * (post_content — already shown in the admin-app's Add/Edit Material
+ * form with the placeholder "Shown on the Material Guide"), and `note`
+ * is the new optional Guide note field
+ * (YeffoPrint_Commerce_Record_Meta::GUIDE_NOTE) for the kind of
+ * logistics caveat a material occasionally needs (e.g. holographic's
+ * shipping-delay note) — both editable from the same Material record
+ * that already controls its photo, thickness, and price.
  */
 function yeffoprint_material_guide_entries(): array {
-	$materials = [
-		[
-			'slug'   => 'glossy-white',
-			'name'   => 'Standard White Glossy',
-			'spec'   => '2.75mil · Glossy',
-			'finish' => 'Glossy',
-			'body'   => 'Our standard material, recommended for most projects. A bright white base with a slight shine, and very easy to apply.',
-			'note'   => '',
-		],
-		[
-			'slug'   => 'matte-white',
-			'name'   => 'Standard White Matte',
-			'spec'   => '2.75mil · Matte',
-			'finish' => 'Matte',
-			'body'   => 'Our standard material, recommended for most projects. The same bright white base as our glossy option, without the shine, and very easy to apply.',
-			'note'   => '',
-		],
-		[
-			'slug'   => 'holographic',
-			'name'   => 'Holographic',
-			'spec'   => 'Rainbow Sheen',
-			'finish' => 'Rainbow Sheen',
-			'body'   => 'Our most popular holographic option, slightly thicker than our standard labels. Anywhere your design shows white, it takes on a rainbow, holographic sheen in the light.',
-			'note'   => "Designs with highly saturated solid colors can occasionally cause holographic sheets to curl slightly during shipping. This never affects a label's print quality or stickiness, but it does mean holographic orders ship about 24 hours later than usual to account for it.",
-		],
-		[
-			'slug'   => 'prism',
-			'name'   => 'Prism',
-			'spec'   => 'Prism Pattern',
-			'finish' => 'Prism Pattern',
-			'body'   => 'One of the newest additions to our lineup, slightly thicker than our standard labels. Anywhere your design shows white, it takes on our prism pattern — best suited to simpler designs, since a busier design can make the effect feel overwhelming.',
-			'note'   => '',
-		],
-		[
-			'slug'   => 'metallic',
-			'name'   => 'Metallic',
-			'spec'   => '4mil · Chrome',
-			'finish' => 'Chrome',
-			'body'   => 'A newer addition with a true chrome finish. Anywhere your design shows white, it takes on a metallic shine.',
-			'note'   => '',
-		],
-		[
-			'slug'   => 'clear',
-			'name'   => 'Transparent (Clear)',
-			'spec'   => 'Clear',
-			'finish' => 'Clear',
-			'body'   => 'Exactly what it sounds like — a fully clear label. Works best with simpler designs and less image detail, since fine detail can oversaturate during printing and edges can appear slightly blurred.',
-			'note'   => '',
-		],
-	];
-
-	$published = get_posts( [
+	$materials = get_posts( [
 		'post_type'      => 'yp_material',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
+		'orderby'        => 'menu_order title',
+		'order'          => 'ASC',
 	] );
 
-	$by_normalized_slug = [];
-	foreach ( $published as $post ) {
-		foreach ( [ $post->post_name, sanitize_title( $post->post_title ) ] as $candidate ) {
-			$normalized = preg_replace( '/-\d+$/', '', $candidate );
-			if ( ! isset( $by_normalized_slug[ $normalized ] ) ) {
-				$by_normalized_slug[ $normalized ] = $post;
-			}
-		}
-	}
-
-	// The exact-slug match above only works when a Material's title in the
-	// dashboard happens to produce exactly this entry's hardcoded slug
-	// ("Glossy White" -> glossy-white). It's admin-editable, so it doesn't
-	// reliably stay that shape — "Standard White Glossy", "White (Gloss)",
-	// reordered words, etc. all miss, leaving that entry photo-less here
-	// even though the record (and its photo) is right there and the
-	// homepage's own materials.php grid — which lists every published
-	// Material directly with no slug-matching at all — shows it fine.
-	// Fallback: match on the entry's own slug words (e.g. "glossy" +
-	// "white") both appearing in a candidate's normalized title/slug,
-	// order and exact phrasing no longer required.
-	$find_by_keywords = function ( array $keywords ) use ( $published ) {
-		foreach ( $published as $post ) {
-			$haystack = sanitize_title( $post->post_title ) . '-' . $post->post_name;
-			$matched  = true;
-			foreach ( $keywords as $keyword ) {
-				if ( false === strpos( $haystack, $keyword ) ) {
-					$matched = false;
-					break;
-				}
-			}
-			if ( $matched ) {
-				return $post;
-			}
-		}
-		return null;
-	};
-
-	return array_map( function ( $material ) use ( $by_normalized_slug, $find_by_keywords ) {
-		$record = $by_normalized_slug[ $material['slug'] ] ?? null;
-		if ( ! $record ) {
-			$record = $find_by_keywords( explode( '-', $material['slug'] ) );
-		}
-		$photo_url = $record ? get_the_post_thumbnail_url( $record, 'thumbnail' ) : '';
-		$hover_id  = $record ? (int) get_post_meta( $record->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true ) : 0;
-		$zoom_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'large' ) : ( $record ? get_the_post_thumbnail_url( $record, 'large' ) : '' );
-		$thickness = $record ? (float) get_post_meta( $record->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ) : 0;
-		$spec      = $material['spec'];
+	return array_map( function ( $post ) {
+		$hover_id  = (int) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true );
+		$photo_url = get_the_post_thumbnail_url( $post, 'thumbnail' ) ?: '';
+		$zoom_url  = $hover_id
+			? ( wp_get_attachment_image_url( $hover_id, 'large' ) ?: '' )
+			: ( get_the_post_thumbnail_url( $post, 'large' ) ?: '' );
+		$thickness = (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true );
+		$spec      = '';
 
 		if ( $thickness > 0 ) {
-			$thickness_display = rtrim( rtrim( number_format( $thickness, 2, '.', '' ), '0' ), '.' );
-			$spec               = $thickness_display . 'mil · ' . $material['finish'];
+			$spec = rtrim( rtrim( number_format( $thickness, 2, '.', '' ), '0' ), '.' ) . 'mil';
 		}
 
-		return array_merge( $material, [
-			'photo_url' => $photo_url ?: '',
-			'zoom_url'  => $zoom_url ?: '',
+		return [
+			'slug'      => $post->post_name,
+			'name'      => get_the_title( $post ),
 			'spec'      => $spec,
-		] );
+			'body'      => wp_strip_all_tags( $post->post_content ),
+			'note'      => (string) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::GUIDE_NOTE, true ),
+			'photo_url' => $photo_url,
+			'zoom_url'  => $zoom_url,
+		];
 	}, $materials );
 }
 

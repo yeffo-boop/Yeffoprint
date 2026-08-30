@@ -52,9 +52,13 @@ $materials = yeffoprint_material_guide_entries();
 						<div class="yp-material-guide__body">
 							<div class="yp-material-guide__header">
 								<h3><?php echo esc_html( $material['name'] ); ?></h3>
-								<span class="yp-material-guide__spec"><?php echo esc_html( $material['spec'] ); ?></span>
+								<?php if ( $material['spec'] ) : ?>
+									<span class="yp-material-guide__spec"><?php echo esc_html( $material['spec'] ); ?></span>
+								<?php endif; ?>
 							</div>
-							<p><?php echo esc_html( $material['body'] ); ?></p>
+							<?php if ( $material['body'] ) : ?>
+								<p><?php echo esc_html( $material['body'] ); ?></p>
+							<?php endif; ?>
 							<?php if ( $material['note'] ) : ?>
 								<p class="yp-material-guide__note"><?php echo esc_html( $material['note'] ); ?></p>
 							<?php endif; ?>

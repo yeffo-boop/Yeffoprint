@@ -79,6 +79,17 @@ class YeffoPrint_Commerce_Record_Meta {
 	 */
 	public const IN_STOCK = '_yp_in_stock';
 
+	/**
+	 * Material only — an optional short caution/logistics note shown
+	 * under the description on the How It Works page's Material Guide
+	 * (direct request: "make that dynamic so I can add/remove materials
+	 * from the dashboard" — this is the field for the kind of note that
+	 * used to be hand-authored per material, e.g. "holographic orders
+	 * ship about 24 hours later than usual"). Optional; a material with
+	 * nothing entered here simply shows no note line.
+	 */
+	public const GUIDE_NOTE = '_yp_guide_note';
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
 	}
@@ -122,6 +133,14 @@ class YeffoPrint_Commerce_Record_Meta {
 			'type'          => 'boolean',
 			'single'        => true,
 			'default'       => true,
+			'show_in_rest'  => true,
+			'auth_callback' => [ $this, 'can_edit' ],
+		] );
+
+		register_post_meta( 'yp_material', self::GUIDE_NOTE, [
+			'type'          => 'string',
+			'single'        => true,
+			'default'       => '',
 			'show_in_rest'  => true,
 			'auth_callback' => [ $this, 'can_edit' ],
 		] );
