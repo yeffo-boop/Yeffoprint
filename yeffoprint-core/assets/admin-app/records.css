@@ -61,17 +61,27 @@
 	padding: 0.65rem 0.75rem;
 	border-top: 1px solid var(--wp--preset--color--light-gray);
 	vertical-align: middle;
-	/* Direct report: the order-detail modal's customer-info table forced
-	   a "tiny bit" of horizontal scroll even after .yp-panel/.yp-record-card
-	   both got overflow-x: auto (mobile audit, above) — a different, more
-	   specific cause than that fix addressed. That fix only ever contains
-	   overflow, it never prevents it: a long unbroken string (a customer's
-	   email address, rendered as one <a> with no spaces for the browser to
-	   wrap on) still forces the table itself wider than the viewport,
-	   which is exactly what the scroll region then had to scroll to show.
-	   overflow-wrap: anywhere lets the browser break such a string at any
-	   character once it has to, so the table can actually fit the
-	   viewport instead of merely scrolling within it. */
+}
+
+/**
+ * Bug found in production (screenshot): applying overflow-wrap: anywhere
+ * to every .yp-record-table td broke the order-detail Items table, whose
+ * cells nest a flex .yp-record-name row + a grid .yp-order-item-meta list.
+ * overflow-wrap is inherited, and it also lowers a box's *automatic
+ * minimum size* under flex/grid layout — normally that minimum is the
+ * width of the longest unbreakable word (min-content), but "anywhere"
+ * makes any single character an acceptable break point, so the automatic
+ * minimum collapses to ~1 character. That let the meta grid's 1fr column
+ * shrink to almost nothing, wrapping every value one character per line
+ * ("Cl/e/ar" instead of "Clear") — not what this rule was for.
+ *
+ * Scoped to a modifier applied only to the order-detail customer-info
+ * table instead (renderWcOrderDetail() in app.js) — the one table this
+ * was actually written for, whose cells hold plain text/a single <a>
+ * link with no nested flex/grid layout of their own, so there's no
+ * min-content collapse to worry about there.
+ */
+.yp-record-table--wrap td {
 	overflow-wrap: anywhere;
 }
 

@@ -818,7 +818,7 @@
 		bodyEl.innerHTML =
 			'<div class="yp-order-detail-grid">' +
 				'<div>' +
-					'<div class="yp-record-card"><table class="yp-record-table"><tbody>' + rowsHtml + '</tbody></table></div>' +
+					'<div class="yp-record-card"><table class="yp-record-table yp-record-table--wrap"><tbody>' + rowsHtml + '</tbody></table></div>' +
 
 					'<div class="yp-panel">' +
 						'<div class="yp-panel__head"><h2>Items</h2></div>' +
