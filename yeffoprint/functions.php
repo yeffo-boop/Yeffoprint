@@ -833,8 +833,39 @@ function yeffoprint_material_guide_entries(): array {
 		}
 	}
 
-	return array_map( function ( $material ) use ( $by_normalized_slug ) {
-		$record    = $by_normalized_slug[ $material['slug'] ] ?? null;
+	// The exact-slug match above only works when a Material's title in the
+	// dashboard happens to produce exactly this entry's hardcoded slug
+	// ("Glossy White" -> glossy-white). It's admin-editable, so it doesn't
+	// reliably stay that shape — "Standard White Glossy", "White (Gloss)",
+	// reordered words, etc. all miss, leaving that entry photo-less here
+	// even though the record (and its photo) is right there and the
+	// homepage's own materials.php grid — which lists every published
+	// Material directly with no slug-matching at all — shows it fine.
+	// Fallback: match on the entry's own slug words (e.g. "glossy" +
+	// "white") both appearing in a candidate's normalized title/slug,
+	// order and exact phrasing no longer required.
+	$find_by_keywords = function ( array $keywords ) use ( $published ) {
+		foreach ( $published as $post ) {
+			$haystack = sanitize_title( $post->post_title ) . '-' . $post->post_name;
+			$matched  = true;
+			foreach ( $keywords as $keyword ) {
+				if ( false === strpos( $haystack, $keyword ) ) {
+					$matched = false;
+					break;
+				}
+			}
+			if ( $matched ) {
+				return $post;
+			}
+		}
+		return null;
+	};
+
+	return array_map( function ( $material ) use ( $by_normalized_slug, $find_by_keywords ) {
+		$record = $by_normalized_slug[ $material['slug'] ] ?? null;
+		if ( ! $record ) {
+			$record = $find_by_keywords( explode( '-', $material['slug'] ) );
+		}
 		$photo_url = $record ? get_the_post_thumbnail_url( $record, 'thumbnail' ) : '';
 		$hover_id  = $record ? (int) get_post_meta( $record->ID, YeffoPrint_Commerce_Record_Meta::HOVER_IMAGE, true ) : 0;
 		$zoom_url  = $hover_id ? wp_get_attachment_image_url( $hover_id, 'large' ) : ( $record ? get_the_post_thumbnail_url( $record, 'large' ) : '' );
