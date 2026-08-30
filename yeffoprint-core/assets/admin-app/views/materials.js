@@ -22,7 +22,8 @@
 		hoverImage: '_yp_hover_image_id',
 		thickness: '_yp_thickness_mil',
 		scope: '_yp_material_scope',
-			inStock: '_yp_in_stock'
+			inStock: '_yp_in_stock',
+		guideNote: '_yp_guide_note'
 	};
 
 	var SCOPES = {
@@ -198,6 +199,7 @@
 							'<div data-yp-form-error></div>' +
 							'<div class="yp-field"><label for="yp-mat-name">Name</label><input type="text" id="yp-mat-name" name="name" required value="' + ( isEdit ? YP.escapeAttr( material.title.raw ) : '' ) + '" /></div>' +
 							'<div class="yp-field"><label for="yp-mat-desc">Description</label><textarea id="yp-mat-desc" name="description" placeholder="Shown on the Material Guide (optional)">' + ( isEdit ? YP.escapeHtml( material.content.raw ) : '' ) + '</textarea></div>' +
+							'<div class="yp-field"><label for="yp-mat-guide-note">Guide note</label><textarea id="yp-mat-guide-note" name="guide_note" placeholder="A short caution/logistics note shown under the description on the Material Guide, e.g. a shipping-delay warning (optional)">' + ( isEdit ? YP.escapeHtml( meta[ META.guideNote ] || '' ) : '' ) + '</textarea></div>' +
 							'<div class="yp-form__row">' +
 								'<div class="yp-field"><label for="yp-mat-scope">Scope</label><select id="yp-mat-scope" name="scope">' +
 									Object.keys( SCOPES ).map( function ( key ) {
@@ -308,6 +310,7 @@
 			body.meta[ META.priceAdjustment ] = parseFloat( form.price_adjustment.value ) || 0;
 			body.meta[ META.hoverImage ] = parseInt( form.hover_image.value, 10 ) || 0;
 			body.meta[ META.inStock ] = form.in_stock.checked;
+			body.meta[ META.guideNote ] = form.guide_note.value;
 			if ( ! existing ) {
 				body.menu_order = allMaterials.length; // New materials land at the end of the list, not menu_order 0 (see move()'s docblock above).
 			}

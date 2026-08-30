@@ -5,78 +5,50 @@
  * Categories: yeffoprint
  *
  * Direct request: real customer-facing copy for each material type, a
- * deeper "which one should I pick" guide. The copy itself is
- * deliberately hardcoded, not data-driven like materials.php's own
- * swatch grid — this is verbatim business copy the site owner
- * supplied (lightly copyedited for grammar only, facts untouched),
- * not something to derive from a Material record's own short blurb
- * field.
+ * deeper "which one should I pick" guide.
  *
- * Originally sat directly below that swatch grid on this page too, but
- * the two were dropped right on top of each other with real photos in
- * both once this guide grew its own photo circles (V2, below) — direct
- * follow-up request to remove the redundancy: the grid's own
- * `wp:pattern` reference was removed from templates/how-it-works.html,
- * leaving this as the page's one materials section. materials.php
- * itself was later (V5) also dropped from templates/front-page.html
- * for the same reason — once this guide's photo matching was fixed to
- * actually find every published Material (see V5 note below), showing
- * the same swatch grid a second time on the homepage was pure
- * redundancy. The pattern file itself is untouched, just unreferenced,
- * in case it's wanted again.
+ * Fully data-driven (V6, direct request: "make that dynamic so I can
+ * add/remove materials from the dashboard and they add/remove from
+ * that page"). Every entry below is a live, published `yp_material`
+ * record — add one in the dashboard and it appears here, unpublish or
+ * delete one and it's gone, no file edit required. `name` is the
+ * record's title; `body` is its Description (post_content — the same
+ * field the admin-app's Add/Edit Material form already labels "Shown
+ * on the Material Guide"); `note` is the optional Guide note field
+ * (YeffoPrint_Commerce_Record_Meta::GUIDE_NOTE) for a logistics caveat
+ * like a shipping-delay warning, when one applies.
  *
- * The photo next to each entry is real, though (V2, direct follow-up
- * request: "pull the picture assigned to the material") — looked up by
- * matching each entry's own `slug` below against a published
- * `yp_material` record's post_name, the same swatch image
- * materials.php's own grid already reads via get_the_post_thumbnail_url().
- * A material with no matching record yet, or a record with no photo
- * uploaded, falls back to the same per-material gradient "chip" look
- * materials.php's own swatch grid already falls back to — same
- * `--{slug}` modifier classes, shared CSS rule (see patterns.css).
+ * Each circle is click-to-enlarge (direct follow-up request: "hover or
+ * click on the image to see a bigger image of what the material looks
+ * like on the vinyl") — reuses the site's existing accessible drawer
+ * primitive (assets/js/site.js's openDrawer/closeDrawer, the same one
+ * driving the header's search/cart panels and the splash screen) in
+ * its centered-modal variant, one per material, wired entirely through
+ * data-yp-drawer-trigger/-close — no new JS. The enlarged photo prefers
+ * the record's "Hover / on-vial image" (Material editor field,
+ * class-material-size-editor.php) — a real photo of the finish
+ * actually applied to a vial — falling back to a larger export of the
+ * same swatch photo if no on-vial photo has been uploaded yet. A
+ * material with neither (gradient-fallback only) gets no zoom
+ * affordance at all, since there's no larger image to show. A material
+ * with no photo uploaded at all falls back to a per-slug gradient
+ * "chip" look for a handful of known finishes (Glossy/Matte
+ * White, Holographic, Prism, Metallic, Clear — see patterns.css), or a
+ * plain neutral chip for anything else.
  *
- * The thickness figure in each entry's spec pill (V3, direct follow-up
- * request: "add that field to the material form so I can indicate
- * thickness there and you can pull that data and display it here") is
- * live where the matched record has one set (Material editor's
- * Thickness (mil) field, class-material-size-editor.php) — built from
- * that value plus the entry's own hardcoded `finish` label below. A
- * material with no matching record, or a record with no thickness set
- * yet, falls back to this entry's own hardcoded `spec` string.
+ * The thickness figure in each entry's spec pill is live where the
+ * record has one set (Material editor's Thickness (mil) field); a
+ * material with none set shows no spec pill at all.
  *
- * Each circle is click-to-enlarge (V4, direct follow-up request: "hover
- * or click on the image to see a bigger image of what the material
- * looks like on the vinyl") — reuses the site's existing accessible
- * drawer primitive (assets/js/site.js's openDrawer/closeDrawer, the
- * same one driving the header's search/cart panels and the splash
- * screen) in its centered-modal variant, one per material, wired
- * entirely through data-yp-drawer-trigger/-close — no new JS. The
- * enlarged photo prefers the matched record's "Hover / on-vial image"
- * (Material editor field, class-material-size-editor.php) — a real
- * photo of the finish actually applied to a vial, which is exactly
- * what was asked for — falling back to a larger export of the same
- * swatch photo if no on-vial photo has been uploaded yet. A material
- * with neither (gradient-fallback only) gets no zoom affordance at
- * all, since there's no larger image to show.
- *
- * The per-material copy array and its live-data resolution (matching
- * `slug` against a published yp_material record's post_name for the
- * real photo/thickness) now live in yeffoprint_material_guide_entries()
- * (functions.php), shared with the label configurator's Material info
- * modal (patterns/material-info-modal.php) — this file's own rendering
- * below is unchanged, it just consumes the already-resolved entries.
- *
- * V5, bug found in production: the Glossy White / Matte White entries
- * showed no photo here (the homepage's own materials.php grid showed
- * both fine, since it lists every published record directly with no
- * matching involved) because the exact-slug match required a Material's
- * dashboard title to normalize to precisely "glossy-white"/"matte-white"
- * — any real-world naming drift ("Standard White Glossy", reordered
- * words, extra qualifiers) missed silently. yeffoprint_material_guide_entries()
- * now falls back to a keyword match (all of an entry's slug words, e.g.
- * "glossy" + "white", appearing anywhere in a candidate's title/slug)
- * whenever the exact match misses, so a rename in the dashboard doesn't
- * quietly break this page again.
+ * The query and per-record shaping live in
+ * yeffoprint_material_guide_entries() (functions.php), shared with the
+ * label configurator's Material info modal
+ * (patterns/material-info-modal.php) — this file's own rendering below
+ * is unchanged, it just consumes the already-resolved entries. See
+ * that function's own docblock for the fuller history of how this
+ * page's data source got here (an exact-slug match against a hardcoded
+ * six-material list, briefly a keyword-fallback match against that
+ * same list, and now this).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -132,9 +104,13 @@ $materials = yeffoprint_material_guide_entries();
 				<div class="yp-material-guide__body">
 					<div class="yp-material-guide__header">
 						<h3><?php echo esc_html( $material['name'] ); ?></h3>
-						<span class="yp-material-guide__spec"><?php echo esc_html( $spec ); ?></span>
+						<?php if ( $spec ) : ?>
+							<span class="yp-material-guide__spec"><?php echo esc_html( $spec ); ?></span>
+						<?php endif; ?>
 					</div>
-					<p><?php echo esc_html( $material['body'] ); ?></p>
+					<?php if ( $material['body'] ) : ?>
+						<p><?php echo esc_html( $material['body'] ); ?></p>
+					<?php endif; ?>
 					<?php if ( $material['note'] ) : ?>
 						<p class="yp-material-guide__note"><?php echo esc_html( $material['note'] ); ?></p>
 					<?php endif; ?>
