@@ -61,6 +61,18 @@
 	padding: 0.65rem 0.75rem;
 	border-top: 1px solid var(--wp--preset--color--light-gray);
 	vertical-align: middle;
+	/* Direct report: the order-detail modal's customer-info table forced
+	   a "tiny bit" of horizontal scroll even after .yp-panel/.yp-record-card
+	   both got overflow-x: auto (mobile audit, above) — a different, more
+	   specific cause than that fix addressed. That fix only ever contains
+	   overflow, it never prevents it: a long unbroken string (a customer's
+	   email address, rendered as one <a> with no spaces for the browser to
+	   wrap on) still forces the table itself wider than the viewport,
+	   which is exactly what the scroll region then had to scroll to show.
+	   overflow-wrap: anywhere lets the browser break such a string at any
+	   character once it has to, so the table can actually fit the
+	   viewport instead of merely scrolling within it. */
+	overflow-wrap: anywhere;
 }
 
 .yp-record-table tr:hover td {
@@ -530,6 +542,39 @@
 	.yp-order-detail-grid {
 		grid-template-columns: 1fr;
 	}
+}
+
+/* Order-detail drawer header: "Order #123" + a status pill next to it,
+   replacing the generic "Order detail" label once the order's actually
+   loaded (renderWcOrderDetail() in app.js) — direct report the modal
+   "wasn't visually pleasing," and it previously gave no clue which
+   order or status you were looking at without scrolling into the body. */
+.yp-drawer__title-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+/* A line item's customization rows (Size/Material/batch quantity/QR
+   download links) below its name in the Items table — was a run of
+   inline dt/dd pairs separated only by <br>, replaced here with an
+   actual label/value grid so each row lines up instead of wrapping
+   into a ragged paragraph. */
+.yp-order-item-meta {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 0.1rem 0.5rem;
+	margin: 0.35rem 0 0;
+	font-size: 0.8rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-order-item-meta dt {
+	font-weight: 600;
+}
+
+.yp-order-item-meta dd {
+	margin: 0;
 }
 
 /* ---------- Shippo rate list ---------- */

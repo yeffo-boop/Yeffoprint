@@ -190,16 +190,27 @@ class YeffoPrint_Admin_Order_Controller {
 			return null; // Fee/shipping/tax line items — nothing to customize, and the totals above already account for them.
 		}
 
+		$product = $item->get_product();
+
 		return [
-			'name'     => $item->get_name(),
-			'quantity' => $item->get_quantity(),
-			'total'    => (float) $item->get_total(),
+			'name'      => $item->get_name(),
+			'quantity'  => $item->get_quantity(),
+			'total'     => (float) $item->get_total(),
+			// The linked product's own image — for a Template line item
+			// this is always the template's featured image, kept in sync
+			// on every Template save (class-linked-product.php), so no
+			// separate lookup through the order item's own template
+			// snapshot is needed here. Custom Design/Sticker line items
+			// use a generic linked product with no image, so this is
+			// simply null for those — the frontend already handles a
+			// missing image (falls back to a placeholder swatch).
+			'image_url' => $product ? ( wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ) ?: null ) : null,
 			// display_value is already wp_kses_post()-safe HTML by the
 			// time get_formatted_meta_data() returns it (WC_Order_Item's
 			// own method) — the same batch tables/variant summaries/QR
 			// links the classic order screen renders raw, rendered raw
 			// here too rather than re-escaped into visible markup.
-			'meta'     => array_values( array_map( static function ( $entry ) {
+			'meta'      => array_values( array_map( static function ( $entry ) {
 				return [ 'label' => (string) $entry->display_key, 'value' => (string) $entry->display_value ];
 			}, $item->get_formatted_meta_data() ) ),
 		];

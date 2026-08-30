@@ -701,7 +701,7 @@
 		drawer.innerHTML =
 			'<div class="yp-drawer__backdrop"></div>' +
 			'<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="Order detail">' +
-				'<div class="yp-drawer__header"><span>Order detail</span>' +
+				'<div class="yp-drawer__header"><span class="yp-drawer__title-group" data-yp-drawer-title>Order detail</span>' +
 					'<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">&times;</button>' +
 				'</div>' +
 				'<div class="yp-drawer__body" data-yp-body><p class="yp-field__hint">Loading&hellip;</p></div>' +
@@ -723,6 +723,18 @@
 			} );
 	}
 
+	/**
+	 * Item image (item.image_url — class-admin-order-controller.php's
+	 * item_payload(), the linked product's own image, which for a
+	 * Template line item is always that template's featured image) —
+	 * direct request: "I'd like to see the picture of the template."
+	 * Reuses .yp-swatch, the same circular thumbnail treatment every
+	 * list screen already uses (Materials, Sizes, etc.), rather than a
+	 * new image style just for this table. A Custom Design/Sticker line
+	 * item's linked product has no image, so the swatch renders as a
+	 * plain placeholder circle in that case — still reads as "an item
+	 * row," not a broken image.
+	 */
 	function wcOrderItemsHtml( items ) {
 		if ( ! items.length ) {
 			return '<p class="yp-field__hint">No line items.</p>';
@@ -730,15 +742,18 @@
 		return '<table class="yp-record-table"><thead><tr><th>Item</th><th>Qty</th><th>Total</th></tr></thead><tbody>' +
 			items.map( function ( item ) {
 				var metaHtml = item.meta.length
-					? '<dl class="yp-field__hint" style="margin:0.35rem 0 0;">' +
+					? '<dl class="yp-order-item-meta">' +
 						item.meta.map( function ( m ) {
-							return '<dt style="font-weight:600;display:inline;">' + YP.escapeHtml( m.label ) + ':</dt> <dd style="display:inline;margin:0 0 0.35rem;">' + m.value + '</dd><br>';
+							return '<dt>' + YP.escapeHtml( m.label ) + '</dt><dd>' + m.value + '</dd>';
 						} ).join( '' ) +
 					'</dl>'
 					: '';
+				var thumbHtml = item.image_url
+					? '<img class="yp-swatch" src="' + YP.escapeAttr( item.image_url ) + '" alt="">'
+					: '<span class="yp-swatch" aria-hidden="true"></span>';
 				return (
 					'<tr>' +
-						'<td>' + YP.escapeHtml( item.name ) + metaHtml + '</td>' +
+						'<td><div class="yp-record-name">' + thumbHtml + '<div>' + YP.escapeHtml( item.name ) + metaHtml + '</div></div></td>' +
 						'<td>' + item.quantity + '</td>' +
 						'<td>$' + item.total.toFixed( 2 ) + '</td>' +
 					'</tr>'
@@ -747,7 +762,40 @@
 		'</tbody></table>';
 	}
 
+	/**
+	 * Semantic color for the order-number/status pill in the drawer
+	 * header below — same good/neutral/warn/crit vocabulary as every
+	 * other pill in this app (trackingStatusPillHtml() above, the
+	 * Pending Orders age pill), not a new one just for this. Falls back
+	 * to neutral for any status this doesn't explicitly know (e.g. a
+	 * plugin-added custom status), so an unrecognized key never breaks
+	 * rendering.
+	 */
+	var WC_ORDER_STATUS_PILLS = {
+		completed:      'good',
+		shipped:        'good',
+		processing:     'neutral',
+		'in-production': 'neutral',
+		'on-hold':      'warn',
+		pending:        'warn',
+		cancelled:      'crit',
+		refunded:       'crit',
+		failed:         'crit'
+	};
+
 	function renderWcOrderDetail( order, drawer, bodyEl, autoPrintLabel ) {
+		// Direct request: the modal "wasn't visually pleasing" — the header
+		// used to just say the generic "Order detail" the whole time. Now
+		// that the order's actually loaded, it names the order and shows
+		// its status right where staff are already looking, instead of
+		// making them scroll down into the Status panel to see either.
+		var titleEl = drawer.querySelector( '[data-yp-drawer-title]' );
+		if ( titleEl ) {
+			titleEl.innerHTML =
+				'Order #' + YP.escapeHtml( String( order.number ) ) +
+				'<span class="yp-pill yp-pill--' + ( WC_ORDER_STATUS_PILLS[ order.status ] || 'neutral' ) + '">' + YP.escapeHtml( order.status_label ) + '</span>';
+		}
+
 		var rowsHtml = wcOrderRow(
 			'Customer',
 			YP.escapeHtml( order.customer_name || '' ) + ( order.customer_email ? ' — <a href="mailto:' + YP.escapeAttr( order.customer_email ) + '">' + YP.escapeHtml( order.customer_email ) + '</a>' : '' ) +
