@@ -7,10 +7,10 @@
  * Direct request: real customer-facing copy for each material type, a
  * deeper "which one should I pick" guide. The copy itself is
  * deliberately hardcoded, not data-driven like materials.php's own
- * swatch grid (still used on the homepage, see front-page.html) — this
- * is verbatim business copy the site owner supplied (lightly
- * copyedited for grammar only, facts untouched), not something to
- * derive from a Material record's own short blurb field.
+ * swatch grid — this is verbatim business copy the site owner
+ * supplied (lightly copyedited for grammar only, facts untouched),
+ * not something to derive from a Material record's own short blurb
+ * field.
  *
  * Originally sat directly below that swatch grid on this page too, but
  * the two were dropped right on top of each other with real photos in
@@ -18,8 +18,12 @@
  * follow-up request to remove the redundancy: the grid's own
  * `wp:pattern` reference was removed from templates/how-it-works.html,
  * leaving this as the page's one materials section. materials.php
- * itself is untouched (and unremoved) since the homepage still uses
- * it.
+ * itself was later (V5) also dropped from templates/front-page.html
+ * for the same reason — once this guide's photo matching was fixed to
+ * actually find every published Material (see V5 note below), showing
+ * the same swatch grid a second time on the homepage was pure
+ * redundancy. The pattern file itself is untouched, just unreferenced,
+ * in case it's wanted again.
  *
  * The photo next to each entry is real, though (V2, direct follow-up
  * request: "pull the picture assigned to the material") — looked up by
@@ -61,6 +65,18 @@
  * (functions.php), shared with the label configurator's Material info
  * modal (patterns/material-info-modal.php) — this file's own rendering
  * below is unchanged, it just consumes the already-resolved entries.
+ *
+ * V5, bug found in production: the Glossy White / Matte White entries
+ * showed no photo here (the homepage's own materials.php grid showed
+ * both fine, since it lists every published record directly with no
+ * matching involved) because the exact-slug match required a Material's
+ * dashboard title to normalize to precisely "glossy-white"/"matte-white"
+ * — any real-world naming drift ("Standard White Glossy", reordered
+ * words, extra qualifiers) missed silently. yeffoprint_material_guide_entries()
+ * now falls back to a keyword match (all of an entry's slug words, e.g.
+ * "glossy" + "white", appearing anywhere in a candidate's title/slug)
+ * whenever the exact match misses, so a rename in the dashboard doesn't
+ * quietly break this page again.
  */
 
 defined( 'ABSPATH' ) || exit;
