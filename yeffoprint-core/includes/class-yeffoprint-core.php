@@ -136,6 +136,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-login.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-order-email-badge.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-telegram-webhook-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-chat-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -197,6 +198,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_App_Shortcut();
 		new YeffoPrint_Telegram_Webhook_Sync();
 		new YeffoPrint_Telegram_Webhook_Controller();
+		new YeffoPrint_Web_Chat_Controller();
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
 		new YeffoPrint_Telegram_Login();

@@ -133,6 +133,42 @@ add_action( 'wp_enqueue_scripts', function () {
 		'restUrl' => esc_url_raw( rest_url( 'wp/v2/yp_template' ) ),
 	] );
 
+	// On-site chat widget (direct request, following the Telegram bot's
+	// own launch) — site-wide, not template-gated, same "the header/cart
+	// icon are everywhere" reasoning as yeffoprint-site above. Gated on
+	// the Telegram bot's own on/off switch (Settings → Telegram Bot):
+	// this widget answers with that bot's exact same brain
+	// (class-web-chat-controller.php calls YeffoPrint_Telegram_Message_
+	// Handler::handle() directly), so turning the bot off turns this off
+	// too rather than leaving a widget that quietly still works while
+	// looking like it's part of a "disabled" feature.
+	if ( class_exists( 'YeffoPrint_Telegram_Settings' ) && YeffoPrint_Telegram_Settings::is_enabled() ) {
+		wp_enqueue_style(
+			'yeffoprint-web-chat-widget',
+			get_theme_file_uri( 'assets/css/web-chat-widget.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/web-chat-widget.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-web-chat-widget',
+			get_theme_file_uri( 'assets/js/web-chat-widget.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/web-chat-widget.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		wp_localize_script( 'yeffoprint-web-chat-widget', 'yeffoprintWebChat', [
+			'restUrl'  => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			// guest_or_nonced_write() (class-rest-security.php) only ever
+			// checks this for a logged-in request — sent unconditionally
+			// since a guest visitor can start chatting, then log in
+			// (My Account, a different tab) without a page reload.
+			'nonce'    => wp_create_nonce( 'wp_rest' ),
+			'greeting' => __( "Hi! I'm YeffoBot. Ask about sizes, materials, shipping, or check an order — or just say hi.", 'yeffoprint' ),
+		] );
+	}
+
 	// Cart drawer data — global (the cart icon/drawer live in the
 	// header on every page), not just on the configurator screen.
 	if ( function_exists( 'WC' ) ) {

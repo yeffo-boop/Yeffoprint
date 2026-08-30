@@ -11,8 +11,11 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Telegram_Message_Handler {
 
-	/** @param array $message The Telegram "message" object as decoded from the webhook update — chat.id, text, and (optionally) from.username/first_name/last_name. */
-	public function handle( array $message ): string {
+	/**
+	 * @param array $message The Telegram "message" object as decoded from the webhook update — chat.id, text, and (optionally) from.username/first_name/last_name.
+	 * @param bool  $can_push_notifications Whether the caller can actually deliver a later push to this chat_id — true for Telegram (the only caller until the web chat widget), false for a website chat session, which has no delivery channel of its own to promise a later message on. Only affects order_status_reply()'s own follow-up line/linking below; every other reply is identical either way.
+	 */
+	public function handle( array $message, bool $can_push_notifications = true ): string {
 		$chat_id = (int) ( $message['chat']['id'] ?? 0 );
 		$text    = trim( (string) ( $message['text'] ?? '' ) );
 		$from    = is_array( $message['from'] ?? null ) ? $message['from'] : [];
@@ -64,7 +67,7 @@ class YeffoPrint_Telegram_Message_Handler {
 		}
 
 		if ( in_array( $command, [ '/order', '/track', '/status' ], true ) ) {
-			return $this->order_status_reply( trim( substr( $text, strlen( $command ) ) ), $chat_id );
+			return $this->order_status_reply( trim( substr( $text, strlen( $command ) ) ), $chat_id, $can_push_notifications );
 		}
 
 		if ( '/reorder' === $command ) {
@@ -83,7 +86,7 @@ class YeffoPrint_Telegram_Message_Handler {
 		// still works, since that's the natural way to answer this
 		// bot's own prompt for one.
 		if ( self::extract_order_ref_and_email( $text ) ) {
-			return $this->order_status_reply( $text, $chat_id );
+			return $this->order_status_reply( $text, $chat_id, $can_push_notifications );
 		}
 
 		$faq_answer = YeffoPrint_Telegram_Faq::match( $text );
@@ -147,7 +150,7 @@ class YeffoPrint_Telegram_Message_Handler {
 		return __( "You're connected! I'll message you here about your orders — including a chance to approve or request changes on a proof right from this chat.", 'yeffoprint-core' );
 	}
 
-	private function order_status_reply( string $args_text, int $chat_id ): string {
+	private function order_status_reply( string $args_text, int $chat_id, bool $can_push_notifications = true ): string {
 		$parsed = self::extract_order_ref_and_email( $args_text );
 
 		if ( ! $parsed ) {
@@ -166,7 +169,7 @@ class YeffoPrint_Telegram_Message_Handler {
 
 		$reply = YeffoPrint_Telegram_Order_Lookup::format_status( $order );
 
-		if ( $chat_id && YeffoPrint_Telegram_Order_Notifications::link( $order, $chat_id ) ) {
+		if ( $can_push_notifications && $chat_id && YeffoPrint_Telegram_Order_Notifications::link( $order, $chat_id ) ) {
 			$reply .= "\n\n" . __( "I'll message you here when your proof is ready or your order ships.", 'yeffoprint-core' );
 		}
 
