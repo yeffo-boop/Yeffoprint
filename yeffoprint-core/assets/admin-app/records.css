@@ -286,6 +286,50 @@
 	}
 }
 
+/**
+ * Direct report: the order-detail Shippo panel's 4 package-dimension
+ * fields (Weight/Length/Width/Height) — each just a 1-2 digit number —
+ * were taking up a lot of vertical space, stacking one per row at full
+ * .yp-form__row size below 620px same as every other, much longer-
+ * value form on this site. Scoped to its own class rather than
+ * touching .yp-form__row itself (the shared 2-column row every other
+ * form here uses at full size) — 4 across even on a phone, since a
+ * short number never needs the full width .yp-form__row assumes a
+ * field might.
+ */
+.yp-shippo-dims {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 0.5rem;
+	margin-bottom: 0.85rem;
+}
+
+.yp-shippo-dims .yp-field {
+	gap: 0.2rem;
+}
+
+.yp-shippo-dims .yp-field label {
+	font-size: 0.68rem;
+}
+
+.yp-shippo-dims .yp-field input[type="number"] {
+	padding: 0.4rem 0.5rem;
+	font-size: 0.85rem;
+}
+
+@media (max-width: 360px) {
+	.yp-shippo-dims {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+/* The button sat flush against the dimension fields above it with no
+   breathing room of its own — .yp-shippo-dims's own margin-bottom
+   (above) covers most of it, this closes the rest. */
+.yp-shippo-get-rates {
+	margin-top: 0.25rem;
+}
+
 .yp-field {
 	display: flex;
 	flex-direction: column;

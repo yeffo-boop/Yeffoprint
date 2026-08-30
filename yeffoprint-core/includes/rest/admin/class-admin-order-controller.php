@@ -175,6 +175,34 @@ class YeffoPrint_Admin_Order_Controller {
 			// alongside it a bit." Shown next to, not instead of, the row above.
 			'shippo_configured'        => YeffoPrint_Shippo_Settings::is_configured(),
 			'shippo_default_package'   => YeffoPrint_Shippo_Settings::get_default_package(),
+			// Direct request: "can we add the rewards info to this screen... how many points this
+			// order will receive (or has received)?" Same processed-vs-pending distinction as the
+			// classic order screen's own "Rewards Points" meta box (class-rewards-order-box.php) —
+			// once YeffoPrint_Rewards::finalize_order() has actually run (order paid), show the
+			// real stored amounts; before that, YeffoPrint_Rewards::calculate_points() is a safe,
+			// read-only live estimate of what finalize_order() would compute right now.
+			'rewards'                  => $this->rewards_payload( $order ),
+		];
+	}
+
+	private function rewards_payload( \WC_Order $order ): array {
+		if ( ! $order->get_customer_id() ) {
+			return [ 'guest' => true, 'processed' => false, 'earned' => 0, 'redeemed' => 0 ];
+		}
+
+		$processed = (bool) $order->get_meta( YeffoPrint_Rewards::ORDER_PROCESSED_META );
+		$points    = $processed
+			? [
+				'earned'   => (int) $order->get_meta( YeffoPrint_Rewards::ORDER_POINTS_EARNED_META ),
+				'redeemed' => (int) $order->get_meta( YeffoPrint_Rewards::ORDER_POINTS_REDEEMED_META ),
+			]
+			: YeffoPrint_Rewards::calculate_points( $order );
+
+		return [
+			'guest'     => false,
+			'processed' => $processed,
+			'earned'    => $points['earned'],
+			'redeemed'  => $points['redeemed'],
 		];
 	}
 

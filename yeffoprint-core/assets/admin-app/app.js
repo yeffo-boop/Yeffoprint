@@ -763,6 +763,36 @@
 	}
 
 	/**
+	 * Direct request: "can we add the rewards info to this screen? Like
+	 * how many points this order will receive (or has received)?" Same
+	 * processed-vs-pending wording as the classic order screen's own
+	 * "Rewards Points" meta box (class-rewards-order-box.php) — "will
+	 * earn" before the order's paid (a live estimate, order.rewards.
+	 * processed is false), "earned" once it actually has been.
+	 */
+	function wcOrderRewardsLine( rewards ) {
+		if ( ! rewards || rewards.guest ) {
+			return 'Rewards: guest order — not eligible for points.';
+		}
+
+		if ( ! rewards.earned && ! rewards.redeemed ) {
+			return rewards.processed
+				? 'Rewards: no points were earned or redeemed on this order.'
+				: 'Rewards: no points will be earned or redeemed on this order.';
+		}
+
+		var parts = [];
+		if ( rewards.earned ) {
+			parts.push( ( rewards.processed ? 'Earned: +' : 'Will earn: +' ) + rewards.earned + ' points' );
+		}
+		if ( rewards.redeemed ) {
+			parts.push( ( rewards.processed ? 'Redeemed: −' : 'Will redeem: −' ) + rewards.redeemed + ' points' );
+		}
+
+		return 'Rewards: ' + parts.join( ' · ' );
+	}
+
+	/**
 	 * Semantic color for the order-number/status pill in the drawer
 	 * header below — same good/neutral/warn/crit vocabulary as every
 	 * other pill in this app (trackingStatusPillHtml() above, the
@@ -824,6 +854,7 @@
 						'<div class="yp-panel__head"><h2>Items</h2></div>' +
 						wcOrderItemsHtml( order.items ) +
 						'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
+						'<p class="yp-panel__hint">' + wcOrderRewardsLine( order.rewards ) + '</p>' +
 					'</div>' +
 
 					'<div class="yp-panel">' +
@@ -961,13 +992,13 @@
 			'<div class="yp-panel" data-yp-shippo-panel>' +
 				'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
 				'<p class="yp-panel__hint">Comparing rates below is free. Purchasing a label is a real charge against your Shippo balance/carrier accounts.</p>' +
-				'<div class="yp-form__row">' +
+				'<div class="yp-shippo-dims">' +
 					'<div class="yp-field"><label for="yp-shippo-weight">Weight (oz)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-weight" value="' + YP.escapeAttr( pkg.weight_oz ) + '" /></div>' +
 					'<div class="yp-field"><label for="yp-shippo-length">Length (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-length" value="' + YP.escapeAttr( pkg.length_in ) + '" /></div>' +
 					'<div class="yp-field"><label for="yp-shippo-width">Width (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-width" value="' + YP.escapeAttr( pkg.width_in ) + '" /></div>' +
 					'<div class="yp-field"><label for="yp-shippo-height">Height (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-height" value="' + YP.escapeAttr( pkg.height_in ) + '" /></div>' +
 				'</div>' +
-				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-get-rates>Get Rates</button>' +
+				'<button type="button" class="wp-block-button__link is-style-outline yp-shippo-get-rates" data-yp-shippo-get-rates>Get Rates</button>' +
 				'<div data-yp-shippo-rates></div>' +
 				'<div data-yp-shippo-error></div>' +
 				'<div data-yp-shippo-result></div>' +
