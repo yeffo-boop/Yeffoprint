@@ -69,6 +69,13 @@
 	overflow: hidden;
 }
 
+/* The [hidden] attribute's UA default (display: none) has lower specificity
+ * than the class rule above and loses to it, so the panel stays visible —
+ * and toggling `panel.hidden` in JS has no visual effect — without this. */
+.yp-chat-panel[hidden] {
+	display: none;
+}
+
 .yp-chat-panel__header {
 	flex-shrink: 0;
 	display: flex;
