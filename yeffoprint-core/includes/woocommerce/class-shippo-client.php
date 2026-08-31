@@ -5,14 +5,17 @@
  * private call() helper, public methods that return an array on success
  * or \WP_Error on failure, no local state beyond the API token.
  *
- * Two calls only, matching the drawer's actual flow (rate-shop, then
+ * Core calls matching the drawer's actual flow (rate-shop, then
  * purchase): get_rates() creates a Shipment object (address_from +
  * address_to + one parcel) with `async: false` so Shippo returns live
  * rates synchronously in the same response — no polling needed.
  * purchase_label() creates a Transaction against a chosen rate's
  * object_id, also synchronous. Rate-shopping itself never charges
  * anything on a Shippo account; only a Transaction (an actual label
- * purchase) does.
+ * purchase) does. validate_address() is a third, even lighter call —
+ * an Address object with `validate: true` — used ahead of both, by the
+ * manual order creator, to catch a bad address before an order (or a
+ * label) is ever built from it.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -84,6 +87,38 @@ class YeffoPrint_Shippo_Client {
 		usort( $rates, static fn( $a, $b ) => $a['amount'] <=> $b['amount'] );
 
 		return [ 'rates' => $rates ];
+	}
+
+	/**
+	 * Address verification via Shippo's own /addresses/ endpoint (`validate:
+	 * true`) — direct request: "I need the ability to verify the shipping/
+	 * billing address for the customer before finalizing." Shippo runs the
+	 * address through the same USPS/carrier validation get_rates() already
+	 * relies on implicitly, and hands back a pass/fail plus any correction
+	 * notes (e.g. a missing unit number, a corrected ZIP+4) — informational
+	 * only, this never blocks anything on its own; staff decide whether to
+	 * fix the address or proceed anyway.
+	 *
+	 * @param array $address {street1, street2, city, state, zip, country, name}
+	 * @return array{is_valid:bool, messages:string[]}|\WP_Error
+	 */
+	public function validate_address( array $address ) {
+		$response = $this->call( 'POST', '/addresses/', array_merge( $this->format_address( $address ), [ 'validate' => true ] ) );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$results  = is_array( $response['validation_results'] ?? null ) ? $response['validation_results'] : [];
+		$messages = array_values( array_filter( array_map(
+			static fn( $message ) => trim( (string) ( $message['text'] ?? '' ) ),
+			is_array( $results['messages'] ?? null ) ? $results['messages'] : []
+		) ) );
+
+		return [
+			'is_valid' => (bool) ( $results['is_valid'] ?? false ),
+			'messages' => $messages,
+		];
 	}
 
 	/**
