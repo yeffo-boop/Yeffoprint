@@ -24,6 +24,10 @@ class YeffoPrint_Telegram_Message_Handler {
 			return $this->handle_pending_escalation( $chat_id, $text, $from );
 		}
 
+		if ( YeffoPrint_Telegram_Escalation::has_pending_contact( $chat_id ) ) {
+			return YeffoPrint_Telegram_Escalation::capture_contact( $chat_id, $from, $text );
+		}
+
 		// A tapped "Request changes" button (class-telegram-callback-
 		// handler.php) leaves this chat waiting for the customer's next
 		// message to use as their change-request notes — checked before
@@ -111,8 +115,7 @@ class YeffoPrint_Telegram_Message_Handler {
 
 	private function handle_pending_escalation( int $chat_id, string $text, array $from ): string {
 		if ( YeffoPrint_Telegram_Escalation::is_affirmative( $text ) ) {
-			YeffoPrint_Telegram_Escalation::forward( $chat_id, $from );
-			return __( "Sent! Our team will follow up with you here. Anything else I can help with?", 'yeffoprint-core' );
+			return YeffoPrint_Telegram_Escalation::confirm( $chat_id, $from );
 		}
 
 		YeffoPrint_Telegram_Escalation::clear( $chat_id );
