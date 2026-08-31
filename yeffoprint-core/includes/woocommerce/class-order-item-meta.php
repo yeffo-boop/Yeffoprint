@@ -34,15 +34,33 @@ class YeffoPrint_Order_Item_Meta {
 	 */
 	private bool $rendering_html_email = false;
 
+	/**
+	 * True only while WC is building the "Details for your order" email
+	 * (WC_Email_Customer_Invoice) specifically — direct report: the
+	 * "Labels in this batch" line (added in apply() below, meant for the
+	 * order screen and other customer emails, where the per-label detail
+	 * beneath it makes the count meaningful) reads as a bare, confusing
+	 * line on just that one email and should be dropped there only.
+	 * Set/cleared around the same `woocommerce_email_order_details`
+	 * action WC's own item-table renderer is hooked to (priority 10),
+	 * at priorities 5/100 so it brackets that renderer regardless of
+	 * HTML vs. plain-text — unlike $rendering_html_email above,
+	 * WC's plain-text templates DO fire this action.
+	 */
+	private bool $hiding_batch_count_line = false;
+
 	public function __construct() {
 		add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'snapshot' ], 10, 4 );
 		add_filter( 'woocommerce_hidden_order_itemmeta', [ $this, 'hide_internal_keys' ] );
 		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'add_qr_download_links' ], 10, 2 );
 		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'format_customization_display' ], 10, 2 );
+		add_filter( 'woocommerce_order_item_get_formatted_meta_data', [ $this, 'hide_batch_count_line_for_invoice' ], 10, 2 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_order_screen_assets' ] );
 		add_action( 'woocommerce_email_header', [ $this, 'mark_html_email' ] );
 		add_action( 'woocommerce_email_footer', [ $this, 'unmark_html_email' ] );
 		add_action( 'woocommerce_email_after_order_table', [ $this, 'render_customization_email_fields' ], 10, 4 );
+		add_action( 'woocommerce_email_order_details', [ $this, 'mark_customer_invoice_email' ], 5, 4 );
+		add_action( 'woocommerce_email_order_details', [ $this, 'unmark_customer_invoice_email' ], 100 );
 	}
 
 	public function mark_html_email(): void {
@@ -51,6 +69,29 @@ class YeffoPrint_Order_Item_Meta {
 
 	public function unmark_html_email(): void {
 		$this->rendering_html_email = false;
+	}
+
+	public function mark_customer_invoice_email( \WC_Order $order, bool $sent_to_admin, bool $plain_text, \WC_Email $email ): void {
+		$this->hiding_batch_count_line = ( 'customer_invoice' === $email->id );
+	}
+
+	public function unmark_customer_invoice_email(): void {
+		$this->hiding_batch_count_line = false;
+	}
+
+	/** @see $hiding_batch_count_line's own docblock above. */
+	public function hide_batch_count_line_for_invoice( array $formatted_meta, \WC_Order_Item $item ): array {
+		if ( ! $this->hiding_batch_count_line ) {
+			return $formatted_meta;
+		}
+
+		foreach ( $formatted_meta as $key => $entry ) {
+			if ( __( 'Labels in this batch', 'yeffoprint-core' ) === $entry->key ) {
+				unset( $formatted_meta[ $key ] );
+			}
+		}
+
+		return $formatted_meta;
 	}
 
 	public function snapshot( \WC_Order_Item_Product $item, string $cart_item_key, array $values, \WC_Order $order ): void {
