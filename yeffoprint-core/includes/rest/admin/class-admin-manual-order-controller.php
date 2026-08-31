@@ -55,6 +55,24 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			'callback'            => [ $this, 'template_pricing_preview' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		// Direct request: "I need the ability to verify the shipping/billing
+		// address... also need to be able to select a shipping method." No
+		// order exists yet at this point in the flow (unlike class-admin-
+		// shippo-controller.php's own /admin/order/{id}/shippo/* routes,
+		// which read an existing order's saved address) — these two take
+		// the address/parcel straight from the request instead.
+		register_rest_route( self::NAMESPACE, '/admin/manual-orders/verify-address', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'verify_address' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/manual-orders/shipping-rates', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'shipping_rates' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
 	}
 
 	/** @return \WP_REST_Response */
@@ -154,5 +172,82 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		}
 
 		return (float) get_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function verify_address( \WP_REST_Request $request ) {
+		$client = $this->shippo_client();
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		$params  = $request->get_json_params() ?: [];
+		$address = $this->address_to_shippo( is_array( $params['address'] ?? null ) ? $params['address'] : [] );
+
+		if ( '' === trim( $address['street1'] ) || '' === trim( $address['zip'] ) ) {
+			return new \WP_Error( 'yeffoprint_shippo_incomplete_address', __( 'Enter a complete street address and ZIP/postal code before verifying.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$result = $client->validate_address( $address );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return rest_ensure_response( $result );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function shipping_rates( \WP_REST_Request $request ) {
+		$client = $this->shippo_client();
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		$params  = $request->get_json_params() ?: [];
+		$address = $this->address_to_shippo( is_array( $params['address'] ?? null ) ? $params['address'] : [] );
+
+		if ( '' === trim( $address['street1'] ) || '' === trim( $address['zip'] ) ) {
+			return new \WP_Error( 'yeffoprint_shippo_incomplete_address', __( 'Enter a complete shipping address before getting rates.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$default = YeffoPrint_Shippo_Settings::get_default_package();
+		$parcel  = [
+			'weight_oz' => isset( $params['weight_oz'] ) ? (float) $params['weight_oz'] : $default['weight_oz'],
+			'length_in' => isset( $params['length_in'] ) ? (float) $params['length_in'] : $default['length_in'],
+			'width_in'  => isset( $params['width_in'] ) ? (float) $params['width_in'] : $default['width_in'],
+			'height_in' => isset( $params['height_in'] ) ? (float) $params['height_in'] : $default['height_in'],
+		];
+
+		$result = $client->get_rates( $address, $parcel );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return rest_ensure_response( $result );
+	}
+
+	/** Same shape as class-admin-shippo-controller.php's own client() — a token check first, so a missing Shippo token reads as one clear message instead of an API-call failure. @return YeffoPrint_Shippo_Client|\WP_Error */
+	private function shippo_client() {
+		if ( ! YeffoPrint_Shippo_Settings::is_configured() ) {
+			return new \WP_Error( 'yeffoprint_shippo_not_configured', __( 'Add a Shippo API token in Settings → Shipping first.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return new YeffoPrint_Shippo_Client( YeffoPrint_Shippo_Settings::get_api_key() );
+	}
+
+	/** Maps this screen's address form shape (first_name/last_name/address_1/address_2/postcode/…, same field names WC_Order's own setters use) to Shippo's address_to shape (name/street1/street2/zip/…) — same mapping class-admin-shippo-controller.php's own address_to() does starting from a WC_Order instead of a raw form. */
+	private function address_to_shippo( array $address ): array {
+		$name = trim( sanitize_text_field( (string) ( $address['first_name'] ?? '' ) ) . ' ' . sanitize_text_field( (string) ( $address['last_name'] ?? '' ) ) );
+
+		return [
+			'name'    => $name,
+			'street1' => sanitize_text_field( (string) ( $address['address_1'] ?? '' ) ),
+			'street2' => sanitize_text_field( (string) ( $address['address_2'] ?? '' ) ),
+			'city'    => sanitize_text_field( (string) ( $address['city'] ?? '' ) ),
+			'state'   => sanitize_text_field( (string) ( $address['state'] ?? '' ) ),
+			'zip'     => sanitize_text_field( (string) ( $address['postcode'] ?? '' ) ),
+			'country' => strtoupper( sanitize_text_field( (string) ( $address['country'] ?? '' ) ) ),
+			'phone'   => sanitize_text_field( (string) ( $address['phone'] ?? '' ) ),
+		];
 	}
 }

@@ -95,6 +95,10 @@
 	}
 
 	YP.views[ 'manual-order' ] = function ( viewEl ) {
+		var emptyAddress = function () {
+			return { first_name: '', last_name: '', address_1: '', address_2: '', city: '', state: '', postcode: '', country: 'US', phone: '' };
+		};
+
 		var state = {
 			orderType: 'custom_design',
 			options: null, // custom-orders/options — Custom Design's own sizes/materials.
@@ -103,7 +107,25 @@
 			selectedCustomer: null, // { id, display_name, email }
 			newCustomerMode: false,
 			selectedTemplate: null, // { id, title } — picked from search, before its configurator data has loaded.
-			templateData: null // GET /templates/{id}/configurator response — { field_schema, sizes, materials } — null until selectedTemplate's data has loaded.
+			templateData: null, // GET /templates/{id}/configurator response — { field_schema, sizes, materials } — null until selectedTemplate's data has loaded.
+			// Shared by every order type (like the Customer picker above), so
+			// this lives in its own top-level state slice rather than reset
+			// by render()'s order-type switch the way batch/sticker/template
+			// fields are — a customer's address doesn't change based on what
+			// they're ordering. Every field write goes straight into this
+			// object (see bindShippingPanel()) so it survives render()
+			// rebuilding the panel's HTML from scratch on every order-type click.
+			shipping: {
+				address: emptyAddress(),
+				billingDiffers: false,
+				billingAddress: emptyAddress(),
+				parcel: yeffoprintAdminApp.shippo ? yeffoprintAdminApp.shippo.defaultPackage : null,
+				verifying: false,
+				verifyResult: null, // { is_valid, messages } from the last /verify-address call.
+				fetchingRates: false,
+				rates: null, // array from the last /shipping-rates call, or an { error } object.
+				selectedRateId: null
+			}
 		};
 
 		viewEl.innerHTML = '<p class="yp-app__intro">Loading&hellip;</p>';
@@ -139,6 +161,8 @@
 					'<div data-yp-customer-picker></div>' +
 				'</div>' +
 
+				shippingPanelHtml() +
+
 				( 'custom_design' === state.orderType ? customDesignFieldsHtml() : ( 'sticker' === state.orderType ? stickerFieldsHtml() : templateFieldsHtml() ) ) +
 
 				'<div class="yp-panel">' +
@@ -170,6 +194,15 @@
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>Create Order</button>';
 
 			renderCustomerPicker();
+			bindShippingPanel();
+			// render() rebuilds the shipping panel's HTML from scratch (e.g.
+			// on every order-type switch) with empty verify-result/rate-list
+			// containers — state.shipping itself survives that rebuild (see
+			// its own docblock above), so play it back into the fresh DOM.
+			renderVerifyResult();
+			if ( state.shipping.rates ) {
+				renderManualShippingRates();
+			}
 
 			viewEl.querySelectorAll( '[data-yp-order-type]' ).forEach( function ( button ) {
 				if ( button.disabled ) {
@@ -845,6 +878,267 @@
 			};
 		}
 
+		/* ---------- Shipping & Billing address, shipping rate (this revision) ----------
+		 * Direct request: "I need the ability to verify the shipping/billing
+		 * address for the customer before finalizing, also need to be able
+		 * to select a shipping method so shipping can be added to the
+		 * invoice." Address verification and rate-shopping both go through
+		 * class-admin-manual-order-controller.php's own /verify-address and
+		 * /shipping-rates routes — no order exists yet at this point, unlike
+		 * the order-detail screen's own Shippo panel (app.js's
+		 * shippoPanelHtml()/fetchShippoRates(), which this reuses the
+		 * .yp-shippo-dims/.yp-rate-list/.yp-rate-card styling from) which
+		 * reads an already-saved order address. Selecting a rate here only
+		 * adds its cost to the invoice as a real shipping line item —
+		 * purchasing the actual label still happens from that same
+		 * order-detail Shippo panel once the order exists, same as any
+		 * other order.
+		 */
+
+		function addressFieldsHtml( prefix, address ) {
+			return (
+				'<div class="yp-form__row">' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-first-name">First name</label><input type="text" id="yp-mo-' + prefix + '-first-name" data-yp-address-field="first_name" value="' + YP.escapeAttr( address.first_name ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-last-name">Last name</label><input type="text" id="yp-mo-' + prefix + '-last-name" data-yp-address-field="last_name" value="' + YP.escapeAttr( address.last_name ) + '" /></div>' +
+				'</div>' +
+				'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-1">Address line 1</label><input type="text" id="yp-mo-' + prefix + '-address-1" data-yp-address-field="address_1" value="' + YP.escapeAttr( address.address_1 ) + '" /></div>' +
+				'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-2">Address line 2</label><input type="text" id="yp-mo-' + prefix + '-address-2" data-yp-address-field="address_2" value="' + YP.escapeAttr( address.address_2 ) + '" /></div>' +
+				'<div class="yp-form__row--three">' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-city">City</label><input type="text" id="yp-mo-' + prefix + '-city" data-yp-address-field="city" value="' + YP.escapeAttr( address.city ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-state">State</label><input type="text" id="yp-mo-' + prefix + '-state" data-yp-address-field="state" value="' + YP.escapeAttr( address.state ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-postcode">ZIP / postal code</label><input type="text" id="yp-mo-' + prefix + '-postcode" data-yp-address-field="postcode" value="' + YP.escapeAttr( address.postcode ) + '" /></div>' +
+				'</div>' +
+				'<div class="yp-form__row">' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-country">Country</label><input type="text" id="yp-mo-' + prefix + '-country" data-yp-address-field="country" maxlength="2" placeholder="US" value="' + YP.escapeAttr( address.country ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-phone">Phone</label><input type="text" id="yp-mo-' + prefix + '-phone" data-yp-address-field="phone" value="' + YP.escapeAttr( address.phone ) + '" /></div>' +
+				'</div>'
+			);
+		}
+
+		function shippingPanelHtml() {
+			var s             = state.shipping;
+			var pkg           = s.parcel;
+			var shippoEnabled = !! ( yeffoprintAdminApp.shippo && yeffoprintAdminApp.shippo.configured && pkg );
+
+			return (
+				'<div class="yp-panel" data-yp-shipping-panel>' +
+					'<div class="yp-panel__head"><h2>Shipping &amp; billing address</h2></div>' +
+					'<p class="yp-panel__hint">Optional at this step — leave blank to add an address later from the order screen instead.</p>' +
+					addressFieldsHtml( 'ship', s.address ) +
+					'<button type="button" class="yp-row-action" data-yp-verify-address>Verify address</button>' +
+					'<div data-yp-verify-result></div>' +
+
+					'<div class="yp-field yp-field--checkbox">' +
+						'<input type="checkbox" id="yp-mo-billing-differs"' + ( s.billingDiffers ? ' checked' : '' ) + ' />' +
+						'<label for="yp-mo-billing-differs">Billing address is different</label>' +
+					'</div>' +
+					'<div data-yp-billing-fields' + ( s.billingDiffers ? '' : ' style="display:none;"' ) + '>' +
+						addressFieldsHtml( 'bill', s.billingAddress ) +
+					'</div>' +
+
+					( shippoEnabled ?
+						'<div class="yp-panel__head"><h2>Shipping method</h2></div>' +
+						'<p class="yp-panel__hint">Comparing rates is free. This adds the chosen rate’s cost to the invoice as a shipping line — it doesn’t purchase a label; do that from the order screen once the order exists.</p>' +
+						'<div class="yp-shippo-dims">' +
+							'<div class="yp-field"><label for="yp-mo-ship-weight">Weight (oz)</label><input type="number" min="0.1" step="0.1" id="yp-mo-ship-weight" value="' + YP.escapeAttr( pkg.weight_oz ) + '" /></div>' +
+							'<div class="yp-field"><label for="yp-mo-ship-length">Length (in)</label><input type="number" min="0.1" step="0.1" id="yp-mo-ship-length" value="' + YP.escapeAttr( pkg.length_in ) + '" /></div>' +
+							'<div class="yp-field"><label for="yp-mo-ship-width">Width (in)</label><input type="number" min="0.1" step="0.1" id="yp-mo-ship-width" value="' + YP.escapeAttr( pkg.width_in ) + '" /></div>' +
+							'<div class="yp-field"><label for="yp-mo-ship-height">Height (in)</label><input type="number" min="0.1" step="0.1" id="yp-mo-ship-height" value="' + YP.escapeAttr( pkg.height_in ) + '" /></div>' +
+						'</div>' +
+						'<button type="button" class="wp-block-button__link is-style-outline yp-shippo-get-rates" data-yp-get-rates>Get shipping rates</button>' +
+						'<div data-yp-shipping-rates></div>' +
+						'<div data-yp-shipping-error></div>'
+						: '<div class="yp-panel__head"><h2>Shipping method</h2></div>' +
+						'<p class="yp-panel__hint">Add a Shippo API token under Settings &rarr; Shipping to compare live rates here — an address above still gets saved to the order either way.</p>' ) +
+				'</div>'
+			);
+		}
+
+		function readAddressState( prefix ) {
+			var target = 'ship' === prefix ? state.shipping.address : state.shipping.billingAddress;
+			viewEl.querySelectorAll( '#yp-mo-' + prefix + '-first-name, #yp-mo-' + prefix + '-last-name, #yp-mo-' + prefix + '-address-1, #yp-mo-' + prefix + '-address-2, #yp-mo-' + prefix + '-city, #yp-mo-' + prefix + '-state, #yp-mo-' + prefix + '-postcode, #yp-mo-' + prefix + '-country, #yp-mo-' + prefix + '-phone' )
+				.forEach( function ( field ) {
+					target[ field.getAttribute( 'data-yp-address-field' ) ] = field.value;
+				} );
+		}
+
+		function bindShippingPanel() {
+			var panel = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			if ( ! panel ) {
+				return; // Shippo not configured and no fields rendered — shouldn't happen, defensive only.
+			}
+
+			[ 'ship', 'bill' ].forEach( function ( prefix ) {
+				panel.querySelectorAll( '[id^="yp-mo-' + prefix + '-"]' ).forEach( function ( field ) {
+					field.addEventListener( 'input', function () { readAddressState( prefix ); } );
+				} );
+			} );
+
+			var billingDiffersToggle = panel.querySelector( '#yp-mo-billing-differs' );
+			billingDiffersToggle.addEventListener( 'change', function () {
+				state.shipping.billingDiffers = billingDiffersToggle.checked;
+				panel.querySelector( '[data-yp-billing-fields]' ).style.display = billingDiffersToggle.checked ? '' : 'none';
+			} );
+
+			panel.querySelector( '[data-yp-verify-address]' ).addEventListener( 'click', verifyShippingAddress );
+
+			var getRatesButton = panel.querySelector( '[data-yp-get-rates]' );
+			if ( getRatesButton ) {
+				getRatesButton.addEventListener( 'click', fetchManualShippingRates );
+			}
+		}
+
+		function verifyShippingAddress() {
+			var panel     = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			var resultEl  = panel.querySelector( '[data-yp-verify-result]' );
+			var button    = panel.querySelector( '[data-yp-verify-address]' );
+
+			readAddressState( 'ship' );
+
+			button.disabled = true;
+			button.textContent = 'Verifying…';
+			resultEl.innerHTML = '';
+
+			YP.request( coreEndpoint( 'admin/manual-orders/verify-address' ), {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { address: state.shipping.address } )
+			} )
+				.then( function ( result ) {
+					button.disabled = false;
+					button.textContent = 'Verify address';
+					state.shipping.verifyResult = result;
+					renderVerifyResult();
+				} )
+				.catch( function ( error ) {
+					button.disabled = false;
+					button.textContent = 'Verify address';
+					state.shipping.verifyResult = { error: error.message };
+					renderVerifyResult();
+				} );
+		}
+
+		function renderVerifyResult() {
+			var panel    = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			var resultEl = panel.querySelector( '[data-yp-verify-result]' );
+			var result   = state.shipping.verifyResult;
+
+			if ( ! result ) {
+				resultEl.innerHTML = '';
+				return;
+			}
+
+			if ( result.error ) {
+				resultEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( result.error ) + '</p>';
+				return;
+			}
+
+			var messages = ( result.messages || [] ).map( function ( message ) {
+				return '<li>' + YP.escapeHtml( message ) + '</li>';
+			} ).join( '' );
+
+			resultEl.innerHTML = result.is_valid
+				? '<p class="yp-panel__hint">Address verified.</p>' + ( messages ? '<ul>' + messages + '</ul>' : '' )
+				: '<p class="yp-form__error">This address didn’t verify — double-check it before finalizing.</p>' + ( messages ? '<ul>' + messages + '</ul>' : '' );
+		}
+
+		function fetchManualShippingRates() {
+			var panel   = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			var button  = panel.querySelector( '[data-yp-get-rates]' );
+			var ratesEl = panel.querySelector( '[data-yp-shipping-rates]' );
+			var errorEl = panel.querySelector( '[data-yp-shipping-error]' );
+
+			readAddressState( 'ship' );
+
+			var defaults = yeffoprintAdminApp.shippo.defaultPackage;
+			var parcel = {
+				weight_oz: parseFloat( panel.querySelector( '#yp-mo-ship-weight' ).value ) || defaults.weight_oz,
+				length_in: parseFloat( panel.querySelector( '#yp-mo-ship-length' ).value ) || defaults.length_in,
+				width_in: parseFloat( panel.querySelector( '#yp-mo-ship-width' ).value ) || defaults.width_in,
+				height_in: parseFloat( panel.querySelector( '#yp-mo-ship-height' ).value ) || defaults.height_in
+			};
+
+			button.disabled = true;
+			button.textContent = 'Getting rates…';
+			errorEl.innerHTML = '';
+			ratesEl.innerHTML = '';
+
+			YP.request( coreEndpoint( 'admin/manual-orders/shipping-rates' ), {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { address: state.shipping.address, weight_oz: parcel.weight_oz, length_in: parcel.length_in, width_in: parcel.width_in, height_in: parcel.height_in } )
+			} )
+				.then( function ( response ) {
+					button.disabled = false;
+					button.textContent = 'Get shipping rates';
+					state.shipping.rates = response.rates || [];
+					state.shipping.selectedRateId = state.shipping.rates.length ? state.shipping.rates[ 0 ].id : null;
+					renderManualShippingRates();
+				} )
+				.catch( function ( error ) {
+					button.disabled = false;
+					button.textContent = 'Get shipping rates';
+					state.shipping.rates = null;
+					errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
+		}
+
+		function renderManualShippingRates() {
+			var panel   = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			var ratesEl = panel.querySelector( '[data-yp-shipping-rates]' );
+			var rates   = state.shipping.rates || [];
+
+			if ( ! rates.length ) {
+				ratesEl.innerHTML = '<p class="yp-panel__hint">No rates came back for this address/package.</p>';
+				return;
+			}
+
+			ratesEl.innerHTML = '<div class="yp-rate-list">' +
+				rates.map( function ( rate ) {
+					var checked = rate.id === state.shipping.selectedRateId;
+					return (
+						'<label class="yp-rate-card' + ( checked ? ' is-selected' : '' ) + '">' +
+							'<input type="radio" name="yp-mo-shipping-rate" value="' + YP.escapeAttr( rate.id ) + '"' + ( checked ? ' checked' : '' ) + ' />' +
+							'<span class="yp-rate-card__body">' +
+								'<span class="yp-rate-card__carrier">' + YP.escapeHtml( rate.carrier_label ) + '</span> ' +
+								'<span class="yp-rate-card__service">' + YP.escapeHtml( rate.service ) + '</span>' +
+							'</span>' +
+							'<span class="yp-rate-card__days">' + ( rate.days ? rate.days + ( 1 === rate.days ? ' day' : ' days' ) : '—' ) + '</span>' +
+							'<span class="yp-rate-card__price">$' + rate.amount.toFixed( 2 ) + '</span>' +
+						'</label>'
+					);
+				} ).join( '' ) +
+			'</div>';
+
+			ratesEl.querySelectorAll( '.yp-rate-card' ).forEach( function ( card ) {
+				card.addEventListener( 'click', function () {
+					ratesEl.querySelectorAll( '.yp-rate-card' ).forEach( function ( c ) { c.classList.remove( 'is-selected' ); } );
+					card.classList.add( 'is-selected' );
+					state.shipping.selectedRateId = card.querySelector( 'input' ).value;
+				} );
+			} );
+		}
+
+		function selectedShippingPayload() {
+			if ( ! state.shipping.rates || ! state.shipping.selectedRateId ) {
+				return null;
+			}
+			var rate = state.shipping.rates.filter( function ( r ) { return r.id === state.shipping.selectedRateId; } )[ 0 ];
+			if ( ! rate ) {
+				return null;
+			}
+			return { carrier_label: rate.carrier_label, service: rate.service, amount: rate.amount };
+		}
+
+		function shippingAddressPayload( address ) {
+			// Every field blank is a valid "no address yet" — the backend's
+			// own sanitize_address() treats that as null rather than an
+			// incomplete-address error, same reasoning as leaving it blank
+			// in the form in the first place.
+			var hasAny = Object.keys( address ).some( function ( key ) { return '' !== address[ key ] && 'country' !== key; } );
+			return hasAny ? address : null;
+		}
+
 		/* ---------- Submit ---------- */
 
 		function submit() {
@@ -886,6 +1180,17 @@
 			}
 
 			body.send_invoice_email = viewEl.querySelector( '#yp-mo-send-invoice' ).checked;
+
+			readAddressState( 'ship' );
+			body.shipping_address = shippingAddressPayload( state.shipping.address );
+			if ( state.shipping.billingDiffers ) {
+				readAddressState( 'bill' );
+				body.billing_address = shippingAddressPayload( state.shipping.billingAddress );
+			}
+			var selectedShipping = selectedShippingPayload();
+			if ( selectedShipping ) {
+				body.shipping = selectedShipping;
+			}
 
 			submitButton.disabled = true;
 			submitButton.textContent = 'Creating…';

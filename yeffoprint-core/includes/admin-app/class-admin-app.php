@@ -163,6 +163,15 @@ class YeffoPrint_Admin_App {
 			// own copy back too (class-admin-custom-order-controller.php),
 			// used to build that one order's own Status <select>.
 			'customOrderStatuses'    => YeffoPrint_Custom_Order_Meta::STATUSES,
+			// Manual order creation's address-verify/shipping-rate step
+			// (views/manual-order.js) needs this before any order exists to
+			// carry its own copy the way class-admin-order-controller.php's
+			// per-order detail_payload() already does for the existing
+			// per-order Shippo panel.
+			'shippo'                 => [
+				'configured'     => YeffoPrint_Shippo_Settings::is_configured(),
+				'defaultPackage' => YeffoPrint_Shippo_Settings::get_default_package(),
+			],
 		] );
 
 		// Shared repeater widget (Phase 5) — depended on by both

@@ -44,6 +44,18 @@
  * emails, the customization display on the order screen) keeps working
  * unmodified.
  *
+ * Shipping/billing address + shipping cost (this revision) — direct
+ * request: "I need the ability to verify the shipping/billing address
+ * for the customer before finalizing, also need to be able to select a
+ * shipping method so shipping can be added to the invoice." Both the
+ * address verification and the rate-shopping happen client-side against
+ * class-admin-manual-order-controller.php's own /admin/manual-orders/
+ * verify-address and /shipping-rates routes *before* this method is ever
+ * called — this class only receives the already-chosen address and
+ * shipping rate, applies the address to the order's own shipping/billing
+ * fields, and adds the rate as a real WC_Order_Item_Shipping line item.
+ * See sanitize_address() and add_shipping_line() below.
+ *
  * "Requires proof approval" is not a separate feature bolted on here —
  * it's the same seam `submit()` already relies on:
  * `_yp_custom_order_id` on a line item is what
@@ -84,6 +96,22 @@ class YeffoPrint_Manual_Order_Creator {
 	 *     @type bool   $send_invoice_email  All order types — direct request: email the customer their
 	 *                                       order details and a payment link right on creation, via
 	 *                                       WooCommerce's own built-in Order details/Customer Invoice email.
+	 *     @type array  $shipping_address  Optional — { first_name, last_name, address_1, address_2, city,
+	 *                                     state, postcode, country, phone }. Left out (or every field left
+	 *                                     blank) entirely skips setting a shipping address, same as before
+	 *                                     this field existed — staff can still add one later from the order
+	 *                                     screen. A partially filled address (some but not all of address_1/
+	 *                                     city/state/postcode/country) is rejected rather than silently saved
+	 *                                     incomplete.
+	 *     @type array  $billing_address   Optional, same shape as $shipping_address — only needed when
+	 *                                     billing differs from shipping; mirrors $shipping_address otherwise.
+	 *     @type array  $shipping         Optional — { carrier_label, service, amount }, the Shippo rate
+	 *                                     staff selected (class-admin-manual-order-controller.php's own
+	 *                                     /admin/manual-orders/shipping-rates). Added as a real shipping
+	 *                                     line item on the order, included in calculate_totals() below —
+	 *                                     this doesn't purchase a label, just adds the cost to the invoice;
+	 *                                     the actual label is purchased later from the order screen's own
+	 *                                     Shippo panel, same as any other order.
 	 * }
 	 * @return array{order:\WC_Order, custom_order_id:int}|\WP_Error
 	 */
@@ -120,6 +148,22 @@ class YeffoPrint_Manual_Order_Creator {
 			}
 		}
 
+		$shipping_address = self::sanitize_address( $payload['shipping_address'] ?? null );
+		if ( is_wp_error( $shipping_address ) ) {
+			return $shipping_address;
+		}
+
+		$billing_address = null;
+		if ( ! empty( $payload['billing_address'] ) ) {
+			$billing_address = self::sanitize_address( $payload['billing_address'] );
+			if ( is_wp_error( $billing_address ) ) {
+				return $billing_address;
+			}
+		}
+		if ( ! $billing_address ) {
+			$billing_address = $shipping_address;
+		}
+
 		$customer = self::resolve_or_create_customer( is_array( $payload['customer'] ?? null ) ? $payload['customer'] : [] );
 		if ( is_wp_error( $customer ) ) {
 			return $customer;
@@ -138,6 +182,34 @@ class YeffoPrint_Manual_Order_Creator {
 		$order->set_billing_email( $customer->user_email );
 		$order->set_billing_first_name( $customer->first_name ?: $customer->display_name );
 		$order->set_billing_last_name( $customer->last_name );
+
+		if ( $shipping_address ) {
+			$order->set_shipping_first_name( $shipping_address['first_name'] ?: $order->get_billing_first_name() );
+			$order->set_shipping_last_name( $shipping_address['last_name'] ?: $order->get_billing_last_name() );
+			$order->set_shipping_address_1( $shipping_address['address_1'] );
+			$order->set_shipping_address_2( $shipping_address['address_2'] );
+			$order->set_shipping_city( $shipping_address['city'] );
+			$order->set_shipping_state( $shipping_address['state'] );
+			$order->set_shipping_postcode( $shipping_address['postcode'] );
+			$order->set_shipping_country( $shipping_address['country'] );
+			$order->set_shipping_phone( $shipping_address['phone'] );
+		}
+
+		if ( $billing_address ) {
+			// Only overrides the name defaults set just above when the
+			// address form's own name fields were actually filled in —
+			// staff commonly leave those blank and just fill in the
+			// street/city/state, relying on the customer's own name.
+			$order->set_billing_first_name( $billing_address['first_name'] ?: $order->get_billing_first_name() );
+			$order->set_billing_last_name( $billing_address['last_name'] ?: $order->get_billing_last_name() );
+			$order->set_billing_address_1( $billing_address['address_1'] );
+			$order->set_billing_address_2( $billing_address['address_2'] );
+			$order->set_billing_city( $billing_address['city'] );
+			$order->set_billing_state( $billing_address['state'] );
+			$order->set_billing_postcode( $billing_address['postcode'] );
+			$order->set_billing_country( $billing_address['country'] );
+			$order->set_billing_phone( $billing_address['phone'] );
+		}
 
 		$order_type_to_shell_type = [
 			'custom_design' => 'label',
@@ -220,6 +292,10 @@ class YeffoPrint_Manual_Order_Creator {
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, $template['material_id'] );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::TEMPLATE_VARIANTS, wp_json_encode( $template['variants'] ) );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $template['instructions'] );
+		}
+
+		if ( ! empty( $payload['shipping'] ) && is_array( $payload['shipping'] ) ) {
+			self::add_shipping_line( $order, $payload['shipping'] );
 		}
 
 		$order->calculate_totals();
@@ -685,5 +761,79 @@ class YeffoPrint_Manual_Order_Creator {
 	private static function is_published( string $post_type, int $post_id ): bool {
 		$post = get_post( $post_id );
 		return (bool) ( $post && $post_type === $post->post_type && 'publish' === $post->post_status );
+	}
+
+	/**
+	 * Sanitizes a raw shipping/billing address submission. Field names
+	 * match WC_Order's own setters (first_name/last_name/address_1/
+	 * address_2/city/state/postcode/country/phone) rather than Shippo's
+	 * (name/street1/zip/…) — the request/response shape Shippo actually
+	 * wants is built separately, right before each Shippo call
+	 * (class-admin-manual-order-controller.php's own address_to_shippo()),
+	 * since this method's job is only "is this a usable order address."
+	 *
+	 * Every field blank is a deliberate, valid "no address yet" — staff
+	 * can add one later from the order screen, same as before this
+	 * feature existed. A *partial* address (some but not all of
+	 * address_1/city/state/postcode/country filled in) is rejected
+	 * outright rather than silently saved incomplete, since that's far
+	 * more likely to be an oversight than an intentional partial address.
+	 *
+	 * @return array{first_name:string,last_name:string,address_1:string,address_2:string,city:string,state:string,postcode:string,country:string,phone:string}|null|\WP_Error
+	 */
+	private static function sanitize_address( $raw ) {
+		if ( ! is_array( $raw ) ) {
+			return null;
+		}
+
+		$fields = [
+			'first_name' => sanitize_text_field( (string) ( $raw['first_name'] ?? '' ) ),
+			'last_name'  => sanitize_text_field( (string) ( $raw['last_name'] ?? '' ) ),
+			'address_1'  => sanitize_text_field( (string) ( $raw['address_1'] ?? '' ) ),
+			'address_2'  => sanitize_text_field( (string) ( $raw['address_2'] ?? '' ) ),
+			'city'       => sanitize_text_field( (string) ( $raw['city'] ?? '' ) ),
+			'state'      => sanitize_text_field( (string) ( $raw['state'] ?? '' ) ),
+			'postcode'   => sanitize_text_field( (string) ( $raw['postcode'] ?? '' ) ),
+			'country'    => strtoupper( sanitize_text_field( (string) ( $raw['country'] ?? '' ) ) ),
+			'phone'      => sanitize_text_field( (string) ( $raw['phone'] ?? '' ) ),
+		];
+
+		if ( '' === implode( '', $fields ) ) {
+			return null;
+		}
+
+		foreach ( [ 'address_1', 'city', 'state', 'postcode', 'country' ] as $required_key ) {
+			if ( '' === $fields[ $required_key ] ) {
+				return new \WP_Error( 'yeffoprint_incomplete_address', __( 'Please fill in a complete address (street, city, state, ZIP/postal code, country) or leave every address field blank.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Adds the staff-selected Shippo rate as a real shipping line item —
+	 * cost only, no label purchase happens here (that's the order
+	 * screen's own existing Shippo panel, once the order exists). Silently
+	 * does nothing for a $shipping array with neither a usable amount nor
+	 * a carrier/service name, so a stray empty object in the payload never
+	 * adds a blank "$0.00 Shipping" line to an order that never actually
+	 * had a rate selected.
+	 */
+	private static function add_shipping_line( \WC_Order $order, array $shipping ): void {
+		$amount       = max( 0.0, (float) ( $shipping['amount'] ?? 0 ) );
+		$carrier      = sanitize_text_field( (string) ( $shipping['carrier_label'] ?? '' ) );
+		$service      = sanitize_text_field( (string) ( $shipping['service'] ?? '' ) );
+		$method_title = trim( $carrier . ' ' . $service );
+
+		if ( '' === $method_title && $amount <= 0 ) {
+			return;
+		}
+
+		$item = new \WC_Order_Item_Shipping();
+		$item->set_method_title( '' !== $method_title ? $method_title : __( 'Shipping', 'yeffoprint-core' ) );
+		$item->set_method_id( 'yeffoprint_shippo' );
+		$item->set_total( $amount );
+		$order->add_item( $item );
 	}
 }
