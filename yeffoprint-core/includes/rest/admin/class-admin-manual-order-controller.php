@@ -57,20 +57,18 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		] );
 
 		// Direct request: "I need the ability to verify the shipping/billing
-		// address... also need to be able to select a shipping method." No
-		// order exists yet at this point in the flow (unlike class-admin-
-		// shippo-controller.php's own /admin/order/{id}/shippo/* routes,
-		// which read an existing order's saved address) — these two take
-		// the address/parcel straight from the request instead.
+		// address... before finalizing." No order exists yet at this point
+		// in the flow (unlike class-admin-shippo-controller.php's own
+		// /admin/order/{id}/shippo/rates route, which reads an existing
+		// order's saved address) — this takes the address straight from the
+		// request instead. Shipping-method selection itself doesn't need a
+		// route of its own — direct follow-up: "I don't need to rate shop
+		// to add shipping, just use my default shipping options" — it
+		// reads yeffoprintAdminApp.shippo.manualOrderShippingOptions
+		// (Settings → Shipping), no API call.
 		register_rest_route( self::NAMESPACE, '/admin/manual-orders/verify-address', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'verify_address' ],
-			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
-		] );
-
-		register_rest_route( self::NAMESPACE, '/admin/manual-orders/shipping-rates', [
-			'methods'             => \WP_REST_Server::CREATABLE,
-			'callback'            => [ $this, 'shipping_rates' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 	}
@@ -189,36 +187,6 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		}
 
 		$result = $client->validate_address( $address );
-		if ( is_wp_error( $result ) ) {
-			return $result;
-		}
-
-		return rest_ensure_response( $result );
-	}
-
-	/** @return \WP_REST_Response|\WP_Error */
-	public function shipping_rates( \WP_REST_Request $request ) {
-		$client = $this->shippo_client();
-		if ( is_wp_error( $client ) ) {
-			return $client;
-		}
-
-		$params  = $request->get_json_params() ?: [];
-		$address = $this->address_to_shippo( is_array( $params['address'] ?? null ) ? $params['address'] : [] );
-
-		if ( '' === trim( $address['street1'] ) || '' === trim( $address['zip'] ) ) {
-			return new \WP_Error( 'yeffoprint_shippo_incomplete_address', __( 'Enter a complete shipping address before getting rates.', 'yeffoprint-core' ), [ 'status' => 400 ] );
-		}
-
-		$default = YeffoPrint_Shippo_Settings::get_default_package();
-		$parcel  = [
-			'weight_oz' => isset( $params['weight_oz'] ) ? (float) $params['weight_oz'] : $default['weight_oz'],
-			'length_in' => isset( $params['length_in'] ) ? (float) $params['length_in'] : $default['length_in'],
-			'width_in'  => isset( $params['width_in'] ) ? (float) $params['width_in'] : $default['width_in'],
-			'height_in' => isset( $params['height_in'] ) ? (float) $params['height_in'] : $default['height_in'],
-		];
-
-		$result = $client->get_rates( $address, $parcel );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
