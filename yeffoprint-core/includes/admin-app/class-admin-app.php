@@ -169,8 +169,15 @@ class YeffoPrint_Admin_App {
 			// per-order detail_payload() already does for the existing
 			// per-order Shippo panel.
 			'shippo'                 => [
-				'configured'     => YeffoPrint_Shippo_Settings::is_configured(),
-				'defaultPackage' => YeffoPrint_Shippo_Settings::get_default_package(),
+				'configured'                => YeffoPrint_Shippo_Settings::is_configured(),
+				'defaultPackage'            => YeffoPrint_Shippo_Settings::get_default_package(),
+				// Manual order creation's shipping-method picker (direct
+				// request: "I don't need to rate shop to add shipping, just
+				// use my default shipping options") — a flat preset list, not
+				// a Shippo API call, so it's available even without an API
+				// token configured (unlike defaultPackage/configured above,
+				// which gate the order-detail Shippo panel's own rate-shop).
+				'manualOrderShippingOptions' => YeffoPrint_Shippo_Settings::get_manual_order_shipping_options(),
 			],
 		] );
 

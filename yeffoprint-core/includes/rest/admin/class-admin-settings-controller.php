@@ -63,6 +63,7 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( YeffoPrint_Shippo_Settings::DEFAULT_LENGTH_IN_OPTION, max( 0.1, (float) ( $params['shippo_default_length_in'] ?? 8 ) ) );
 		update_option( YeffoPrint_Shippo_Settings::DEFAULT_WIDTH_IN_OPTION, max( 0.1, (float) ( $params['shippo_default_width_in'] ?? 6 ) ) );
 		update_option( YeffoPrint_Shippo_Settings::DEFAULT_HEIGHT_IN_OPTION, max( 0.1, (float) ( $params['shippo_default_height_in'] ?? 1 ) ) );
+		update_option( YeffoPrint_Shippo_Settings::MANUAL_ORDER_SHIPPING_OPTIONS_OPTION, YeffoPrint_Shippo_Settings::sanitize_manual_order_shipping_options( (array) ( $params['manual_order_shipping_options'] ?? [] ) ) );
 
 		update_option( $M::LIVE_PREVIEW_ENABLED_OPTION, (bool) ( $params['live_preview_enabled'] ?? false ) );
 
@@ -131,6 +132,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			'shippo_api_key'             => YeffoPrint_Shippo_Settings::get_api_key(),
 			'shippo_ship_from_phone'     => (string) get_option( YeffoPrint_Shippo_Settings::SHIP_FROM_PHONE_OPTION, '' ),
 			'shippo_default_package'     => YeffoPrint_Shippo_Settings::get_default_package(),
+			'manual_order_shipping_options' => YeffoPrint_Shippo_Settings::get_manual_order_shipping_options(),
 			'shippo_webhook_url'         => esc_url_raw( YeffoPrint_Shippo_Webhook_Secret::webhook_url() ),
 			'shippo_webhook_status'      => YeffoPrint_Shippo_Webhook_Sync::last_message(),
 			'live_preview_enabled'       => (bool) get_option( $M::LIVE_PREVIEW_ENABLED_OPTION, true ),

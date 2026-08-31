@@ -35,6 +35,41 @@
 		{ id: 'integrations', label: 'Integrations' }
 	];
 
+	// Same "read straight from the live DOM at save time, no parallel JS
+	// array to keep in sync" repeater shape as views/pricing.js's own
+	// bulk-discount tier table.
+	function manualOrderShippingOptionRowHtml( option ) {
+		option = option || { label: '', amount: '' };
+		return (
+			'<tr>' +
+				'<td><input type="text" data-shipping-option-label placeholder="e.g. USPS Ground Advantage" value="' + YP.escapeAttr( option.label ) + '" /></td>' +
+				'<td><input type="number" min="0" step="0.01" data-shipping-option-amount value="' + YP.escapeAttr( option.amount ) + '" /></td>' +
+				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove shipping option">&times;</button></td>' +
+			'</tr>'
+		);
+	}
+
+	function wireRemoveShippingOptionRows( tbody ) {
+		tbody.querySelectorAll( '[data-yp-remove-row]' ).forEach( function ( button ) {
+			if ( button._wired ) {
+				return;
+			}
+			button._wired = true;
+			button.addEventListener( 'click', function () {
+				button.closest( 'tr' ).remove();
+			} );
+		} );
+	}
+
+	function readShippingOptionRows( tbody ) {
+		return Array.prototype.map.call( tbody.querySelectorAll( 'tr' ), function ( row ) {
+			return {
+				label: row.querySelector( '[data-shipping-option-label]' ).value,
+				amount: parseFloat( row.querySelector( '[data-shipping-option-amount]' ).value ) || 0
+			};
+		} ).filter( function ( option ) { return '' !== option.label.trim(); } );
+	}
+
 	YP.views.settings = function ( viewEl ) {
 		viewEl.innerHTML = '<p class="yp-app__intro">Loading settings&hellip;</p>';
 
@@ -146,6 +181,17 @@
 					// by hand (Settings → API → Webhooks) if that didn't take.
 					'<p class="yp-panel__hint">Tracking webhook endpoint (auto-registers with Shippo when you save an API token above; event type <code>track_updated</code>): <code>' + YP.escapeHtml( settings.shippo_webhook_url ) + '</code></p>' +
 					( settings.shippo_webhook_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.shippo_webhook_status ) + '</p>' : '' ) +
+				'</div>' +
+
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Manual order shipping options</h2></div>' +
+					'<p class="yp-panel__hint">Direct request: "I don’t need to rate shop to add shipping, just use my default shipping options." Staff pick one of these flat rates on the Manual Order screen instead of live rate-shopping — works whether or not Shippo above is configured.</p>' +
+					'<table class="yp-tier-table"><thead><tr><th>Label</th><th>Price</th><th></th></tr></thead>' +
+						'<tbody data-yp-shipping-option-rows>' +
+							( settings.manual_order_shipping_options || [] ).map( manualOrderShippingOptionRowHtml ).join( '' ) +
+						'</tbody>' +
+					'</table>' +
+					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-shipping-option>+ Add shipping option</button>' +
 				'</div>';
 
 			var integrationsHtml =
@@ -248,6 +294,13 @@
 				preview: viewEl.querySelector( '[data-yp-splash-preview]' )
 			} );
 
+			var shippingOptionRows = viewEl.querySelector( '[data-yp-shipping-option-rows]' );
+			wireRemoveShippingOptionRows( shippingOptionRows );
+			viewEl.querySelector( '[data-yp-add-shipping-option]' ).addEventListener( 'click', function () {
+				shippingOptionRows.insertAdjacentHTML( 'beforeend', manualOrderShippingOptionRowHtml( null ) );
+				wireRemoveShippingOptionRows( shippingOptionRows );
+			} );
+
 			viewEl.querySelector( '[data-yp-save]' ).addEventListener( 'click', save );
 		}
 
@@ -278,6 +331,7 @@
 				shippo_default_length_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-length' ).value ) || 8,
 				shippo_default_width_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-width' ).value ) || 6,
 				shippo_default_height_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-height' ).value ) || 1,
+				manual_order_shipping_options: readShippingOptionRows( viewEl.querySelector( '[data-yp-shipping-option-rows]' ) ),
 				contact_recipient_email: viewEl.querySelector( '#yp-set-contact-email' ).value,
 				splash_enabled: viewEl.querySelector( '#yp-set-splash-enabled' ).checked,
 				splash_image_id: parseInt( viewEl.querySelector( '[data-yp-splash-id]' ).value, 10 ) || 0,

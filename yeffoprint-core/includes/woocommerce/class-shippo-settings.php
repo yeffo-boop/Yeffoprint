@@ -38,6 +38,18 @@ class YeffoPrint_Shippo_Settings {
 	public const DEFAULT_HEIGHT_IN_OPTION = 'yeffoprint_shippo_default_height_in';
 	public const SHIP_FROM_PHONE_OPTION   = 'yeffoprint_shippo_ship_from_phone';
 
+	/**
+	 * Manual order creation's preset shipping methods — direct request:
+	 * "I don't need to rate shop to add shipping, just use my default
+	 * shipping options." Lives here beside the rest of the shipping
+	 * config even though it's a deliberate Shippo *bypass*, not a Shippo
+	 * API concept — a flat, admin-edited {label, amount} list staff pick
+	 * from directly on the Manual Order screen instead of live rate-
+	 * shopping, since the owner already knows what they charge for each
+	 * service without needing a live quote per order.
+	 */
+	public const MANUAL_ORDER_SHIPPING_OPTIONS_OPTION = 'yeffoprint_manual_order_shipping_options';
+
 	// A padded 8x6 bubble mailer with a few sheets of vinyl labels inside —
 	// direct answer, "not sure how much the envelope weighs" — a starting
 	// point meant to be corrected in Settings once a real package has been
@@ -46,6 +58,13 @@ class YeffoPrint_Shippo_Settings {
 	private const DEFAULT_LENGTH_IN = 8.0;
 	private const DEFAULT_WIDTH_IN  = 6.0;
 	private const DEFAULT_HEIGHT_IN = 1.0;
+
+	// Seeded from the site owner's own actual rates, direct request.
+	private const DEFAULT_MANUAL_ORDER_SHIPPING_OPTIONS = [
+		[ 'label' => 'USPS Ground Advantage', 'amount' => 6.00 ],
+		[ 'label' => 'UPS 2nd Day Air', 'amount' => 25.00 ],
+		[ 'label' => 'USPS First Class International', 'amount' => 25.00 ],
+	];
 
 	public static function get_api_key(): string {
 		$key = get_option( self::API_KEY_OPTION, '' );
@@ -65,6 +84,36 @@ class YeffoPrint_Shippo_Settings {
 			'width_in'  => (float) get_option( self::DEFAULT_WIDTH_IN_OPTION, self::DEFAULT_WIDTH_IN ),
 			'height_in' => (float) get_option( self::DEFAULT_HEIGHT_IN_OPTION, self::DEFAULT_HEIGHT_IN ),
 		];
+	}
+
+	/** @return array<int, array{label:string, amount:float}> */
+	public static function get_manual_order_shipping_options(): array {
+		$stored = get_option( self::MANUAL_ORDER_SHIPPING_OPTIONS_OPTION, null );
+		if ( ! is_array( $stored ) ) {
+			return self::DEFAULT_MANUAL_ORDER_SHIPPING_OPTIONS;
+		}
+
+		return self::sanitize_manual_order_shipping_options( $stored );
+	}
+
+	/** Shared by get_manual_order_shipping_options() (reading whatever's already stored) and class-admin-settings-controller.php's own save handler (sanitizing a fresh submission before it's stored) — one validation rule, not two. @return array<int, array{label:string, amount:float}> */
+	public static function sanitize_manual_order_shipping_options( array $raw ): array {
+		$options = [];
+
+		foreach ( $raw as $option ) {
+			if ( ! is_array( $option ) ) {
+				continue;
+			}
+
+			$label = sanitize_text_field( (string) ( $option['label'] ?? '' ) );
+			if ( '' === $label ) {
+				continue;
+			}
+
+			$options[] = [ 'label' => $label, 'amount' => max( 0.0, (float) ( $option['amount'] ?? 0 ) ) ];
+		}
+
+		return $options;
 	}
 
 	/**
