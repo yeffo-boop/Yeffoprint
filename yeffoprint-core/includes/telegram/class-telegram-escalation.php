@@ -16,8 +16,9 @@
  * to the literal placeholder "Website visitor" there, since a browser
  * chat session has no name or username to read. confirm() below adds a
  * third step for exactly that gap: unless the chat is a linked Telegram
- * account with a real email already on file, it asks for one before
- * ever forwarding anything.
+ * account with a real email already on file, it asks for a name and an
+ * email or Telegram handle before ever forwarding anything — direct
+ * follow-up specified name + email/handle rather than a phone number.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -78,14 +79,14 @@ class YeffoPrint_Telegram_Escalation {
 		}
 
 		set_transient( self::contact_key( $chat_id ), $message, self::PENDING_TTL );
-		return __( "What's the best email or phone number to reach you at? Our team will follow up there.", 'yeffoprint-core' );
+		return __( "What's your name, and your email or Telegram handle? Our team will follow up there.", 'yeffoprint-core' );
 	}
 
-	/** The customer's reply to confirm()'s own prompt above — sent as-is, no format validation (an email, a phone number, "text me at ..." are all fine, since the owner reads this themselves). */
+	/** The customer's reply to confirm()'s own prompt above — sent as-is, no format validation (a name plus an email or @handle, all in one message, is exactly what's asked for and expected here, since the owner reads this themselves). */
 	public static function capture_contact( int $chat_id, array $from, string $contact ): string {
 		$contact = trim( $contact );
 		if ( '' === $contact ) {
-			return __( "I didn't catch that — what's the best email or phone number to reach you at?", 'yeffoprint-core' );
+			return __( "I didn't catch that — what's your name, and your email or Telegram handle?", 'yeffoprint-core' );
 		}
 
 		$message = (string) get_transient( self::contact_key( $chat_id ) );
