@@ -552,7 +552,13 @@
 					var checkedAgo = timeAgoLabel( pkg.tracking_checked_at );
 					return (
 						'<tr>' +
-							'<td><a href="' + YP.escapeAttr( pkg.edit_url ) + '">' + YP.escapeHtml( pkg.order_label ) + '</a></td>' +
+							// Direct report: clicking an order here used to link straight to the
+							// classic WooCommerce edit screen instead of this dashboard's own
+							// order-detail drawer (which is where the Shippo "reprint label" panel
+							// lives) — a button wired to the same [data-yp-wc-order] handler the
+							// Pending Orders panel's rows already use (bound below) instead of a
+							// plain <a href="edit_url">.
+							'<td><button type="button" class="yp-row-action" style="padding:0;font-weight:600;" data-yp-wc-order="' + pkg.id + '">' + YP.escapeHtml( pkg.order_label ) + '</button></td>' +
 							'<td>' + YP.escapeHtml( pkg.customer || '—' ) + '</td>' +
 							'<td><span class="yp-chip">' + YP.escapeHtml( pkg.carrier_label || '—' ) + '</span></td>' +
 							'<td>' + tracking + '</td>' +
@@ -976,6 +982,33 @@
 	 * text and the confirm() in bindShippoPanel() below both make explicit
 	 * before it fires.
 	 */
+	/**
+	 * Direct request: "need the ability to go back and print the label
+	 * later." Renders every label already on order.shippo_labels
+	 * (class-admin-order-controller.php's detail_payload(), sourced from
+	 * YeffoPrint_Order_Tracking::get_shippo_labels()) as a plain reprint
+	 * list — separate from the "Label purchased" confirmation message
+	 * purchaseShippoLabel() below shows, which only exists for the
+	 * duration of the drawer session a label was bought in.
+	 */
+	function shippoLabelsListHtml( labels ) {
+		if ( ! labels.length ) {
+			return '';
+		}
+		return (
+			'<div class="yp-panel__hint" style="margin:0 0 0.75rem;"><strong>Purchased labels</strong></div>' +
+			'<ul class="yp-shippo-labels-list" style="margin:0 0 0.75rem;padding-left:1.1rem;">' +
+				labels.map( function ( label ) {
+					return (
+						'<li>' + YP.escapeHtml( label.carrier_label ) + ' — ' + YP.escapeHtml( label.tracking_number ) +
+							' — <a href="' + YP.escapeAttr( label.label_url ) + '" target="_blank" rel="noopener">Print</a>' +
+						'</li>'
+					);
+				} ).join( '' ) +
+			'</ul>'
+		);
+	}
+
 	function shippoPanelHtml( order ) {
 		if ( ! order.shippo_configured ) {
 			return (
@@ -991,6 +1024,7 @@
 		return (
 			'<div class="yp-panel" data-yp-shippo-panel>' +
 				'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
+				'<div data-yp-shippo-labels>' + shippoLabelsListHtml( order.shippo_labels || [] ) + '</div>' +
 				'<p class="yp-panel__hint">Comparing rates below is free. Purchasing a label is a real charge against your Shippo balance/carrier accounts.</p>' +
 				'<div class="yp-shippo-dims">' +
 					'<div class="yp-field"><label for="yp-shippo-weight">Weight (oz)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-weight" value="' + YP.escapeAttr( pkg.weight_oz ) + '" /></div>' +
@@ -1224,6 +1258,28 @@
 					'</p>';
 				panel.querySelector( '[data-yp-shippo-rates]' ).innerHTML = '';
 				order.status = response.status;
+
+				// Direct request: "can it automatically open the label in a new tab to
+				// print?" — same URL the "Print label" link above already points to, just
+				// opened immediately instead of waiting for a click. Browsers only allow
+				// window.open() unprompted from a real click handler, which this is (the
+				// "Purchase Selected Label" click that kicked off this request).
+				if ( response.label.label_url ) {
+					window.open( response.label.label_url, '_blank', 'noopener' );
+				}
+
+				// Direct request: "need the ability to go back and print the label
+				// later." Folds the new label into the reprint list (shippoLabelsListHtml())
+				// right away, so it's there without waiting on a fresh drawer open/re-fetch.
+				order.shippo_labels = ( order.shippo_labels || [] ).concat( [ {
+					carrier_label:    response.label.carrier_label,
+					tracking_number:  response.label.tracking_number,
+					label_url:        response.label.label_url
+				} ] );
+				var labelsListEl = panel.querySelector( '[data-yp-shippo-labels]' );
+				if ( labelsListEl ) {
+					labelsListEl.innerHTML = shippoLabelsListHtml( order.shippo_labels );
+				}
 				// Status now lives in the grid's other column (see
 				// renderWcOrderDetail()'s two-column layout) — walking up
 				// to the shared drawer body ([data-yp-body]) rather than

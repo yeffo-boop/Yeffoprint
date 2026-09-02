@@ -175,6 +175,11 @@ class YeffoPrint_Admin_Order_Controller {
 			// alongside it a bit." Shown next to, not instead of, the row above.
 			'shippo_configured'        => YeffoPrint_Shippo_Settings::is_configured(),
 			'shippo_default_package'   => YeffoPrint_Shippo_Settings::get_default_package(),
+			// Direct request: "need the ability to go back and print the label later." Every
+			// Shippo label already purchased on this order, printable link included, so the panel
+			// can offer a reprint regardless of whether it was purchased in this drawer session or
+			// a previous one.
+			'shippo_labels'            => YeffoPrint_Order_Tracking::get_shippo_labels( $order ),
 			// Direct request: "can we add the rewards info to this screen... how many points this
 			// order will receive (or has received)?" Same processed-vs-pending distinction as the
 			// classic order screen's own "Rewards Points" meta box (class-rewards-order-box.php) —

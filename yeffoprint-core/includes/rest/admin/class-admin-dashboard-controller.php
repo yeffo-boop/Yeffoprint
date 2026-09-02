@@ -168,6 +168,11 @@ class YeffoPrint_Admin_Dashboard_Controller {
 				$status = YeffoPrint_Order_Delivery_Status::get_status( $order, $shipment['tracking_number'] );
 
 				$rows[] = [
+					// Direct report: clicking an order here landed on the classic WooCommerce
+					// edit screen instead of this dashboard's own order-detail drawer — 'id'
+					// (same field pending_wc_orders() rows already carry) is what the frontend's
+					// existing [data-yp-wc-order] click handler needs to open that drawer instead.
+					'id'                          => $order->get_id(),
 					/* translators: %s: order number */
 					'order_label'                 => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
 					'customer'                    => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
