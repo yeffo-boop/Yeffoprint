@@ -71,6 +71,17 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			'callback'            => [ $this, 'verify_address' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		// Direct request: "can it pull their existing address from their
+		// profile if it has it filled out?" — fetched once, right when
+		// staff pick an existing customer (not folded into search_customers()
+		// above, which runs on every keystroke against up to 20 results at
+		// once — this is one lookup for the one customer actually chosen).
+		register_rest_route( self::NAMESPACE, '/admin/manual-orders/customer/(?P<id>\d+)/address', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'customer_address' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
 	}
 
 	/** @return \WP_REST_Response */
@@ -192,6 +203,43 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		}
 
 		return rest_ensure_response( $result );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function customer_address( \WP_REST_Request $request ) {
+		$user_id = absint( $request['id'] );
+		$user    = get_user_by( 'id', $user_id );
+		if ( ! $user ) {
+			return new \WP_Error( 'yeffoprint_invalid_customer', __( 'That customer could not be found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		$customer = new \WC_Customer( $user_id );
+
+		return rest_ensure_response( [
+			'shipping' => $this->customer_half_address( $customer, 'shipping' ),
+			'billing'  => $this->customer_half_address( $customer, 'billing' ),
+		] );
+	}
+
+	/** One half (shipping or billing) of a WC_Customer's saved address, in this screen's own form shape — null when that half has no street address on file at all, so the caller can tell "nothing saved" from "saved, just blank fields." */
+	private function customer_half_address( \WC_Customer $customer, string $type ): ?array {
+		$getter = static fn( string $field ) => $customer->{"get_{$type}_{$field}"}();
+
+		if ( '' === trim( (string) $getter( 'address_1' ) ) ) {
+			return null;
+		}
+
+		return [
+			'first_name' => (string) $getter( 'first_name' ),
+			'last_name'  => (string) $getter( 'last_name' ),
+			'address_1'  => (string) $getter( 'address_1' ),
+			'address_2'  => (string) $getter( 'address_2' ),
+			'city'       => (string) $getter( 'city' ),
+			'state'      => (string) $getter( 'state' ),
+			'postcode'   => (string) $getter( 'postcode' ),
+			'country'    => (string) $getter( 'country' ),
+			'phone'      => (string) $getter( 'phone' ),
+		];
 	}
 
 	/** Same shape as class-admin-shippo-controller.php's own client() — a token check first, so a missing Shippo token reads as one clear message instead of an API-call failure. @return YeffoPrint_Shippo_Client|\WP_Error */
