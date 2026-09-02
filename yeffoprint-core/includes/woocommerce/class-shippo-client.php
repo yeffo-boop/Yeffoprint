@@ -244,7 +244,7 @@ class YeffoPrint_Shippo_Client {
 	public function purchase_label( string $rate_id ) {
 		$response = $this->call( 'POST', '/transactions/', [
 			'rate'            => $rate_id,
-			'label_file_type' => 'PDF',
+			'label_file_type' => 'PDF_4x6',
 			'async'           => false,
 		] );
 
