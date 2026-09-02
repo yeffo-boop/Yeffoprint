@@ -176,6 +176,46 @@ class YeffoPrint_Order_Tracking {
 	}
 
 	/**
+	 * Every still-valid Shippo-purchased label on this order, with the
+	 * actual printable PDF link (`label_url`) — deliberately separate
+	 * from get_shipments() above, which drops that field since it's
+	 * built for the customer-facing carrier tracking link instead.
+	 * Direct request: staff need to come back and reprint a label after
+	 * the purchase-confirmation panel that showed it is long gone (e.g.
+	 * reopening the order detail drawer later, or from a different
+	 * browser tab), so this is read straight off the stored label
+	 * records rather than anything session-scoped.
+	 *
+	 * @return array{carrier_label:string,tracking_number:string,label_url:string}[]
+	 */
+	public static function get_shippo_labels( \WC_Order $order ): array {
+		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
+		if ( ! is_array( $labels ) ) {
+			return [];
+		}
+
+		$result = [];
+		foreach ( $labels as $label ) {
+			if ( ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'] ) {
+				continue;
+			}
+			$label_url = trim( (string) ( $label['label_url'] ?? '' ) );
+			if ( '' === $label_url ) {
+				continue;
+			}
+
+			$carrier_id = sanitize_key( (string) ( $label['carrier_id'] ?? '' ) );
+			$result[]   = [
+				'carrier_label'   => self::carrier_label( $carrier_id ),
+				'tracking_number' => (string) ( $label['tracking'] ?? '' ),
+				'label_url'       => $label_url,
+			];
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Writes this order's current shipments into TRACKING_INDEX_META,
 	 * skipping any tracking number already indexed (checked against the
 	 * existing rows, not overwritten) so calling this repeatedly — every
