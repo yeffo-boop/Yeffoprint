@@ -1,0 +1,6 @@
+# Real per-machine config (WooCommerce API key, GitHub token) - never commit.
+PackingSlipConfig.ps1
+
+# Runtime state/logs, unique to each machine running the script.
+OrderState.json
+PackingSlips.log
