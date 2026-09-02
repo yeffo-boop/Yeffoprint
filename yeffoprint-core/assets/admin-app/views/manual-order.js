@@ -859,6 +859,7 @@
 					button.addEventListener( 'click', function () {
 						state.selectedCustomer = results[ index ];
 						renderCustomerPicker();
+						prefillAddressFromCustomer( results[ index ].id );
 					} );
 				} );
 			}
@@ -958,6 +959,63 @@
 				.forEach( function ( field ) {
 					target[ field.getAttribute( 'data-yp-address-field' ) ] = field.value;
 				} );
+		}
+
+		/** Rebuilds just the Shipping & billing panel's own markup in place — used after prefillAddressFromCustomer() below updates state.shipping, without touching (or losing typed-in progress in) the order-type-specific panel above the fold. */
+		function refreshShippingPanel() {
+			var panel = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			if ( ! panel ) {
+				return;
+			}
+			panel.outerHTML = shippingPanelHtml();
+			bindShippingPanel();
+			renderVerifyResult();
+		}
+
+		/**
+		 * Direct request: "can it pull their existing address from their
+		 * profile if it has it filled out? I'd still like the opportunity
+		 * to edit it if necessary, but if it's there it should pull it."
+		 * Fired the moment staff pick an existing customer (not folded into
+		 * the search-as-you-type results themselves, which would mean
+		 * fetching an address for every result on every keystroke instead
+		 * of the one customer actually chosen).
+		 *
+		 * The Shipping field prefers the account's saved shipping address,
+		 * falling back to its billing address when only that's on file —
+		 * the common case for a customer who's only ever entered one
+		 * address at checkout, and this business cares about where the
+		 * label/sticker order actually ships. The separate Billing section
+		 * only switches on when the account has *both* halves saved *and*
+		 * they're actually different; a customer with just one address (or
+		 * two identical ones) stays on the simpler single-address view,
+		 * same as this screen's own default for an address typed fresh.
+		 */
+		function prefillAddressFromCustomer( customerId ) {
+			YP.request( coreEndpoint( 'admin/manual-orders/customer/' + customerId + '/address' ) )
+				.then( function ( result ) {
+					var shipping = result.shipping || result.billing;
+
+					if ( shipping ) {
+						state.shipping.address = shipping;
+					}
+
+					if ( result.shipping && result.billing && addressesDiffer( result.shipping, result.billing ) ) {
+						state.shipping.billingAddress = result.billing;
+						state.shipping.billingDiffers = true;
+					}
+
+					refreshShippingPanel();
+				} )
+				.catch( function () {
+					// No saved address, or the lookup failed — leave the
+					// fields exactly as they were (blank, ready to type
+					// into), same as picking a customer with none on file.
+				} );
+		}
+
+		function addressesDiffer( a, b ) {
+			return Object.keys( a ).some( function ( key ) { return ( a[ key ] || '' ) !== ( b[ key ] || '' ); } );
 		}
 
 		function bindShippingPanel() {

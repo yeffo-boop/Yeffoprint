@@ -44,17 +44,30 @@
  * emails, the customization display on the order screen) keeps working
  * unmodified.
  *
- * Shipping/billing address + shipping cost (this revision) — direct
- * request: "I need the ability to verify the shipping/billing address
- * for the customer before finalizing, also need to be able to select a
- * shipping method so shipping can be added to the invoice." Both the
- * address verification and the rate-shopping happen client-side against
- * class-admin-manual-order-controller.php's own /admin/manual-orders/
- * verify-address and /shipping-rates routes *before* this method is ever
- * called — this class only receives the already-chosen address and
- * shipping rate, applies the address to the order's own shipping/billing
- * fields, and adds the rate as a real WC_Order_Item_Shipping line item.
- * See sanitize_address() and add_shipping_line() below.
+ * Shipping/billing address + shipping cost — direct request: "I need
+ * the ability to verify the shipping/billing address for the customer
+ * before finalizing, also need to be able to select a shipping method
+ * so shipping can be added to the invoice." Address verification
+ * happens client-side against class-admin-manual-order-controller.php's
+ * own /admin/manual-orders/verify-address route *before* this method is
+ * ever called; the shipping method is a flat admin-edited preset picked
+ * client-side too (Settings → Shipping → "Manual order shipping
+ * options," no live rate-shop). This class only receives the
+ * already-chosen address and shipping-method payload, applies the
+ * address to the order's own shipping/billing fields, and adds the
+ * method as a real WC_Order_Item_Shipping line item. See
+ * sanitize_address() and add_shipping_line() below.
+ *
+ * Customer address prefill + save-back (this revision) — direct
+ * follow-up: "can it pull their existing address from their profile if
+ * it has it filled out? ... if they dont have one, when I key it into
+ * that order, it should update their account with their address for
+ * future use." The prefill half lives client-side
+ * (class-admin-manual-order-controller.php's own /admin/manual-orders/
+ * customer/{id}/address route, fetched the moment staff pick an
+ * existing customer) — this class only handles the other direction,
+ * writing the address back onto the customer's own WooCommerce account
+ * once the order is built, via maybe_save_address_to_profile() below.
  *
  * "Requires proof approval" is not a separate feature bolted on here —
  * it's the same seam `submit()` already relies on:
@@ -210,6 +223,14 @@ class YeffoPrint_Manual_Order_Creator {
 			$order->set_billing_country( $billing_address['country'] );
 			$order->set_billing_phone( $billing_address['phone'] );
 		}
+
+		// Direct request: "if they dont have one, when I key it into that
+		// order, it should update their account with their address for
+		// future use." Only ever fills a gap — never overwrites an address
+		// already on the customer's account, since staff typing a
+		// different one for this particular order (a gift, a one-off
+		// destination) isn't necessarily meant to replace their usual one.
+		self::maybe_save_address_to_profile( $customer->ID, $shipping_address, $billing_address );
 
 		$order_type_to_shell_type = [
 			'custom_design' => 'label',
@@ -835,5 +856,56 @@ class YeffoPrint_Manual_Order_Creator {
 		$item->set_method_id( 'yeffoprint_shippo' );
 		$item->set_total( $amount );
 		$order->add_item( $item );
+	}
+
+	/**
+	 * Direct request: "if they dont have one, when I key it into that
+	 * order, it should update their account with their address for
+	 * future use." Fills in whichever half (shipping/billing) of the
+	 * customer's own WooCommerce address is currently empty — never
+	 * overwrites a half that's already on file, since staff typing a
+	 * different address for this one order (a gift, a one-off
+	 * destination) isn't necessarily meant to replace the customer's
+	 * usual saved address. A brand-new customer (resolve_or_create_
+	 * customer() above) always has both halves empty, so this always
+	 * saves for them.
+	 */
+	private static function maybe_save_address_to_profile( int $user_id, ?array $shipping_address, ?array $billing_address ): void {
+		if ( ! $shipping_address && ! $billing_address ) {
+			return;
+		}
+
+		$customer = new \WC_Customer( $user_id );
+		$changed  = false;
+
+		if ( $shipping_address && '' === trim( $customer->get_shipping_address_1() ) ) {
+			$customer->set_shipping_first_name( $shipping_address['first_name'] );
+			$customer->set_shipping_last_name( $shipping_address['last_name'] );
+			$customer->set_shipping_address_1( $shipping_address['address_1'] );
+			$customer->set_shipping_address_2( $shipping_address['address_2'] );
+			$customer->set_shipping_city( $shipping_address['city'] );
+			$customer->set_shipping_state( $shipping_address['state'] );
+			$customer->set_shipping_postcode( $shipping_address['postcode'] );
+			$customer->set_shipping_country( $shipping_address['country'] );
+			$customer->set_shipping_phone( $shipping_address['phone'] );
+			$changed = true;
+		}
+
+		if ( $billing_address && '' === trim( $customer->get_billing_address_1() ) ) {
+			$customer->set_billing_first_name( $billing_address['first_name'] );
+			$customer->set_billing_last_name( $billing_address['last_name'] );
+			$customer->set_billing_address_1( $billing_address['address_1'] );
+			$customer->set_billing_address_2( $billing_address['address_2'] );
+			$customer->set_billing_city( $billing_address['city'] );
+			$customer->set_billing_state( $billing_address['state'] );
+			$customer->set_billing_postcode( $billing_address['postcode'] );
+			$customer->set_billing_country( $billing_address['country'] );
+			$customer->set_billing_phone( $billing_address['phone'] );
+			$changed = true;
+		}
+
+		if ( $changed ) {
+			$customer->save();
+		}
 	}
 }
