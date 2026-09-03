@@ -14,7 +14,9 @@
  *    than the global `upload_mimes` filter, and every accepted SVG is
  *    parsed and stripped of scripts/handlers/foreignObject before
  *    being stored. If it doesn't parse as valid XML, it's rejected —
- *    we can't sanitize what we can't inspect.
+ *    we can't sanitize what we can't inspect. That `mimes` override
+ *    alone isn't the whole story, though — see trust_svg_extension()
+ *    below for the second, independent core check it doesn't cover.
  * 2. A configurable max file size and file count, since this is
  *    customer-facing, unauthenticated (guest) upload — the kind of
  *    endpoint abuse tries first.
@@ -76,7 +78,26 @@ class YeffoPrint_Secure_Upload {
 			'mimes'     => self::ALLOWED_MIMES,
 		];
 
+		// wp_handle_upload() runs a second, independent check beyond the
+		// `mimes` override just above: WP core's own wp_check_filetype_and_ext()
+		// tries to confirm anything whose extension maps to an image/*
+		// type is really a raster image (wp_get_image_mime(), backed by
+		// exif_imagetype()/getimagesize()). SVG is vector/XML, not a
+		// raster format those functions can recognize at all, so that
+		// sniff always comes back empty for a perfectly valid SVG — and
+		// core treats "couldn't confirm this is really an image" as
+		// grounds to zero out the file's type/extension and reject the
+		// upload outright, regardless of `mimes` correctly listing .svg.
+		// Direct report: "I need to be able to accept svg files... it's
+		// not accepted" — this is that gap; every "enable SVG uploads"
+		// implementation has to work around it the same way, via this
+		// same core filter. Added/removed around this one call only, so
+		// it never affects any other upload on the site (media library,
+		// another plugin) — same "scoped to this one flow" reasoning as
+		// the `mimes` override right above it.
+		add_filter( 'wp_check_filetype_and_ext', [ __CLASS__, 'trust_svg_extension' ], 10, 4 );
 		$uploaded = wp_handle_upload( $file, $overrides );
+		remove_filter( 'wp_check_filetype_and_ext', [ __CLASS__, 'trust_svg_extension' ], 10 );
 
 		if ( isset( $uploaded['error'] ) ) {
 			return new \WP_Error( 'yeffoprint_invalid_file', $uploaded['error'] );
@@ -104,6 +125,25 @@ class YeffoPrint_Secure_Upload {
 		}
 
 		return $attachment_id;
+	}
+
+	/**
+	 * @see the call site in handle() above for why this exists. Only
+	 * ever touches a file whose declared extension is exactly .svg —
+	 * every other extension's result from core's own check passes
+	 * through untouched. The uploaded content itself still goes through
+	 * looks_like_svg()/sanitize_svg_file() below regardless of what this
+	 * returns, so this only restores SVG's normal *extension* handling —
+	 * it grants no exemption from this class's own content validation.
+	 */
+	public static function trust_svg_extension( array $data, string $file, string $filename, $mimes ): array {
+		if ( 'svg' === strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) ) ) {
+			$data['ext']             = 'svg';
+			$data['type']            = 'image/svg+xml';
+			$data['proper_filename'] = $data['proper_filename'] ?: $filename;
+		}
+
+		return $data;
 	}
 
 	/**
