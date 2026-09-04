@@ -180,6 +180,18 @@ class YeffoPrint_Order_Delivery_Status {
 			}
 		}
 
+		// Direct bug report: "the site isn't marking orders completed once
+		// tracking shows it's been delivered." update_status() below calls
+		// save(), which re-fires class-order-shipment-status.php's own
+		// maybe_advance_to_shipped() — its fingerprint guard exists to undo
+		// WooCommerce Shipping's own premature auto-complete, and without
+		// this it can't tell that jump apart from this one, so it was
+		// silently reverting the completion back to "shipped" the instant
+		// it happened. Staging the current fingerprint first (see that
+		// method's own docblock) makes the guard recognize this as already
+		// reflected and leave it alone.
+		YeffoPrint_Order_Shipment_Status::record_current_fingerprint( $order );
+
 		$order->update_status(
 			'completed',
 			__( 'Every package on this order shows as delivered — automatically marked Completed.', 'yeffoprint-core' )

@@ -81,6 +81,19 @@ class YeffoPrint_Custom_Order_Meta {
 	 * every other entry point into this data shape.
 	 */
 	public const TEMPLATE_VARIANTS   = '_yp_co_template_variants';
+	/**
+	 * Template orders only — the yp_template's field schema, frozen at
+	 * the moment this shell was created (same shape and same reasoning
+	 * as the WC order item's own `_yp_template_snapshot.field_schema` —
+	 * class-order-item-meta.php). Without this, rendering a shell's
+	 * variants always meant re-reading the *current* live template
+	 * schema (YeffoPrint_Field_Schema::get()) — direct report: "I can't
+	 * see all of the customizations I entered in" — any field later
+	 * renamed, removed, or given a new id on that template silently
+	 * dropped its stored value from every past order's summary, since
+	 * the lookup only ever walked the schema as it exists *today*.
+	 */
+	public const TEMPLATE_FIELD_SCHEMA = '_yp_co_template_field_schema';
 	public const DESIGN_FEE          = '_yp_design_fee';
 	public const STATUS              = '_yp_status';
 	public const WC_ORDER_ID         = '_yp_wc_order_id';

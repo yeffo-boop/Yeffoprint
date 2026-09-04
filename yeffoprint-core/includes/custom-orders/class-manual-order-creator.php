@@ -381,6 +381,18 @@ class YeffoPrint_Manual_Order_Creator {
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SIZE_ID, $group['size_id'] );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, $group['material_id'] );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::TEMPLATE_VARIANTS, wp_json_encode( $group['variants'] ) );
+		// Frozen at creation time — see TEMPLATE_FIELD_SCHEMA's own
+		// docblock. Same YeffoPrint_Field_Schema::get() call the WC order
+		// item's own _yp_template_snapshot already makes (class-order-
+		// item-meta.php::snapshot()) — this just also keeps a copy on the
+		// yp_custom_order shell itself, since the admin-app's Custom
+		// Orders drawer reads straight off the shell rather than the (not
+		// yet created, for an order still awaiting payment) WC order item.
+		update_post_meta(
+			$custom_order_id,
+			YeffoPrint_Custom_Order_Meta::TEMPLATE_FIELD_SCHEMA,
+			wp_json_encode( $group['template_id'] ? YeffoPrint_Field_Schema::get( $group['template_id'] ) : [] )
+		);
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $group['instructions'] );
 	}
 
