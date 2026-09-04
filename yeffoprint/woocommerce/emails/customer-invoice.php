@@ -45,37 +45,43 @@ if ( ! empty( $order->get_billing_first_name() ) ) {
 <?php if ( $order->needs_payment() ) { ?>
 	<p>
 	<?php
+	// Direct request: "can you make the payment link more obvious?" — the
+	// sentence here now just sets context; the .yp-payment-cta card below
+	// (email-styles.php) carries the actual call to action, in the site's
+	// accent color, so it's the one thing on this email nothing else
+	// competes with for attention.
 	if ( $order->has_status( OrderStatus::FAILED ) ) {
 		printf(
-			wp_kses(
-			/* translators: %1$s Site title, %2$s Order pay link */
-				__( 'Sorry, your order on %1$s was unsuccessful. Your order details are below, with a link to try your payment again: %2$s', 'woocommerce' ),
-				array(
-					'a' => array(
-						'href' => array(),
-					),
-				)
-			),
-			esc_html( get_bloginfo( 'name', 'display' ) ),
-			'<a href="' . esc_url( $order->get_checkout_payment_url() ) . '" class="email-payment-link">' . esc_html__( 'Pay for this order', 'woocommerce' ) . '</a>'
+			/* translators: %s: Site title */
+			esc_html__( 'Sorry, your order on %s was unsuccessful. Here’s a summary of what’s included — use the button below to try your payment again.', 'yeffoprint' ),
+			esc_html( get_bloginfo( 'name', 'display' ) )
 		);
 	} else {
 		printf(
-			wp_kses(
-			/* translators: %1$s Site title, %2$s Order pay link */
-				__( 'An order has been created for you on %1$s. Your order details are below, with a link to make payment when you’re ready: %2$s', 'woocommerce' ),
-				array(
-					'a' => array(
-						'href' => array(),
-					),
-				)
-			),
-			esc_html( get_bloginfo( 'name', 'display' ) ),
-			'<a href="' . esc_url( $order->get_checkout_payment_url() ) . '" class="email-payment-link">' . esc_html__( 'Pay for this order', 'woocommerce' ) . '</a>'
+			/* translators: %s: Site title */
+			esc_html__( 'An order has been created for you on %s. Here’s a summary of what’s included — when you’re ready, use the button below to complete payment.', 'yeffoprint' ),
+			esc_html( get_bloginfo( 'name', 'display' ) )
 		);
 	}
 	?>
 	</p>
+
+	<table class="yp-payment-cta" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+		<tr><td>
+			<span class="yp-payment-cta-label"><?php esc_html_e( 'Amount due', 'yeffoprint' ); ?></span>
+			<span class="yp-payment-cta-amount"><?php echo wp_kses_post( wc_price( $order->get_total() ) ); ?></span>
+			<a class="yp-payment-cta-button" href="<?php echo esc_url( $order->get_checkout_payment_url() ); ?>"><?php esc_html_e( 'Pay for this order →', 'yeffoprint' ); ?></a>
+			<span class="yp-payment-cta-sub">
+				<?php
+				printf(
+					/* translators: %s: order number */
+					esc_html__( 'Order %s · secure checkout', 'yeffoprint' ),
+					esc_html( $order->get_order_number() )
+				);
+				?>
+			</span>
+		</td></tr>
+	</table>
 
 <?php } else { ?>
 	<p>

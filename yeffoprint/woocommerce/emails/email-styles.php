@@ -396,6 +396,143 @@ table.yp-email-callout p {
 	color: <?php echo esc_attr( $text ); ?>;
 }
 
+/* Payment CTA card (customer-invoice.php) — direct request: "can you
+   make the payment link more obvious?" Replaces a bare inline link
+   mid-paragraph with a dedicated card stating the amount due and a
+   button in the site's accent color, so payment is the one thing on the
+   email nothing else competes with for attention. */
+table.yp-payment-cta {
+	margin: 2px 0 22px;
+}
+
+table.yp-payment-cta > tbody > tr > td {
+	background-color: #FDF1F8;
+	border: 1px solid #F3C7E1;
+	border-radius: 10px;
+	padding: 20px;
+	text-align: center;
+}
+
+.yp-payment-cta-label {
+	display: block;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 0 0 6px;
+}
+
+.yp-payment-cta-amount {
+	display: block;
+	font-size: 28px;
+	font-weight: 700;
+	color: <?php echo esc_attr( $text ); ?>;
+	font-family: <?php echo $font_family; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+	margin: 0 0 14px;
+}
+
+a.yp-payment-cta-button {
+	display: inline-block;
+	background-color: <?php echo esc_attr( $link_color ); ?>;
+	color: #FFFFFF !important;
+	font-weight: 700;
+	font-size: 15px;
+	text-decoration: none;
+	padding: 13px 30px;
+	border-radius: 8px;
+	letter-spacing: .01em;
+}
+
+.yp-payment-cta-sub {
+	display: block;
+	font-size: 11.5px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 12px 0 0;
+}
+
+/* YeffoBot notice card (class-telegram-order-email-badge.php) — bigger
+   than .yp-email-callout above since it carries the mascot image
+   alongside two explained ways to reach the bot. Direct feedback on an
+   earlier draft: "it doesn't really explain what the links do, just
+   says telegram and web chat" — each option below is its own full-width
+   row with a bold action line plus a caption stating what happens. */
+table.yp-bot-callout {
+	margin: 0 0 22px;
+}
+
+table.yp-bot-callout > tbody > tr > td {
+	background-color: #FDF1F8;
+	border: 1px solid #F3C7E1;
+	border-radius: 12px;
+	padding: 18px;
+	text-align: <?php echo is_rtl() ? 'right' : 'left'; ?>;
+}
+
+.yp-bot-callout-head td {
+	padding: 0;
+}
+
+.yp-bot-callout-head img {
+	display: block;
+}
+
+.yp-bot-callout-eyebrow {
+	display: block;
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: <?php echo esc_attr( $link_color ); ?>;
+	font-weight: 700;
+	margin: 0 0 2px;
+}
+
+.yp-bot-callout-title {
+	display: block;
+	font-size: 15px;
+	font-weight: 700;
+	color: <?php echo esc_attr( $text ); ?>;
+	font-family: <?php echo $font_family; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+}
+
+.yp-bot-callout-intro {
+	font-size: 12px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 12px 0 10px;
+	line-height: 145%;
+}
+
+table.yp-bot-option {
+	margin: 8px 0 0;
+}
+
+table.yp-bot-option td {
+	background-color: #FFFFFF;
+	border: 1px solid <?php echo esc_attr( $border ); ?>;
+	border-radius: 9px;
+	padding: 10px 12px;
+}
+
+table.yp-bot-option a {
+	display: block;
+	text-decoration: none;
+}
+
+.yp-bot-option-title {
+	display: block;
+	font-size: 12.5px;
+	font-weight: 700;
+	color: <?php echo esc_attr( $text ); ?>;
+}
+
+.yp-bot-option-sub {
+	display: block;
+	font-size: 11px;
+	font-weight: normal;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin-top: 1px;
+}
+
 /* Per-label customization detail (class-order-item-meta.php's
    render_customization_email_fields()) — one box per "Customization"/
    "Label N (qty M)" variant, replacing the dense joined-string row WC's

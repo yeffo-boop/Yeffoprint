@@ -159,6 +159,9 @@ class YeffoPrint_Order_Tracking {
 			}
 
 			$carrier_id = sanitize_key( (string) ( $label['carrier_id'] ?? '' ) );
+			if ( '' === $carrier_id ) {
+				$carrier_id = self::guess_carrier_from_tracking_number( $tracking_number );
+			}
 
 			$shipments[] = [
 				'carrier_id'      => $carrier_id,
@@ -173,6 +176,35 @@ class YeffoPrint_Order_Tracking {
 
 	public static function carrier_label( string $carrier_id ): string {
 		return self::CARRIER_LABELS[ $carrier_id ] ?? strtoupper( $carrier_id );
+	}
+
+	/**
+	 * Fallback for a label whose `carrier_id` never got stored — direct
+	 * report: after purchase_label()'s own carrier-derivation bug was
+	 * fixed (see that method's own docblock — a rate-purchase response's
+	 * `rate` field is a plain id string, not the expanded object with a
+	 * `provider` field the rates *listing* returns), every label
+	 * purchased through Shippo *before* that fix already has an empty
+	 * carrier_id baked into SHIPPO_LABELS_META permanently — there's no
+	 * migration that can recover the real value after the fact without
+	 * re-hitting Shippo's API per label. A tracking number's own shape is
+	 * enough to tell USPS from UPS (the only two carriers this store
+	 * ships with — see CARRIER_LABELS above) without any lookup at all,
+	 * so this self-heals every already-broken record the moment it's
+	 * read, with no backfill script needed.
+	 */
+	private static function guess_carrier_from_tracking_number( string $tracking_number ): string {
+		$tracking_number = strtoupper( trim( $tracking_number ) );
+
+		if ( preg_match( '/^1Z[0-9A-Z]{16}$/', $tracking_number ) ) {
+			return 'ups';
+		}
+
+		if ( preg_match( '/^\d{20,22}$/', $tracking_number ) || preg_match( '/^[A-Z]{2}\d{9}US$/', $tracking_number ) ) {
+			return 'usps';
+		}
+
+		return '';
 	}
 
 	/**
@@ -204,10 +236,15 @@ class YeffoPrint_Order_Tracking {
 				continue;
 			}
 
-			$carrier_id = sanitize_key( (string) ( $label['carrier_id'] ?? '' ) );
-			$result[]   = [
+			$tracking_number = (string) ( $label['tracking'] ?? '' );
+			$carrier_id      = sanitize_key( (string) ( $label['carrier_id'] ?? '' ) );
+			if ( '' === $carrier_id ) {
+				$carrier_id = self::guess_carrier_from_tracking_number( $tracking_number );
+			}
+
+			$result[] = [
 				'carrier_label'   => self::carrier_label( $carrier_id ),
-				'tracking_number' => (string) ( $label['tracking'] ?? '' ),
+				'tracking_number' => $tracking_number,
 				'label_url'       => $label_url,
 			];
 		}
