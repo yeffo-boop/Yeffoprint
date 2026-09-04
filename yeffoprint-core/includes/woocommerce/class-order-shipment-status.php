@@ -120,7 +120,7 @@ class YeffoPrint_Order_Shipment_Status {
 			return;
 		}
 
-		$fingerprint = $this->fingerprint( $shipments );
+		$fingerprint = self::fingerprint( $shipments );
 		if ( $fingerprint === $order->get_meta( self::SHIPMENT_FINGERPRINT_META, true ) ) {
 			return; // Already reflected — this save is for something else entirely.
 		}
@@ -143,7 +143,42 @@ class YeffoPrint_Order_Shipment_Status {
 		$order->save();
 	}
 
-	private function fingerprint( array $shipments ): string {
+	private static function fingerprint( array $shipments ): string {
 		return md5( (string) wp_json_encode( array_column( $shipments, 'tracking_number' ) ) );
+	}
+
+	/**
+	 * Direct bug report: "the site isn't marking orders completed once
+	 * tracking shows it's been delivered." class-order-delivery-status.php's
+	 * own maybe_complete() calls $order->update_status( 'completed', ... )
+	 * once every shipment shows delivered — but that method's own save()
+	 * re-fires woocommerce_after_order_object_save, landing right back in
+	 * maybe_advance_to_shipped() above with the order now sitting on
+	 * 'completed'. That method's fingerprint guard exists specifically to
+	 * catch WooCommerce Shipping's own *premature* auto-complete (see its
+	 * own docblock) — it can't tell that jump apart from this store's own
+	 * legitimate, delivery-confirmed one unless the fingerprint it compares
+	 * against is already current. Whenever it wasn't (an order marked
+	 * Shipped by some path other than maybe_advance_to_shipped() itself —
+	 * e.g. a manual status change — never recorded one in the first place;
+	 * a later refunded/voided label changes the shipment list and so the
+	 * fingerprint, after the order was already Shipped), the guard failed
+	 * open and force-reverted the brand-new 'completed' status straight
+	 * back to 'shipped', silently undoing the auto-complete every time.
+	 *
+	 * class-order-delivery-status.php now calls this right before
+	 * update_status( 'completed' ) so the fingerprint it's about to
+	 * re-check is guaranteed current — staged onto the same in-memory
+	 * $order object, persisted by that same update_status() call's own
+	 * save(), regardless of whatever was (or wasn't) stored before.
+	 */
+	public static function record_current_fingerprint( \WC_Order $order ): void {
+		$shipments = YeffoPrint_Order_Tracking::get_shipments( $order );
+		if ( ! $shipments ) {
+			return;
+		}
+
+		$fingerprint = self::fingerprint( $shipments );
+		$order->update_meta_data( self::SHIPMENT_FINGERPRINT_META, $fingerprint );
 	}
 }

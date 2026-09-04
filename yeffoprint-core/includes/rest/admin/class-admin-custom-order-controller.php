@@ -221,7 +221,19 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			$raw_variants = (string) $m( YeffoPrint_Custom_Order_Meta::TEMPLATE_VARIANTS );
 			$variants     = $raw_variants ? json_decode( $raw_variants, true ) : null;
 			$variants     = is_array( $variants ) ? $variants : [];
-			$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+
+			// Direct report: "I can't see all of the customizations I
+			// entered in." Reads the field schema frozen at this shell's
+			// own creation time (TEMPLATE_FIELD_SCHEMA's own docblock)
+			// rather than the template's current live schema — a field
+			// later renamed/removed/re-ID'd on the template was silently
+			// dropping its stored value here, since the live schema no
+			// longer has a matching field to attach it to. Falls back to
+			// the live schema only for a shell created before this
+			// snapshot existed at all (no snapshot meta to read).
+			$raw_field_schema = (string) $m( YeffoPrint_Custom_Order_Meta::TEMPLATE_FIELD_SCHEMA );
+			$field_schema     = $raw_field_schema ? json_decode( $raw_field_schema, true ) : null;
+			$field_schema     = is_array( $field_schema ) ? $field_schema : ( $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [] );
 
 			$payload['template'] = [
 				'template_id'    => $template_id,
