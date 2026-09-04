@@ -472,17 +472,26 @@
 
 				applyPastOrderFields( data );
 
-				var overrides = { compound_strength: data.compound_strength || '' };
-				if ( data.size_id ) {
-					overrides.size_id = data.size_id;
-				}
-				if ( data.material_id ) {
-					overrides.material_id = data.material_id;
-				}
-				if ( data.quantity ) {
-					overrides.quantity = data.quantity;
-				}
-				batchRows = [ createRow( overrides ) ];
+				// Direct report: reordering a past design with more than
+				// one label row (different compound/strength combos) used
+				// to only bring back the first row — `data.batch` is now
+				// the past order's complete row list (server falls back to
+				// a single row for any order that predates batching), so
+				// every row it actually had comes back, not just one.
+				var rows = data.batch && data.batch.length ? data.batch : [ {} ];
+				batchRows = rows.map( function ( row ) {
+					var overrides = { compound_strength: row.compound_strength || '' };
+					if ( row.size_id ) {
+						overrides.size_id = row.size_id;
+					}
+					if ( row.material_id ) {
+						overrides.material_id = row.material_id;
+					}
+					if ( row.quantity ) {
+						overrides.quantity = row.quantity;
+					}
+					return createRow( overrides );
+				} );
 				renderBatch();
 
 				if ( checkEligibility ) {
