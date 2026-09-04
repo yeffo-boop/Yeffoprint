@@ -29,6 +29,15 @@
  * its own small preview wrapper (`POST /admin/manual-orders/sticker-
  * pricing-preview`, `POST /admin/manual-orders/template-pricing-preview`).
  * Order creation itself (`POST /admin/manual-orders`) is new for all three.
+ *
+ * Mixed orders (this revision) — direct request: "customers order
+ * custom design items mixed with template items... I need the
+ * ability... to order them at the same time." The three "Item types"
+ * buttons above toggle independently now instead of switching between
+ * mutually-exclusive tabs, so any combination's own fields panel (and
+ * own price preview) can be visible and filled in at once; submit()
+ * sends whichever are active as their own nested key in the request
+ * body instead of one order_type picking a single shape.
  */
 
 ( function () {
@@ -94,13 +103,25 @@
 		} );
 	}
 
+	// Direct request: "customers order custom design items mixed with
+	// template items... I need the ability... to order them at the same
+	// time." Every button here used to be a radio — exactly one active,
+	// switching state.orderType — now each toggles independently in
+	// state.activeTypes, and render() stacks every active type's own
+	// fields panel instead of picking just one.
+	var ORDER_TYPE_LABELS = {
+		custom_design: 'Custom Design',
+		sticker: 'Custom Sticker',
+		template: 'Template Label'
+	};
+
 	YP.views[ 'manual-order' ] = function ( viewEl ) {
 		var emptyAddress = function () {
 			return { first_name: '', last_name: '', address_1: '', address_2: '', city: '', state: '', postcode: '', country: 'US', phone: '' };
 		};
 
 		var state = {
-			orderType: 'custom_design',
+			activeTypes: { custom_design: true, sticker: false, template: false },
 			options: null, // custom-orders/options — Custom Design's own sizes/materials.
 			stickerOptions: null, // custom-stickers/options — Custom Stickers' own sizes/materials/types/shapes.
 			stickerUploads: [], // [{ name, id, error }] — same shape as the customer-facing form's own uploadedFiles.
@@ -141,16 +162,16 @@
 			} );
 
 		function render() {
+			var typeButtonsHtml = Object.keys( ORDER_TYPE_LABELS ).map( function ( type ) {
+				return '<button type="button" class="wp-block-button__link ' + ( state.activeTypes[ type ] ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="' + type + '">' + ORDER_TYPE_LABELS[ type ] + '</button>';
+			} ).join( '' );
+
 			viewEl.innerHTML =
-				'<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront.</p>' +
+				'<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' +
 
 				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Order type</h2></div>' +
-					'<div class="yp-form__actions">' +
-						'<button type="button" class="wp-block-button__link ' + ( 'custom_design' === state.orderType ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="custom_design">Custom Design</button>' +
-						'<button type="button" class="wp-block-button__link ' + ( 'sticker' === state.orderType ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="sticker">Custom Sticker</button>' +
-						'<button type="button" class="wp-block-button__link ' + ( 'template' === state.orderType ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="template">Template Label</button>' +
-					'</div>' +
+					'<div class="yp-panel__head"><h2>Item types</h2></div>' +
+					'<div class="yp-form__actions">' + typeButtonsHtml + '</div>' +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -160,20 +181,17 @@
 
 				shippingPanelHtml() +
 
-				( 'custom_design' === state.orderType ? customDesignFieldsHtml() : ( 'sticker' === state.orderType ? stickerFieldsHtml() : templateFieldsHtml() ) ) +
-
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Price</h2></div>' +
-					'<div data-yp-price-preview><p class="yp-field__hint">' + priceHintText() + '</p></div>' +
-				'</div>' +
+				( state.activeTypes.custom_design ? customDesignFieldsHtml() : '' ) +
+				( state.activeTypes.sticker ? stickerFieldsHtml() : '' ) +
+				( state.activeTypes.template ? templateFieldsHtml() : '' ) +
 
 				'<div class="yp-panel">' +
 					'<div class="yp-field yp-field--checkbox">' +
 						'<input type="checkbox" id="yp-mo-requires-proof" checked />' +
 						'<label for="yp-mo-requires-proof">Requires proof approval before printing</label>' +
 					'</div>' +
-					'<p class="yp-panel__hint">When checked, the customer gets a proof-approval link once staff upload a proof from the Custom Orders screen — same flow as an order placed on the storefront.</p>' +
-					( 'custom_design' === state.orderType ?
+					'<p class="yp-panel__hint">When checked, the customer gets a proof-approval link once staff upload a proof from the Custom Orders screen — same flow as an order placed on the storefront. Each item type above gets its own proof to approve.</p>' +
+					( state.activeTypes.custom_design ?
 						'<div class="yp-field yp-field--checkbox">' +
 							'<input type="checkbox" id="yp-mo-waive-fee" />' +
 							'<label for="yp-mo-waive-fee">Waive the ' + ( state.options && state.options.design_fee ? state.options.design_fee : 'design' ) + ' fee</label>' +
@@ -193,7 +211,7 @@
 			renderCustomerPicker();
 			bindShippingPanel();
 			// render() rebuilds the shipping panel's HTML from scratch (e.g.
-			// on every order-type switch) with an empty verify-result
+			// on every item-type toggle) with an empty verify-result
 			// container — state.shipping itself survives that rebuild (see
 			// its own docblock above; the shipping-method <select> reads its
 			// own selected option straight from that state when the markup
@@ -201,20 +219,22 @@
 			renderVerifyResult();
 
 			viewEl.querySelectorAll( '[data-yp-order-type]' ).forEach( function ( button ) {
-				if ( button.disabled ) {
-					return;
-				}
 				button.addEventListener( 'click', function () {
 					var type = button.getAttribute( 'data-yp-order-type' );
-					if ( type === state.orderType ) {
+					var activeCount = Object.keys( state.activeTypes ).filter( function ( t ) { return state.activeTypes[ t ]; } ).length;
+					// Always leave at least one type active — an empty
+					// order has nothing for pricing/submit to work with,
+					// same "never remove the last one" rule batch/variant
+					// rows already enforce (wireRemoveButtons() above).
+					if ( state.activeTypes[ type ] && activeCount <= 1 ) {
 						return;
 					}
-					state.orderType = type;
+					state.activeTypes[ type ] = ! state.activeTypes[ type ];
 					render();
 				} );
 			} );
 
-			if ( 'custom_design' === state.orderType ) {
+			if ( state.activeTypes.custom_design ) {
 				var batchBody = viewEl.querySelector( '[data-yp-batch]' );
 				wireRemoveButtons( batchBody, refreshPricePreview );
 
@@ -233,13 +253,17 @@
 					waiveFeeToggle._wired = true;
 					waiveFeeToggle.addEventListener( 'change', refreshPricePreview );
 				}
-			} else if ( 'sticker' === state.orderType ) {
+			}
+
+			if ( state.activeTypes.sticker ) {
 				bindStickerChangeListeners();
 				wireStickerUploads();
 				renderStickerFileList();
 				toggleStickerCustomDimensions();
 				refreshStickerPricePreview();
-			} else {
+			}
+
+			if ( state.activeTypes.template ) {
 				renderTemplatePanel();
 				if ( state.templateData ) {
 					bindTemplateVariantListeners();
@@ -248,16 +272,6 @@
 			}
 
 			viewEl.querySelector( '[data-yp-submit]' ).addEventListener( 'click', submit );
-		}
-
-		function priceHintText() {
-			if ( 'custom_design' === state.orderType ) {
-				return 'Add a label to see pricing.';
-			}
-			if ( 'sticker' === state.orderType ) {
-				return 'Choose a size, material, type, and shape to see pricing.';
-			}
-			return state.templateData ? 'Add a label to see pricing.' : 'Choose a design to see pricing.';
 		}
 
 		/* ---------- Custom Design (Phase A) ---------- */
@@ -275,6 +289,7 @@
 						'<div class="yp-field"><label for="yp-mo-style-notes">Style notes</label><textarea id="yp-mo-style-notes" rows="2"></textarea></div>' +
 						'<div class="yp-field"><label for="yp-mo-instructions">Instructions</label><textarea id="yp-mo-instructions" rows="2"></textarea></div>' +
 					'</div>' +
+					'<div data-yp-price-preview="custom_design"><p class="yp-field__hint">Add a label to see pricing.</p></div>' +
 				'</div>'
 			);
 		}
@@ -296,7 +311,7 @@
 		}
 
 		function doRefreshPricePreview() {
-			var previewEl = viewEl.querySelector( '[data-yp-price-preview]' );
+			var previewEl = viewEl.querySelector( '[data-yp-price-preview="custom_design"]' );
 			if ( ! previewEl ) {
 				return; // Navigated away.
 			}
@@ -386,6 +401,7 @@
 						'<input type="file" id="yp-mo-sticker-files" multiple />' +
 						'<ul data-yp-sticker-file-list></ul>' +
 					'</div>' +
+					'<div data-yp-price-preview="sticker"><p class="yp-field__hint">Choose a size, material, type, and shape to see pricing.</p></div>' +
 				'</div>'
 			);
 		}
@@ -437,7 +453,7 @@
 		}
 
 		function doRefreshStickerPricePreview() {
-			var previewEl = viewEl.querySelector( '[data-yp-price-preview]' );
+			var previewEl = viewEl.querySelector( '[data-yp-price-preview="sticker"]' );
 			if ( ! previewEl ) {
 				return; // Navigated away.
 			}
@@ -547,6 +563,7 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Template Label details</h2></div>' +
 					'<div data-yp-template-panel></div>' +
+					'<div data-yp-price-preview="template"><p class="yp-field__hint">Choose a design to see pricing.</p></div>' +
 				'</div>'
 			);
 		}
@@ -752,13 +769,13 @@
 		}
 
 		function doRefreshTemplatePricePreview() {
-			var previewEl = viewEl.querySelector( '[data-yp-price-preview]' );
+			var previewEl = viewEl.querySelector( '[data-yp-price-preview="template"]' );
 			if ( ! previewEl ) {
 				return; // Navigated away.
 			}
 
 			if ( ! state.templateData ) {
-				previewEl.innerHTML = '<p class="yp-field__hint">' + priceHintText() + '</p>';
+				previewEl.innerHTML = '<p class="yp-field__hint">Choose a design to see pricing.</p>';
 				return;
 			}
 
@@ -1123,41 +1140,44 @@
 			var statusEl     = viewEl.querySelector( '[data-yp-submit-status]' );
 			var submitButton = viewEl.querySelector( '[data-yp-submit]' );
 
-			var body;
-			if ( 'custom_design' === state.orderType ) {
+			// Direct request: "customers order custom design items mixed
+			// with template items... order them at the same time." Every
+			// active type below contributes its own nested key rather than
+			// this body being shaped around exactly one order_type.
+			var body = {
+				customer: customerPayload(),
+				requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked,
+				send_invoice_email: viewEl.querySelector( '#yp-mo-send-invoice' ).checked
+			};
+
+			if ( state.activeTypes.custom_design ) {
 				var batchBody = viewEl.querySelector( '[data-yp-batch]' );
-				body = {
-					order_type: 'custom_design',
-					customer: customerPayload(),
+				body.custom_design = {
 					brand_name: viewEl.querySelector( '#yp-mo-brand' ).value,
 					batch: readBatchRows( batchBody ),
 					style_notes: viewEl.querySelector( '#yp-mo-style-notes' ).value,
 					instructions: viewEl.querySelector( '#yp-mo-instructions' ).value,
-					requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked,
 					waive_design_fee: viewEl.querySelector( '#yp-mo-waive-fee' ).checked
 				};
-			} else if ( 'sticker' === state.orderType ) {
-				body = readStickerFields();
-				body.order_type = 'sticker';
-				body.customer = customerPayload();
-				body.instructions = viewEl.querySelector( '#yp-mo-sticker-instructions' ).value;
-				body.uploads = state.stickerUploads.filter( function ( file ) { return file.id; } ).map( function ( file ) { return file.id; } );
-				body.requires_proof = viewEl.querySelector( '#yp-mo-requires-proof' ).checked;
-			} else {
+			}
+
+			if ( state.activeTypes.sticker ) {
+				var stickerFields = readStickerFields();
+				stickerFields.instructions = viewEl.querySelector( '#yp-mo-sticker-instructions' ).value;
+				stickerFields.uploads = state.stickerUploads.filter( function ( file ) { return file.id; } ).map( function ( file ) { return file.id; } );
+				body.sticker = stickerFields;
+			}
+
+			if ( state.activeTypes.template ) {
 				var templateVariantsBody = viewEl.querySelector( '[data-yp-template-variants]' );
-				body = {
-					order_type: 'template',
-					customer: customerPayload(),
+				body.template = {
 					template_id: state.selectedTemplate ? state.selectedTemplate.id : 0,
 					size_id: parseInt( ( viewEl.querySelector( '#yp-mo-template-size' ) || {} ).value, 10 ) || 0,
 					material_id: parseInt( ( viewEl.querySelector( '#yp-mo-template-material' ) || {} ).value, 10 ) || 0,
 					variants: templateVariantsBody && state.templateData ? readTemplateVariants( templateVariantsBody, state.templateData.field_schema ) : [],
-					instructions: ( viewEl.querySelector( '#yp-mo-template-instructions' ) || {} ).value || '',
-					requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked
+					instructions: ( viewEl.querySelector( '#yp-mo-template-instructions' ) || {} ).value || ''
 				};
 			}
-
-			body.send_invoice_email = viewEl.querySelector( '#yp-mo-send-invoice' ).checked;
 
 			readAddressState( 'ship' );
 			body.shipping_address = shippingAddressPayload( state.shipping.address );
@@ -1184,9 +1204,13 @@
 					submitButton.textContent = 'Create Order';
 
 					var links = '<a href="' + YP.escapeAttr( result.order_edit_url ) + '">View order</a>';
-					if ( result.custom_order_id ) {
-						links += ' &middot; <a href="#/orders/' + result.custom_order_id + '">Add a proof</a>';
-					}
+					// One "Add a proof" link per shell — an order can now
+					// carry more than one (see the class docblock in
+					// class-manual-order-creator.php).
+					( result.custom_orders || [] ).forEach( function ( customOrder ) {
+						var label = ORDER_TYPE_LABELS[ customOrder.order_type ] || customOrder.order_type;
+						links += ' &middot; <a href="#/orders/' + customOrder.id + '">Add a proof (' + YP.escapeHtml( label ) + ')</a>';
+					} );
 					statusEl.innerHTML = '<p class="yp-panel__hint">Order created. ' + links + '</p>';
 				} )
 				.catch( function ( error ) {

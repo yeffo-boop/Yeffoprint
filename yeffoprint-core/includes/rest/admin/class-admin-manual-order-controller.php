@@ -116,18 +116,29 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			return $result;
 		}
 
-		$order            = $result['order'];
-		$custom_order_id  = $result['custom_order_id'];
+		$order = $result['order'];
 
 		return rest_ensure_response( [
-			'success'                   => true,
-			'order_id'                  => $order->get_id(),
+			'success'         => true,
+			'order_id'        => $order->get_id(),
 			// $order->get_edit_order_url() rather than a hand-built
 			// post.php?post=…&action=edit link — resolves correctly
 			// whether this store is on classic post-based orders or HPOS.
-			'order_edit_url'            => $order->get_edit_order_url(),
-			'custom_order_id'           => $custom_order_id,
-			'custom_order_approval_url' => $custom_order_id ? yeffoprint_core_proof_approval_url( $custom_order_id ) : '',
+			'order_edit_url'  => $order->get_edit_order_url(),
+			// Direct request: "customers order custom design items mixed
+			// with template items... order them at the same time" — this
+			// order can now carry more than one proof-approval shell (one
+			// per item type present, when "Requires proof approval" is
+			// checked), so this is a list rather than the single
+			// custom_order_id/custom_order_approval_url pair returned
+			// before that request.
+			'custom_orders'   => array_map( static function ( array $custom_order ) {
+				return [
+					'id'           => $custom_order['id'],
+					'order_type'   => $custom_order['order_type'],
+					'approval_url' => yeffoprint_core_proof_approval_url( $custom_order['id'] ),
+				];
+			}, $result['custom_orders'] ),
 		] );
 	}
 

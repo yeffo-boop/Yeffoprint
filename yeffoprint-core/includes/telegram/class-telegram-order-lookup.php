@@ -79,10 +79,22 @@ class YeffoPrint_Telegram_Order_Lookup {
 			}
 		}
 
-		$custom_status = self::custom_order_status_label( $order->get_id() );
-		if ( $custom_status ) {
+		$custom_statuses = self::custom_order_status_labels( $order->get_id() );
+		if ( $custom_statuses ) {
 			$lines[] = '';
-			$lines[] = sprintf( /* translators: %s: custom order production status */ __( 'Custom design status: %s', 'yeffoprint-core' ), $custom_status );
+			// A manually-created order can now carry more than one linked
+			// yp_custom_order — direct request behind that: "customers
+			// order custom design items mixed with template items... at
+			// the same time," each kind getting its own proof — so this
+			// lists every one found rather than assuming exactly one.
+			if ( count( $custom_statuses ) > 1 ) {
+				$lines[] = __( 'Custom design status:', 'yeffoprint-core' );
+				foreach ( $custom_statuses as $status ) {
+					$lines[] = '• ' . $status;
+				}
+			} else {
+				$lines[] = sprintf( /* translators: %s: custom order production status */ __( 'Custom design status: %s', 'yeffoprint-core' ), $custom_statuses[0] );
+			}
 		}
 
 		return implode( "\n", $lines );
@@ -135,22 +147,37 @@ class YeffoPrint_Telegram_Order_Lookup {
 		return sprintf( /* translators: %s: live status text from the carrier, e.g. "Delivered — Spokane, WA" */ __( 'Status: %s', 'yeffoprint-core' ), $text );
 	}
 
-	/** The linked Custom Order (yp_custom_order) record's own production status, if this WC order came from that flow — separate pipeline from WooCommerce's order status, per PROJECT_SPEC §13. */
-	private static function custom_order_status_label( int $wc_order_id ): ?string {
+	/**
+	 * Every linked Custom Order (yp_custom_order) record's own
+	 * production status, if this WC order came from that flow —
+	 * separate pipeline from WooCommerce's order status, per
+	 * PROJECT_SPEC §13. A manually-created order can now carry more
+	 * than one (direct request: "customers order custom design items
+	 * mixed with template items... at the same time" — each kind gets
+	 * its own proof, class-manual-order-creator.php), so this returns
+	 * every one found rather than assuming exactly one the way this
+	 * used to (back when an order could only ever have one).
+	 *
+	 * @return string[]
+	 */
+	private static function custom_order_status_labels( int $wc_order_id ): array {
 		$posts = get_posts( [
 			'post_type'   => 'yp_custom_order',
 			'post_status' => 'any',
-			'numberposts' => 1,
+			'numberposts' => -1,
 			'meta_key'    => YeffoPrint_Custom_Order_Meta::WC_ORDER_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- one order's own lookup, not a listing screen.
 			'meta_value'  => $wc_order_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			'fields'      => 'ids',
 		] );
 
-		if ( empty( $posts ) ) {
-			return null;
+		$labels = [];
+		foreach ( $posts as $post_id ) {
+			$status = (string) get_post_meta( $post_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
+			if ( '' !== $status ) {
+				$labels[] = YeffoPrint_Custom_Order_Meta::get_status_label( $status );
+			}
 		}
 
-		$status = (string) get_post_meta( $posts[0], YeffoPrint_Custom_Order_Meta::STATUS, true );
-		return '' !== $status ? YeffoPrint_Custom_Order_Meta::get_status_label( $status ) : null;
+		return $labels;
 	}
 }
