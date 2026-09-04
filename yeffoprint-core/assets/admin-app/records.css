@@ -287,6 +287,25 @@
 }
 
 /**
+ * Direct report: the manual order Shipping & billing address form's
+ * field labels "look like they belong to the field above it" — .yp-field's
+ * own `gap` (below) only spaces a field's label from its OWN input; two
+ * stacked rows/fields had no margin between them at all, so the next
+ * field's label sat flush against the PREVIOUS field's input (0 gap)
+ * while its own input sat 0.35rem below it — visually reading as
+ * belonging to the wrong one. The owl selector (`> * + *`) adds margin
+ * only between stacked children, never before the first, so no separate
+ * first-child exception is needed. Direct-child only and its own class
+ * (not .yp-form__row/.yp-field sitewide) on purpose: several other
+ * screens lay .yp-field out side-by-side inside a grid row (e.g.
+ * .yp-shippo-dims below) rather than stacked — adding margin-top there
+ * would misalign those instead of fixing anything.
+ */
+.yp-address-fields > * + * {
+	margin-top: var(--wp--preset--spacing--sm);
+}
+
+/**
  * Direct report: the order-detail Shippo panel's 4 package-dimension
  * fields (Weight/Length/Width/Height) — each just a 1-2 digit number —
  * were taking up a lot of vertical space, stacking one per row at full
