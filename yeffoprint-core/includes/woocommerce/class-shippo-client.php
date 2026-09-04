@@ -240,8 +240,28 @@ class YeffoPrint_Shippo_Client {
 		] );
 	}
 
-	/** @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error */
-	public function purchase_label( string $rate_id ) {
+	/**
+	 * $carrier_id/$carrier_label: real bug found via a live report ("the
+	 * shipped packages dashboard doesn't show the carrier for the labels
+	 * we're making with shippo, it just shows a -", and the tracking
+	 * number wasn't clickable either) — this used to try reading
+	 * `$response['rate']['provider']` off the transaction it just
+	 * created, the same shape a *rate listing* entry has
+	 * (normalize_rate() below). A Transaction's own `rate` field isn't
+	 * an expanded object, though — it's just the purchased rate's own
+	 * object id, a plain string. Indexing a string with a non-numeric
+	 * key like that resolves through `??`'s isset() check as "not set,"
+	 * silently, no warning — so every purchase was quietly storing an
+	 * empty carrier_id, which get_shipments()/get_shippo_labels() then
+	 * had nothing to map to a real carrier name or tracking URL with.
+	 * The caller already knows the carrier — it's the exact rate this
+	 * same class's own get_rates()/normalize_rate() just displayed to
+	 * pick from — so it's passed in here instead of re-derived from a
+	 * response that never reliably had it.
+	 *
+	 * @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error
+	 */
+	public function purchase_label( string $rate_id, string $carrier_id = '', string $carrier_label = '' ) {
 		$response = $this->call( 'POST', '/transactions/', [
 			'rate'            => $rate_id,
 			'label_file_type' => 'PDF_4x6',
@@ -263,12 +283,10 @@ class YeffoPrint_Shippo_Client {
 			);
 		}
 
-		$carrier_id = sanitize_key( str_replace( ' ', '_', strtolower( (string) ( $response['rate']['provider'] ?? '' ) ) ) );
-
 		return [
 			'tracking_number' => (string) ( $response['tracking_number'] ?? '' ),
 			'carrier_id'      => $carrier_id,
-			'carrier_label'   => (string) ( $response['rate']['provider'] ?? YeffoPrint_Order_Tracking::carrier_label( $carrier_id ) ),
+			'carrier_label'   => '' !== $carrier_label ? $carrier_label : YeffoPrint_Order_Tracking::carrier_label( $carrier_id ),
 			'label_url'       => (string) ( $response['label_url'] ?? '' ),
 		];
 	}

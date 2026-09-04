@@ -102,7 +102,17 @@ class YeffoPrint_Admin_Shippo_Controller {
 			return new \WP_Error( 'yeffoprint_shippo_missing_rate', __( 'Choose a rate first.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$label = $client->purchase_label( $rate_id );
+		// Direct report: "the shipped packages dashboard doesn't show the
+		// carrier for the labels we're making with shippo, it just shows
+		// a -" — the frontend already displayed this exact rate's carrier
+		// (get_rates() below), so it's sent along with the purchase
+		// rather than re-derived from Shippo's own transaction response
+		// afterward. See YeffoPrint_Shippo_Client::purchase_label()'s own
+		// docblock for why that response can't be trusted for this.
+		$carrier_id    = sanitize_key( (string) ( $params['carrier_id'] ?? '' ) );
+		$carrier_label = sanitize_text_field( (string) ( $params['carrier_label'] ?? '' ) );
+
+		$label = $client->purchase_label( $rate_id, $carrier_id, $carrier_label );
 		if ( is_wp_error( $label ) ) {
 			return $label;
 		}

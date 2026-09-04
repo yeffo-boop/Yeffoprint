@@ -917,21 +917,27 @@
 		 */
 
 		function addressFieldsHtml( prefix, address ) {
+			// Direct report: these field labels "look like they belong to
+			// the field above" — wrapped in .yp-address-fields (records.css)
+			// so consecutive rows/fields get real spacing between them; see
+			// that rule's own comment for why the gap wasn't there before.
 			return (
-				'<div class="yp-form__row">' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-first-name">First name</label><input type="text" id="yp-mo-' + prefix + '-first-name" data-yp-address-field="first_name" value="' + YP.escapeAttr( address.first_name ) + '" /></div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-last-name">Last name</label><input type="text" id="yp-mo-' + prefix + '-last-name" data-yp-address-field="last_name" value="' + YP.escapeAttr( address.last_name ) + '" /></div>' +
-				'</div>' +
-				'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-1">Address line 1</label><input type="text" id="yp-mo-' + prefix + '-address-1" data-yp-address-field="address_1" value="' + YP.escapeAttr( address.address_1 ) + '" /></div>' +
-				'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-2">Address line 2</label><input type="text" id="yp-mo-' + prefix + '-address-2" data-yp-address-field="address_2" value="' + YP.escapeAttr( address.address_2 ) + '" /></div>' +
-				'<div class="yp-form__row--three">' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-city">City</label><input type="text" id="yp-mo-' + prefix + '-city" data-yp-address-field="city" value="' + YP.escapeAttr( address.city ) + '" /></div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-state">State</label><input type="text" id="yp-mo-' + prefix + '-state" data-yp-address-field="state" value="' + YP.escapeAttr( address.state ) + '" /></div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-postcode">ZIP / postal code</label><input type="text" id="yp-mo-' + prefix + '-postcode" data-yp-address-field="postcode" value="' + YP.escapeAttr( address.postcode ) + '" /></div>' +
-				'</div>' +
-				'<div class="yp-form__row">' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-country">Country</label><input type="text" id="yp-mo-' + prefix + '-country" data-yp-address-field="country" maxlength="2" placeholder="US" value="' + YP.escapeAttr( address.country ) + '" /></div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-phone">Phone</label><input type="text" id="yp-mo-' + prefix + '-phone" data-yp-address-field="phone" value="' + YP.escapeAttr( address.phone ) + '" /></div>' +
+				'<div class="yp-address-fields">' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-first-name">First name</label><input type="text" id="yp-mo-' + prefix + '-first-name" data-yp-address-field="first_name" value="' + YP.escapeAttr( address.first_name ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-last-name">Last name</label><input type="text" id="yp-mo-' + prefix + '-last-name" data-yp-address-field="last_name" value="' + YP.escapeAttr( address.last_name ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-1">Address line 1</label><input type="text" id="yp-mo-' + prefix + '-address-1" data-yp-address-field="address_1" value="' + YP.escapeAttr( address.address_1 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-2">Address line 2</label><input type="text" id="yp-mo-' + prefix + '-address-2" data-yp-address-field="address_2" value="' + YP.escapeAttr( address.address_2 ) + '" /></div>' +
+					'<div class="yp-form__row--three">' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-city">City</label><input type="text" id="yp-mo-' + prefix + '-city" data-yp-address-field="city" value="' + YP.escapeAttr( address.city ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-state">State</label><input type="text" id="yp-mo-' + prefix + '-state" data-yp-address-field="state" value="' + YP.escapeAttr( address.state ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-postcode">ZIP / postal code</label><input type="text" id="yp-mo-' + prefix + '-postcode" data-yp-address-field="postcode" value="' + YP.escapeAttr( address.postcode ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-country">Country</label><input type="text" id="yp-mo-' + prefix + '-country" data-yp-address-field="country" maxlength="2" placeholder="US" value="' + YP.escapeAttr( address.country ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-phone">Phone</label><input type="text" id="yp-mo-' + prefix + '-phone" data-yp-address-field="phone" value="' + YP.escapeAttr( address.phone ) + '" /></div>' +
+					'</div>' +
 				'</div>'
 			);
 		}

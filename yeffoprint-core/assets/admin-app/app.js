@@ -1232,12 +1232,12 @@
 			}
 			var rate = rates.filter( function ( r ) { return r.id === selected.value; } )[ 0 ];
 			if ( rate && window.confirm( 'Purchase this ' + rate.carrier_label + ' ' + rate.service + ' label for $' + rate.amount.toFixed( 2 ) + '? This charges your Shippo balance/carrier account immediately.' ) ) {
-				purchaseShippoLabel( order, panel, selected.value );
+				purchaseShippoLabel( order, panel, rate );
 			}
 		} );
 	}
 
-	function purchaseShippoLabel( order, panel, rateId ) {
+	function purchaseShippoLabel( order, panel, rate ) {
 		var purchaseButton = panel.querySelector( '[data-yp-shippo-purchase]' );
 		var errorEl = panel.querySelector( '[data-yp-shippo-error]' );
 		var resultEl = panel.querySelector( '[data-yp-shippo-result]' );
@@ -1246,10 +1246,19 @@
 		purchaseButton.textContent = 'Purchasing…';
 		errorEl.innerHTML = '';
 
+		// Direct report: "the shipped packages dashboard doesn't show the
+		// carrier for the labels we're making with shippo, it just shows
+		// a -" — Shippo's own label-purchase response doesn't reliably
+		// echo back which carrier a rate belonged to, so the carrier this
+		// panel already displayed for the chosen rate (rate.carrier_id/
+		// carrier_label — the exact same rate the confirm() above just
+		// named) is sent along with the purchase instead of trying to
+		// re-derive it server-side afterward. See
+		// YeffoPrint_Shippo_Client::purchase_label()'s own docblock.
 		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/shippo/purchase', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify( { rate_id: rateId } )
+			body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label } )
 		} )
 			.then( function ( response ) {
 				resultEl.innerHTML =
