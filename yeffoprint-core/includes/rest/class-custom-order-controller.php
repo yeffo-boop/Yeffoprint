@@ -116,10 +116,22 @@ class YeffoPrint_Custom_Order_Controller {
 		}
 
 		return rest_ensure_response( [
+			// Direct report: reordering a past design that had more than
+			// one label row (different compound/strength combos) only
+			// ever brought back the first row — size_id/material_id/
+			// quantity/compound_strength below are that same single row,
+			// kept for whatever else in this response's own shape still
+			// expects them, but `batch` is the real, complete answer:
+			// every row this order actually had, via the same shared
+			// reader the admin editor already uses for the same purpose
+			// (falls back to a single row built from the fields below for
+			// any order submitted before batching existed, which never
+			// wrote a BATCH row at all).
 			'size_id'           => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::SIZE_ID, true ),
 			'material_id'       => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, true ),
 			'quantity'          => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::QUANTITY, true ),
 			'compound_strength' => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::COMPOUND_STRENGTH, true ),
+			'batch'             => YeffoPrint_Custom_Order_Meta::get_batch_rows( $id ),
 			'brand_name'        => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true ),
 			'style_notes'       => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::STYLE_NOTES, true ),
 			'instructions'      => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, true ),
