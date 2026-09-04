@@ -209,4 +209,36 @@
 	} else {
 		init();
 	}
+
+	/**
+	 * Lets a link — the order emails' own "Start live chat" option, for
+	 * one — deep-link straight into an opened panel instead of landing on
+	 * a page with a closed widget the visitor then has to notice and
+	 * click themselves. Reads a plain query param rather than a hash so
+	 * it survives being pasted into an email client that strips/rewrites
+	 * URL fragments.
+	 */
+	function openFromUrlParam() {
+		var params;
+		try {
+			params = new URLSearchParams( window.location.search );
+		} catch ( error ) {
+			return;
+		}
+
+		if ( 'open' !== params.get( 'yp_chat' ) ) {
+			return;
+		}
+
+		var fab = document.querySelector( '.yp-chat-fab' );
+		if ( fab ) {
+			fab.click();
+		}
+	}
+
+	if ( 'loading' === document.readyState ) {
+		document.addEventListener( 'DOMContentLoaded', openFromUrlParam );
+	} else {
+		openFromUrlParam();
+	}
 } )();
