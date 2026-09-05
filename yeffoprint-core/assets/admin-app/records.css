@@ -64,28 +64,6 @@
 }
 
 /**
- * Bug found in production (screenshot): applying overflow-wrap: anywhere
- * to every .yp-record-table td broke the order-detail Items table, whose
- * cells nest a flex .yp-record-name row + a grid .yp-order-item-meta list.
- * overflow-wrap is inherited, and it also lowers a box's *automatic
- * minimum size* under flex/grid layout — normally that minimum is the
- * width of the longest unbreakable word (min-content), but "anywhere"
- * makes any single character an acceptable break point, so the automatic
- * minimum collapses to ~1 character. That let the meta grid's 1fr column
- * shrink to almost nothing, wrapping every value one character per line
- * ("Cl/e/ar" instead of "Clear") — not what this rule was for.
- *
- * Scoped to a modifier applied only to the order-detail customer-info
- * table instead (renderWcOrderDetail() in app.js) — the one table this
- * was actually written for, whose cells hold plain text/a single <a>
- * link with no nested flex/grid layout of their own, so there's no
- * min-content collapse to worry about there.
- */
-.yp-record-table--wrap td {
-	overflow-wrap: anywhere;
-}
-
-/**
  * Direct report, with a screenshot: on the order-detail Items table, a
  * line item's Qty/Total values appeared to float in the middle of the
  * (now much taller, thanks to the meta grid below the item name) row,
@@ -95,9 +73,9 @@
  * roughly the same single-line height — middle vs. top look identical
  * there. It only becomes a problem when one cell (Item, here) is much
  * taller than its row-mates, which is unique to this table. Scoped to
- * its own modifier for the same reason as .yp-record-table--wrap above:
- * a blanket change to every .yp-record-table risked an unreviewed
- * regression on tables this was never meant to touch.
+ * its own modifier rather than changing every .yp-record-table, which
+ * risked an unreviewed regression on tables this was never meant to
+ * touch.
  */
 .yp-record-table--top td {
 	vertical-align: top;
@@ -971,13 +949,25 @@
  * detail no longer needs a wide multi-column table to summarize a record
  * — the full detail is one click away in the pane beside it.
  */
+/**
+ * Direct report: "the table is too small. Doesn't take up enough
+ * vertical space." A flat `min-height: 32rem` left a lot of dead warm-
+ * white page below the panel on any normal-height screen. `.yp-split`
+ * sits inside `.yp-app__view`, which is itself a `flex: 1` child of the
+ * full-viewport-height `.yp-app__main` column (app-shell.css) — so
+ * `100vh` minus the fixed chrome above this panel (topbar, view padding,
+ * the intro paragraph, the search/filter toolbar) is exactly the space
+ * actually available before the page would start to scroll. `max()`
+ * keeps the old 32rem as a floor for a very short viewport instead of
+ * letting the calc() shrink the panel unreasonably small.
+ */
 .yp-split {
 	display: flex;
 	background: var(--wp--preset--color--white);
 	border-radius: var(--wp--custom--radius--card);
 	box-shadow: var(--wp--custom--shadow-elevation--low);
 	overflow: hidden;
-	min-height: 32rem;
+	min-height: max(32rem, calc(100vh - 17rem));
 }
 
 .yp-split__list {
@@ -1052,6 +1042,24 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/**
+ * Direct report: "the date of the order gets cut off, so some of that
+ * data just needs to be moved under so I can see it." The row's date
+ * used to have no place of its own at all — there wasn't room to cram
+ * it onto the single-line `.s` (customer · type) without truncating
+ * one or the other. Its own line below `.s` instead of widening the
+ * row, since the list column is a fixed 20rem regardless.
+ */
+.yp-split__row-text .d {
+	font-size: 0.7rem;
+	color: var(--wp--preset--color--charcoal);
+	opacity: 0.7;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	margin-top: 0.1rem;
 }
 
 .yp-split__row-status {

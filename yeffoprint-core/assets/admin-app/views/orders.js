@@ -130,6 +130,7 @@
 						'<span class="yp-split__row-text">' +
 							'<span class="t">' + YP.escapeHtml( order.title ) + '</span>' +
 							'<span class="s">' + YP.escapeHtml( order.customer_name || order.customer_email || '—' ) + ' · ' + YP.escapeHtml( order.order_type_label ) + '</span>' +
+							'<span class="d">' + ( order.date ? YP.escapeHtml( new Date( order.date ).toLocaleDateString() ) : '' ) + '</span>' +
 						'</span>' +
 						'<span class="yp-split__row-status">' +
 							( order.paid

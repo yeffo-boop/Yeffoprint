@@ -806,8 +806,16 @@
 	   replicated here) for a normal paid WooCommerce order too, backed
 	   by class-admin-order-controller.php's detail_payload(). */
 
-	function wcOrderRow( label, valueHtml ) {
-		return '<tr><th>' + YP.escapeHtml( label ) + '</th><td>' + valueHtml + '</td></tr>';
+	// Same field/value shape as the Custom Orders split-view detail pane's
+	// own field() helper (views/orders.js) — reused directly rather than
+	// duplicated, since .yp-split__field is a generic label/value pair, not
+	// something scoped to that one screen. Direct report: this drawer's old
+	// plain <table> "needs to be redesigned... it's clunky" — swapped for
+	// the same field-grid look staff already see on the Custom Orders
+	// screen, instead of two different visual languages for "an order's
+	// details" a click apart from each other.
+	function wcOrderField( label, valueHtml ) {
+		return '<div class="yp-split__field"><span class="k">' + YP.escapeHtml( label ) + '</span><span class="v">' + valueHtml + '</span></div>';
 	}
 
 	/**
@@ -963,17 +971,17 @@
 				'<span class="yp-pill yp-pill--' + ( WC_ORDER_STATUS_PILLS[ order.status ] || 'neutral' ) + '">' + YP.escapeHtml( order.status_label ) + '</span>';
 		}
 
-		var rowsHtml = wcOrderRow(
+		var fieldsHtml = wcOrderField(
 			'Customer',
 			YP.escapeHtml( order.customer_name || '' ) + ( order.customer_email ? ' — <a href="mailto:' + YP.escapeAttr( order.customer_email ) + '">' + YP.escapeHtml( order.customer_email ) + '</a>' : '' ) +
 				( order.customer_phone ? ' — ' + YP.escapeHtml( order.customer_phone ) : '' )
 		);
-		rowsHtml += wcOrderRow( 'Shipping Address', order.shipping_address ? order.shipping_address.replace( /\n/g, '<br>' ) : '—' );
-		rowsHtml += wcOrderRow( 'Payment Method', YP.escapeHtml( order.payment_method_title || '—' ) );
+		fieldsHtml += wcOrderField( 'Shipping Address', order.shipping_address ? order.shipping_address.replace( /\n/g, '<br>' ) : '—' );
+		fieldsHtml += wcOrderField( 'Payment Method', YP.escapeHtml( order.payment_method_title || '—' ) );
+		fieldsHtml += wcOrderField( 'Date', order.date ? new Date( order.date ).toLocaleString() : '—' );
 		if ( order.customer_note ) {
-			rowsHtml += wcOrderRow( 'Customer Note', YP.escapeHtml( order.customer_note ).replace( /\n/g, '<br>' ) );
+			fieldsHtml += wcOrderField( 'Customer Note', YP.escapeHtml( order.customer_note ).replace( /\n/g, '<br>' ) );
 		}
-		rowsHtml += wcOrderRow( 'Date', order.date ? new Date( order.date ).toLocaleString() : '—' );
 
 		// Two columns now that the modal (records.css's
 		// .yp-drawer--wide.yp-drawer--center override) has the room for
@@ -985,7 +993,7 @@
 		bodyEl.innerHTML =
 			'<div class="yp-order-detail-grid">' +
 				'<div>' +
-					'<div class="yp-record-card"><table class="yp-record-table yp-record-table--wrap"><tbody>' + rowsHtml + '</tbody></table></div>' +
+					'<div class="yp-panel"><div class="yp-split__fields">' + fieldsHtml + '</div></div>' +
 
 					'<div class="yp-panel">' +
 						'<div class="yp-panel__head"><h2>Items</h2></div>' +
