@@ -1855,3 +1855,10 @@ Direct follow-up, right after the Items-table fix above shipped: "still doesn't 
 Verify: open the WC order drawer → confirm everything renders in one column in this order (Customer fields → Status → Items → Shipping Label → Shippo → Open in WooCommerce), the modal is noticeably narrower than before, and Save Status/Print Shipping Label/Get Rates all still work exactly as before.
 
 Immediate follow-up: "it needs to be wider" — 720px was too tight for the Items table's per-label field chips. Widened to 880px (`records.css`), splitting the difference between the old two-column 1040px and the too-tight 720px.
+
+Second follow-up, three parts: "still could be wider so it doesn't take as much vertical space. remove the extra padding around the status change so that takes less space. use 2 columns in the label customization area."
+- Modal width back to the original 1040px — a single column doesn't need it for side-by-side panels, but it does mean the Items table's field chips (below) spread across more columns instead of stacking, which is a real vertical-space win now.
+- `.yp-order-fields` (a label's Corner Finish/Compound Name/Strength/Color/Expiration Date chips) is now a 2-column grid instead of one full-width row per field, roughly halving that block's height. Drops to a single column under 480px so it never gets uncomfortably cramped on a phone-width drawer.
+- New `.yp-panel--compact` modifier (smaller padding, tighter heading margin) on just the Status panel — the one panel in this drawer that's a single dropdown-and-button row, not dense content, so it was carrying the same padding as every content-heavy panel around it for no reason. Scoped to a modifier rather than changing `.yp-panel` itself, which every other panel/list-screen form still relies on for its normal spacing.
+
+Verify: open the WC order drawer → confirm it's noticeably wider again, the Status panel is visibly more compact than the panels around it, and a batch label's customization fields render 2-up instead of stacked one per row (collapsing back to 1 column only on a very narrow/phone-width drawer).

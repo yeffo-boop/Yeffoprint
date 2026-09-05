@@ -487,6 +487,25 @@
 	margin: 0.5rem 0 0;
 }
 
+/**
+ * Direct report: the WC order drawer's Status panel (app.js's
+ * renderWcOrderDetail()) — one dropdown and a button, nothing else —
+ * still carried the full .yp-panel padding/heading spacing every
+ * other, much denser panel here uses, so it read as taking up more
+ * room than its own single row of controls needed. Scoped to a
+ * modifier rather than changing .yp-panel itself, which every list
+ * screen's edit form and every other panel in this drawer still relies
+ * on for its normal spacing.
+ */
+.yp-panel--compact {
+	padding: 0.85rem var(--wp--preset--spacing--md);
+	margin-bottom: 0.75rem;
+}
+
+.yp-panel--compact .yp-panel__head {
+	margin-bottom: 0.5rem;
+}
+
 /* ---------- "Needs attention" — dashboard home only (app.js's
    needsAttentionHtml()). A ranked queue merging the urgent rows out of
    the panels below into one list, direct request: "an order stuck for 4
@@ -769,14 +788,17 @@
    drawer, untouched — this rule only ever matches an element carrying
    both classes, which today is only the order detail drawer
    (app.js's openWcOrderDrawer()).
-   Went to 720px when this became a single column — direct follow-up
-   report: "it needs to be wider." A single column doesn't need
-   1040px's worth of side-by-side panels, but 720px was too tight for
-   this drawer's widest content (the Items table's per-label field
-   chips, each a label+value pair that wants real room before
-   wrapping) — 880px splits the difference. */
+   Went narrower (720px, then 880px) when this became a single column,
+   then wider again — direct follow-up report: "still could be wider so
+   it doesn't take as much vertical space" — back to the original
+   1040px. A single column doesn't need that width for side-by-side
+   panels the way the old two-column layout did, but it still buys
+   real vertical savings here: the Items table's per-label field chips
+   are now 2-up (.yp-order-fields below) rather than stacked one per
+   row, so the extra horizontal room becomes fewer, shorter rows
+   instead of empty margin. */
 .yp-drawer--wide.yp-drawer--center .yp-drawer__panel {
-	width: min(880px, calc(100% - 2rem));
+	width: min(1040px, calc(100% - 2rem));
 	max-height: min(88vh, calc(100dvh - 2rem));
 }
 
@@ -829,12 +851,23 @@
  * the classic screen (different file because the two never share a
  * page, and this one uses the app's real theme tokens instead of
  * classic wp-admin grays).
+ *
+ * 2 columns, not stacked — direct follow-up report: the modal "could
+ * be wider so it doesn't take as much vertical space," and one field
+ * per full-width row was the biggest single contributor to that height
+ * once there was a wide modal (above) to spread them across instead.
  */
 .yp-order-fields {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
 	gap: 0.35rem;
 	margin: 0.25rem 0;
+}
+
+@media (max-width: 480px) {
+	.yp-order-fields {
+		grid-template-columns: 1fr;
+	}
 }
 
 .yp-order-field {
