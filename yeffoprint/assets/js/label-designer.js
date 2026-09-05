@@ -51,6 +51,9 @@
 	var form       = document.getElementById( 'yp-label-designer-form' );
 	var widthInput  = document.getElementById( 'yp-ld-width' );
 	var heightInput = document.getElementById( 'yp-ld-height' );
+	var sizePresetGroupEl = root.querySelector( '[data-yp-ld-size-presets]' );
+	var sizePresetRadios = sizePresetGroupEl ? Array.prototype.slice.call( sizePresetGroupEl.querySelectorAll( 'input[name="ld_size_preset"]' ) ) : [];
+	var sizePresetHintEl = root.querySelector( '[data-yp-ld-size-preset-hint]' );
 	var materialSelect  = document.getElementById( 'yp-ld-material' );
 	var quantityInput   = document.getElementById( 'yp-ld-quantity' );
 	var quantityPresetsEl = root.querySelector( '[data-yp-ld-quantity-presets]' );
@@ -101,6 +104,7 @@
 	var draftSaveDebounceTimer = null;
 	var formErrorEl          = null;
 	var lastConfirmedDims    = null;
+	var lastConfirmedSizePreset = null;
 
 	// Every image the customer uploads via "+ Image" (usually a logo) is
 	// kept here by upload id, separate from the flattened PNG the canvas
@@ -193,10 +197,32 @@
 		};
 	}
 
+	function checkedSizePresetRadio() {
+		return sizePresetRadios.filter( function ( radio ) { return radio.checked; } )[ 0 ] || null;
+	}
+
+	function setSizeLock( isLocked ) {
+		widthInput.disabled = isLocked;
+		heightInput.disabled = isLocked;
+	}
+
+	function updateSizePresetHint( radio ) {
+		if ( ! sizePresetHintEl ) {
+			return;
+		}
+		if ( ! radio || 'custom' === radio.value ) {
+			sizePresetHintEl.textContent = 'Custom size — enter your own width and height.';
+			return;
+		}
+		var name = radio.closest( '.yp-size-preset' ).querySelector( '.yp-size-preset__name' ).textContent;
+		sizePresetHintEl.textContent = 'Locked to ' + name + ' — choose Custom to enter your own width/height.';
+	}
+
 	function initCanvas() {
 		var dims  = currentDimensionsIn();
 		var scale = pxPerInch( dims.width, dims.height );
 		lastConfirmedDims = dims;
+		lastConfirmedSizePreset = checkedSizePresetRadio();
 
 		canvas = new fabric.Canvas( 'yp-ld-canvas', {
 			width:  dims.width * scale,
@@ -217,10 +243,18 @@
 
 	function resizeCanvasToInputs() {
 		if ( canvas.getObjects().length && ! window.confirm( 'Changing the label size will clear your current design. Continue?' ) ) {
-			// Revert the inputs to the last confirmed size — nothing to
-			// resize to, the customer declined losing their design.
+			// Revert the inputs — and, if a size-preset radio triggered
+			// this (rather than typing directly into the fields), revert
+			// that too, or it would sit checked while showing the old
+			// preset's dimensions: nothing to resize to, the customer
+			// declined losing their design.
 			widthInput.value  = lastConfirmedDims.width;
 			heightInput.value = lastConfirmedDims.height;
+			if ( lastConfirmedSizePreset ) {
+				lastConfirmedSizePreset.checked = true;
+				setSizeLock( 'custom' !== lastConfirmedSizePreset.value );
+				updateSizePresetHint( lastConfirmedSizePreset );
+			}
 			return;
 		}
 
@@ -233,6 +267,7 @@
 		canvas.setHeight( dims.height * scale );
 		canvas.renderAll();
 		lastConfirmedDims = dims;
+		lastConfirmedSizePreset = checkedSizePresetRadio();
 		pushHistory();
 		refreshPricing();
 		saveDraftDebounced();
@@ -574,6 +609,38 @@
 	widthInput.addEventListener( 'change', function () { resizeCanvasToInputs(); } );
 	heightInput.addEventListener( 'change', function () { resizeCanvasToInputs(); } );
 
+	/**
+	 * Size presets — direct request: "some preset size options and also
+	 * a custom option: Peptide Vials 45mmx21mm, Oils Labels: 60x30,
+	 * Custom." Presets just pre-fill + lock the same width/height inputs
+	 * everything else already reads from (currentDimensionsIn(), pricing,
+	 * the draft) rather than being a parallel source of truth — "Custom"
+	 * simply unlocks them back to today's manual entry. width/height stay
+	 * in inches throughout (what the canvas and pricing formula use); the
+	 * preset values are pre-converted from the requested mm sizes. The
+	 * `step` on both inputs moved from 0.1 to 0.01 so those conversions
+	 * (e.g. 45mm -> 1.77in) land on an exact step multiple — the native
+	 * number input would otherwise silently block form submission on a
+	 * value that doesn't align to `step`.
+	 */
+	sizePresetRadios.forEach( function ( radio ) {
+		radio.addEventListener( 'change', function () {
+			if ( ! radio.checked ) {
+				return;
+			}
+			updateSizePresetHint( radio );
+			if ( 'custom' === radio.value ) {
+				setSizeLock( false );
+				lastConfirmedSizePreset = radio;
+				return;
+			}
+			setSizeLock( true );
+			widthInput.value  = radio.dataset.widthIn;
+			heightInput.value = radio.dataset.heightIn;
+			resizeCanvasToInputs(); // Also updates lastConfirmedSizePreset on confirm, refreshes pricing, and saves the draft.
+		} );
+	} );
+
 	/* ---------- Pricing ---------- */
 
 	function materialAdjustment( materialId ) {
@@ -664,9 +731,11 @@
 			return;
 		}
 		try {
+			var checkedPreset = checkedSizePresetRadio();
 			window.localStorage.setItem( DRAFT_STORAGE_KEY, JSON.stringify( {
 				widthIn: widthInput.value,
 				heightIn: heightInput.value,
+				sizePreset: checkedPreset ? checkedPreset.value : '',
 				materialId: materialSelect.value,
 				quantity: quantityInput.value,
 				bgColor: bgColorInput.value,
@@ -819,6 +888,24 @@
 		bgColorInput.value = draft.bgColor || bgColorInput.value;
 		brandInput.value   = draft.brandName || '';
 		notesInput.value   = draft.notes || '';
+
+		// draft.sizePreset only exists on a draft saved after this feature
+		// shipped — an older draft (or one saved while "Custom" was
+		// selected) falls back to 'custom' so its saved width/height are
+		// never silently overwritten by a preset default.
+		var draftPreset = sizePresetRadios.filter( function ( radio ) { return radio.value === draft.sizePreset; } )[ 0 ]
+			|| sizePresetRadios.filter( function ( radio ) { return 'custom' === radio.value; } )[ 0 ]
+			|| null;
+		if ( draftPreset ) {
+			draftPreset.checked = true;
+			sizePresetRadios.forEach( function ( radio ) {
+				if ( radio !== draftPreset ) {
+					radio.checked = false;
+				}
+			} );
+			setSizeLock( 'custom' !== draftPreset.value );
+			updateSizePresetHint( draftPreset );
+		}
 
 		initCanvas();
 

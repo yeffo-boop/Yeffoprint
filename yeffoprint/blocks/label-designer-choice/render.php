@@ -13,6 +13,16 @@
  * to design) and the Designer's own canvas app shell, both starting
  * hidden — custom-order-form.js's updateDesignMethodUi() drives their
  * visibility alongside the existing mode radiogroup.
+ *
+ * The canvas app shell also carries a label-size preset picker (direct
+ * request: "some preset size options and also a custom option: Peptide
+ * Vials 45mmx21mm, Oils Labels: 60x30, Custom") — width/height stay in
+ * inches (what the pricing formula and canvas sizing already use), the
+ * two named presets are just that conversion pre-filled and the fields
+ * locked; "Custom" unlocks them back to today's manual entry. See
+ * label-designer.js's own comment on the preset radios for why the
+ * width/height `step` moved from 0.1 to 0.01 (needed for the presets'
+ * mm-to-inch conversions to land on an exact step multiple).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -21,14 +31,26 @@ if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 	return;
 }
 ?>
-<div class="yp-field yp-custom-order__design-method" role="radiogroup" aria-label="How would you like to design it?" hidden data-yp-co-design-method-group>
-	<label class="yp-radio-option">
+<div class="yp-field yp-custom-order__design-method yp-choice-cards yp-choice-cards--pair" role="radiogroup" aria-label="How would you like to design it?" hidden data-yp-co-design-method-group>
+	<label class="yp-choice-card">
 		<input type="radio" name="design_method" value="form" checked />
-		<span>Describe it for our designer <span class="description">— tell us what you want, we'll build it</span></span>
+		<span class="yp-choice-card__check" aria-hidden="true">&#10003;</span>
+		<span class="yp-choice-card__row">
+			<span>
+				<span class="yp-choice-card__title">Describe it for our designer</span>
+				<span class="yp-choice-card__desc">Tell us your brand, style, and any files to work from.</span>
+			</span>
+		</span>
 	</label>
-	<label class="yp-radio-option">
+	<label class="yp-choice-card">
 		<input type="radio" name="design_method" value="designer" />
-		<span>Use our online Designer <span class="description">— build it yourself with a live preview</span></span>
+		<span class="yp-choice-card__check" aria-hidden="true">&#10003;</span>
+		<span class="yp-choice-card__row">
+			<span>
+				<span class="yp-choice-card__title">Use our online Designer</span>
+				<span class="yp-choice-card__desc">Build it yourself on a live canvas — same $25 fee.</span>
+			</span>
+		</span>
 	</label>
 </div>
 
@@ -40,14 +62,36 @@ if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 
 	<form id="yp-label-designer-form" hidden>
 
-		<div class="yp-ld__setup">
+		<div class="yp-field">
+			<label>Label size</label>
+			<div class="yp-size-presets" role="radiogroup" aria-label="Label size" data-yp-ld-size-presets>
+				<label class="yp-size-preset">
+					<input type="radio" name="ld_size_preset" value="peptide-vials" data-width-in="1.77" data-height-in="0.83" checked />
+					<span class="yp-size-preset__name">Peptide Vials</span>
+					<span class="yp-size-preset__dims">45 &times; 21 mm</span>
+				</label>
+				<label class="yp-size-preset">
+					<input type="radio" name="ld_size_preset" value="oil-labels" data-width-in="2.36" data-height-in="1.18" />
+					<span class="yp-size-preset__name">Oil Labels</span>
+					<span class="yp-size-preset__dims">60 &times; 30 mm</span>
+				</label>
+				<label class="yp-size-preset">
+					<input type="radio" name="ld_size_preset" value="custom" />
+					<span class="yp-size-preset__name">Custom</span>
+					<span class="yp-size-preset__dims">Enter your own</span>
+				</label>
+			</div>
+			<p class="yp-ld__size-preset-hint" data-yp-ld-size-preset-hint>Locked to Peptide Vials — choose Custom to enter your own width/height.</p>
+		</div>
+
+		<div class="yp-ld__setup" data-yp-ld-setup>
 			<div class="yp-field yp-ld__dimension">
 				<label for="yp-ld-width">Width <span class="description">(inches)</span></label>
-				<input type="number" id="yp-ld-width" min="0.2" max="19.6" step="0.1" value="2" required />
+				<input type="number" id="yp-ld-width" min="0.2" max="19.6" step="0.01" value="1.77" required disabled />
 			</div>
 			<div class="yp-field yp-ld__dimension">
 				<label for="yp-ld-height">Height <span class="description">(inches)</span></label>
-				<input type="number" id="yp-ld-height" min="0.2" max="19.6" step="0.1" value="1" required />
+				<input type="number" id="yp-ld-height" min="0.2" max="19.6" step="0.01" value="0.83" required disabled />
 			</div>
 			<div class="yp-field">
 				<label for="yp-ld-material">Material</label>

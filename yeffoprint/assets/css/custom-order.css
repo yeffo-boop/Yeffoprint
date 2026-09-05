@@ -61,12 +61,159 @@
 	border-top: 1px solid var(--wp--preset--color--light-gray);
 }
 
-.yp-custom-order__mode {
-	display: flex;
-	flex-direction: column;
+/*
+ * Card-style choice selectors — direct request: make the "how do you
+ * want to submit this" / "describe it vs. use our Designer" choices
+ * "stand out a bit more" than a plain list of radio rows. Shared by
+ * .yp-custom-order__mode (3 modes) and .yp-custom-order__design-method
+ * (the Label Designer's 2-way sub-choice, blocks/label-designer-choice)
+ * — both carry .yp-choice-cards for this same card grid, so a change
+ * here applies to both without duplicating rules. Mockup approved
+ * as-is before this was built (see docs/ARCHITECTURE.md).
+ */
+.yp-choice-cards {
+	display: grid;
 	gap: 0.6rem;
 }
 
+.yp-choice-cards--pair {
+	grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+	.yp-choice-cards--pair {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+.yp-choice-card {
+	position: relative;
+	display: block;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	padding: 1rem 1.1rem 1rem 1.3rem;
+	cursor: pointer;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+/* A colored accent bar down the left edge only appears once selected —
+   the one deliberately bold touch on an otherwise restrained card, so
+   the selected state actually reads as selected at a glance. */
+.yp-choice-card::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 4px;
+	border-radius: var(--wp--custom--radius--control) 0 0 var(--wp--custom--radius--control);
+	background: transparent;
+	transition: background 150ms ease;
+}
+
+.yp-choice-card:hover {
+	border-color: var(--wp--preset--color--charcoal);
+}
+
+.yp-choice-card input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.yp-choice-card:has(input:checked) {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+}
+
+.yp-choice-card:has(input:checked)::before {
+	background: var(--wp--custom--gradient-brand-deep);
+}
+
+.yp-choice-card.is-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.yp-choice-card__row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.yp-choice-card__title {
+	display: block;
+	font-weight: 700;
+	margin-bottom: 0.2rem;
+}
+
+.yp-choice-card__desc {
+	display: block;
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-choice-card__badge {
+	flex: none;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.72rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	padding: 0.3rem 0.6rem;
+	border-radius: 999px;
+	white-space: nowrap;
+	background: rgba(194, 0, 122, 0.1);
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-choice-card__badge.is-free {
+	background: rgba(0, 174, 239, 0.12);
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-choice-card__check {
+	position: absolute;
+	top: -8px;
+	right: -8px;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.68rem;
+	line-height: 1;
+	opacity: 0;
+	transform: scale(0.6);
+	transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.yp-choice-card:has(input:checked) .yp-choice-card__check {
+	opacity: 1;
+	transform: scale(1);
+}
+
+/* The disabled-reorder-for-guests reason (custom-order-form.js) — a
+   `title` attribute alone only surfaces on hover, which doesn't exist
+   on a touch device, so this is the note's one real home: shown
+   inline, always, rather than relying on hover at all. */
+.yp-choice-card__note {
+	display: block;
+	margin-top: 0.35rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+/*
+ * Plain radio-row style — kept for templates/web-design-quote.html
+ * (its intake form's several radiogroups, e.g. "which package"), which
+ * still uses this and isn't part of the card redesign above.
+ */
 .yp-radio-option {
 	display: flex;
 	align-items: baseline;
@@ -96,10 +243,6 @@
 	display: block;
 }
 
-/* The disabled-reorder-for-guests reason (custom-order-form.js) — a
-   `title` attribute alone only surfaces on hover, which doesn't exist
-   on a touch device, so this is the note's one real home: shown
-   inline, always, rather than relying on hover at all. */
 .yp-radio-option__note {
 	display: block;
 	margin-top: 0.25rem;
