@@ -65,6 +65,7 @@ class YeffoPrint_Order_Tracking_Controller {
 			'order_number' => $order->get_order_number(),
 			'status'       => $order->get_status(),
 			'status_label' => wc_get_order_status_name( $order->get_status() ),
+			'steps'        => YeffoPrint_Order_Status_Stepper::steps( $order ),
 			'shipments'    => $shipments,
 		] );
 	}

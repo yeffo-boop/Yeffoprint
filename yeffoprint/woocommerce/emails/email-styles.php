@@ -598,6 +598,78 @@ table.yp-email-fields-rows .yp-email-field-value {
 	margin-right: 5px;
 }
 
+/* Order-status stepper (class-order-status-stepper.php) — a row of
+   numbered circles connected by a thin line, replacing a plain "your
+   order is now processing" sentence with an at-a-glance sense of where
+   the order actually is. No sub-text under each label, unlike the web
+   version of this component — an inbox at 600px wide across 4-5 columns
+   has no room for it, and every one of these templates already explains
+   the moment in its own prose. Circles use border-radius, which
+   Outlook's desktop rendering engine ignores (they degrade to squares
+   there) — the same tradeoff already accepted by this file's other
+   rounded cards (.yp-payment-cta, .yp-bot-callout below). */
+table.yp-order-stepper-email {
+	margin: 4px 0 20px;
+}
+
+td.yp-stepper-step {
+	text-align: center;
+	vertical-align: top;
+	padding: 0 2px;
+}
+
+td.yp-stepper-connector-cell {
+	width: 32px;
+	padding: 0;
+}
+
+td.yp-stepper-connector {
+	width: 100%;
+	height: 2px;
+	background-color: <?php echo esc_attr( $border ); ?>;
+	padding: 0;
+	line-height: 2px;
+	font-size: 0;
+}
+
+td.yp-stepper-connector.is-active {
+	background-color: <?php echo esc_attr( $link_color ); ?>;
+}
+
+td.yp-stepper-dot {
+	width: 24px;
+	height: 24px;
+	min-width: 24px;
+	border-radius: 50%;
+	background-color: <?php echo esc_attr( $border ); ?>;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	font-size: 11px;
+	font-weight: 700;
+	text-align: center;
+	vertical-align: middle;
+	font-family: <?php echo $font_family; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+}
+
+td.yp-stepper-dot.is-complete,
+td.yp-stepper-dot.is-current {
+	background-color: <?php echo esc_attr( $link_color ); ?>;
+	color: #FFFFFF;
+}
+
+span.yp-stepper-label {
+	display: block;
+	font-size: 10px;
+	line-height: 130%;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin-top: 6px;
+	font-family: <?php echo $font_family; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+}
+
+span.yp-stepper-label.is-current {
+	color: <?php echo esc_attr( $text ); ?>;
+	font-weight: 700;
+}
+
 /* ---- Footer band ---- */
 #template_footer td {
 	padding: 0;

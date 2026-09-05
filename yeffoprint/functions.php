@@ -277,6 +277,19 @@ add_action( 'wp_enqueue_scripts', function () {
 		);
 	}
 
+	// The visual order-status stepper (class-order-status-stepper.php)
+	// only ever renders on a single order's own "View Order" page —
+	// scoped tighter than the woocommerce.css gate above the same way
+	// payment-icons.js is scoped to is_cart() specifically.
+	if ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'view-order' ) ) {
+		wp_enqueue_style(
+			'yeffoprint-order-stepper',
+			get_theme_file_uri( 'assets/css/order-stepper.css' ),
+			[ 'yeffoprint-woocommerce' ],
+			yeffoprint_asset_version( 'assets/css/order-stepper.css' )
+		);
+	}
+
 	// Cart page only — direct request, mockup approved (Option C: a
 	// plain payment-icon strip under "Proceed to Checkout"). Scoped
 	// tighter than the woocommerce.css gate above (Cart specifically,
@@ -424,9 +437,16 @@ add_action( 'wp_enqueue_scripts', function () {
 		);
 
 		wp_enqueue_style(
+			'yeffoprint-order-stepper',
+			get_theme_file_uri( 'assets/css/order-stepper.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/order-stepper.css' )
+		);
+
+		wp_enqueue_style(
 			'yeffoprint-track-order',
 			get_theme_file_uri( 'assets/css/track-order.css' ),
-			[ 'yeffoprint-configurator' ],
+			[ 'yeffoprint-order-stepper' ],
 			yeffoprint_asset_version( 'assets/css/track-order.css' )
 		);
 

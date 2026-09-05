@@ -1,0 +1,116 @@
+/*
+ * Visual order-status stepper (yeffoprint-core's class-order-status-
+ * stepper.php) — shared between the public /track-order/ page (built
+ * from REST JSON by track-order.js) and native WooCommerce My Account →
+ * View Order (server-rendered via the woocommerce_order_details_before_
+ * order_table hook). Same markup/classes either way, so this one file
+ * styles both — see that class's own docblock for why there are two
+ * render paths for one component.
+ */
+
+.yp-order-stepper {
+	display: flex;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.yp-order-stepper__step {
+	flex: 1;
+	position: relative;
+	text-align: center;
+	padding-top: 2.35rem;
+}
+
+.yp-order-stepper__step::before {
+	content: "";
+	position: absolute;
+	top: 13px;
+	left: -50%;
+	width: 100%;
+	height: 2px;
+	background: var(--wp--preset--color--light-gray);
+	z-index: 0;
+}
+
+.yp-order-stepper__step:first-child::before {
+	display: none;
+}
+
+.yp-order-stepper__step.is-complete::before,
+.yp-order-stepper__step.is-current::before {
+	background: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-order-stepper__dot {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--light-gray);
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 700;
+	z-index: 1;
+}
+
+.yp-order-stepper__step.is-complete .yp-order-stepper__dot,
+.yp-order-stepper__step.is-current .yp-order-stepper__dot {
+	background: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-order-stepper__step.is-current .yp-order-stepper__dot {
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--wp--preset--color--magenta) 20%, transparent);
+}
+
+.yp-order-stepper__label {
+	display: block;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal);
+	padding: 0 0.25rem;
+}
+
+.yp-order-stepper__step.is-complete .yp-order-stepper__label,
+.yp-order-stepper__step.is-current .yp-order-stepper__label {
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-order-stepper__sublabel {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+	margin-top: 0.2rem;
+	padding: 0 0.25rem;
+}
+
+@media (max-width: 560px) {
+	.yp-order-stepper__step {
+		padding-top: 2rem;
+	}
+
+	.yp-order-stepper__dot {
+		width: 22px;
+		height: 22px;
+		font-size: 0.7rem;
+	}
+
+	.yp-order-stepper__step::before {
+		top: 10px;
+	}
+
+	.yp-order-stepper__label {
+		font-size: 0.7rem;
+	}
+
+	.yp-order-stepper__sublabel {
+		display: none;
+	}
+}
