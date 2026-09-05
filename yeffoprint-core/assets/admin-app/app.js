@@ -1229,6 +1229,26 @@
 	}
 
 	/**
+	 * Strips everything but letters/digits down to lowercase space-
+	 * separated words — direct bug report: this was matching "UPS Ground
+	 * Saver" instead of the customer's actual "UPS 2nd Day Air", which a
+	 * plain substring check (the previous approach) should have gotten
+	 * right if both strings were identical. The real culprit is that
+	 * WooCommerce's own stored shipping method title and Shippo's
+	 * servicelevel name are two different systems' labels for the same
+	 * service — one might carry a "®"/"™", different spacing/punctuation,
+	 * or wrap the carrier name differently ("UPS® 2nd Day Air®" vs. "UPS
+	 * 2nd Day Air") — any of which defeats an exact substring match,
+	 * silently falling back to "cheapest" (Ground Saver, almost always
+	 * the least expensive UPS ground service) with no visible sign the
+	 * match had failed. Normalizing both sides to bare words before
+	 * comparing survives exactly that kind of cosmetic mismatch.
+	 */
+	function normalizeForRateMatch( text ) {
+		return ( text || '' ).toLowerCase().replace( /[^a-z0-9]+/g, ' ' ).trim();
+	}
+
+	/**
 	 * Best-guess match between the rates Shippo returned and whatever the
 	 * customer actually picked at checkout (order.shipping_method — the
 	 * same string already shown on the WooCommerce Shipping panel's own
@@ -1239,28 +1259,41 @@
 	 * weak on its own — e.g. "USPS" appears in most USPS service names —
 	 * while a service-name match like "Priority Mail" is far more
 	 * specific), so the two are weighted differently rather than treated
-	 * as equally good signals. Returns null (falls back to cheapest, the
-	 * existing default) when nothing matches at all — e.g. a generic
-	 * WooCommerce method like "Flat rate" or "Local pickup" was chosen,
-	 * which no Shippo rate could ever legitimately match.
+	 * as equally good signals.
+	 *
+	 * Service-name matching is word-overlap, not a single substring
+	 * check — every word of the Shippo service name ("2nd"/"day"/"air")
+	 * is looked up individually in the customer's chosen method text, and
+	 * the score scales with how many of them are found, so "UPS® 2nd Day
+	 * Air®" still fully matches Shippo's "UPS 2nd Day Air" (punctuation
+	 * stripped, same words) and a close-but-not-identical label (an extra
+	 * qualifier word, say) still gets partial credit instead of an
+	 * all-or-nothing miss that falls all the way back to the cheapest
+	 * rate. Returns null (falls back to cheapest, the existing default)
+	 * only when nothing matches at all — e.g. a generic WooCommerce
+	 * method like "Flat rate" or "Local pickup" was chosen, which no
+	 * Shippo rate could ever legitimately match.
 	 */
 	function findBestMatchingRateId( rates, shippingMethod ) {
 		if ( ! shippingMethod ) {
 			return null;
 		}
-		var haystack = shippingMethod.toLowerCase();
+		var haystack = normalizeForRateMatch( shippingMethod );
+		var haystackWords = haystack ? haystack.split( ' ' ) : [];
 		var bestId = null;
 		var bestScore = 0;
 
 		rates.forEach( function ( rate ) {
-			var carrier = ( rate.carrier_label || '' ).toLowerCase();
-			var service = ( rate.service || '' ).toLowerCase();
+			var carrier = normalizeForRateMatch( rate.carrier_label );
+			var service = normalizeForRateMatch( rate.service );
 			var score = 0;
 			if ( carrier && haystack.indexOf( carrier ) !== -1 ) {
 				score += 1;
 			}
-			if ( service && haystack.indexOf( service ) !== -1 ) {
-				score += 2;
+			if ( service ) {
+				var serviceWords = service.split( ' ' );
+				var matchedWords = serviceWords.filter( function ( word ) { return haystackWords.indexOf( word ) !== -1; } );
+				score += 2 * ( matchedWords.length / serviceWords.length );
 			}
 			if ( score > bestScore ) {
 				bestScore = score;
