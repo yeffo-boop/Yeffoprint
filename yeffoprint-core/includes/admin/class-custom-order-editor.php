@@ -68,6 +68,12 @@ class YeffoPrint_Custom_Order_Editor {
 		$customer_provided_design = ! $is_sticker && (bool) $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_PROVIDED_DESIGN );
 		$source_custom_order_id   = $is_sticker ? 0 : (int) $m( YeffoPrint_Custom_Order_Meta::SOURCE_CUSTOM_ORDER_ID );
 		$fee_waived               = ! $is_sticker && (bool) $m( YeffoPrint_Custom_Order_Meta::FEE_WAIVED );
+		// Label Designer (canvas) submissions are 'new_design' — the fee
+		// still applies, since the export is a template staff build the
+		// real print file from, not a print-ready file — but staff still
+		// benefit from knowing at a glance that it came through the
+		// Designer rather than the plain description form.
+		$is_canvas_submission     = ! $is_sticker && (bool) $m( YeffoPrint_Custom_Order_Meta::CANVAS_WIDTH_MM );
 		?>
 		<?php if ( $change_request && 'design_in_progress' === $m( YeffoPrint_Custom_Order_Meta::STATUS ) ) : ?>
 			<div class="notice notice-warning inline" style="margin: 0 0 12px; padding: 10px 12px;">
@@ -110,6 +116,8 @@ class YeffoPrint_Custom_Order_Editor {
 							?>
 						<?php elseif ( $fee_waived ) : ?>
 							<?php esc_html_e( 'New design (fee waived by staff)', 'yeffoprint-core' ); ?>
+						<?php elseif ( $is_canvas_submission ) : ?>
+							<?php esc_html_e( 'New design — submitted via Label Designer', 'yeffoprint-core' ); ?>
 						<?php else : ?>
 							<?php esc_html_e( 'New design', 'yeffoprint-core' ); ?>
 						<?php endif; ?>
@@ -179,7 +187,16 @@ class YeffoPrint_Custom_Order_Editor {
 					</td></tr>
 					<tr><th><?php esc_html_e( 'Style / Colors', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::STYLE_NOTES ) ?: '—' ) ); ?></td></tr>
 					<tr><th><?php esc_html_e( 'Instructions', 'yeffoprint-core' ); ?></th><td><?php echo nl2br( esc_html( $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ) ?: '—' ) ); ?></td></tr>
-					<tr><th><?php echo esc_html( $customer_provided_design ? __( 'Print-Ready Design File(s)', 'yeffoprint-core' ) : __( 'Inspiration Files', 'yeffoprint-core' ) ); ?></th><td>
+					<?php
+					if ( $customer_provided_design ) {
+						$uploads_label = __( 'Print-Ready Design File(s)', 'yeffoprint-core' );
+					} elseif ( $is_canvas_submission ) {
+						$uploads_label = __( 'Design Export (from Label Designer)', 'yeffoprint-core' );
+					} else {
+						$uploads_label = __( 'Inspiration Files', 'yeffoprint-core' );
+					}
+					?>
+					<tr><th><?php echo esc_html( $uploads_label ); ?></th><td>
 						<?php
 						$label_files = $customer_provided_design ? (array) $m( YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS ) : $uploads;
 						echo $this->render_upload_list( $label_files );

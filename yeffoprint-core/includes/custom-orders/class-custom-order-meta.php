@@ -184,9 +184,14 @@ class YeffoPrint_Custom_Order_Meta {
 	 * change the font, colors, etc"). Unlike every other flow, this one
 	 * has no preset `yp_size` post behind it — the customer types their
 	 * own width/height, so it's stored directly here rather than as a
-	 * SIZE_ID reference. Present only on an `own_design`-mode submission
-	 * made through the Label Designer; absent on every existing peptide/
-	 * Template order, which keeps using SIZE_ID as always.
+	 * SIZE_ID reference. Present only on a submission made through the
+	 * Label Designer (detected by presence of these two fields, not by
+	 * $mode — see class-custom-order-controller.php's own comment); absent
+	 * on every existing peptide/Template order, which keeps using SIZE_ID
+	 * as always. A Designer submission is always 'new_design' in practice
+	 * — direct clarification: the exported canvas is a template staff
+	 * still build the real print file from, not a print-ready file
+	 * itself, so it's never fee-free the way a true own_design upload is.
 	 */
 	public const CANVAS_WIDTH_MM  = '_yp_canvas_width_mm';
 	public const CANVAS_HEIGHT_MM = '_yp_canvas_height_mm';

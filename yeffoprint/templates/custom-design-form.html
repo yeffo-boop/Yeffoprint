@@ -9,38 +9,38 @@
 		<p class="yp-eyebrow">Fully Custom</p>
 		<h1>Create a Custom Label</h1>
 		<p>Tell us about your brand and we'll build a one-off label from scratch. A designer reviews every request and sends a proof before anything prints.</p>
-	<!-- /wp:html -->
 
-	<!-- wp:yeffoprint/label-designer-notice /-->
-
-	<!-- wp:html -->
 		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
 
+		<div class="yp-field yp-custom-order__mode" role="radiogroup" aria-label="How would you like to submit this design?" hidden data-yp-co-mode-group>
+			<label class="yp-radio-option">
+				<input type="radio" name="mode" value="new_design" checked />
+				<span>Design something new <span class="description">— $25 design fee</span></span>
+			</label>
+			<label class="yp-radio-option">
+				<input type="radio" name="mode" value="own_design" />
+				<span>I have my own print-ready design <span class="description">— no design fee</span></span>
+			</label>
+			<label class="yp-radio-option">
+				<input type="radio" name="mode" value="reorder" />
+				<span class="yp-radio-option__text">
+					<span>Reorder a past design <span class="description">— no design fee</span></span>
+					<span class="description yp-radio-option__note" data-yp-co-reorder-login-note hidden>Log in to your account to reorder a past design.</span>
+				</span>
+			</label>
+		</div>
+	<!-- /wp:html -->
+
+	<!-- wp:yeffoprint/label-designer-choice /-->
+
+	<!-- wp:html -->
+		<div class="yp-field" data-yp-co-reorder-picker hidden>
+			<label for="yp-co-reorder-select">Which past design?</label>
+			<select id="yp-co-reorder-select"></select>
+			<p class="description" data-yp-co-reorder-empty hidden>You don't have any past designs eligible to reorder without the design fee yet — a design becomes eligible once it's approved, printing, or shipped.</p>
+		</div>
+
 		<form id="yp-custom-order-form" hidden>
-
-			<div class="yp-field yp-custom-order__mode" role="radiogroup" aria-label="How would you like to submit this design?">
-				<label class="yp-radio-option">
-					<input type="radio" name="mode" value="new_design" checked />
-					<span>Design something new <span class="description">— $25 design fee</span></span>
-				</label>
-				<label class="yp-radio-option">
-					<input type="radio" name="mode" value="own_design" />
-					<span>I have my own print-ready design <span class="description">— no design fee</span></span>
-				</label>
-				<label class="yp-radio-option">
-					<input type="radio" name="mode" value="reorder" />
-					<span class="yp-radio-option__text">
-						<span>Reorder a past design <span class="description">— no design fee</span></span>
-						<span class="description yp-radio-option__note" data-yp-co-reorder-login-note hidden>Log in to your account to reorder a past design.</span>
-					</span>
-				</label>
-			</div>
-
-			<div class="yp-field" data-yp-co-reorder-picker hidden>
-				<label for="yp-co-reorder-select">Which past design?</label>
-				<select id="yp-co-reorder-select"></select>
-				<p class="description" data-yp-co-reorder-empty hidden>You don't have any past designs eligible to reorder without the design fee yet — a design becomes eligible once it's approved, printing, or shipped.</p>
-			</div>
 
 			<div class="yp-custom-order__batch" data-yp-co-batch></div>
 			<p class="yp-batch-actions">

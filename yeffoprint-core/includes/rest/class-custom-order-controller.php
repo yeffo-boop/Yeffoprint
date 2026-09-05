@@ -198,10 +198,11 @@ class YeffoPrint_Custom_Order_Controller {
 		$mode = $this->parse_mode( $request );
 
 		// Same Label Designer detection as submit() — see that method's
-		// own comment for why width_mm/height_mm presence is the marker.
+		// own comment for why width_mm/height_mm presence (not mode) is
+		// the marker.
 		$request_width_mm  = (float) $request->get_param( 'width_mm' );
 		$request_height_mm = (float) $request->get_param( 'height_mm' );
-		$is_canvas_submission = 'own_design' === $mode && $request_width_mm > 0 && $request_height_mm > 0;
+		$is_canvas_submission = $request_width_mm > 0 && $request_height_mm > 0;
 
 		$batch = $is_canvas_submission
 			? $this->validate_canvas_row( $request_width_mm, $request_height_mm, $request )
@@ -391,12 +392,16 @@ class YeffoPrint_Custom_Order_Controller {
 		// picked yp_size post, and always exactly one row (no batching in
 		// this flow — see class-cart-item-keys.php's own CANVAS_WIDTH_MM
 		// doc for why that's a deliberate v1 scope cut, not an oversight).
-		// Presence of width_mm/height_mm on an own_design submission is
-		// what marks this as a Label Designer request rather than a
-		// legacy own_design upload with a picked Size.
+		// Presence of width_mm/height_mm is what marks this as a Label
+		// Designer request — independent of $mode (a canvas submission is
+		// always 'new_design' in practice: direct clarification, "I can't
+		// just download that and print, I'm using it as a template to
+		// design their label," so the $25 fee still applies same as any
+		// other new_design request — see the 'new_design' === $mode fee
+		// block below).
 		$request_width_mm  = (float) $request->get_param( 'width_mm' );
 		$request_height_mm = (float) $request->get_param( 'height_mm' );
-		$is_canvas_submission = 'own_design' === $mode && $request_width_mm > 0 && $request_height_mm > 0;
+		$is_canvas_submission = $request_width_mm > 0 && $request_height_mm > 0;
 
 		$batch = $is_canvas_submission
 			? $this->validate_canvas_row( $request_width_mm, $request_height_mm, $request )

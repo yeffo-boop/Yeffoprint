@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/label-designer-choice",
+	"title": "Label Designer Choice",
+	"category": "theme",
+	"description": "On the Custom Design page, under 'Design something new': the design-method choice (describe it for our designer / use our online Designer) plus the Designer's own canvas app — admins only for now, renders nothing for everyone else. See class-feature-gate.php.",
+	"render": "file:./render.php",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"textdomain": "yeffoprint"
+}

@@ -20,6 +20,18 @@
  * prefill) — a field-level edit (a select's change, typing in an input)
  * mutates that row's state in place and re-requests the price preview,
  * without touching the DOM the customer is currently interacting with.
+ *
+ * Under 'new_design' only, an admin-only sibling block (blocks/label-
+ * designer-choice — see its own docblock) adds a second choice: describe
+ * it here in this form, or use the Label Designer canvas instead (a
+ * separate, self-contained app — see label-designer.js — with its own
+ * `<form>` and its own submission). This file owns the mode radiogroup
+ * (now a sibling of both forms, not nested inside this one, so switching
+ * to the canvas doesn't hide it) and the design-method radiogroup that
+ * toggles between them; the elements below are simply absent for a
+ * non-admin, since that block renders nothing for them — every reference
+ * to them below stays a no-op in that case, and the page behaves exactly
+ * as it always has.
  */
 ( function () {
 	'use strict';
@@ -35,7 +47,10 @@
 
 	var statusEl = root.querySelector( '.yp-configurator__status' );
 	var form = document.getElementById( 'yp-custom-order-form' );
-	var modeRadios = Array.prototype.slice.call( form.querySelectorAll( 'input[name="mode"]' ) );
+	// Root-scoped, not form-scoped: the mode radiogroup is now a sibling
+	// of <form>, not nested inside it (see this file's own docblock).
+	var modeGroupEl = root.querySelector( '[data-yp-co-mode-group]' );
+	var modeRadios = Array.prototype.slice.call( root.querySelectorAll( 'input[name="mode"]' ) );
 	var reorderPickerEl = root.querySelector( '[data-yp-co-reorder-picker]' );
 	var reorderSelectEl = document.getElementById( 'yp-co-reorder-select' );
 	var reorderEmptyEl = root.querySelector( '[data-yp-co-reorder-empty]' );
@@ -50,7 +65,16 @@
 	var labelsTotalEl = root.querySelector( '[data-yp-co-labels-total]' );
 	var totalEl = root.querySelector( '[data-yp-co-total]' );
 
-	var state = { mode: 'new_design' };
+	// Present only for an admin viewer — blocks/label-designer-choice
+	// renders nothing at all for everyone else, so these are simply null
+	// there and every reference to them below is a guarded no-op.
+	var designMethodGroupEl = root.querySelector( '[data-yp-co-design-method-group]' );
+	var designMethodRadios = designMethodGroupEl ? Array.prototype.slice.call( designMethodGroupEl.querySelectorAll( 'input[name="design_method"]' ) ) : [];
+	var labelDesignerContainerEl = root.querySelector( '[data-yp-ld-container]' );
+	var ldChoiceBackButton = root.querySelector( '[data-yp-ld-choice-back]' );
+
+	var state = { mode: 'new_design', designMethod: 'form' };
+	var formLoaded = false;
 
 	var sizesData = [];
 	var materialsData = [];
@@ -530,6 +554,31 @@
 
 	/* ---------- Mode switching ---------- */
 
+	/**
+	 * Shows the design-method choice only under 'new_design' (own_design/
+	 * reorder customers already have their artwork — there's nothing to
+	 * design), and swaps between this form and the Designer's own canvas
+	 * container based on it. Folds in the form's own "don't show any of
+	 * this until initial data has loaded" gate (formerly a one-shot
+	 * `form.hidden = false` in init()), since that gate and the design-
+	 * method choice both now decide the same element's visibility.
+	 */
+	function updateDesignMethodUi() {
+		var showChoice = formLoaded && 'new_design' === state.mode && !! designMethodGroupEl;
+
+		if ( designMethodGroupEl ) {
+			designMethodGroupEl.hidden = ! showChoice;
+		}
+
+		var useDesigner = showChoice && 'designer' === state.designMethod;
+
+		if ( labelDesignerContainerEl ) {
+			labelDesignerContainerEl.hidden = ! useDesigner;
+		}
+
+		form.hidden = ! formLoaded || useDesigner;
+	}
+
 	function applyModeUi() {
 		var mode = state.mode;
 
@@ -551,6 +600,18 @@
 		// mode already holding uploads from a reorder prefill without the
 		// <input> itself ever holding a file — the submit handler's own
 		// uploadedFiles check below enforces this instead.
+
+		// Only 'new_design' offers the Designer — leaving it resets the
+		// choice back to 'form' so returning to 'new_design' later never
+		// strands the customer mid-canvas with the form still hidden.
+		if ( 'new_design' !== mode ) {
+			state.designMethod = 'form';
+			designMethodRadios.forEach( function ( radio ) {
+				radio.checked = 'form' === radio.value;
+			} );
+		}
+
+		updateDesignMethodUi();
 	}
 
 	function setMode( mode ) {
@@ -559,6 +620,26 @@
 			radio.checked = radio.value === mode;
 		} );
 		applyModeUi();
+	}
+
+	designMethodRadios.forEach( function ( radio ) {
+		radio.addEventListener( 'change', function () {
+			if ( ! radio.checked ) {
+				return;
+			}
+			state.designMethod = radio.value;
+			updateDesignMethodUi();
+		} );
+	} );
+
+	if ( ldChoiceBackButton ) {
+		ldChoiceBackButton.addEventListener( 'click', function () {
+			state.designMethod = 'form';
+			designMethodRadios.forEach( function ( radio ) {
+				radio.checked = 'form' === radio.value;
+			} );
+			updateDesignMethodUi();
+		} );
 	}
 
 	modeRadios.forEach( function ( radio ) {
@@ -580,7 +661,7 @@
 	// attribute — `title` only ever surfaces on hover, which doesn't
 	// exist on a touch device, so a phone would show no explanation at
 	// all for why the option won't select.
-	var reorderModeRadio = form.querySelector( 'input[name="mode"][value="reorder"]' );
+	var reorderModeRadio = root.querySelector( 'input[name="mode"][value="reorder"]' );
 	if ( reorderModeRadio && ! yeffoprintCustomOrder.isLoggedIn ) {
 		reorderModeRadio.disabled = true;
 		var reorderOption = reorderModeRadio.closest( '.yp-radio-option' );
@@ -746,7 +827,11 @@
 				renderBatch();
 
 				statusEl.hidden = true;
-				form.hidden = false;
+				formLoaded = true;
+				if ( modeGroupEl ) {
+					modeGroupEl.hidden = false;
+				}
+				updateDesignMethodUi();
 
 				if ( reorderId ) {
 					prefillFromPastOrder( reorderId, true );
@@ -918,7 +1003,7 @@
 	// browser actually shows checked at load, rather than assuming
 	// 'new_design' — a bfcache/back-navigation restore can leave a
 	// different radio checked than a freshly-parsed document would.
-	var checkedModeRadio = form.querySelector( 'input[name="mode"]:checked' );
+	var checkedModeRadio = root.querySelector( 'input[name="mode"]:checked' );
 	state.mode = checkedModeRadio ? checkedModeRadio.value : 'new_design';
 	applyModeUi();
 
