@@ -1,7 +1,7 @@
 /**
- * Custom Orders — the Fully Custom Design + Custom Stickers production
- * pipeline (docs/ARCHITECTURE.md, Phase 6). `yp_custom_order` has no
- * REST-registered meta at all (the classic `class-custom-order-editor.php`
+ * Custom Orders — the Fully Custom Design + Custom Stickers + Template
+ * Label production pipeline (docs/ARCHITECTURE.md, Phase 6). `yp_custom_order`
+ * has no REST-registered meta at all (the classic `class-custom-order-editor.php`
  * reads/writes everything with plain `get_post_meta()`), so this
  * screen is backed entirely by the new `/admin/custom-orders`/
  * `/admin/custom-order/{id}` endpoints rather than piggybacking on core
@@ -10,6 +10,16 @@
  * Read-only past Status, mirroring the classic editor exactly: every
  * other field here is what the customer submitted or what payment
  * completion filled in, neither of which staff edit from either UI.
+ *
+ * Split view, not a drawer — direct request: "the design of the admin
+ * panel is still very clunky... come up with mockups of a new admin
+ * design that's much easier and faster to use," Concept B ("Workspace")
+ * chosen. Selecting a row updates the detail pane in place instead of
+ * opening a `.yp-drawer` overlay on top of the page — no REST or data
+ * shape changed at all, this is purely how the same data gets shown.
+ * The list column and detail pane are two halves of the same `.yp-split`
+ * container (records.css); on a narrow screen they stack, with the
+ * selected row's detail replacing the list until "← Back."
  *
  * Supports being opened at a specific order via the router's `subId`
  * (`#/orders/123`) — the Dashboard home view links a pending/awaiting-
@@ -38,15 +48,30 @@
 		shipped: 'yp-pill--good'
 	};
 
+	// A small, fixed rotation — purely a visual anchor so a row is easier to
+	// spot at a glance in the list column, not meaningful data. Picked by
+	// order id so the same order always gets the same color across reloads.
+	var AVATAR_COLORS = [ '#C2007A', '#0078A4', '#8A5C08', '#1C7A34', '#5B4B8A' ];
+
+	function avatarColor( id ) {
+		return AVATAR_COLORS[ id % AVATAR_COLORS.length ];
+	}
+
+	function initial( text ) {
+		return ( text || '?' ).trim().charAt( 0 ).toUpperCase() || '?';
+	}
+
 	function endpoint( path ) {
 		return yeffoprintAdminApp.restUrl + 'admin/' + path;
 	}
 
 	YP.views.orders = function ( viewEl, subId ) {
-		var allOrders = [];
+		var allOrders  = [];
+		var selectedId = subId ? parseInt( subId, 10 ) : 0;
+		var detailOrder = null; // last successfully loaded detail payload, for re-render (e.g. after Save Status) without a full reload.
 
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Fully Custom Design and Custom Sticker requests moving through the design → proof → production pipeline.</p>' +
+			'<p class="yp-app__intro">Fully Custom Design, Custom Sticker, and Template Label requests moving through the design → proof → production pipeline.</p>' +
 			'<div class="yp-list-toolbar">' +
 				'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search orders&hellip;" />' +
 				'<select data-yp-status-filter>' +
@@ -56,27 +81,34 @@
 					} ).join( '' ) +
 				'</select>' +
 			'</div>' +
-			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
-				'<th>Order</th><th>Type</th><th>Customer</th><th>Status</th><th>Date</th><th></th>' +
-			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="6">Loading&hellip;</td></tr></tbody></table></div>';
+			'<div class="yp-split" data-yp-split>' +
+				'<div class="yp-split__list">' +
+					'<div class="yp-split__rows" data-yp-rows><p class="yp-field__hint" style="padding:1rem;">Loading&hellip;</p></div>' +
+				'</div>' +
+				'<div class="yp-split__detail" data-yp-detail>' +
+					'<div class="yp-split__empty"><p class="yp-field__hint">Select an order on the left to see its details.</p></div>' +
+				'</div>' +
+			'</div>';
 
-		var rowsEl        = viewEl.querySelector( '[data-yp-rows]' );
+		var splitEl        = viewEl.querySelector( '[data-yp-split]' );
+		var rowsEl         = viewEl.querySelector( '[data-yp-rows]' );
+		var detailEl       = viewEl.querySelector( '[data-yp-detail]' );
 		var searchEl       = viewEl.querySelector( '[data-yp-search]' );
 		var statusFilterEl = viewEl.querySelector( '[data-yp-status-filter]' );
 
-		function load( openId ) {
-			rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">Loading&hellip;</td></tr>';
+		function load() {
+			rowsEl.innerHTML = '<p class="yp-field__hint" style="padding:1rem;">Loading&hellip;</p>';
 			var query = statusFilterEl.value ? '?status=' + encodeURIComponent( statusFilterEl.value ) : '';
 			YP.request( endpoint( 'custom-orders' + query ) )
 				.then( function ( orders ) {
 					allOrders = orders || [];
 					renderRows( allOrders );
-					if ( openId ) {
-						openDetail( parseInt( openId, 10 ) );
+					if ( selectedId ) {
+						loadDetail( selectedId );
 					}
 				} )
 				.catch( function ( error ) {
-					rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">Couldn’t load orders: ' + YP.escapeHtml( error.message ) + '</td></tr>';
+					rowsEl.innerHTML = '<p class="yp-form__error">Couldn’t load orders: ' + YP.escapeHtml( error.message ) + '</p>';
 				} );
 		}
 
@@ -87,66 +119,58 @@
 				: orders;
 
 			if ( ! filtered.length ) {
-				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">' + ( orders.length ? 'No orders match your filters.' : 'No custom orders yet.' ) + '</td></tr>';
+				rowsEl.innerHTML = '<p class="yp-field__hint" style="padding:1rem;">' + ( orders.length ? 'No orders match your filters.' : 'No custom orders yet.' ) + '</p>';
 				return;
 			}
 
 			rowsEl.innerHTML = filtered.map( function ( order ) {
 				return (
-					'<tr data-id="' + order.id + '">' +
-						'<td><div class="yp-record-name">' + YP.escapeHtml( order.title ) + '</div></td>' +
-						'<td><span class="yp-chip">' + YP.escapeHtml( order.order_type_label ) + '</span></td>' +
-						'<td>' + YP.escapeHtml( order.customer_name || order.customer_email || '—' ) + '</td>' +
-						'<td>' +
+					'<button type="button" class="yp-split__row' + ( order.id === selectedId ? ' is-selected' : '' ) + '" data-id="' + order.id + '">' +
+						'<span class="yp-split__row-avatar" style="background:' + avatarColor( order.id ) + ';">' + YP.escapeHtml( initial( order.title ) ) + '</span>' +
+						'<span class="yp-split__row-text">' +
+							'<span class="t">' + YP.escapeHtml( order.title ) + '</span>' +
+							'<span class="s">' + YP.escapeHtml( order.customer_name || order.customer_email || '—' ) + ' · ' + YP.escapeHtml( order.order_type_label ) + '</span>' +
+						'</span>' +
+						'<span class="yp-split__row-status">' +
 							( order.paid
 								? '<span class="yp-pill ' + ( STATUS_PILLS[ order.status ] || 'yp-pill--neutral' ) + '">' + YP.escapeHtml( order.status_label ) + '</span>'
 								: '<span class="yp-pill yp-pill--neutral">Unpaid</span>' ) +
-							( order.has_change_request ? ' <span class="yp-pill yp-pill--crit">Changes requested</span>' : '' ) +
-						'</td>' +
-						'<td>' + ( order.date ? new Date( order.date ).toLocaleDateString() : '—' ) + '</td>' +
-						'<td class="yp-row-actions"><button type="button" class="yp-row-action" data-yp-view="' + order.id + '">View</button></td>' +
-					'</tr>'
+							( order.has_change_request ? '<span class="yp-pill yp-pill--crit">Changes requested</span>' : '' ) +
+						'</span>' +
+					'</button>'
 				);
 			} ).join( '' );
 
-			rowsEl.querySelectorAll( '[data-yp-view]' ).forEach( function ( button ) {
-				button.addEventListener( 'click', function () { openDetail( parseInt( button.getAttribute( 'data-yp-view' ), 10 ) ); } );
+			rowsEl.querySelectorAll( '[data-id]' ).forEach( function ( row ) {
+				row.addEventListener( 'click', function () { selectRow( parseInt( row.getAttribute( 'data-id' ), 10 ) ); } );
 			} );
 		}
 
-		/* ---------- Detail drawer ---------- */
+		/* ---------- Selection + detail pane ---------- */
 
-		function openDetail( id ) {
-			var drawer = document.createElement( 'div' );
-			drawer.className = 'yp-drawer yp-drawer--wide';
-			drawer.setAttribute( 'aria-hidden', 'true' );
-			drawer.innerHTML =
-				'<div class="yp-drawer__backdrop"></div>' +
-				'<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="Order detail">' +
-					'<div class="yp-drawer__header"><span>Order detail</span>' +
-						'<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">&times;</button>' +
-					'</div>' +
-					'<div class="yp-drawer__body" data-yp-body><p class="yp-field__hint">Loading&hellip;</p></div>' +
-				'</div>';
-
-			document.body.appendChild( drawer );
-			YP.initDrawer( drawer );
-			YP.openDrawer( drawer );
-
-			loadDetail( id, drawer );
+		function selectRow( id ) {
+			selectedId = id;
+			splitEl.classList.add( 'has-selection' );
+			rowsEl.querySelectorAll( '[data-id]' ).forEach( function ( row ) {
+				row.classList.toggle( 'is-selected', parseInt( row.getAttribute( 'data-id' ), 10 ) === id );
+			} );
+			loadDetail( id );
 		}
 
-		function loadDetail( id, drawer ) {
-			var bodyEl = drawer.querySelector( '[data-yp-body]' );
+		function loadDetail( id ) {
+			detailEl.innerHTML = '<div class="yp-split__empty"><p class="yp-field__hint">Loading&hellip;</p></div>';
 			YP.request( endpoint( 'custom-order/' + id ) )
-				.then( function ( order ) { renderDetail( order, drawer, bodyEl ); } )
+				.then( function ( order ) {
+					detailOrder = order;
+					renderDetail( order );
+				} )
 				.catch( function ( error ) {
-					bodyEl.innerHTML = '<p class="yp-form__error">Couldn’t load this order: ' + YP.escapeHtml( error.message ) + '</p>';
+					detailEl.innerHTML = '<div class="yp-split__empty"><p class="yp-form__error">Couldn’t load this order: ' + YP.escapeHtml( error.message ) + '</p></div>';
 				} );
 		}
 
-		function row( label, valueHtml ) {
-			return '<tr><th>' + YP.escapeHtml( label ) + '</th><td>' + valueHtml + '</td></tr>';
+		function field( label, valueHtml ) {
+			return '<div class="yp-split__field"><span class="k">' + YP.escapeHtml( label ) + '</span><span class="v">' + valueHtml + '</span></div>';
 		}
 
 		function uploadListHtml( uploads ) {
@@ -158,62 +182,47 @@
 			} ).join( '' ) + '</ul>';
 		}
 
-		function renderDetail( order, drawer, bodyEl ) {
-			var rowsHtml = row( 'Type', YP.escapeHtml( order.order_type_label ) );
-
-			rowsHtml += row(
-				'Customer',
-				YP.escapeHtml( order.customer_name || '' ) + ( order.customer_email ? ' — <a href="mailto:' + YP.escapeAttr( order.customer_email ) + '">' + YP.escapeHtml( order.customer_email ) + '</a>' : '' )
-			);
+		function renderDetail( order ) {
+			var fieldsHtml = '';
 
 			if ( 'sticker' === order.order_type ) {
 				var s = order.sticker;
-				rowsHtml += row( 'Sticker Type', YP.escapeHtml( s.sticker_type_label || '—' ) );
-				rowsHtml += row( 'Shape', YP.escapeHtml( s.shape_label || '—' ) );
-				rowsHtml += row( 'Size', s.is_custom_size ? ( 'Custom: ' + YP.escapeHtml( s.custom_width_in ) + '&Prime; &times; ' + YP.escapeHtml( s.custom_height_in ) + '&Prime;' ) : YP.escapeHtml( s.size_label || '—' ) );
-				rowsHtml += row( 'Material', YP.escapeHtml( s.material_label || '—' ) );
-				rowsHtml += row( 'Quantity', String( s.quantity ) );
-				rowsHtml += row( 'Instructions', s.instructions ? YP.escapeHtml( s.instructions ).replace( /\n/g, '<br>' ) : '—' );
-				rowsHtml += row( 'Artwork Files', uploadListHtml( s.artwork_uploads ) );
+				fieldsHtml += field( 'Sticker Type', YP.escapeHtml( s.sticker_type_label || '—' ) );
+				fieldsHtml += field( 'Shape', YP.escapeHtml( s.shape_label || '—' ) );
+				fieldsHtml += field( 'Size', s.is_custom_size ? ( 'Custom: ' + YP.escapeHtml( s.custom_width_in ) + '&Prime; &times; ' + YP.escapeHtml( s.custom_height_in ) + '&Prime;' ) : YP.escapeHtml( s.size_label || '—' ) );
+				fieldsHtml += field( 'Material', YP.escapeHtml( s.material_label || '—' ) );
+				fieldsHtml += field( 'Quantity', String( s.quantity ) );
+				fieldsHtml += field( 'Instructions', s.instructions ? YP.escapeHtml( s.instructions ).replace( /\n/g, '<br>' ) : '—' );
+				fieldsHtml += field( 'Artwork Files', uploadListHtml( s.artwork_uploads ) );
 			} else if ( 'template' === order.order_type ) {
 				var t = order.template;
-				rowsHtml += row( 'Design', YP.escapeHtml( t.template_title || '—' ) );
-				rowsHtml += row( 'Size', YP.escapeHtml( t.size_label || '—' ) );
-				rowsHtml += row( 'Material', YP.escapeHtml( t.material_label || '—' ) );
-				rowsHtml += row(
-					'Batch',
-					'<table class="yp-record-table"><thead><tr><th>Qty</th><th>Customization</th></tr></thead><tbody>' +
-						t.variants.map( function ( v ) {
-							return '<tr><td>' + v.quantity + '</td><td>' + ( v.summary ? YP.escapeHtml( v.summary ) : '—' ) + '</td></tr>';
-						} ).join( '' ) +
-					'</tbody></table>'
-				);
-				rowsHtml += row( 'Instructions', t.instructions ? YP.escapeHtml( t.instructions ).replace( /\n/g, '<br>' ) : '—' );
+				fieldsHtml += field( 'Design', YP.escapeHtml( t.template_title || '—' ) );
+				fieldsHtml += field( 'Size', YP.escapeHtml( t.size_label || '—' ) );
+				fieldsHtml += field( 'Material', YP.escapeHtml( t.material_label || '—' ) );
+				fieldsHtml += field( 'Instructions', t.instructions ? YP.escapeHtml( t.instructions ).replace( /\n/g, '<br>' ) : '—' );
 			} else {
 				var l = order.label;
-				rowsHtml += row( 'Brand Name', YP.escapeHtml( l.brand_name || '—' ) );
-				rowsHtml += row(
-					'Batch',
-					'<table class="yp-record-table"><thead><tr><th>Size</th><th>Material</th><th>Qty</th><th>Compound / Strength</th></tr></thead><tbody>' +
-						l.batch.map( function ( b ) {
-							return '<tr><td>' + YP.escapeHtml( b.size_label || '—' ) + '</td><td>' + YP.escapeHtml( b.material_label || '—' ) + '</td><td>' + b.quantity + '</td><td>' + YP.escapeHtml( b.compound_strength || '—' ) + '</td></tr>';
-						} ).join( '' ) +
-					'</tbody></table>'
-				);
-				rowsHtml += row( 'Style / Colors', l.style_notes ? YP.escapeHtml( l.style_notes ).replace( /\n/g, '<br>' ) : '—' );
-				rowsHtml += row( 'Instructions', l.instructions ? YP.escapeHtml( l.instructions ).replace( /\n/g, '<br>' ) : '—' );
-				rowsHtml += row( l.uploads_label, uploadListHtml( l.uploads ) );
+				fieldsHtml += field( 'Brand Name', YP.escapeHtml( l.brand_name || '—' ) );
+				fieldsHtml += field( 'Style / Colors', l.style_notes ? YP.escapeHtml( l.style_notes ).replace( /\n/g, '<br>' ) : '—' );
+				fieldsHtml += field( 'Instructions', l.instructions ? YP.escapeHtml( l.instructions ).replace( /\n/g, '<br>' ) : '—' );
+				fieldsHtml += field( l.uploads_label, uploadListHtml( l.uploads ) );
 			}
 
-			rowsHtml += row(
-				'label' === order.order_type ? 'Design Fee' : 'Amount Paid',
-				order.fee_skipped
-					? '$0.00 — fee skipped'
-					: ( order.design_fee ? '$' + order.design_fee.toFixed( 2 ) + ' — paid' : 'Awaiting payment' )
-			);
-
-			if ( order.wc_order_edit_url ) {
-				rowsHtml += row( 'Order', '<a href="' + YP.escapeAttr( order.wc_order_edit_url ) + '" target="_blank" rel="noopener noreferrer">#' + order.wc_order_id + '</a>' );
+			var batchHtml = '';
+			if ( 'template' === order.order_type ) {
+				batchHtml =
+					'<table class="yp-record-table"><thead><tr><th>Qty</th><th>Customization</th></tr></thead><tbody>' +
+						order.template.variants.map( function ( v ) {
+							return '<tr><td>' + v.quantity + '</td><td>' + ( v.summary ? YP.escapeHtml( v.summary ) : '—' ) + '</td></tr>';
+						} ).join( '' ) +
+					'</tbody></table>';
+			} else if ( 'label' === order.order_type ) {
+				batchHtml =
+					'<table class="yp-record-table"><thead><tr><th>Size</th><th>Material</th><th>Qty</th><th>Compound / Strength</th></tr></thead><tbody>' +
+						order.label.batch.map( function ( b ) {
+							return '<tr><td>' + YP.escapeHtml( b.size_label || '—' ) + '</td><td>' + YP.escapeHtml( b.material_label || '—' ) + '</td><td>' + b.quantity + '</td><td>' + YP.escapeHtml( b.compound_strength || '—' ) + '</td></tr>';
+						} ).join( '' ) +
+					'</tbody></table>';
 			}
 
 			var noticesHtml = '';
@@ -224,34 +233,61 @@
 				noticesHtml += '<div class="yp-form__error" style="background: rgba(181, 121, 10, 0.1); color: #8a5c08;"><strong>Customer provided their own print-ready design</strong> — no design work needed.</div>';
 			}
 
-			bodyEl.innerHTML =
-				noticesHtml +
-				'<div class="yp-record-card"><table class="yp-record-table"><tbody>' + rowsHtml + '</tbody></table></div>' +
+			detailEl.innerHTML =
+				'<div class="yp-split__detail-scroll">' +
+					'<button type="button" class="yp-split__back" data-yp-back>&larr; Back to list</button>' +
+					'<div class="yp-split__head">' +
+						'<span class="yp-split__row-avatar" style="background:' + avatarColor( order.id ) + ';width:40px;height:40px;font-size:1rem;">' + YP.escapeHtml( initial( order.title ) ) + '</span>' +
+						'<div>' +
+							'<h2>' + YP.escapeHtml( order.title ) + '</h2>' +
+							'<p class="yp-field__hint" style="margin:0.15rem 0 0;">' +
+								YP.escapeHtml( order.order_type_label ) + ' · ' + YP.escapeHtml( order.customer_name || '' ) +
+								( order.customer_email ? ' — <a href="mailto:' + YP.escapeAttr( order.customer_email ) + '">' + YP.escapeHtml( order.customer_email ) + '</a>' : '' ) +
+							'</p>' +
+						'</div>' +
+					'</div>' +
+					noticesHtml +
+					'<div class="yp-split__fields">' + fieldsHtml + '</div>' +
+					( batchHtml ? '<h3 class="yp-split__subhead">Batch</h3>' + batchHtml : '' ) +
+					'<div class="yp-split__fields" style="margin-top:0.75rem;">' +
+						field(
+							'label' === order.order_type ? 'Design Fee' : 'Amount Paid',
+							order.fee_skipped
+								? '$0.00 — fee skipped'
+								: ( order.design_fee ? '$' + order.design_fee.toFixed( 2 ) + ' — paid' : 'Awaiting payment' )
+						) +
+						( order.wc_order_edit_url ? field( 'Order', '<a href="' + YP.escapeAttr( order.wc_order_edit_url ) + '" target="_blank" rel="noopener noreferrer">#' + order.wc_order_id + '</a>' ) : '' ) +
+					'</div>' +
 
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Status</h2></div>' +
-					( order.paid
-						? '<div class="yp-form__row"><div class="yp-field"><select data-yp-status>' +
-							Object.keys( order.statuses ).map( function ( key ) {
-								return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
-							} ).join( '' ) +
-						'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-save-status>Save Status</button></div></div>'
-						: '<p class="yp-field__hint">Awaiting the design fee payment — status is set automatically once paid.</p>' ) +
-					'<div data-yp-status-error></div>' +
-				'</div>' +
+					'<div class="yp-panel">' +
+						'<div class="yp-panel__head"><h2>Status</h2></div>' +
+						( order.paid
+							? '<div class="yp-form__row"><div class="yp-field"><select data-yp-status>' +
+								Object.keys( order.statuses ).map( function ( key ) {
+									return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
+								} ).join( '' ) +
+							'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-save-status>Save Status</button></div></div>'
+							: '<p class="yp-field__hint">Awaiting the design fee payment — status is set automatically once paid.</p>' ) +
+						'<div data-yp-status-error></div>' +
+					'</div>' +
 
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Proofs</h2>' + ( order.paid ? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-proof>+ Add Proof</button>' : '' ) + '</div>' +
-					'<div data-yp-proofs-list>' + proofsListHtml( order.proofs ) + '</div>' +
-					( order.approval_url
-						? '<p class="yp-field__hint"><strong>Customer approval link:</strong> <input type="text" readonly onclick="this.select();" value="' + YP.escapeAttr( order.approval_url ) + '" style="width:100%;margin-top:0.35rem;padding:0.4rem 0.6rem;font-family:var(--wp--preset--font-family--mono);font-size:0.78rem;border:1.5px solid var(--wp--preset--color--light-gray);border-radius:var(--wp--custom--radius--control);" /></p>'
-						: '' ) +
-					( 'awaiting_approval' === order.status ? reminderStatusHtml( order ) : '' ) +
+					'<div class="yp-panel">' +
+						'<div class="yp-panel__head"><h2>Proofs</h2>' + ( order.paid ? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-proof>+ Add Proof</button>' : '' ) + '</div>' +
+						'<div data-yp-proofs-list>' + proofsListHtml( order.proofs ) + '</div>' +
+						( order.approval_url
+							? '<p class="yp-field__hint"><strong>Customer approval link:</strong> <input type="text" readonly onclick="this.select();" value="' + YP.escapeAttr( order.approval_url ) + '" style="width:100%;margin-top:0.35rem;padding:0.4rem 0.6rem;font-family:var(--wp--preset--font-family--mono);font-size:0.78rem;border:1.5px solid var(--wp--preset--color--light-gray);border-radius:var(--wp--custom--radius--control);" /></p>'
+							: '' ) +
+						( 'awaiting_approval' === order.status ? reminderStatusHtml( order ) : '' ) +
+					'</div>' +
 				'</div>';
 
+			detailEl.querySelector( '[data-yp-back]' ).addEventListener( 'click', function () {
+				splitEl.classList.remove( 'has-selection' );
+			} );
+
 			if ( order.paid ) {
-				bodyEl.querySelector( '[data-yp-save-status]' ).addEventListener( 'click', function () { saveStatus( order, drawer, bodyEl ); } );
-				bodyEl.querySelector( '[data-yp-add-proof]' ).addEventListener( 'click', function () { addProof( order, drawer, bodyEl ); } );
+				detailEl.querySelector( '[data-yp-save-status]' ).addEventListener( 'click', function () { saveStatus( order ); } );
+				detailEl.querySelector( '[data-yp-add-proof]' ).addEventListener( 'click', function () { addProof( order ); } );
 			}
 		}
 
@@ -277,10 +313,10 @@
 			} ).join( '' ) + '</ul>';
 		}
 
-		function saveStatus( order, drawer, bodyEl ) {
-			var select = bodyEl.querySelector( '[data-yp-status]' );
-			var button = bodyEl.querySelector( '[data-yp-save-status]' );
-			var errorEl = bodyEl.querySelector( '[data-yp-status-error]' );
+		function saveStatus( order ) {
+			var select = detailEl.querySelector( '[data-yp-status]' );
+			var button = detailEl.querySelector( '[data-yp-save-status]' );
+			var errorEl = detailEl.querySelector( '[data-yp-status-error]' );
 
 			button.disabled = true;
 			button.textContent = 'Saving…';
@@ -288,7 +324,7 @@
 
 			YP.request( endpoint( 'custom-order/' + order.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { status: select.value } ) } )
 				.then( function ( updated ) {
-					renderDetail( updated, drawer, bodyEl );
+					renderDetail( updated );
 					load();
 				} )
 				.catch( function ( error ) {
@@ -298,7 +334,7 @@
 				} );
 		}
 
-		function addProof( order, drawer, bodyEl ) {
+		function addProof( order ) {
 			if ( typeof wp === 'undefined' || ! wp.media ) {
 				return;
 			}
@@ -307,13 +343,13 @@
 
 			frame.on( 'select', function () {
 				var attachment = frame.state().get( 'selection' ).first().toJSON();
-				var listEl = bodyEl.querySelector( '[data-yp-proofs-list]' );
+				var listEl = detailEl.querySelector( '[data-yp-proofs-list]' );
 				listEl.innerHTML = '<p class="yp-field__hint">Uploading proof&hellip;</p>';
 
 				YP.request( endpoint( 'proofs' ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { custom_order_id: order.id, file_id: attachment.id } ) } )
 					.then( function () { return YP.request( endpoint( 'custom-order/' + order.id ) ); } )
 					.then( function ( updated ) {
-						renderDetail( updated, drawer, bodyEl );
+						renderDetail( updated );
 						load();
 					} )
 					.catch( function ( error ) {
@@ -324,9 +360,57 @@
 			frame.open();
 		}
 
-		searchEl.addEventListener( 'input', function () { renderRows( allOrders ); } );
-		statusFilterEl.addEventListener( 'change', function () { load(); } );
+		/**
+		 * Keyboard: ↑/↓ move between rows, Esc back to list on mobile. The
+		 * router tears a view down by just overwriting viewEl's innerHTML
+		 * on the next hashchange — nothing ever calls back in here to
+		 * unregister this listener, so it checks, on every fire, whether
+		 * this view's own root node is still attached to the document and
+		 * unregisters itself the first time it isn't (rather than a
+		 * document-level keydown listener silently piling up one per past
+		 * visit to this screen over a long admin session).
+		 */
+		function handleKeydown( event ) {
+			if ( ! document.body.contains( viewEl ) ) {
+				document.removeEventListener( 'keydown', handleKeydown );
+				return;
+			}
 
-		load( subId );
+			if ( 'ArrowDown' !== event.key && 'ArrowUp' !== event.key && 'Escape' !== event.key ) {
+				return;
+			}
+			var active = document.activeElement;
+			if ( active && ( 'INPUT' === active.tagName || 'SELECT' === active.tagName || 'TEXTAREA' === active.tagName ) ) {
+				return; // Never hijack typing in the search box or a form field.
+			}
+
+			if ( 'Escape' === event.key ) {
+				splitEl.classList.remove( 'has-selection' );
+				return;
+			}
+
+			var visibleRows = Array.prototype.slice.call( rowsEl.querySelectorAll( '[data-id]' ) );
+			if ( ! visibleRows.length ) {
+				return;
+			}
+			var currentIndex = visibleRows.findIndex( function ( row ) { return parseInt( row.getAttribute( 'data-id' ), 10 ) === selectedId; } );
+			var nextIndex = 'ArrowDown' === event.key ? currentIndex + 1 : currentIndex - 1;
+			nextIndex = Math.max( 0, Math.min( visibleRows.length - 1, nextIndex ) );
+
+			if ( nextIndex === currentIndex && -1 !== currentIndex ) {
+				return;
+			}
+			event.preventDefault();
+			var nextRow = visibleRows[ nextIndex ];
+			selectRow( parseInt( nextRow.getAttribute( 'data-id' ), 10 ) );
+			nextRow.scrollIntoView( { block: 'nearest' } );
+		}
+
+		document.addEventListener( 'keydown', handleKeydown );
+
+		searchEl.addEventListener( 'input', function () { renderRows( allOrders ); } );
+		statusFilterEl.addEventListener( 'change', load );
+
+		load();
 	};
 } )();

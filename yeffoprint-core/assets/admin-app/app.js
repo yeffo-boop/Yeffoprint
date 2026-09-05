@@ -453,14 +453,14 @@
 
 	function daysAgoLabel( isoDate, dueDateDays ) {
 		if ( ! isoDate ) {
-			return { text: '—', overdue: false };
+			return { text: '—', overdue: false, overdueBy: 0 };
 		}
 		var daysOpen = Math.floor( ( Date.now() - new Date( isoDate ).getTime() ) / 86400000 );
 		if ( daysOpen > dueDateDays ) {
 			var overdueBy = daysOpen - dueDateDays;
-			return { text: overdueBy + ( 1 === overdueBy ? ' day overdue' : ' days overdue' ), overdue: true };
+			return { text: overdueBy + ( 1 === overdueBy ? ' day overdue' : ' days overdue' ), overdue: true, overdueBy: overdueBy };
 		}
-		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false };
+		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false, overdueBy: 0 };
 	}
 
 	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction, clickAttr, actionHeader ) {
@@ -540,6 +540,85 @@
 		return 'checked ' + hours + ( 1 === hours ? ' hour ago' : ' hours ago' );
 	}
 
+	/**
+	 * "Needs attention" — direct request: "the dashboard is five separate
+	 * flat panels with nothing ranking them... an order stuck for 4 days
+	 * looks exactly as urgent as one placed an hour ago." Pulls the
+	 * genuinely urgent rows out of the panels below (already-fetched data,
+	 * no new endpoint) into one ranked list at the top: a tracking failure
+	 * first (there's no "days" to compare it against, and a lost/failed
+	 * package is as urgent as this dashboard gets), then every overdue
+	 * pending order/proof/approval, most-overdue first. The panels below
+	 * are unchanged and still show everything, overdue or not — this is a
+	 * "look here first," not a replacement for browsing the full lists.
+	 */
+	function needsAttentionItems( summary, dueDateDays, sendToPrinterButtonHtml ) {
+		var items = [];
+
+		summary.shipped_packages.forEach( function ( pkg ) {
+			if ( 'FAILURE' !== pkg.tracking_status && 'RETURNED' !== pkg.tracking_status ) {
+				return;
+			}
+			items.push( {
+				sortKey: Infinity,
+				title: pkg.order_label + ' — ' + ( 'FAILURE' === pkg.tracking_status ? 'delivery failed' : 'returned to sender' ),
+				meta: ( pkg.customer || '—' ) + ' · ' + ( pkg.carrier_label || 'Carrier' ) + ' ' + pkg.tracking_number,
+				actionHtml: '<button type="button" class="wp-block-button__link is-style-outline yp-row-action" style="padding:4px 10px;font-size:12px;" data-yp-wc-order="' + pkg.id + '">View order</button>'
+			} );
+		} );
+
+		function pushOverdue( rows, metaSuffix, actionBuilder ) {
+			rows.forEach( function ( row ) {
+				var age = daysAgoLabel( row.date, dueDateDays );
+				if ( ! age.overdue ) {
+					return;
+				}
+				items.push( {
+					sortKey: age.overdueBy,
+					title: row.label,
+					meta: ( row.customer || '—' ) + ' · ' + age.text + metaSuffix,
+					actionHtml: actionBuilder( row )
+				} );
+			} );
+		}
+
+		pushOverdue( summary.pending_orders, '', sendToPrinterButtonHtml );
+		pushOverdue( summary.pending_proofs, ' · needs a proof', function ( row ) {
+			return '<button type="button" class="wp-block-button__link is-style-outline yp-row-action" style="padding:4px 10px;font-size:12px;" data-yp-dashboard-order="' + row.id + '">View</button>';
+		} );
+		pushOverdue( summary.awaiting_approval, ' · awaiting customer approval', function ( row ) {
+			return '<button type="button" class="wp-block-button__link is-style-outline yp-row-action" style="padding:4px 10px;font-size:12px;" data-yp-dashboard-order="' + row.id + '">View</button>';
+		} );
+
+		items.sort( function ( a, b ) { return b.sortKey - a.sortKey; } );
+
+		return items.slice( 0, 6 );
+	}
+
+	function needsAttentionHtml( summary, dueDateDays, sendToPrinterButtonHtml ) {
+		var items = needsAttentionItems( summary, dueDateDays, sendToPrinterButtonHtml );
+		if ( ! items.length ) {
+			return '';
+		}
+
+		return (
+			'<div class="yp-panel yp-attn">' +
+				'<div class="yp-panel__head"><h2>Needs attention</h2><span class="yp-panel__hint" style="margin:0;">' + items.length + ( 1 === items.length ? ' item' : ' items' ) + '</span></div>' +
+				items.map( function ( item ) {
+					return (
+						'<div class="yp-attn__row">' +
+							'<div class="yp-attn__text">' +
+								'<span class="t">' + YP.escapeHtml( item.title ) + '</span>' +
+								'<span class="s">' + YP.escapeHtml( item.meta ) + '</span>' +
+							'</div>' +
+							'<div class="yp-attn__actions">' + item.actionHtml + '</div>' +
+						'</div>'
+					);
+				} ).join( '' ) +
+			'</div>'
+		);
+	}
+
 	function renderDashboardSummary( summary, el ) {
 		var dueDateDays = summary.due_date_days;
 
@@ -611,6 +690,7 @@
 		}
 
 		el.innerHTML =
+			needsAttentionHtml( summary, dueDateDays, sendToPrinterButtonHtml ) +
 			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped — processing or in production.', summary.pending_orders_url, summary.pending_orders, dueDateDays, true, sendToPrinterButtonHtml, 'data-yp-wc-order', 'Status' ) +
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Shipped Packages</h2><button type="button" class="yp-row-action" data-yp-refresh-tracking>Check tracking now</button></div>' +
