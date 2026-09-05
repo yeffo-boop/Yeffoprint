@@ -175,6 +175,20 @@
 	margin-bottom: 1rem;
 }
 
+/* "+ Add another label" / "Bulk import from CSV" / "Download CSV
+   template" — direct request: a reseller placing a large batch order
+   shouldn't have to add each label by hand. */
+.yp-batch-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.yp-batch-actions__sep {
+	color: var(--wp--preset--color--light-gray);
+}
+
 .yp-batch-row .yp-field:last-child {
 	margin-bottom: 0;
 }

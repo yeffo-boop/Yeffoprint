@@ -267,6 +267,220 @@
 		updatePricePreview();
 	} );
 
+	/**
+	 * ---------- Bulk import from CSV ----------
+	 * Direct request: "we would need to offer a template the customer
+	 * can use to fill out and upload" — a reseller placing a large batch
+	 * order (many different compound/strength/size/material
+	 * combinations) adding each one through "+ Add another label"
+	 * doesn't scale. Size/Material are matched by name, not id — a
+	 * customer has no way to know an internal post id — case-
+	 * insensitively against the same sizesData/materialsData already
+	 * loaded for the row dropdowns; any row that doesn't resolve
+	 * cleanly is reported and skipped rather than guessed at, the same
+	 * "never silently guess" principle the server's own
+	 * validate_batch_rows() already follows for this endpoint.
+	 */
+
+	var importCsvButton = root.querySelector( '[data-yp-co-import-csv]' );
+	var downloadTemplateButton = root.querySelector( '[data-yp-co-download-template]' );
+	var csvInput = root.querySelector( '[data-yp-co-csv-input]' );
+	var importErrorEl = null;
+
+	function showImportErrors( lines ) {
+		if ( ! importErrorEl ) {
+			importErrorEl = document.createElement( 'p' );
+			importErrorEl.className = 'yp-configurator__cart-status is-error';
+			root.querySelector( '.yp-batch-actions' ).insertAdjacentElement( 'afterend', importErrorEl );
+		}
+		importErrorEl.innerHTML = lines.map( escapeHtml ).join( '<br>' );
+	}
+
+	function clearImportErrors() {
+		if ( importErrorEl ) {
+			importErrorEl.remove();
+			importErrorEl = null;
+		}
+	}
+
+	function csvCell( value ) {
+		var str = String( value == null ? '' : value );
+		return /[",\r\n]/.test( str ) ? '"' + str.replace( /"/g, '""' ) + '"' : str;
+	}
+
+	/** One quoted-field-aware CSV parse, good enough for the small, simple sheet this template produces — not a general RFC 4180 parser (no multi-line quoted fields), matching this codebase's "no build step, no external library for a small job" convention elsewhere. */
+	function parseCsv( text ) {
+		var rows = [];
+
+		text.split( /\r\n|\r|\n/ ).forEach( function ( line ) {
+			if ( '' === line.trim() ) {
+				return;
+			}
+
+			var cells = [];
+			var current = '';
+			var inQuotes = false;
+
+			for ( var i = 0; i < line.length; i++ ) {
+				var char = line.charAt( i );
+
+				if ( inQuotes ) {
+					if ( '"' === char && '"' === line.charAt( i + 1 ) ) {
+						current += '"';
+						i++;
+					} else if ( '"' === char ) {
+						inQuotes = false;
+					} else {
+						current += char;
+					}
+				} else if ( '"' === char ) {
+					inQuotes = true;
+				} else if ( ',' === char ) {
+					cells.push( current );
+					current = '';
+				} else {
+					current += char;
+				}
+			}
+			cells.push( current );
+
+			rows.push( cells.map( function ( cell ) { return cell.trim(); } ) );
+		} );
+
+		return rows;
+	}
+
+	function findRecordByName( records, name ) {
+		var lower = name.trim().toLowerCase();
+		for ( var i = 0; i < records.length; i++ ) {
+			if ( records[ i ].name.trim().toLowerCase() === lower ) {
+				return records[ i ];
+			}
+		}
+		return null;
+	}
+
+	function importCsvRows( rows ) {
+		// The template's own header row is the first line a customer sees
+		// when they open the file — skip it if present so it's never
+		// treated as a real row. Detected by name rather than always
+		// dropping row 1, so a customer who deletes the header (or pastes
+		// rows from elsewhere without one) doesn't silently lose their
+		// first real row.
+		if ( rows.length && rows[ 0 ][ 0 ] && 'size' === rows[ 0 ][ 0 ].trim().toLowerCase() ) {
+			rows = rows.slice( 1 );
+		}
+
+		var imported = [];
+		var errors = [];
+
+		rows.forEach( function ( cells, index ) {
+			var rowNumber = index + 1;
+			var sizeName = cells[ 0 ] || '';
+			var materialName = cells[ 1 ] || '';
+			var quantityRaw = cells[ 2 ] || '';
+			var compoundStrength = cells[ 3 ] || '';
+
+			if ( ! sizeName && ! materialName && ! quantityRaw ) {
+				return; // A fully blank row (trailing spreadsheet rows) — nothing to report, nothing to import.
+			}
+
+			var size = findRecordByName( sizesData, sizeName );
+			if ( ! size ) {
+				errors.push( 'Row ' + rowNumber + ': “' + sizeName + '” isn’t a size we offer.' );
+				return;
+			}
+
+			var material = findRecordByName( materialsData, materialName );
+			if ( ! material ) {
+				errors.push( 'Row ' + rowNumber + ': “' + materialName + '” isn’t a material we offer.' );
+				return;
+			}
+			if ( false === material.in_stock ) {
+				errors.push( 'Row ' + rowNumber + ': “' + materialName + '” is currently out of stock.' );
+				return;
+			}
+
+			var quantity = parseInt( quantityRaw, 10 );
+			if ( ! quantity || quantity < 1 ) {
+				errors.push( 'Row ' + rowNumber + ': quantity must be a whole number of 1 or more.' );
+				return;
+			}
+
+			imported.push( createRow( {
+				size_id: size.id,
+				material_id: material.id,
+				quantity: quantity,
+				compound_strength: compoundStrength
+			} ) );
+		} );
+
+		if ( imported.length ) {
+			batchRows = batchRows.concat( imported );
+			renderBatch();
+			updatePricePreview();
+		}
+
+		if ( errors.length ) {
+			showImportErrors(
+				( imported.length
+					? [ 'Imported ' + imported.length + ' label' + ( 1 === imported.length ? '' : 's' ) + '. The rows below need fixing — add them manually if you’d rather not re-upload:' ]
+					: [] ).concat( errors )
+			);
+		} else if ( imported.length ) {
+			clearImportErrors();
+		}
+	}
+
+	importCsvButton.addEventListener( 'click', function () {
+		csvInput.click();
+	} );
+
+	csvInput.addEventListener( 'change', function () {
+		var file = csvInput.files[ 0 ];
+		csvInput.value = ''; // Lets re-selecting the same file (after fixing it) fire change again.
+		if ( ! file ) {
+			return;
+		}
+
+		clearImportErrors();
+
+		var reader = new FileReader();
+		reader.onload = function () {
+			importCsvRows( parseCsv( String( reader.result ) ) );
+		};
+		reader.onerror = function () {
+			showImportErrors( [ 'Couldn’t read that file — try again or add labels manually.' ] );
+		};
+		reader.readAsText( file );
+	} );
+
+	/**
+	 * A ready-to-fill CSV built from this store's own live sizes/
+	 * materials/quantity presets — a client-side Blob download, no
+	 * server round trip needed for a small file already fully in memory
+	 * on the page.
+	 */
+	downloadTemplateButton.addEventListener( 'click', function () {
+		var availableMaterials = materialsData.filter( function ( m ) { return false !== m.in_stock; } );
+		var exampleMaterial = ( availableMaterials.length ? availableMaterials[ 0 ] : materialsData[ 0 ] ) || { name: 'White Glossy' };
+		var exampleSize = sizesData.length ? sizesData[ 0 ] : { name: '3mL' };
+		var exampleQuantity = quantityPresets[ 0 ] || 50;
+
+		var csv = 'Size,Material,Quantity,Compound / Strength\r\n' +
+			csvCell( exampleSize.name ) + ',' + csvCell( exampleMaterial.name ) + ',' + exampleQuantity + ',' + csvCell( 'Tirzepatide 5mg' ) + '\r\n';
+
+		var blob = new Blob( [ csv ], { type: 'text/csv;charset=utf-8;' } );
+		var url = URL.createObjectURL( blob );
+		var link = document.createElement( 'a' );
+		link.href = url;
+		link.download = 'yeffoprint-label-batch-template.csv';
+		document.body.appendChild( link );
+		link.click();
+		document.body.removeChild( link );
+		URL.revokeObjectURL( url );
+	} );
+
 	/* ---------- Pricing preview ---------- */
 
 	/**
