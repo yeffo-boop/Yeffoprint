@@ -49,6 +49,33 @@ class YeffoPrint_Order_Item_Meta {
 	 */
 	private bool $hiding_batch_count_line = false;
 
+	/**
+	 * True only while YeffoPrint_Admin_Order_Controller is building the
+	 * admin app's own WC order drawer payload (class-admin-order-
+	 * controller.php's item_payload()) — direct report, with a
+	 * screenshot: that drawer's Items table showed the raw " — "-joined
+	 * summary string ("Corner Finish: Rounded — Compound Name:
+	 * Tesamorelin — Strength (mg or iu): 10mg — …"), the exact wall-of-
+	 * text problem format_customization_display() below already solves
+	 * for the classic order-edit screen and HTML emails. That method
+	 * never fired here because its own is_order_edit_screen() check
+	 * looks for a classic wp-admin screen id, which a REST API request
+	 * never has. Static, unlike $rendering_html_email/$hiding_batch_
+	 * count_line above, because the controller calling
+	 * get_formatted_meta_data() has no reference to this filter's own
+	 * `$this` (registered once, at bootstrap, with nothing keeping the
+	 * instance around) — a class-level toggle needs no such reference.
+	 */
+	private static bool $rendering_admin_app_context = false;
+
+	public static function mark_admin_app_context(): void {
+		self::$rendering_admin_app_context = true;
+	}
+
+	public static function unmark_admin_app_context(): void {
+		self::$rendering_admin_app_context = false;
+	}
+
 	public function __construct() {
 		add_action( 'woocommerce_checkout_create_order_line_item', [ $this, 'snapshot' ], 10, 4 );
 		add_filter( 'woocommerce_hidden_order_itemmeta', [ $this, 'hide_internal_keys' ] );
@@ -404,8 +431,9 @@ class YeffoPrint_Order_Item_Meta {
 	public function format_customization_display( array $formatted_meta, \WC_Order_Item $item ): array {
 		$is_order_screen = $this->is_order_edit_screen();
 		$is_html_email   = $this->rendering_html_email;
+		$is_admin_app    = self::$rendering_admin_app_context;
 
-		if ( ! $is_order_screen && ! $is_html_email ) {
+		if ( ! $is_order_screen && ! $is_html_email && ! $is_admin_app ) {
 			return $formatted_meta;
 		}
 

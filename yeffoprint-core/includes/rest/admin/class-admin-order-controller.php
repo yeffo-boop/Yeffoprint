@@ -243,10 +243,30 @@ class YeffoPrint_Admin_Order_Controller {
 			// own method) — the same batch tables/variant summaries/QR
 			// links the classic order screen renders raw, rendered raw
 			// here too rather than re-escaped into visible markup.
+			//
+			// mark/unmark_admin_app_context() around the call itself —
+			// direct report, with a screenshot: this table was showing
+			// the raw joined "Corner Finish: Rounded — Compound Name: …"
+			// summary string instead of the field-by-field layout the
+			// classic order screen already gets, because
+			// YeffoPrint_Order_Item_Meta::format_customization_display()
+			// only reformats it there or in an HTML email. This flag is
+			// this REST request's own "order screen," so the same
+			// reformatted markup (and its color swatches) now renders
+			// here too.
 			'meta'      => array_values( array_map( static function ( $entry ) {
 				return [ 'label' => (string) $entry->display_key, 'value' => (string) $entry->display_value ];
-			}, $item->get_formatted_meta_data() ) ),
+			}, self::formatted_meta_data( $item ) ) ),
 		];
+	}
+
+	/** @see item_payload()'s own call site above for why this wraps get_formatted_meta_data() instead of calling it directly. */
+	private static function formatted_meta_data( \WC_Order_Item $item ): array {
+		YeffoPrint_Order_Item_Meta::mark_admin_app_context();
+		$formatted_meta = $item->get_formatted_meta_data();
+		YeffoPrint_Order_Item_Meta::unmark_admin_app_context();
+
+		return $formatted_meta;
 	}
 
 	/** wc_get_order_statuses()'s own list (every standard WC status plus this plugin's own "In Production"/"Shipped" ones — both registered through the standard woocommerce_order_statuses filter, class-order-production-status.php/class-order-shipment-status.php), keys unprefixed to match WC_Order::get_status()'s own return value. */

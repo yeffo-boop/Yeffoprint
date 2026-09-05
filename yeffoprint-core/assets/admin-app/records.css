@@ -825,6 +825,67 @@
 	margin: 0;
 }
 
+/**
+ * Direct report, with a screenshot: a Template Label batch row's own
+ * "Label N (qty M)" value (nested inside the dd above) was rendering as
+ * one long " — "-joined sentence — "Corner Finish: Rounded — Compound
+ * Name: Tesamorelin — Strength (mg or iu): 10mg — Color: #0061fe —
+ * Expiration Date: 9/4/2028" — wrapping across a dozen lines and
+ * completely unscannable. That's WC_Order_Item's own raw meta value;
+ * class-order-item-meta.php's format_customization_display() already
+ * rebuilds it into this per-field markup for the classic order-edit
+ * screen and HTML emails, now also for this drawer
+ * (YeffoPrint_Order_Item_Meta::mark_admin_app_context(), class-admin-
+ * order-controller.php) — this is that markup's admin-app styling,
+ * parallel to assets/admin/admin.css's own .yp-order-field* rules for
+ * the classic screen (different file because the two never share a
+ * page, and this one uses the app's real theme tokens instead of
+ * classic wp-admin grays).
+ */
+.yp-order-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	margin: 0.25rem 0;
+}
+
+.yp-order-field {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.1rem 0.5rem;
+	padding: 0.4rem 0.6rem;
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	font-size: 0.8rem;
+	line-height: 1.4;
+}
+
+.yp-order-field__label {
+	font-weight: 700;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-order-field__label::after {
+	content: ":";
+}
+
+.yp-order-field__value {
+	color: var(--wp--preset--color--charcoal);
+	overflow-wrap: anywhere;
+}
+
+/* A color-picker field's own swatch, next to its hex value — see class-order-item-meta.php's color_swatch_html(). */
+.yp-order-field__swatch {
+	display: inline-block;
+	width: 0.85rem;
+	height: 0.85rem;
+	border-radius: 0.2rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	vertical-align: middle;
+	margin-right: 0.15rem;
+}
+
 /* ---------- Shippo rate list ---------- */
 
 /* Carrier filter pills, above the rate list — direct request: "I'd
