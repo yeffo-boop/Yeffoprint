@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/label-designer-app",
+	"title": "Label Designer App",
+	"category": "theme",
+	"description": "The Label Designer canvas app shell for admins, or a Coming Soon placeholder for everyone else while the feature is finished — see class-feature-gate.php.",
+	"render": "file:./render.php",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"textdomain": "yeffoprint"
+}

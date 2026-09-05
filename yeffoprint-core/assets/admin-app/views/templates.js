@@ -36,6 +36,22 @@
 		previewFont: '_yp_preview_font'
 	};
 
+	// Gallery filter/search facets on the Shop Labels page
+	// (class-template-taxonomies.php) — reachable through WP core's own
+	// /wp/v2/yp_template route the moment a taxonomy is registered
+	// against a post type with show_in_rest: true (its terms come back
+	// as a plain array of ids under a REST field named after the
+	// taxonomy itself, since none of the 4 set a custom rest_base), so
+	// no new admin controller endpoint is needed here — just fetch each
+	// taxonomy's terms and read/write that same field name on the
+	// Template object already being saved below.
+	var TAXONOMIES = {
+		yp_product_type: 'Product Type',
+		yp_style: 'Style',
+		yp_color: 'Color',
+		yp_material_tag: 'Compatible Material'
+	};
+
 	function endpoint( path ) {
 		return yeffoprintAdminApp.wpApiUrl + 'yp_template' + ( path || '' );
 	}
@@ -240,6 +256,18 @@
 								'<div class="yp-panel__head"><h2>Customization Fields</h2></div>' +
 								'<div data-yp-field-schema-container><p class="yp-field__hint">Loading&hellip;</p></div>' +
 							'</div>' +
+							'<div class="yp-panel">' +
+								'<div class="yp-panel__head"><h2>Tags</h2></div>' +
+								'<p class="yp-field__hint">Drive the filters on the Shop Labels gallery page &mdash; Product Type is the main "peptide vial labels vs. other product labels" split; Style/Color/Material are finer facets.</p>' +
+								Object.keys( TAXONOMIES ).map( function ( taxonomy ) {
+									return (
+										'<div class="yp-field">' +
+											'<label>' + YP.escapeHtml( TAXONOMIES[ taxonomy ] ) + '</label>' +
+											'<div class="yp-admin-checklist" data-yp-taxonomy-checklist="' + taxonomy + '"><p class="yp-field__hint">Loading&hellip;</p></div>' +
+										'</div>'
+									);
+								} ).join( '' ) +
+							'</div>' +
 							'<div class="yp-form__actions">' +
 								'<button type="submit" class="wp-block-button__link is-style-accent" data-yp-save>' + ( isEdit ? 'Save changes' : 'Add template' ) + '</button>' +
 								'<button type="button" class="wp-block-button__link is-style-outline" data-yp-drawer-close>Cancel</button>' +
@@ -303,16 +331,24 @@
 			var saveButtonEl = drawer.querySelector( '[data-yp-save]' );
 			saveButtonEl.disabled = true;
 
+			var taxonomyKeys = Object.keys( TAXONOMIES );
+
 			var checklistPromises = [
 				YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_size?status=publish&per_page=100&orderby=menu_order&order=asc' ),
 				YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_material?status=publish&per_page=100&orderby=menu_order&order=asc' ),
 				YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_field_preset?status=publish&per_page=100&orderby=title&order=asc' )
-			];
+			].concat( taxonomyKeys.map( function ( taxonomy ) {
+				return YP.request( yeffoprintAdminApp.wpApiUrl + taxonomy + '?per_page=100&orderby=name&order=asc' );
+			} ) );
 
 			Promise.all( checklistPromises ).then( function ( results ) {
 				var sizes = results[ 0 ] || [];
 				var materials = results[ 1 ] || [];
 				var presetPosts = results[ 2 ] || [];
+				var taxonomyTerms = {};
+				taxonomyKeys.forEach( function ( taxonomy, index ) {
+					taxonomyTerms[ taxonomy ] = results[ 3 + index ] || [];
+				} );
 
 				var loadGap = isEdit
 					? YP.request( adminEndpoint( template.id ) )
@@ -329,6 +365,11 @@
 				return Promise.all( [ loadGap, loadPresets ] ).then( function ( results2 ) {
 					renderChecklist( drawer.querySelector( '[data-yp-sizes-checklist]' ), sizes, results2[ 0 ].compatible_sizes, 'compat-size' );
 					renderChecklist( drawer.querySelector( '[data-yp-materials-checklist]' ), materials, results2[ 0 ].compatible_materials, 'compat-material' );
+
+					taxonomyKeys.forEach( function ( taxonomy ) {
+						var selectedTermIds = isEdit && Array.isArray( template[ taxonomy ] ) ? template[ taxonomy ] : [];
+						renderTermChecklist( drawer.querySelector( '[data-yp-taxonomy-checklist="' + taxonomy + '"]' ), taxonomyTerms[ taxonomy ], selectedTermIds, taxonomy );
+					} );
 
 					if ( sharedPreset ) {
 						renderSharedFieldsReadOnly( drawer.querySelector( '[data-yp-field-schema-container]' ), sharedPreset );
@@ -381,6 +422,18 @@
 				} ).join( '' );
 			}
 
+			/** Same shape as renderChecklist() above, but for taxonomy terms (which have a plain `name`, not a `title.rendered`). */
+			function renderTermChecklist( container, terms, selectedIds, taxonomy ) {
+				if ( ! terms.length ) {
+					container.innerHTML = '<p class="yp-field__hint">No terms yet — add one from the Shop Labels gallery filters, or via wp-admin.</p>';
+					return;
+				}
+				container.innerHTML = terms.map( function ( term ) {
+					var checked = selectedIds.indexOf( term.id ) !== -1;
+					return '<label><input type="checkbox" data-taxonomy-term="' + taxonomy + '" value="' + term.id + '"' + ( checked ? ' checked' : '' ) + ' /> ' + YP.escapeHtml( term.name ) + '</label>';
+				} ).join( '' );
+			}
+
 			drawer.querySelector( '[data-yp-form]' ).addEventListener( 'submit', function ( event ) {
 				event.preventDefault();
 				save( template, drawer, function () { return fieldSchemaEditor.getFields(); } );
@@ -414,6 +467,13 @@
 			coreBody.meta[ META.badge ] = drawer.querySelector( '#yp-tpl-badge' ).value;
 			coreBody.meta[ META.previewFont ] = drawer.querySelector( '#yp-tpl-font' ).value;
 			coreBody.meta[ META.vialMockup ] = parseInt( drawer.querySelector( '[data-yp-vial-id]' ).value, 10 ) || 0;
+
+			Object.keys( TAXONOMIES ).forEach( function ( taxonomy ) {
+				coreBody[ taxonomy ] = Array.prototype.map.call(
+					drawer.querySelectorAll( '[data-taxonomy-term="' + taxonomy + '"]:checked' ),
+					function ( el ) { return parseInt( el.value, 10 ); }
+				);
+			} );
 
 			var coreUrl = existing ? endpoint( '/' + existing.id ) : endpoint();
 

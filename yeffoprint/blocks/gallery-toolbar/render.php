@@ -24,6 +24,12 @@ $sort_options = [
 	'popularity' => __( 'Most Popular', 'yeffoprint' ),
 ];
 
+// The primary category split — rendered as its own row, visually
+// separated from the finer Style/Color/Material facets below, since
+// this is the "peptide vial labels vs. other product labels" separation
+// directly requested rather than just another equal-weight filter.
+$category_taxonomy = 'yp_product_type';
+
 $filter_taxonomies = [
 	'yp_style'        => __( 'Style', 'yeffoprint' ),
 	'yp_color'        => __( 'Color', 'yeffoprint' ),
@@ -39,60 +45,82 @@ if ( isset( $_GET['sort'] ) ) {
 }
 
 $active_filters = [];
-foreach ( array_keys( $filter_taxonomies ) as $taxonomy ) {
+foreach ( array_merge( [ $category_taxonomy ], array_keys( $filter_taxonomies ) ) as $taxonomy ) {
 	if ( ! empty( $_GET[ $taxonomy ] ) ) {
 		$active_filters[ $taxonomy ] = sanitize_title( wp_unslash( $_GET[ $taxonomy ] ) );
 	}
 }
+
+/**
+ * Renders one taxonomy's terms as pills in the current $active_filters/
+ * $current_sort/$base_url context — shared by both the primary category
+ * row and the finer Style/Color/Material row below so the two stay in
+ * sync rather than drifting into two copies of the same logic.
+ */
+$render_filter_pills = function ( string $taxonomy ) use ( &$active_filters, $current_sort, $base_url ) {
+	$terms = get_terms( [ 'taxonomy' => $taxonomy, 'hide_empty' => true ] );
+
+	if ( is_wp_error( $terms ) || empty( $terms ) ) {
+		return;
+	}
+
+	foreach ( $terms as $term ) {
+		$is_active = isset( $active_filters[ $taxonomy ] ) && $active_filters[ $taxonomy ] === $term->slug;
+
+		$pill_args = $active_filters;
+		if ( $is_active ) {
+			unset( $pill_args[ $taxonomy ] );
+		} else {
+			$pill_args[ $taxonomy ] = $term->slug;
+		}
+		if ( 'featured' !== $current_sort ) {
+			$pill_args['sort'] = $current_sort;
+		}
+
+		$href = $pill_args ? add_query_arg( $pill_args, $base_url ) : $base_url;
+		?>
+		<a
+			class="yp-filter-pill<?php echo $is_active ? ' is-active' : ''; ?>"
+			href="<?php echo esc_url( $href ); ?>"
+			<?php echo $is_active ? 'aria-current="true"' : ''; ?>
+		><?php echo esc_html( $term->name ); ?></a>
+		<?php
+	}
+};
 ?>
 <div class="yp-gallery-toolbar">
 
-	<div class="yp-filter-group">
-		<?php foreach ( $filter_taxonomies as $taxonomy => $label ) :
-			$terms = get_terms( [ 'taxonomy' => $taxonomy, 'hide_empty' => true ] );
+	<?php if ( get_terms( [ 'taxonomy' => $category_taxonomy, 'hide_empty' => true, 'fields' => 'ids' ] ) ) : ?>
+		<div class="yp-filter-group yp-filter-group--primary">
+			<span class="yp-filter-group__label"><?php esc_html_e( 'Show:', 'yeffoprint' ); ?></span>
+			<?php $render_filter_pills( $category_taxonomy ); ?>
+		</div>
+	<?php endif; ?>
 
-			if ( is_wp_error( $terms ) || empty( $terms ) ) {
-				continue;
-			}
+	<div class="yp-gallery-toolbar__row">
 
-			foreach ( $terms as $term ) :
-				$is_active = isset( $active_filters[ $taxonomy ] ) && $active_filters[ $taxonomy ] === $term->slug;
+		<div class="yp-filter-group">
+			<?php foreach ( array_keys( $filter_taxonomies ) as $taxonomy ) {
+				$render_filter_pills( $taxonomy );
+			} ?>
+		</div>
 
-				$pill_args = $active_filters;
-				if ( $is_active ) {
-					unset( $pill_args[ $taxonomy ] );
-				} else {
-					$pill_args[ $taxonomy ] = $term->slug;
-				}
-				if ( 'featured' !== $current_sort ) {
-					$pill_args['sort'] = $current_sort;
-				}
-
-				$href = $pill_args ? add_query_arg( $pill_args, $base_url ) : $base_url;
-				?>
-				<a
-					class="yp-filter-pill<?php echo $is_active ? ' is-active' : ''; ?>"
-					href="<?php echo esc_url( $href ); ?>"
-					<?php echo $is_active ? 'aria-current="true"' : ''; ?>
-				><?php echo esc_html( $term->name ); ?></a>
-			<?php endforeach;
-		endforeach; ?>
-	</div>
-
-	<form class="yp-sort-form" method="get" action="<?php echo esc_url( $base_url ); ?>">
-		<?php foreach ( $active_filters as $taxonomy => $slug ) : ?>
-			<input type="hidden" name="<?php echo esc_attr( $taxonomy ); ?>" value="<?php echo esc_attr( $slug ); ?>" />
-		<?php endforeach; ?>
-
-		<label class="screen-reader-text" for="yp-sort-select"><?php esc_html_e( 'Sort by', 'yeffoprint' ); ?></label>
-		<select class="yp-sort-select" id="yp-sort-select" name="sort">
-			<?php foreach ( $sort_options as $value => $label ) : ?>
-				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $current_sort, $value ); ?>>
-					<?php echo esc_html( $label ); ?>
-				</option>
+		<form class="yp-sort-form" method="get" action="<?php echo esc_url( $base_url ); ?>">
+			<?php foreach ( $active_filters as $taxonomy => $slug ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( $taxonomy ); ?>" value="<?php echo esc_attr( $slug ); ?>" />
 			<?php endforeach; ?>
-		</select>
-		<button type="submit" class="wp-block-button__link"><?php esc_html_e( 'Apply', 'yeffoprint' ); ?></button>
-	</form>
+
+			<label class="screen-reader-text" for="yp-sort-select"><?php esc_html_e( 'Sort by', 'yeffoprint' ); ?></label>
+			<select class="yp-sort-select" id="yp-sort-select" name="sort">
+				<?php foreach ( $sort_options as $value => $label ) : ?>
+					<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $current_sort, $value ); ?>>
+						<?php echo esc_html( $label ); ?>
+					</option>
+				<?php endforeach; ?>
+			</select>
+			<button type="submit" class="wp-block-button__link"><?php esc_html_e( 'Apply', 'yeffoprint' ); ?></button>
+		</form>
+
+	</div>
 
 </div>

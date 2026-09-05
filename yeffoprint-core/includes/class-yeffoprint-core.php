@@ -26,6 +26,7 @@ final class YeffoPrint_Core {
 	 * engine, pricing engine, REST endpoints, and admin UI.
 	 */
 	private function includes(): void {
+		require_once YEFFOPRINT_CORE_PATH . 'includes/class-feature-gate.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-post-type-registry.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-taxonomies.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-meta.php';
@@ -209,6 +210,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Login();
 		new YeffoPrint_Telegram_Order_Email_Badge();
 		new YeffoPrint_Proof_Reminder_Scheduler();
+		new YeffoPrint_Feature_Gate();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)
@@ -321,12 +323,14 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-web-design-packages-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-telegram-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-material-guide-backfill-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-product-templates-seed-command.php';
 			( new YeffoPrint_Seed_Command() )->register();
 			( new YeffoPrint_Shipping_Setup_Command() )->register();
 			( new YeffoPrint_Pages_Setup_Command() )->register();
 			( new YeffoPrint_Web_Design_Packages_Setup_Command() )->register();
 			( new YeffoPrint_Telegram_Setup_Command() )->register();
 			( new YeffoPrint_Material_Guide_Backfill_Command() )->register();
+			( new YeffoPrint_Product_Templates_Seed_Command() )->register();
 		}
 	}
 }
