@@ -23,7 +23,7 @@
 	var statusEl = root.querySelector( '.yp-configurator__status' );
 	var contentEl = root.querySelector( '[data-yp-to-content]' );
 	var orderNumberEl = root.querySelector( '[data-yp-to-order-number]' );
-	var statusPillEl = root.querySelector( '[data-yp-to-status-pill]' );
+	var stepperEl = root.querySelector( '[data-yp-to-stepper]' );
 	var shipmentsEl = root.querySelector( '[data-yp-to-shipments]' );
 
 	var params = new URLSearchParams( window.location.search );
@@ -77,6 +77,37 @@
 		return '<ul class="yp-track-order__events">' + items + '</ul>';
 	}
 
+	/**
+	 * Mirrors YeffoPrint_Order_Status_Stepper::render_html() on the PHP
+	 * side (My Account → View Order) so both surfaces produce the exact
+	 * same markup/classes for the shared order-stepper.css to style —
+	 * this page renders it client-side since it's already JSON/REST-
+	 * driven, rather than the server-rendered hook that page uses.
+	 */
+	function renderStepper( steps, statusLabel ) {
+		if ( ! steps || ! steps.length ) {
+			// Cancelled/refunded/failed — a forward-moving progress bar has
+			// nothing honest to say here, so fall back to the plain status
+			// text instead of rendering nothing at all.
+			return '<span class="yp-track-order__status-pill">' + escapeHtml( statusLabel || '' ) + '</span>';
+		}
+
+		var items = steps.map( function ( step, index ) {
+			var dot = 'complete' === step.state ? '&#10003;' : String( index + 1 );
+			var sublabel = step.sublabel
+				? '<span class="yp-order-stepper__sublabel">' + escapeHtml( step.sublabel ) + '</span>'
+				: '';
+
+			return '<li class="yp-order-stepper__step is-' + step.state + '">' +
+				'<span class="yp-order-stepper__dot" aria-hidden="true">' + dot + '</span>' +
+				'<span class="yp-order-stepper__label">' + escapeHtml( step.label ) + '</span>' +
+				sublabel +
+				'</li>';
+		} ).join( '' );
+
+		return '<ol class="yp-order-stepper">' + items + '</ol>';
+	}
+
 	function renderShipment( shipment ) {
 		var wrap = document.createElement( 'div' );
 		wrap.className = 'yp-track-order__shipment';
@@ -98,7 +129,7 @@
 
 	function render( data ) {
 		orderNumberEl.textContent = 'Order #' + data.order_number;
-		statusPillEl.textContent = data.status_label || '';
+		stepperEl.innerHTML = renderStepper( data.steps, data.status_label );
 
 		shipmentsEl.innerHTML = '';
 		if ( data.shipments && data.shipments.length ) {

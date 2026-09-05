@@ -9,18 +9,20 @@
 }
 
 .yp-track-order__header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	margin-bottom: 1.5rem;
+	margin-bottom: 1rem;
 }
 
 .yp-track-order__header strong {
 	font-size: var(--wp--preset--font-size--large);
 }
 
+.yp-order-stepper-wrap {
+	margin-bottom: 2rem;
+}
+
+/* Fallback for a cancelled/refunded/failed order — YeffoPrint_Order_Status_Stepper::steps() returns none for those, and track-order.js prints this plain pill instead of the stepper it builds everywhere else. */
 .yp-track-order__status-pill {
+	display: inline-block;
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
 	padding: 0.35rem 0.85rem;
