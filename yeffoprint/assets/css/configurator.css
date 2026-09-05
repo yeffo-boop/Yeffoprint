@@ -208,6 +208,63 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
+/* Cross-links between the Custom Design form and the Label Designer —
+   the two pages solve overlapping problems (a one-off custom label)
+   in different ways, so each points at the other for the case it's
+   not the right fit for. */
+.yp-form-redirect-notice {
+	display: flex;
+	gap: 0.9rem;
+	align-items: flex-start;
+	margin-bottom: 1.5rem;
+	padding: 1.1rem 1.25rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--light-gray);
+	border-left: 3px solid var(--wp--preset--color--cyan);
+}
+
+.yp-form-redirect-notice__icon {
+	flex: none;
+	width: 24px;
+	height: 24px;
+	margin-top: 0.1rem;
+	border-radius: 50%;
+	background: var(--wp--preset--color--cyan);
+	color: var(--wp--preset--color--white);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--wp--preset--font-family--heading);
+	font-weight: 700;
+	font-size: 0.85rem;
+}
+
+.yp-form-redirect-notice__body p {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-form-redirect-notice__body strong {
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-form-redirect-notice__cta {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin-top: 0.6rem;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--cyan-deep);
+	text-decoration: none;
+}
+
+.yp-form-redirect-notice__cta:hover {
+	text-decoration: underline;
+}
+
 .yp-configurator__title {
 	margin-top: 0;
 }
