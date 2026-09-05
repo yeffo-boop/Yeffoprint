@@ -256,7 +256,16 @@
 								? '$0.00 — fee skipped'
 								: ( order.design_fee ? '$' + order.design_fee.toFixed( 2 ) + ' — paid' : 'Awaiting payment' )
 						) +
-						( order.wc_order_edit_url ? field( 'Order', '<a href="' + YP.escapeAttr( order.wc_order_edit_url ) + '" target="_blank" rel="noopener noreferrer">#' + order.wc_order_id + '</a>' ) : '' ) +
+						// Direct request: this used to link straight out to the
+					// classic WooCommerce edit screen in a new tab — "I don't
+					// want to use that screen at all... bring me to our own
+					// YeffoDesign version." Opens the same order-detail drawer
+					// the Dashboard's own Pending Orders/Shipped Packages rows
+					// already use (YP.openWcOrderDrawer(), app.js), so the
+					// order's items/customer/shipping/Shippo panel/status all
+					// stay inside this app — bound just below, once this HTML
+					// is actually in the document.
+					( order.wc_order_id ? field( 'Order', '<button type="button" class="yp-row-action" style="padding:0;font-weight:600;" data-yp-open-wc-order="' + order.wc_order_id + '">#' + order.wc_order_id + '</button>' ) : '' ) +
 					'</div>' +
 
 					'<div class="yp-panel">' +
@@ -284,6 +293,13 @@
 			detailEl.querySelector( '[data-yp-back]' ).addEventListener( 'click', function () {
 				splitEl.classList.remove( 'has-selection' );
 			} );
+
+			var openWcOrderButton = detailEl.querySelector( '[data-yp-open-wc-order]' );
+			if ( openWcOrderButton ) {
+				openWcOrderButton.addEventListener( 'click', function () {
+					YP.openWcOrderDrawer( parseInt( openWcOrderButton.getAttribute( 'data-yp-open-wc-order' ), 10 ) );
+				} );
+			}
 
 			if ( order.paid ) {
 				detailEl.querySelector( '[data-yp-save-status]' ).addEventListener( 'click', function () { saveStatus( order ); } );

@@ -32,7 +32,23 @@ body.yeffoprint-app .error {
 	display: none !important;
 }
 
-body.yeffoprint-app.wp-toolbar {
+/**
+ * Direct report: "weird blank space at the very top of the page
+ * horizontally across the whole thing." Root cause: WordPress reserves
+ * room for the 32px admin bar by putting `padding-top: 32px` on the
+ * <html> element itself (class `wp-toolbar`, added there by WP core,
+ * never on <body>) — not on any of the #wpadminbar/#wpcontent/#wpbody
+ * elements above, and not on <body> at all. The #wpadminbar rule above
+ * hides the bar, but hiding it does nothing to that separate, unrelated
+ * padding reservation on <html>, so the space it was leaving room for
+ * stayed empty. The previous rule here, `body.yeffoprint-app.wp-toolbar`,
+ * could never match anything — `wp-toolbar` isn't a body class — so it
+ * silently did nothing. This whole stylesheet only ever loads on this
+ * one page to begin with (class-admin-app.php's enqueue is gated on
+ * is_own_screen()), so targeting <html> directly and unscoped is safe:
+ * there's no other page this could affect.
+ */
+html.wp-toolbar {
 	padding-top: 0 !important;
 }
 
