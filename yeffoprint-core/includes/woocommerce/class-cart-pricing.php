@@ -164,8 +164,24 @@ class YeffoPrint_Cart_Pricing {
 		}
 
 		$material_adjustment = self::adjustment( 'yp_material', (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 ) );
-		$size_adjustment     = self::adjustment( 'yp_size', (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 ) );
 		$quantity             = (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
+
+		// Label Designer item: customer-entered dimensions instead of a
+		// preset Size post — no size_adjustment to look up (the size cost
+		// is already fully embodied in the dynamic base price below), and
+		// the base itself comes from dynamic_base_price() instead of the
+		// site-wide constant. Everything else (material adjustment,
+		// discount tiers, quantity) is the exact same shared logic every
+		// other label-bearing line item already goes through.
+		$width_mm  = (float) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ] ?? 0 );
+		$height_mm = (float) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] ?? 0 );
+
+		if ( $width_mm > 0 && $height_mm > 0 ) {
+			$base_price_override = YeffoPrint_Pricing_Rule::dynamic_base_price( $width_mm, $height_mm );
+			return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, 0.0, $quantity, $tier_quantity ?? self::combined_label_quantity(), $base_price_override );
+		}
+
+		$size_adjustment = self::adjustment( 'yp_size', (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 ) );
 
 		return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $quantity, $tier_quantity ?? self::combined_label_quantity() );
 	}
@@ -244,9 +260,22 @@ class YeffoPrint_Cart_Pricing {
 			return $item_data;
 		}
 
-		$size = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
-		if ( $size ) {
-			$item_data[] = [ 'key' => __( 'Size', 'yeffoprint-core' ), 'value' => $size->post_title ];
+		$width_mm  = (float) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ] ?? 0 );
+		$height_mm = (float) ( $cart_item[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] ?? 0 );
+
+		if ( $width_mm > 0 && $height_mm > 0 ) {
+			// Label Designer item — no preset Size post to read a title
+			// from, so show the customer's own entered dimensions instead.
+			$item_data[] = [
+				'key'   => __( 'Size', 'yeffoprint-core' ),
+				/* translators: 1: width in millimeters, 2: height in millimeters */
+				'value' => sprintf( __( '%1$smm × %2$smm', 'yeffoprint-core' ), rtrim( rtrim( number_format( $width_mm, 1 ), '0' ), '.' ), rtrim( rtrim( number_format( $height_mm, 1 ), '0' ), '.' ) ),
+			];
+		} else {
+			$size = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
+			if ( $size ) {
+				$item_data[] = [ 'key' => __( 'Size', 'yeffoprint-core' ), 'value' => $size->post_title ];
+			}
 		}
 
 		$material = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );

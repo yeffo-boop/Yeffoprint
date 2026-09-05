@@ -352,6 +352,71 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
+	// Label Designer — direct request: "a full live product label
+	// customizer." Submits through the same own_design Custom Design
+	// flow as the form above (reuses its /custom-orders/uploads and
+	// /custom-orders REST endpoints directly), so it shares that flow's
+	// configurator.css base — plus its own canvas/toolbar chrome
+	// (label-designer.css), Fabric.js (vendored locally, not a CDN —
+	// see label-designer.js's own docblock for why), a curated icon
+	// dataset, and a wider curated Google Fonts set than the sitewide
+	// one loaded above (a font *picker* needs more than 3 families).
+	if ( is_page() && in_array( get_page_template_slug(), [ 'label-designer', 'label-designer.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-label-designer-fonts',
+			'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Merriweather:wght@400;700&family=Poppins:wght@400;600;700&family=Pacifico&family=Bebas+Neue&family=Caveat:wght@600&family=Oswald:wght@500;700&family=Lora:wght@500;700&family=Josefin+Sans:wght@500;700&family=Dancing+Script:wght@600&display=swap',
+			[],
+			null
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-label-designer',
+			get_theme_file_uri( 'assets/css/label-designer.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/label-designer.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-fabric',
+			get_theme_file_uri( 'assets/vendor/fabric.min.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/vendor/fabric.min.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-label-designer-icons',
+			get_theme_file_uri( 'assets/js/label-designer-icons.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/label-designer-icons.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-label-designer',
+			get_theme_file_uri( 'assets/js/label-designer.js' ),
+			[ 'yeffoprint-fabric', 'yeffoprint-label-designer-icons' ],
+			yeffoprint_asset_version( 'assets/js/label-designer.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		wp_localize_script( 'yeffoprint-label-designer', 'yeffoprintLabelDesigner', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+		] );
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-stickers-form', 'custom-stickers-form.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',

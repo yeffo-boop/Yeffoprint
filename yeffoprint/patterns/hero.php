@@ -25,11 +25,11 @@ defined( 'ABSPATH' ) || exit;
 			<!-- /wp:paragraph -->
 
 			<!-- wp:heading {"level":1,"fontSize":"xx-large"} -->
-			<h1 class="wp-block-heading has-xx-large-font-size">Vial labels, designed once, <span class="yp-hero__accent-word">printed</span> to spec.</h1>
+			<h1 class="wp-block-heading has-xx-large-font-size">Product labels, designed once, <span class="yp-hero__accent-word">printed</span> to spec.</h1>
 			<!-- /wp:heading -->
 
 			<!-- wp:paragraph {"fontSize":"large"} -->
-			<p class="has-large-font-size">YeffoDesign designs and prints research and supplement vial labels — waterproof stock, exact color matching, and a proof you approve before anything hits press.</p>
+			<p class="has-large-font-size">YeffoDesign designs and prints labels for peptides, cosmetics, skincare, supplements, and more — waterproof stock, exact color matching, and a proof you approve before anything hits press.</p>
 			<!-- /wp:paragraph -->
 
 			<!-- wp:buttons -->

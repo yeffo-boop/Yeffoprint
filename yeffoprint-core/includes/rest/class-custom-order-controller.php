@@ -25,6 +25,20 @@ class YeffoPrint_Custom_Order_Controller {
 	private const UPLOAD_RATE_LIMIT_WINDOW  = 600; // 10 minutes
 	private const UPLOAD_RATE_LIMIT_MAX     = 20;
 
+	// Label Designer only — sane bounds on a customer-entered label size,
+	// same "never trust the client" reasoning as everything else in this
+	// controller. A few mm (nothing meaningfully printable smaller) to a
+	// few hundred mm (past which this stops being a "label" in any normal
+	// sense) — matched by the same bounds enforced client-side.
+	private const CANVAS_MIN_DIMENSION_MM = 5.0;
+	private const CANVAS_MAX_DIMENSION_MM = 500.0;
+
+	// Label Designer only — the Fabric.js canvas JSON, kept only so a
+	// design can be reopened later; nothing downstream depends on it, so
+	// a generous but bounded cap is enough to stop abuse without needing
+	// to actually parse/validate its internal shape.
+	private const CANVAS_DESIGN_JSON_MAX_BYTES = 200000;
+
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
 	}
@@ -181,8 +195,18 @@ class YeffoPrint_Custom_Order_Controller {
 			wc_load_cart(); // So the shared tier quantity below reflects this session's actual cart, not an empty/uninitialized one.
 		}
 
-		$mode  = $this->parse_mode( $request );
-		$batch = $this->validate_batch_rows( $request->get_param( 'batch' ) );
+		$mode = $this->parse_mode( $request );
+
+		// Same Label Designer detection as submit() — see that method's
+		// own comment for why width_mm/height_mm presence is the marker.
+		$request_width_mm  = (float) $request->get_param( 'width_mm' );
+		$request_height_mm = (float) $request->get_param( 'height_mm' );
+		$is_canvas_submission = 'own_design' === $mode && $request_width_mm > 0 && $request_height_mm > 0;
+
+		$batch = $is_canvas_submission
+			? $this->validate_canvas_row( $request_width_mm, $request_height_mm, $request )
+			: $this->validate_batch_rows( $request->get_param( 'batch' ) );
+
 		if ( is_wp_error( $batch ) ) {
 			return $batch;
 		}
@@ -199,8 +223,14 @@ class YeffoPrint_Custom_Order_Controller {
 
 		foreach ( $batch as $row ) {
 			$material_adjustment = $this->record_adjustment( 'yp_material', $row['material_id'] );
-			$size_adjustment      = $this->record_adjustment( 'yp_size', $row['size_id'] );
-			$breakdown            = YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $row['quantity'], $tier_quantity );
+
+			if ( ! empty( $row['width_mm'] ) && ! empty( $row['height_mm'] ) ) {
+				$base_price_override = YeffoPrint_Pricing_Rule::dynamic_base_price( $row['width_mm'], $row['height_mm'] );
+				$breakdown            = YeffoPrint_Pricing_Rule::calculate( $material_adjustment, 0.0, $row['quantity'], $tier_quantity, $base_price_override );
+			} else {
+				$size_adjustment = $this->record_adjustment( 'yp_size', $row['size_id'] );
+				$breakdown       = YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $row['quantity'], $tier_quantity );
+			}
 
 			$rows[]    = $breakdown;
 			$subtotal += $breakdown['unit_price_after_discount'] * $row['quantity'];
@@ -323,9 +353,15 @@ class YeffoPrint_Custom_Order_Controller {
 
 		$material_format = static function ( \WP_Post $post ) {
 			return [
-				'id'       => $post->ID,
-				'name'     => $post->post_title,
-				'in_stock' => (bool) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ),
+				'id'               => $post->ID,
+				'name'             => $post->post_title,
+				'in_stock'         => (bool) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ),
+				// Label Designer only — its client-side price estimate needs
+				// this to reflect the chosen Material before the debounced
+				// authoritative pricing-preview round trip lands; every
+				// existing consumer of this endpoint (custom-order-form.js)
+				// simply doesn't read this new key.
+				'price_adjustment' => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
 			];
 		};
 
@@ -351,10 +387,26 @@ class YeffoPrint_Custom_Order_Controller {
 
 		$mode = $this->parse_mode( $request );
 
-		$batch = $this->validate_batch_rows( $request->get_param( 'batch' ) );
+		// Label Designer: a customer-entered width/height instead of a
+		// picked yp_size post, and always exactly one row (no batching in
+		// this flow — see class-cart-item-keys.php's own CANVAS_WIDTH_MM
+		// doc for why that's a deliberate v1 scope cut, not an oversight).
+		// Presence of width_mm/height_mm on an own_design submission is
+		// what marks this as a Label Designer request rather than a
+		// legacy own_design upload with a picked Size.
+		$request_width_mm  = (float) $request->get_param( 'width_mm' );
+		$request_height_mm = (float) $request->get_param( 'height_mm' );
+		$is_canvas_submission = 'own_design' === $mode && $request_width_mm > 0 && $request_height_mm > 0;
+
+		$batch = $is_canvas_submission
+			? $this->validate_canvas_row( $request_width_mm, $request_height_mm, $request )
+			: $this->validate_batch_rows( $request->get_param( 'batch' ) );
+
 		if ( is_wp_error( $batch ) ) {
 			return $batch;
 		}
+
+		$canvas_design_json = $is_canvas_submission ? $this->sanitize_canvas_design_json( $request->get_param( 'canvas_design' ) ) : '';
 
 		$brand_name = sanitize_text_field( (string) $request->get_param( 'brand_name' ) );
 		if ( '' === $brand_name ) {
@@ -430,6 +482,14 @@ class YeffoPrint_Custom_Order_Controller {
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, $uploads );
 		}
 
+		if ( $is_canvas_submission ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_WIDTH_MM, $request_width_mm );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_HEIGHT_MM, $request_height_mm );
+			if ( '' !== $canvas_design_json ) {
+				update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_DESIGN_JSON, $canvas_design_json );
+			}
+		}
+
 		if ( 'reorder' === $mode ) {
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::SOURCE_CUSTOM_ORDER_ID, $source_custom_order_id );
 		}
@@ -480,15 +540,25 @@ class YeffoPrint_Custom_Order_Controller {
 		// class-cart-item-keys.php for why two rows with identical data
 		// would otherwise silently merge into one WooCommerce line item.
 		foreach ( $batch as $row_index => $row ) {
-			YeffoPrint_Cart_Pricing::allow_next_add( true );
-			$row_cart_item_key = WC()->cart->add_to_cart( $labels_product_id, $row['quantity'], 0, [], [
+			$row_cart_item_data = [
 				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID        => $custom_order_id,
 				YeffoPrint_Cart_Item_Keys::SIZE_ID                => $row['size_id'],
 				YeffoPrint_Cart_Item_Keys::MATERIAL_ID            => $row['material_id'],
 				YeffoPrint_Cart_Item_Keys::TOTAL_QTY              => $row['quantity'],
 				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ROW_INDEX => $row_index,
 				YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH      => $row['compound_strength'],
-			] );
+			];
+
+			// Label Designer row: no SIZE_ID (0, harmlessly ignored by
+			// class-cart-pricing.php's adjustment() lookup) — these two
+			// keys are what actually drive its dynamic base price instead.
+			if ( ! empty( $row['width_mm'] ) && ! empty( $row['height_mm'] ) ) {
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ]  = $row['width_mm'];
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] = $row['height_mm'];
+			}
+
+			YeffoPrint_Cart_Pricing::allow_next_add( true );
+			$row_cart_item_key = WC()->cart->add_to_cart( $labels_product_id, $row['quantity'], 0, [], $row_cart_item_data );
 			YeffoPrint_Cart_Pricing::allow_next_add( false );
 
 			if ( ! $row_cart_item_key ) {
@@ -567,6 +637,57 @@ class YeffoPrint_Custom_Order_Controller {
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Label Designer's own_design row — the same shape validate_batch_rows()
+	 * returns (so everything downstream in submit() can treat it
+	 * identically), but with `size_id` always 0 and `width_mm`/`height_mm`
+	 * added instead, since there's no yp_size post behind a customer-drawn
+	 * canvas. Always exactly one row — this flow has no batching.
+	 *
+	 * @return array<int, array{size_id:int, material_id:int, quantity:int, compound_strength:string, width_mm:float, height_mm:float}>|\WP_Error
+	 */
+	private function validate_canvas_row( float $width_mm, float $height_mm, \WP_REST_Request $request ) {
+		if (
+			$width_mm < self::CANVAS_MIN_DIMENSION_MM || $width_mm > self::CANVAS_MAX_DIMENSION_MM ||
+			$height_mm < self::CANVAS_MIN_DIMENSION_MM || $height_mm > self::CANVAS_MAX_DIMENSION_MM
+		) {
+			return new \WP_Error( 'yeffoprint_invalid_canvas_dimensions', __( 'Please enter a label width and height within the allowed range.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$material_id = absint( $request->get_param( 'material_id' ) );
+		if ( ! $material_id || ! $this->is_published( 'yp_material', $material_id ) ) {
+			return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		if ( ! (bool) get_post_meta( $material_id, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ) ) {
+			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$quantity = absint( $request->get_param( 'quantity' ) );
+		if ( $quantity < 1 ) {
+			return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Quantity must be at least 1.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return [ [
+			'size_id'           => 0,
+			'material_id'       => $material_id,
+			'quantity'          => $quantity,
+			'compound_strength' => '',
+			'width_mm'          => $width_mm,
+			'height_mm'         => $height_mm,
+		] ];
+	}
+
+	/** Label Designer only — the Fabric.js canvas JSON, kept only so a design can be reopened later; nothing downstream depends on its internal shape, so validation is just "does it decode, and is it small enough" rather than a schema check. Returns '' (nothing stored) for anything invalid or absent, rather than erroring the whole submission over an optional, non-print-affecting field. */
+	private function sanitize_canvas_design_json( $raw ): string {
+		$raw = (string) $raw;
+		if ( '' === $raw || strlen( $raw ) > self::CANVAS_DESIGN_JSON_MAX_BYTES ) {
+			return '';
+		}
+
+		return null === json_decode( $raw ) ? '' : $raw;
 	}
 
 	/** Same shape as class-pricing-controller.php's own private helper of the same name — kept local rather than shared, matching this plugin's existing per-controller convention (e.g. is_published()/published() below are also not shared). */

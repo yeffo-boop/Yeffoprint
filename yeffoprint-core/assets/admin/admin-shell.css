@@ -623,3 +623,15 @@ body.yeffoprint-admin .yp-dashboard__card-desc {
 	font-size: 0.8125rem;
 	color: #3A3A3C; /* charcoal */
 }
+
+/* Custom Order editor's upload list (class-custom-order-editor.php) — a
+   quick visual for an image-type upload instead of only a filename link,
+   most valuable for a Label Designer submission's exported PNG. */
+body.yeffoprint-admin .yp-upload-thumbnail {
+	display: block;
+	max-width: 160px;
+	max-height: 160px;
+	margin-bottom: 0.35rem;
+	border: 1px solid #E7E5E1; /* light-gray */
+	border-radius: 6px;
+}
