@@ -983,41 +983,38 @@
 			fieldsHtml += wcOrderField( 'Customer Note', YP.escapeHtml( order.customer_note ).replace( /\n/g, '<br>' ) );
 		}
 
-		// Two columns now that the modal (records.css's
-		// .yp-drawer--wide.yp-drawer--center override) has the room for
-		// them: order/items/status on the left (the "what was ordered"
-		// story, read top to bottom), both shipping panels stacked on
-		// the right (the "get it out the door" actions) — rather than
-		// one long list where the two shipping panels used to push
-		// Status halfway down the sidebar.
+		// Single column, direct request: "it should be a one column
+		// design... order status change towards the top and shipping
+		// options down towards the bottom" — Status right under the
+		// order's own fields, ahead of Items, since changing it is the
+		// thing staff most often open this drawer to do; both shipping
+		// panels (Shipping Label, Shippo) last, since printing/buying a
+		// label is the last step in working an order. The two-column
+		// grid this replaced put Status behind a full Items table read
+		// and split "what was ordered" from "get it out the door" onto
+		// two panes that had to be read in parallel instead of in order.
 		bodyEl.innerHTML =
-			'<div class="yp-order-detail-grid">' +
-				'<div>' +
-					'<div class="yp-panel"><div class="yp-split__fields">' + fieldsHtml + '</div></div>' +
+			'<div class="yp-panel"><div class="yp-split__fields">' + fieldsHtml + '</div></div>' +
 
-					'<div class="yp-panel">' +
-						'<div class="yp-panel__head"><h2>Items</h2></div>' +
-						wcOrderItemsHtml( order.items ) +
-						'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
-						'<p class="yp-panel__hint">' + wcOrderRewardsLine( order.rewards ) + '</p>' +
-					'</div>' +
-
-					'<div class="yp-panel">' +
-						'<div class="yp-panel__head"><h2>Status</h2></div>' +
-						'<div class="yp-form__row"><div class="yp-field"><select data-yp-wc-status>' +
-							Object.keys( order.statuses ).map( function ( key ) {
-								return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
-							} ).join( '' ) +
-						'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
-						'<div data-yp-wc-status-error></div>' +
-					'</div>' +
-				'</div>' +
-
-				'<div>' +
-					wcOrderShippingLabelHtml( order ) +
-					shippoPanelHtml( order ) +
-				'</div>' +
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Status</h2></div>' +
+				'<div class="yp-form__row"><div class="yp-field"><select data-yp-wc-status>' +
+					Object.keys( order.statuses ).map( function ( key ) {
+						return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
+					} ).join( '' ) +
+				'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
+				'<div data-yp-wc-status-error></div>' +
 			'</div>' +
+
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Items</h2></div>' +
+				wcOrderItemsHtml( order.items ) +
+				'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
+				'<p class="yp-panel__hint">' + wcOrderRewardsLine( order.rewards ) + '</p>' +
+			'</div>' +
+
+			wcOrderShippingLabelHtml( order ) +
+			shippoPanelHtml( order ) +
 
 			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
 
