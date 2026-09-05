@@ -996,7 +996,7 @@
 		bodyEl.innerHTML =
 			'<div class="yp-panel"><div class="yp-split__fields">' + fieldsHtml + '</div></div>' +
 
-			'<div class="yp-panel">' +
+			'<div class="yp-panel yp-panel--compact">' +
 				'<div class="yp-panel__head"><h2>Status</h2></div>' +
 				'<div class="yp-form__row"><div class="yp-field"><select data-yp-wc-status>' +
 					Object.keys( order.statuses ).map( function ( key ) {
