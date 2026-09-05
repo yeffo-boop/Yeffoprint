@@ -769,13 +769,14 @@
    drawer, untouched — this rule only ever matches an element carrying
    both classes, which today is only the order detail drawer
    (app.js's openWcOrderDrawer()).
-   Narrower than the two-column layout this replaced — direct request:
-   "it should be a one column design" — 1040px of width behind a single
-   stacked column of panels just left a wide margin of empty warm-white
-   down both sides; 720px comfortably fits the widest thing in here (the
-   Customer/Shipping/Payment two-up field grid) without that gap. */
+   Went to 720px when this became a single column — direct follow-up
+   report: "it needs to be wider." A single column doesn't need
+   1040px's worth of side-by-side panels, but 720px was too tight for
+   this drawer's widest content (the Items table's per-label field
+   chips, each a label+value pair that wants real room before
+   wrapping) — 880px splits the difference. */
 .yp-drawer--wide.yp-drawer--center .yp-drawer__panel {
-	width: min(720px, calc(100% - 2rem));
+	width: min(880px, calc(100% - 2rem));
 	max-height: min(88vh, calc(100dvh - 2rem));
 }
 
