@@ -78,4 +78,21 @@ class YeffoPrint_Cart_Item_Keys {
 
 	/** Custom Design batching only — this row's compound/strength text. Display-only, carried through to the order-item snapshot; never affects pricing. */
 	public const COMPOUND_STRENGTH = 'yp_compound_strength';
+
+	/**
+	 * Label Designer only (own_design-mode Custom Design submission, no
+	 * SIZE_ID — the customer picked their own dimensions instead of a
+	 * preset yp_size post). Deliberately its own pair of constants rather
+	 * than reusing Custom Stickers' CUSTOM_WIDTH_IN/CUSTOM_HEIGHT_IN
+	 * above: those are inches and feed YeffoPrint_Sticker_Pricing's own
+	 * separate $/sq-in engine; these are millimeters and feed
+	 * YeffoPrint_Pricing_Rule::dynamic_base_price() instead — reusing the
+	 * inch-named constants to hold millimeter values would be a real trap
+	 * for the next reader. Presence of these two (and absence of SIZE_ID)
+	 * is what class-cart-pricing.php's apply_price() uses to tell a
+	 * Label Designer labels item apart from a normal Template/Custom
+	 * Design one.
+	 */
+	public const CANVAS_WIDTH_MM  = 'yp_canvas_width_mm';
+	public const CANVAS_HEIGHT_MM = 'yp_canvas_height_mm';
 }

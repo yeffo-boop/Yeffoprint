@@ -178,6 +178,29 @@ class YeffoPrint_Custom_Order_Meta {
 	 */
 	public const BATCH = '_yp_batch';
 
+	/**
+	 * Label Designer (direct request: "a full live product label
+	 * customizer... input a size, add text, easy graphics, shapes/lines,
+	 * change the font, colors, etc"). Unlike every other flow, this one
+	 * has no preset `yp_size` post behind it — the customer types their
+	 * own width/height, so it's stored directly here rather than as a
+	 * SIZE_ID reference. Present only on an `own_design`-mode submission
+	 * made through the Label Designer; absent on every existing peptide/
+	 * Template order, which keeps using SIZE_ID as always.
+	 */
+	public const CANVAS_WIDTH_MM  = '_yp_canvas_width_mm';
+	public const CANVAS_HEIGHT_MM = '_yp_canvas_height_mm';
+
+	/**
+	 * The Fabric.js canvas's own `toJSON()` output — the editable source
+	 * behind the exported PNG in ARTWORK_UPLOADS, kept so a design can be
+	 * reopened later (a reorder, or a future "edit before it's approved"
+	 * feature) instead of starting from a blank canvas. Optional even on
+	 * a Label Designer submission (nothing downstream depends on it —
+	 * the PNG in ARTWORK_UPLOADS is what actually gets printed).
+	 */
+	public const CANVAS_DESIGN_JSON = '_yp_canvas_design_json';
+
 	/** In pipeline order — PROJECT_SPEC §13. */
 	public const STATUSES = [
 		'design_in_progress' => 'Design in progress',

@@ -143,6 +143,24 @@ class YeffoPrint_Pricing_Rule {
 	}
 
 	/**
+	 * Label Designer only (direct request) — peptide/Template pricing
+	 * keeps reading the single site-wide META_BASE_UNIT_PRICE via
+	 * get_base_unit_price() exactly as before; this is a second, parallel
+	 * way to arrive at a base price for the one flow where the customer
+	 * picks their own dimensions instead of a preset Size post, so
+	 * there's no Size.price_adjustment to represent the size cost with.
+	 * Exact formula supplied directly by the business: base price scales
+	 * with label area (width × height), not a flat rate — a much bigger
+	 * label costs meaningfully more to print than a small one. Feed the
+	 * result into calculate()'s $base_price_override to run it through
+	 * the exact same material-adjustment/discount-tier/quantity logic
+	 * every other flow already uses.
+	 */
+	public static function dynamic_base_price( float $width_mm, float $height_mm ): float {
+		return 0.3168 + ( 0.0000351 * $width_mm * $height_mm );
+	}
+
+	/**
 	 * The authoritative formula: ((base − discount) + adjustments) ×
 	 * quantity.
 	 *
@@ -176,6 +194,14 @@ class YeffoPrint_Pricing_Rule {
 	 * holds structurally for either tier type. See docs/ARCHITECTURE.md
 	 * §9.
 	 *
+	 * `$base_price_override` — every existing caller omits this and gets
+	 * the exact same behavior as before it existed (`$base` falls back
+	 * to get_base_unit_price(), the single site-wide value). It exists
+	 * only for the Label Designer flow, whose per-request base price
+	 * comes from dynamic_base_price() instead of a site-wide setting —
+	 * everything from here down (discount tiers, material/size
+	 * adjustments, quantity) runs identically either way.
+	 *
 	 * @return array{
 	 *   base_unit_price:float, material_adjustment:float, size_adjustment:float,
 	 *   unit_price_before_discount:float, discount_per_unit:float,
@@ -183,10 +209,10 @@ class YeffoPrint_Pricing_Rule {
 	 *   quantity:int, tier_quantity:int, total:float, rule_version:int
 	 * }
 	 */
-	public static function calculate( float $material_adjustment, float $size_adjustment, int $quantity, ?int $tier_quantity = null ): array {
+	public static function calculate( float $material_adjustment, float $size_adjustment, int $quantity, ?int $tier_quantity = null, ?float $base_price_override = null ): array {
 		$quantity      = max( 1, $quantity );
 		$tier_quantity = max( $quantity, $tier_quantity ?? $quantity );
-		$base          = self::get_base_unit_price();
+		$base          = $base_price_override ?? self::get_base_unit_price();
 
 		$unit_price_before_discount = max( 0, $base + $material_adjustment + $size_adjustment );
 

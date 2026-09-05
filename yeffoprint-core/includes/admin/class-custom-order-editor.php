@@ -236,9 +236,19 @@ class YeffoPrint_Custom_Order_Editor {
 				continue;
 			}
 
+			// A quick visual, not just a filename link — direct value for
+			// the Label Designer's exported PNG specifically (staff used
+			// to have to open every file in a new tab just to see it), but
+			// applies to any image-type upload here, not only that flow's.
+			$thumbnail_url = wp_get_attachment_image_url( $attachment_id, 'thumbnail' );
+			$thumbnail_html = $thumbnail_url
+				? sprintf( '<img src="%s" alt="" class="yp-upload-thumbnail" />', esc_url( $thumbnail_url ) )
+				: '';
+
 			$items .= sprintf(
-				'<li><a href="%s" target="_blank" rel="noopener noreferrer">%s</a></li>',
+				'<li><a href="%s" target="_blank" rel="noopener noreferrer">%s%s</a></li>',
 				esc_url( $url ),
+				$thumbnail_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from esc_url() above, or empty.
 				esc_html( basename( $url ) )
 			);
 		}

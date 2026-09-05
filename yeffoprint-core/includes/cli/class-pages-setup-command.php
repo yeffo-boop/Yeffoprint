@@ -59,6 +59,13 @@ class YeffoPrint_Pages_Setup_Command {
 		);
 
 		$this->create_page(
+			'design-your-label',
+			__( 'Build Your Own Label', 'yeffoprint-core' ),
+			'',
+			'label-designer.html'
+		);
+
+		$this->create_page(
 			'contact',
 			__( 'Contact', 'yeffoprint-core' ),
 			'',

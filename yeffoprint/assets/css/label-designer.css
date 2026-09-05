@@ -1,0 +1,180 @@
+/*
+ * Label Designer — direct request: "a full live product label
+ * customizer... add text, easy graphics, shapes/lines, change the font,
+ * colors, etc and have it show a live preview." Reuses .yp-field,
+ * .yp-quantity-preset, .yp-configurator__status and
+ * .yp-configurator__cart-status from configurator.css (enqueued
+ * alongside this file, same pattern custom-order.css's own header
+ * comment already documents) rather than redefining them — only the
+ * canvas/toolbar/property-panel chrome specific to this tool lives here.
+ */
+
+.yp-label-designer {
+	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
+}
+
+.yp-ld__setup {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+@media (max-width: 720px) {
+	.yp-ld__setup {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.yp-ld__dimension input {
+	width: 100%;
+}
+
+.yp-ld__workspace {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--card);
+	padding: 1rem;
+	margin-bottom: 1.5rem;
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-ld__toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.85rem;
+	margin-bottom: 1rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-ld__toolbar .button-link:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	text-decoration: none;
+}
+
+.yp-ld__toolbar-sep {
+	width: 1px;
+	align-self: stretch;
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-ld__icon-panel {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr));
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+	padding: 0.75rem;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-ld__icon-button {
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0.4rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--warm-white);
+	color: var(--wp--preset--color--near-black);
+	cursor: pointer;
+}
+
+.yp-ld__icon-button:hover {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.yp-ld__icon-button svg {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+.yp-ld__canvas-wrap {
+	display: flex;
+	justify-content: center;
+	padding: 1rem;
+	background:
+		linear-gradient(45deg, #e7e5e1 25%, transparent 25%),
+		linear-gradient(-45deg, #e7e5e1 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, #e7e5e1 75%),
+		linear-gradient(-45deg, transparent 75%, #e7e5e1 75%);
+	background-size: 16px 16px;
+	background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+	border-radius: var(--wp--custom--radius--control);
+	overflow: auto;
+}
+
+.yp-ld__properties {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 1rem;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-ld__prop {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-ld__prop label {
+	font-weight: 600;
+}
+
+.yp-ld__prop select,
+.yp-ld__prop input[type="number"] {
+	padding: 0.4rem 0.5rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-ld__prop input[type="color"] {
+	width: 2.5rem;
+	height: 2.2rem;
+	padding: 0;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	cursor: pointer;
+}
+
+.yp-ld__toggle {
+	width: 2.2rem;
+	height: 2.2rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	cursor: pointer;
+}
+
+.yp-ld__toggle.is-active {
+	border-color: var(--wp--preset--color--near-black);
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-ld__background {
+	margin-top: 1rem;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.yp-ld__background label {
+	margin: 0;
+}
+
+.yp-ld__background input[type="color"] {
+	width: 2.5rem;
+	height: 2.2rem;
+	padding: 0;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	cursor: pointer;
+}

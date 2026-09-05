@@ -145,7 +145,7 @@
 					'<div class="yp-quantity-control" data-row-quantity></div>' +
 				'</div>' +
 				'<div class="yp-field">' +
-					'<label for="yp-co-row-' + row.id + '-compound">Compound / strength <span class="description">(optional)</span></label>' +
+					'<label for="yp-co-row-' + row.id + '-compound">Product details <span class="description">(e.g. compound &amp; strength) (optional)</span></label>' +
 					'<input type="text" id="yp-co-row-' + row.id + '-compound" data-row-field="compound_strength" maxlength="120" class="widefat" />' +
 				'</div>' +
 			'</div>'
@@ -467,8 +467,8 @@
 		var exampleSize = sizesData.length ? sizesData[ 0 ] : { name: '3mL' };
 		var exampleQuantity = quantityPresets[ 0 ] || 50;
 
-		var csv = 'Size,Material,Quantity,Compound / Strength\r\n' +
-			csvCell( exampleSize.name ) + ',' + csvCell( exampleMaterial.name ) + ',' + exampleQuantity + ',' + csvCell( 'Tirzepatide 5mg' ) + '\r\n';
+		var csv = 'Size,Material,Quantity,Product Details\r\n' +
+			csvCell( exampleSize.name ) + ',' + csvCell( exampleMaterial.name ) + ',' + exampleQuantity + ',' + csvCell( 'Lavender & Chamomile' ) + '\r\n';
 
 		var blob = new Blob( [ csv ], { type: 'text/csv;charset=utf-8;' } );
 		var url = URL.createObjectURL( blob );

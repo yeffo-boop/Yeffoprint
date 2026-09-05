@@ -40,7 +40,7 @@ $email = $email ?? null;
 												<table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation">
 													<tr>
 														<td colspan="2" valign="middle" id="credit">
-															<p><?php esc_html_e( 'Premium custom vial labels and stickers, designed live, printed to order.', 'yeffoprint' ); ?></p>
+															<p><?php esc_html_e( 'Premium custom product labels and stickers, designed live, printed to order.', 'yeffoprint' ); ?></p>
 															<p>
 																<a href="https://t.me/senoryeffo"><?php esc_html_e( 'Telegram', 'yeffoprint' ); ?></a>
 																<a href="https://wa.me/12538304840"><?php esc_html_e( 'WhatsApp', 'yeffoprint' ); ?></a>

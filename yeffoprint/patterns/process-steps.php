@@ -58,7 +58,7 @@ defined( 'ABSPATH' ) || exit;
 			<h3 class="wp-block-heading has-large-font-size">Customize your details</h3>
 			<!-- /wp:heading -->
 			<!-- wp:paragraph -->
-			<p>Enter your compound, strength, brand name, and any other details, and preview exactly how your label will look.</p>
+			<p>Enter your product details, brand name, and any other info, and preview exactly how your label will look.</p>
 			<!-- /wp:paragraph -->
 		</div>
 		<!-- /wp:group -->

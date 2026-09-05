@@ -189,7 +189,9 @@ class YeffoPrint_Order_Item_Meta {
 			// splits across multiple line items here specifically.
 			$row_index         = (int) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ROW_INDEX ] ?? 0 );
 			$compound_strength = (string) ( $values[ YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH ] ?? '' );
-			self::snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength );
+			$canvas_width_mm   = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ] ?? 0 );
+			$canvas_height_mm  = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] ?? 0 );
+			self::snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength, $canvas_width_mm, $canvas_height_mm );
 			return;
 		}
 
@@ -227,7 +229,7 @@ class YeffoPrint_Order_Item_Meta {
 		self::add_variant_rows( $item, $variants, $field_schema );
 	}
 
-	private static function snapshot_custom_order_labels( \WC_Order_Item_Product $item, int $custom_order_id, int $size_id, int $material_id, int $quantity, ?array $pricing, int $row_index = 0, string $compound_strength = '' ): void {
+	private static function snapshot_custom_order_labels( \WC_Order_Item_Product $item, int $custom_order_id, int $size_id, int $material_id, int $quantity, ?array $pricing, int $row_index = 0, string $compound_strength = '', float $canvas_width_mm = 0, float $canvas_height_mm = 0 ): void {
 		$item->add_meta_data( '_yp_custom_order_id', $custom_order_id, true );
 		$item->add_meta_data( '_yp_size_snapshot', wp_json_encode( self::record_snapshot( $size_id ) ), true );
 		$item->add_meta_data( '_yp_material_snapshot', wp_json_encode( self::record_snapshot( $material_id ) ), true );
@@ -238,7 +240,24 @@ class YeffoPrint_Order_Item_Meta {
 		$item->add_meta_data( '_yp_batch_row_index', $row_index, true );
 		$item->add_meta_data( '_yp_compound_strength_snapshot', $compound_strength, true );
 
-		$item->add_meta_data( __( 'Size', 'yeffoprint-core' ), $size_id ? get_the_title( $size_id ) : '—', true );
+		// Label Designer only — no SIZE_ID at all (see class-cart-item-
+		// keys.php's own doc on CANVAS_WIDTH_MM/CANVAS_HEIGHT_MM), so the
+		// "Size" row shows the customer's own entered dimensions instead
+		// of "—".
+		$has_canvas_dimensions = $canvas_width_mm > 0 && $canvas_height_mm > 0;
+		if ( $has_canvas_dimensions ) {
+			$item->add_meta_data( '_yp_canvas_width_mm', $canvas_width_mm, true );
+			$item->add_meta_data( '_yp_canvas_height_mm', $canvas_height_mm, true );
+		}
+
+		$item->add_meta_data(
+			__( 'Size', 'yeffoprint-core' ),
+			$has_canvas_dimensions
+				/* translators: 1: width in millimeters, 2: height in millimeters */
+				? sprintf( __( '%1$smm × %2$smm', 'yeffoprint-core' ), rtrim( rtrim( number_format( $canvas_width_mm, 1 ), '0' ), '.' ), rtrim( rtrim( number_format( $canvas_height_mm, 1 ), '0' ), '.' ) )
+				: ( $size_id ? get_the_title( $size_id ) : '—' ),
+			true
+		);
 		$item->add_meta_data( __( 'Material', 'yeffoprint-core' ), $material_id ? get_the_title( $material_id ) : '—', true );
 		$item->add_meta_data( __( 'Quantity', 'yeffoprint-core' ), $quantity, true );
 		if ( '' !== $compound_strength ) {
