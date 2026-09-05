@@ -98,6 +98,18 @@
 	var formErrorEl          = null;
 	var lastConfirmedDims    = null;
 
+	// Every image the customer uploads via "+ Image" (usually a logo) is
+	// kept here by upload id, separate from the flattened PNG the canvas
+	// exports on submit — that export is print-resolution but is a
+	// re-rasterized composite of the whole label, not the original file.
+	// Staff need the original (often higher-quality, sometimes vector-
+	// sourced) logo on hand for print prep, so every id collected here
+	// rides along on submit under CANVAS_SOURCE_IMAGE_UPLOADS, kept even
+	// if the customer later deletes that image from the canvas — simpler
+	// than tracking canvas-object-to-upload-id lifetime, and erring
+	// toward keeping a file staff might still want beats losing it.
+	var logoUploadIds       = [];
+
 	function escapeHtml( value ) {
 		var div = document.createElement( 'div' );
 		div.textContent = value == null ? '' : String( value );
@@ -526,6 +538,10 @@
 					return;
 				}
 
+				if ( result.id && logoUploadIds.indexOf( result.id ) === -1 ) {
+					logoUploadIds.push( result.id );
+				}
+
 				fabric.Image.fromURL( result.url, function ( img ) {
 					var maxSize = Math.min( canvas.getWidth(), canvas.getHeight() ) * 0.6;
 					if ( img.width > maxSize || img.height > maxSize ) {
@@ -640,7 +656,8 @@
 				bgColor: bgColorInput.value,
 				brandName: brandInput.value,
 				notes: notesInput.value,
-				canvasJson: canvas.toJSON()
+				canvasJson: canvas.toJSON(),
+				logoUploadIds: logoUploadIds
 			} ) );
 		} catch ( e ) {
 			// Private browsing / storage disabled / quota exceeded — the
@@ -743,6 +760,7 @@
 					body: JSON.stringify( {
 						mode: 'own_design',
 						uploads: [ result.id ],
+						source_image_uploads: logoUploadIds,
 						width_mm: widthMm,
 						height_mm: heightMm,
 						material_id: materialId,
@@ -803,6 +821,9 @@
 		}
 		if ( draft.quantity ) {
 			quantityInput.value = draft.quantity;
+		}
+		if ( Array.isArray( draft.logoUploadIds ) ) {
+			logoUploadIds = draft.logoUploadIds;
 		}
 	}
 

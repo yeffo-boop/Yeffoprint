@@ -201,6 +201,19 @@ class YeffoPrint_Custom_Order_Meta {
 	 */
 	public const CANVAS_DESIGN_JSON = '_yp_canvas_design_json';
 
+	/**
+	 * Every image the customer uploaded via the Label Designer's "+ Image"
+	 * button (in practice, usually their logo) — the *original* file(s),
+	 * distinct from ARTWORK_UPLOADS' flattened print-ready PNG export.
+	 * The export is a re-rasterized composite of the whole label at print
+	 * resolution, not the original asset, so staff need this list on hand
+	 * to pull the source file (often better quality, sometimes originally
+	 * vector) when prepping for print. Kept even if the customer later
+	 * removes that image from the canvas — see label-designer.js's own
+	 * doc comment on logoUploadIds for why.
+	 */
+	public const CANVAS_SOURCE_IMAGE_UPLOADS = '_yp_canvas_source_image_uploads';
+
 	/** In pipeline order — PROJECT_SPEC §13. */
 	public const STATUSES = [
 		'design_in_progress' => 'Design in progress',
