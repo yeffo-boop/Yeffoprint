@@ -21,6 +21,14 @@
  * overwrites a Template that already has a non-empty field_schema, so
  * it's safe to run more than once, including after the owner has
  * started customizing one of these by hand.
+ *
+ * Also backfills each Template's featured image. That field IS
+ * REST-exposed on yp_template (it supports 'thumbnail'), but the
+ * connected WordPress MCP tooling's generic CPT-update tool doesn't
+ * forward a featured_media parameter for custom post types (only its
+ * built-in-`post` tool does) — so, same as the 3 fields above, this is
+ * the one place that can reach it. Media IDs below are the 3 placeholder
+ * artwork attachments already uploaded to the live media library.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -33,18 +41,21 @@ class YeffoPrint_Product_Templates_Seed_Command {
 			'size_title'          => 'Cosmetic Jar',
 			'details_label'       => 'Net Wt. / Key Ingredient',
 			'details_description' => 'e.g. "1.7 oz — Shea Butter" or "50g — Vitamin C 10%"',
+			'featured_media'      => 274,
 		],
 		[
 			'slug'                => 'botanica',
 			'size_title'          => 'Skincare Bottle',
 			'details_label'       => 'Volume / Key Ingredient',
 			'details_description' => 'e.g. "30mL — Hyaluronic Acid" or "1 fl oz — Retinol 0.5%"',
+			'featured_media'      => 275,
 		],
 		[
 			'slug'                => 'vital',
 			'size_title'          => 'Supplement Bottle',
 			'details_label'       => 'Serving Size / Directions',
 			'details_description' => 'e.g. "60 capsules — Take 2 daily" or "90ct — 500mg per serving"',
+			'featured_media'      => 276,
 		],
 	];
 
@@ -118,6 +129,15 @@ class YeffoPrint_Product_Templates_Seed_Command {
 		} elseif ( $material_ids ) {
 			update_post_meta( $template->ID, YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS, $material_ids );
 			\WP_CLI::log( sprintf( 'Set compatible materials (all %d published) on %s', count( $material_ids ), $label ) );
+		}
+
+		if ( get_post_thumbnail_id( $template->ID ) ) {
+			\WP_CLI::log( sprintf( '%s already has a featured image — left as-is.', $label ) );
+		} elseif ( ! empty( $config['featured_media'] ) && get_post( $config['featured_media'] ) ) {
+			set_post_thumbnail( $template->ID, $config['featured_media'] );
+			\WP_CLI::log( sprintf( 'Set featured image (attachment #%d) on %s', $config['featured_media'], $label ) );
+		} else {
+			\WP_CLI::log( sprintf( 'Placeholder artwork attachment not found — leaving featured image unset on %s.', $label ) );
 		}
 	}
 
