@@ -6,6 +6,16 @@
  * Order's own detail view (views/orders.js) — both call the same
  * `POST /admin/proof` endpoint — this screen just starts from "pick
  * which order" instead of already being inside one.
+ *
+ * List rows, not a table — continuing the admin redesign onto this
+ * screen: a plain `<table class="yp-record-table">` was the one thing
+ * left rendering proofs as a different shape from the Dashboard's own
+ * panels and the "Needs attention" queue, which all moved to this same
+ * `.yp-list-row` (title/subtitle + meta + action) during that pass.
+ * No detail view worth a split-view here (a proof is just an order
+ * link, a file, and a date — there's nothing to browse into), so this
+ * gets the lighter list-row treatment those already had, not a
+ * `.yp-split` rebuild.
  */
 
 ( function () {
@@ -29,22 +39,20 @@
 				'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search by order&hellip;" />' +
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-add>+ Add Proof</button>' +
 			'</div>' +
-			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
-				'<th>Order</th><th>File</th><th>Date</th><th></th>' +
-			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="4">Loading&hellip;</td></tr></tbody></table></div>';
+			'<div class="yp-panel"><div class="yp-list-rows" data-yp-rows><p class="yp-field__hint">Loading&hellip;</p></div></div>';
 
 		var rowsEl  = viewEl.querySelector( '[data-yp-rows]' );
 		var searchEl = viewEl.querySelector( '[data-yp-search]' );
 
 		function load() {
-			rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="4">Loading&hellip;</td></tr>';
+			rowsEl.innerHTML = '<p class="yp-field__hint">Loading&hellip;</p>';
 			YP.request( endpoint( 'proofs' ) )
 				.then( function ( proofs ) {
 					allProofs = proofs || [];
 					renderRows( allProofs );
 				} )
 				.catch( function ( error ) {
-					rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="4">Couldn’t load proofs: ' + YP.escapeHtml( error.message ) + '</td></tr>';
+					rowsEl.innerHTML = '<p class="yp-form__error">Couldn’t load proofs: ' + YP.escapeHtml( error.message ) + '</p>';
 				} );
 		}
 
@@ -55,18 +63,20 @@
 				: proofs;
 
 			if ( ! filtered.length ) {
-				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="4">' + ( proofs.length ? 'No proofs match your search.' : 'No proofs uploaded yet — add the first one above.' ) + '</td></tr>';
+				rowsEl.innerHTML = '<p class="yp-field__hint">' + ( proofs.length ? 'No proofs match your search.' : 'No proofs uploaded yet — add the first one above.' ) + '</p>';
 				return;
 			}
 
 			rowsEl.innerHTML = filtered.map( function ( proof ) {
 				return (
-					'<tr data-id="' + proof.id + '">' +
-						'<td><div class="yp-record-name">' + YP.escapeHtml( proof.custom_order_title || '—' ) + '</div></td>' +
-						'<td>' + ( proof.file_url ? '<a href="' + YP.escapeAttr( proof.file_url ) + '" target="_blank" rel="noopener noreferrer">' + YP.escapeHtml( proof.title ) + '</a>' : YP.escapeHtml( proof.title ) ) + '</td>' +
-						'<td>' + new Date( proof.date ).toLocaleDateString() + '</td>' +
-						'<td class="yp-row-actions"><button type="button" class="yp-row-action" data-yp-delete="' + proof.id + '">Delete</button></td>' +
-					'</tr>'
+					'<div class="yp-list-row">' +
+						'<div class="yp-list-row__text">' +
+							'<span class="t">' + YP.escapeHtml( proof.custom_order_title || '—' ) + '</span>' +
+							'<span class="s">' + ( proof.file_url ? '<a href="' + YP.escapeAttr( proof.file_url ) + '" target="_blank" rel="noopener noreferrer">' + YP.escapeHtml( proof.title ) + '</a>' : YP.escapeHtml( proof.title ) ) + '</span>' +
+						'</div>' +
+						'<div class="yp-list-row__meta"><span class="yp-list-row__age">' + new Date( proof.date ).toLocaleDateString() + '</span></div>' +
+						'<div class="yp-list-row__action"><button type="button" class="yp-row-action" data-yp-delete="' + proof.id + '">Delete</button></div>' +
+					'</div>'
 				);
 			} ).join( '' );
 
