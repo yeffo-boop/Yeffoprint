@@ -463,35 +463,45 @@
 		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false, overdueBy: 0 };
 	}
 
-	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction, clickAttr, actionHeader ) {
+	/**
+	 * Direct request: "a functional dashboard that gives me what I need
+	 * at a glance, looks polished, and just works." Rows used to render
+	 * as a plain 4-column table — every panel a different table, none of
+	 * them visually related to the "Needs attention" queue above them or
+	 * the split-view list rows Custom Orders now uses. `.yp-list-row`
+	 * (records.css) is that same compact row shape reused here: a bold
+	 * clickable title, a muted customer sub-line, the age/overdue state
+	 * and any per-row action lined up on the right — one visual language
+	 * across the whole dashboard instead of a table per panel.
+	 */
+	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction, clickAttr ) {
 		var body;
 		if ( ! rows.length ) {
 			body = '<p class="yp-field__hint">Nothing here right now.</p>';
 		} else {
-			body =
-				'<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Date</th>' + ( rowAction ? '<th>' + YP.escapeHtml( actionHeader || '' ) + '</th>' : '' ) + '</tr></thead><tbody>' +
-					rows.map( function ( row ) {
-						var age = daysAgoLabel( row.date, dueDateDays );
-						var label = onOrderClick
-							? '<button type="button" class="yp-row-action" style="padding:0;font-weight:600;" ' + ( clickAttr || 'data-yp-dashboard-order' ) + '="' + row.id + '">' + YP.escapeHtml( row.label ) + '</button>'
-							: '<a href="' + YP.escapeAttr( row.edit_url ) + '">' + YP.escapeHtml( row.label ) + '</a>';
-						return (
-							'<tr>' +
-								'<td>' + label + '</td>' +
-								'<td>' + YP.escapeHtml( row.customer || '—' ) + '</td>' +
-								'<td>' + ( age.overdue ? '<span class="yp-pill yp-pill--crit">' + age.text + '</span>' : age.text ) + '</td>' +
-								( rowAction ? '<td>' + rowAction( row ) + '</td>' : '' ) +
-							'</tr>'
-						);
-					} ).join( '' ) +
-				'</tbody></table>';
+			body = rows.map( function ( row ) {
+				var age = daysAgoLabel( row.date, dueDateDays );
+				var label = onOrderClick
+					? '<button type="button" class="yp-row-action" style="padding:0;font-weight:700;" ' + ( clickAttr || 'data-yp-dashboard-order' ) + '="' + row.id + '">' + YP.escapeHtml( row.label ) + '</button>'
+					: '<a href="' + YP.escapeAttr( row.edit_url ) + '">' + YP.escapeHtml( row.label ) + '</a>';
+				return (
+					'<div class="yp-list-row">' +
+						'<div class="yp-list-row__text">' +
+							'<span class="t">' + label + '</span>' +
+							'<span class="s">' + YP.escapeHtml( row.customer || '—' ) + '</span>' +
+						'</div>' +
+						'<div class="yp-list-row__meta">' + ( age.overdue ? '<span class="yp-pill yp-pill--crit">' + age.text + '</span>' : '<span class="yp-list-row__age">' + age.text + '</span>' ) + '</div>' +
+						( rowAction ? '<div class="yp-list-row__action">' + rowAction( row ) + '</div>' : '' ) +
+					'</div>'
+				);
+			} ).join( '' );
 		}
 
 		return (
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>' + YP.escapeHtml( title ) + '</h2>' + ( viewAllHref ? '<a href="' + YP.escapeAttr( viewAllHref ) + '">View all &rarr;</a>' : '' ) + '</div>' +
 				'<p class="yp-panel__hint">' + YP.escapeHtml( description ) + '</p>' +
-				body +
+				'<div class="yp-list-rows">' + body + '</div>' +
 			'</div>'
 		);
 	}
@@ -619,43 +629,77 @@
 		);
 	}
 
+	/**
+	 * Four glanceable counts across the top of the dashboard — direct
+	 * request: "a functional dashboard that gives me what I need at a
+	 * glance." Same four sections the panels below already cover, just
+	 * as a single number each, read in one pass before scrolling into
+	 * any of the detail below.
+	 */
+	function statTilesHtml( summary ) {
+		var tiles = [
+			{ label: 'Pending Orders', count: summary.pending_orders.length },
+			{ label: 'Shipped Packages', count: summary.shipped_packages.length },
+			{ label: 'Awaiting Approval', count: summary.awaiting_approval.length },
+			{ label: 'Maintenance Subscribers', count: summary.maintenance_subscribers.length }
+		];
+
+		return (
+			'<div class="yp-stat-tiles">' +
+				tiles.map( function ( tile ) {
+					return (
+						'<div class="yp-stat-tile">' +
+							'<span class="yp-stat-tile__count">' + tile.count + '</span>' +
+							'<span class="yp-stat-tile__label">' + YP.escapeHtml( tile.label ) + '</span>' +
+						'</div>'
+					);
+				} ).join( '' ) +
+			'</div>'
+		);
+	}
+
 	function renderDashboardSummary( summary, el ) {
 		var dueDateDays = summary.due_date_days;
 
 		var shippedBody = summary.shipped_packages.length
-			? '<table class="yp-record-table"><thead><tr><th>Order</th><th>Customer</th><th>Carrier</th><th>Tracking #</th><th>Status</th></tr></thead><tbody>' +
-				summary.shipped_packages.map( function ( pkg ) {
+			? '<div class="yp-list-rows">' + summary.shipped_packages.map( function ( pkg ) {
 					var tracking = pkg.tracking_url
-						? '<a href="' + YP.escapeAttr( pkg.tracking_url ) + '" target="_blank" rel="noopener noreferrer">' + YP.escapeHtml( pkg.tracking_number ) + '</a>'
-						: YP.escapeHtml( pkg.tracking_number );
+						? '<a href="' + YP.escapeAttr( pkg.tracking_url ) + '" target="_blank" rel="noopener noreferrer" class="mono">' + YP.escapeHtml( pkg.tracking_number ) + '</a>'
+						: '<span class="mono">' + YP.escapeHtml( pkg.tracking_number ) + '</span>';
 					var checkedAgo = timeAgoLabel( pkg.tracking_checked_at );
 					return (
-						'<tr>' +
-							// Direct report: clicking an order here used to link straight to the
-							// classic WooCommerce edit screen instead of this dashboard's own
-							// order-detail drawer (which is where the Shippo "reprint label" panel
-							// lives) — a button wired to the same [data-yp-wc-order] handler the
-							// Pending Orders panel's rows already use (bound below) instead of a
-							// plain <a href="edit_url">.
-							'<td><button type="button" class="yp-row-action" style="padding:0;font-weight:600;" data-yp-wc-order="' + pkg.id + '">' + YP.escapeHtml( pkg.order_label ) + '</button></td>' +
-							'<td>' + YP.escapeHtml( pkg.customer || '—' ) + '</td>' +
-							'<td><span class="yp-chip">' + YP.escapeHtml( pkg.carrier_label || '—' ) + '</span></td>' +
-							'<td>' + tracking + '</td>' +
-							'<td>' + trackingStatusPillHtml( pkg.tracking_status ) +
-								( checkedAgo ? '<div class="yp-record-name__sub">' + YP.escapeHtml( checkedAgo ) + '</div>' : '' ) +
-							'</td>' +
-						'</tr>'
+						'<div class="yp-list-row">' +
+							'<div class="yp-list-row__text">' +
+								// Direct report: clicking an order here used to link straight to the
+								// classic WooCommerce edit screen instead of this dashboard's own
+								// order-detail drawer (which is where the Shippo "reprint label" panel
+								// lives) — a button wired to the same [data-yp-wc-order] handler the
+								// Pending Orders panel's rows already use (bound below) instead of a
+								// plain <a href="edit_url">.
+								'<span class="t"><button type="button" class="yp-row-action" style="padding:0;font-weight:700;" data-yp-wc-order="' + pkg.id + '">' + YP.escapeHtml( pkg.order_label ) + '</button></span>' +
+								'<span class="s">' + YP.escapeHtml( pkg.customer || '—' ) + ' · <span class="yp-chip">' + YP.escapeHtml( pkg.carrier_label || '—' ) + '</span> ' + tracking + '</span>' +
+							'</div>' +
+							'<div class="yp-list-row__meta">' +
+								trackingStatusPillHtml( pkg.tracking_status ) +
+								( checkedAgo ? '<span class="yp-list-row__age">' + YP.escapeHtml( checkedAgo ) + '</span>' : '' ) +
+							'</div>' +
+						'</div>'
 					);
-				} ).join( '' ) +
-			'</tbody></table>'
+				} ).join( '' ) + '</div>'
 			: '<p class="yp-field__hint">Nothing here right now.</p>';
 
 		var maintenanceBody = summary.maintenance_subscribers.length
-			? '<table class="yp-record-table"><thead><tr><th>Customer</th><th>Plan</th><th>Renews</th></tr></thead><tbody>' +
-				summary.maintenance_subscribers.map( function ( sub ) {
-					return '<tr><td>' + YP.escapeHtml( sub.name ) + '</td><td>' + YP.escapeHtml( sub.plan || '—' ) + '</td><td>' + ( sub.renews ? new Date( sub.renews * 1000 ).toLocaleDateString() : '—' ) + '</td></tr>';
-				} ).join( '' ) +
-			'</tbody></table>'
+			? '<div class="yp-list-rows">' + summary.maintenance_subscribers.map( function ( sub ) {
+					return (
+						'<div class="yp-list-row">' +
+							'<div class="yp-list-row__text">' +
+								'<span class="t">' + YP.escapeHtml( sub.name ) + '</span>' +
+								'<span class="s">' + YP.escapeHtml( sub.plan || '—' ) + '</span>' +
+							'</div>' +
+							'<div class="yp-list-row__meta"><span class="yp-list-row__age">' + ( sub.renews ? 'Renews ' + new Date( sub.renews * 1000 ).toLocaleDateString() : '—' ) + '</span></div>' +
+						'</div>'
+					);
+				} ).join( '' ) + '</div>'
 			: '<p class="yp-field__hint">Nothing here right now.</p>';
 
 		/**
@@ -690,8 +734,9 @@
 		}
 
 		el.innerHTML =
+			statTilesHtml( summary ) +
 			needsAttentionHtml( summary, dueDateDays, sendToPrinterButtonHtml ) +
-			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped — processing or in production.', summary.pending_orders_url, summary.pending_orders, dueDateDays, true, sendToPrinterButtonHtml, 'data-yp-wc-order', 'Status' ) +
+			dashboardSectionHtml( 'Pending Orders', 'Paid, not yet shipped — processing or in production.', summary.pending_orders_url, summary.pending_orders, dueDateDays, true, sendToPrinterButtonHtml, 'data-yp-wc-order' ) +
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Shipped Packages</h2><button type="button" class="yp-row-action" data-yp-refresh-tracking>Check tracking now</button></div>' +
 				'<p class="yp-panel__hint">Shipped, not yet delivered — every label with a tracking number currently in transit. Delivered packages automatically move the order to Completed and drop off this list.</p>' +
@@ -799,6 +844,12 @@
 
 		loadWcOrderDetail( id, drawer, autoPrintLabel );
 	}
+
+	// Exposed on YP — direct request: the Custom Orders screen's own
+	// "Order #123" link used to open the classic WooCommerce edit screen
+	// in a new tab; it opens this same drawer in place instead, so staff
+	// never have to leave the app's own order view.
+	YP.openWcOrderDrawer = openWcOrderDrawer;
 
 	function loadWcOrderDetail( id, drawer, autoPrintLabel ) {
 		var bodyEl = drawer.querySelector( '[data-yp-body]' );
