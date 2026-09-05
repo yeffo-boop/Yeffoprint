@@ -273,6 +273,21 @@ add_action( 'wp_enqueue_scripts', function () {
 		);
 	}
 
+	// Cart page only — direct request, mockup approved (Option C: a
+	// plain payment-icon strip under "Proceed to Checkout"). Scoped
+	// tighter than the woocommerce.css gate above (Cart specifically,
+	// not Checkout/My Account too) since that's the one button this
+	// strip is meant to sit under.
+	if ( function_exists( 'is_cart' ) && is_cart() ) {
+		wp_enqueue_script(
+			'yeffoprint-payment-icons',
+			get_theme_file_uri( 'assets/js/payment-icons.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/payment-icons.js' ),
+			true
+		);
+	}
+
 	// Custom template slug is stored without the .html extension on
 	// some WP versions and with it on others — check both rather than
 	// guessing which this install uses.

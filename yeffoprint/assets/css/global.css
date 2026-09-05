@@ -861,6 +861,37 @@ fieldset {
 	justify-content: space-between;
 }
 
+/**
+ * "We Accept" footer column — direct request, mockup approved (Option
+ * D: sitewide reassurance, not tied to any one checkout step). Icons
+ * are simple built-in glyphs (a card outline, a V/Z monogram, a coin
+ * glyph), not the payment networks' own trademarked logos — the label
+ * text next to each one is what actually identifies it.
+ */
+.yp-footer__pay {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.yp-footer__pay-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.35rem 0.6rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal);
+	white-space: nowrap;
+}
+
+.yp-footer__pay-chip svg {
+	display: block;
+	flex-shrink: 0;
+}
+
 /* ---------- Splash screen (functions.php's wp_footer renderer, Dashboard → YeffoPrint → Settings → Splash Screen) ---------- */
 
 .yp-splash {
