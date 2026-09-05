@@ -37,6 +37,18 @@ class YeffoPrint_Template_Taxonomies {
 			__( 'Compatible Material', 'yeffoprint-core' ),
 			'yp_material'
 		) );
+
+		// Direct request: "some kind of separation or filter so people can
+		// specify if they want to see the peptide vial labels or other
+		// product labels" — a primary category, rendered as its own
+		// visually distinct pill row above Style/Color/Material in
+		// blocks/gallery-toolbar/render.php, not just a fourth equal-weight
+		// facet mixed into the same row.
+		register_taxonomy( 'yp_product_type', 'yp_template', $this->args(
+			__( 'Product Types', 'yeffoprint-core' ),
+			__( 'Product Type', 'yeffoprint-core' ),
+			'yp_product_type'
+		) );
 	}
 
 	/**

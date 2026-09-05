@@ -1098,17 +1098,48 @@
 
 .yp-gallery-toolbar {
 	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+	margin-bottom: var(--wp--preset--spacing--md);
+}
+
+.yp-gallery-toolbar__row {
+	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	margin-bottom: var(--wp--preset--spacing--md);
 }
 
 .yp-filter-group {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	gap: 0.5rem;
+}
+
+/* The primary "peptide vial labels vs. other product labels" split —
+   set apart from the finer Style/Color/Material row below it (bigger
+   pills, a "Show:" label, a hairline underneath) so it reads as the
+   main choice rather than one facet among several. */
+.yp-filter-group--primary {
+	padding-bottom: 0.85rem;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-filter-group__label {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.78rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wp--preset--color--charcoal);
+	margin-right: 0.25rem;
+}
+
+.yp-filter-group--primary .yp-filter-pill {
+	padding: 0.55rem 1.1rem;
+	font-size: 0.85rem;
+	font-weight: 600;
 }
 
 .yp-filter-pill {

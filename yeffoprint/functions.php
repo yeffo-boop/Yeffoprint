@@ -361,7 +361,12 @@ add_action( 'wp_enqueue_scripts', function () {
 	// see label-designer.js's own docblock for why), a curated icon
 	// dataset, and a wider curated Google Fonts set than the sitewide
 	// one loaded above (a font *picker* needs more than 3 families).
-	if ( is_page() && in_array( get_page_template_slug(), [ 'label-designer', 'label-designer.html' ], true ) ) {
+	// Admin-only for now (YeffoPrint_Feature_Gate — "I don't want to
+	// release all of these new features until I'm sure they're ready")
+	// — a non-admin visitor sees the Coming Soon placeholder rendered by
+	// blocks/label-designer-app/render.php instead, which needs none of
+	// this: no reason to ship ~300KB of canvas library for that.
+	if ( is_page() && in_array( get_page_template_slug(), [ 'label-designer', 'label-designer.html' ], true ) && YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 		wp_enqueue_style(
 			'yeffoprint-label-designer-fonts',
 			'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Merriweather:wght@400;700&family=Poppins:wght@400;600;700&family=Pacifico&family=Bebas+Neue&family=Caveat:wght@600&family=Oswald:wght@500;700&family=Lora:wght@500;700&family=Josefin+Sans:wght@500;700&family=Dancing+Script:wght@600&display=swap',
@@ -671,6 +676,8 @@ add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/gallery-toolbar' ) );
 	register_block_type( get_theme_file_path( 'blocks/announcement-bar' ) );
 	register_block_type( get_theme_file_path( 'blocks/promo-banner' ) );
+	register_block_type( get_theme_file_path( 'blocks/label-designer-app' ) );
+	register_block_type( get_theme_file_path( 'blocks/label-designer-notice' ) );
 } );
 
 /**
