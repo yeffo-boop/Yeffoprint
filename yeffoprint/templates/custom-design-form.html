@@ -12,20 +12,39 @@
 
 		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
 
-		<div class="yp-field yp-custom-order__mode" role="radiogroup" aria-label="How would you like to submit this design?" hidden data-yp-co-mode-group>
-			<label class="yp-radio-option">
+		<div class="yp-field yp-custom-order__mode yp-choice-cards" role="radiogroup" aria-label="How would you like to submit this design?" hidden data-yp-co-mode-group>
+			<label class="yp-choice-card">
 				<input type="radio" name="mode" value="new_design" checked />
-				<span>Design something new <span class="description">— $25 design fee</span></span>
+				<span class="yp-choice-card__check" aria-hidden="true">&#10003;</span>
+				<span class="yp-choice-card__row">
+					<span>
+						<span class="yp-choice-card__title">Design something new</span>
+						<span class="yp-choice-card__desc">Our designer builds it from scratch and sends a proof.</span>
+					</span>
+					<span class="yp-choice-card__badge">$25 fee</span>
+				</span>
 			</label>
-			<label class="yp-radio-option">
+			<label class="yp-choice-card">
 				<input type="radio" name="mode" value="own_design" />
-				<span>I have my own print-ready design <span class="description">— no design fee</span></span>
+				<span class="yp-choice-card__check" aria-hidden="true">&#10003;</span>
+				<span class="yp-choice-card__row">
+					<span>
+						<span class="yp-choice-card__title">I have my own print-ready design</span>
+						<span class="yp-choice-card__desc">Upload a finished file — we print it as-is.</span>
+					</span>
+					<span class="yp-choice-card__badge is-free">No fee</span>
+				</span>
 			</label>
-			<label class="yp-radio-option">
+			<label class="yp-choice-card">
 				<input type="radio" name="mode" value="reorder" />
-				<span class="yp-radio-option__text">
-					<span>Reorder a past design <span class="description">— no design fee</span></span>
-					<span class="description yp-radio-option__note" data-yp-co-reorder-login-note hidden>Log in to your account to reorder a past design.</span>
+				<span class="yp-choice-card__check" aria-hidden="true">&#10003;</span>
+				<span class="yp-choice-card__row">
+					<span>
+						<span class="yp-choice-card__title">Reorder a past design</span>
+						<span class="yp-choice-card__desc">Print an approved design again, no changes.</span>
+						<span class="description yp-choice-card__note" data-yp-co-reorder-login-note hidden>Log in to your account to reorder a past design.</span>
+					</span>
+					<span class="yp-choice-card__badge is-free">No fee</span>
 				</span>
 			</label>
 		</div>

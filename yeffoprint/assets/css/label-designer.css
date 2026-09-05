@@ -13,11 +13,76 @@
 	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
 }
 
+/*
+ * Size presets — direct request: "some preset size options and also a
+ * custom option: Peptide Vials 45mmx21mm, Oils Labels: 60x30, Custom."
+ * Same pill-card language as .yp-choice-card (custom-order.css) but
+ * simpler (no fee badge, no accent bar) — this is a size pick, not a
+ * decision with different downstream consequences.
+ */
+.yp-size-presets {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 0.65rem;
+	margin-bottom: 0.6rem;
+}
+
+.yp-size-preset {
+	position: relative;
+	display: block;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	padding: 0.8rem 0.9rem;
+	cursor: pointer;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-size-preset input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.yp-size-preset:hover {
+	border-color: var(--wp--preset--color--charcoal);
+}
+
+.yp-size-preset:has(input:checked) {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-size-preset__name {
+	display: block;
+	font-weight: 700;
+	font-size: 0.9rem;
+	margin-bottom: 0.15rem;
+}
+
+.yp-size-preset__dims {
+	display: block;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-size-preset:has(input:checked) .yp-size-preset__dims {
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-ld__size-preset-hint {
+	margin: 0 0 1.2rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
 .yp-ld__setup {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	gap: 1rem;
 	margin-bottom: 1.5rem;
+	transition: opacity 150ms ease;
 }
 
 @media (max-width: 720px) {
@@ -28,6 +93,11 @@
 
 .yp-ld__dimension input {
 	width: 100%;
+}
+
+.yp-ld__dimension input:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 .yp-ld__workspace {

@@ -664,7 +664,7 @@
 	var reorderModeRadio = root.querySelector( 'input[name="mode"][value="reorder"]' );
 	if ( reorderModeRadio && ! yeffoprintCustomOrder.isLoggedIn ) {
 		reorderModeRadio.disabled = true;
-		var reorderOption = reorderModeRadio.closest( '.yp-radio-option' );
+		var reorderOption = reorderModeRadio.closest( '.yp-choice-card' );
 		if ( reorderOption ) {
 			reorderOption.classList.add( 'is-disabled' );
 			var loginNote = reorderOption.querySelector( '[data-yp-co-reorder-login-note]' );
