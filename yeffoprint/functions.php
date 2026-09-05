@@ -166,6 +166,10 @@ add_action( 'wp_enqueue_scripts', function () {
 			// (My Account, a different tab) without a page reload.
 			'nonce'    => wp_create_nonce( 'wp_rest' ),
 			'greeting' => __( "Hi! I'm YeffoBot. Ask about sizes, materials, shipping, or check an order — or just say hi.", 'yeffoprint' ),
+			// Direct request: give the widget an actual face instead of a
+			// generic chat-bubble icon — the FAB, panel header, and every
+			// bot reply all use this same mascot image as their avatar.
+			'mascotUrl' => esc_url_raw( get_theme_file_uri( 'assets/images/yeffobot-mascot.png' ) ),
 		] );
 	}
 

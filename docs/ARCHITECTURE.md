@@ -1904,3 +1904,16 @@ Direct request following a mockup review (4 placement options shown, "I like C &
 Icons throughout (both places, and the approved mockup) are simple built-in glyphs — a card outline, a V/Z monogram, a coin glyph — not the payment networks' own trademarked logos; the label text is what actually identifies each one where labels are shown (the footer chips; the Cart strip is icon-only per the approved "no labels" option).
 
 Verify: add an item to the cart and view the Cart page → confirm the four payment icons appear centered under "Proceed to Checkout," and survive a quantity change or coupon apply without disappearing. Load any page → confirm the footer's new "We Accept" column shows four labeled chips (Card, Venmo, Zelle, Crypto) alongside the existing Shop/Support columns, wrapping sensibly on a narrow screen.
+
+## Extend the YeffoBot mascot into the on-site chat widget
+
+Direct request, following the mockup approval above: extend the YeffoBot mascot beyond emails (its only home until now — `email-styles.php`, `class-telegram-order-email-badge.php`) into the storefront itself. The on-site chat widget (`web-chat-widget.js`) was the obvious first stop: it's *named* YeffoBot in its own header, but rendered with a generic chat-bubble icon and a plain text label — no actual face anywhere.
+
+Three places now use the real mascot image (`assets/images/yeffobot-mascot.png`, already existing from the email work) instead of generic icons:
+- **The launcher (FAB)**: the closed-state icon is the mascot's face instead of a chat-bubble glyph, filling the circular button (`object-fit: cover`) — the button *is* the bot now, not a button that opens something bot-related. The open-state close (×) icon is untouched — a clear, universal affordance a mascot swap would only muddy.
+- **Panel header**: a small avatar next to the "YeffoBot" text, the standard "who you're talking to" pairing.
+- **Every bot message**: `addMessage()`/the typing indicator now build a `.yp-chat-message-row` (avatar + bubble) for a bot reply instead of a bare bubble, matching how the header signals identity — the mascot next to a bubble is what makes clear the *reply itself* came from YeffoBot, not just the panel it's inside. A user's own message keeps its old bare-bubble shape (nothing to show an avatar for).
+
+The mascot URL is localized once (`yeffoprintWebChat.mascotUrl`, `functions.php`) and referenced from all three places rather than hardcoded three times.
+
+Verify: load any page with the chat widget enabled → confirm the launcher button shows the mascot's face, not a chat-bubble icon, and still swaps to the × icon on open. Open the panel → confirm a small mascot avatar sits next to "YeffoBot" in the header. Send a message → confirm the typing indicator and the bot's reply both show the mascot avatar beside their bubbles, while your own message stays a plain right-aligned bubble with no avatar.

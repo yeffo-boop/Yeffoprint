@@ -87,12 +87,15 @@
 		root.className = 'yp-chat-widget';
 		root.innerHTML =
 			'<button type="button" class="yp-chat-fab" aria-expanded="false" aria-label="Chat with YeffoBot">' +
-				'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="yp-chat-fab__icon-open"><path d="M4 4h16v12H8l-4 4V4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/></svg>' +
+				'<img class="yp-chat-fab__icon-open" src="' + yeffoprintWebChat.mascotUrl + '" alt="" aria-hidden="true" />' +
 				'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="yp-chat-fab__icon-close"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
 			'</button>' +
 			'<div class="yp-chat-panel" hidden>' +
 				'<div class="yp-chat-panel__header">' +
-					'<span>YeffoBot</span>' +
+					'<span class="yp-chat-panel__title">' +
+						'<img class="yp-chat-panel__avatar" src="' + yeffoprintWebChat.mascotUrl + '" alt="" aria-hidden="true" />' +
+						'YeffoBot' +
+					'</span>' +
 					'<button type="button" class="yp-icon-button" data-yp-chat-close aria-label="Close chat">&times;</button>' +
 				'</div>' +
 				'<div class="yp-chat-panel__body" data-yp-chat-messages role="log" aria-live="polite"></div>' +
@@ -112,11 +115,35 @@
 		var form = root.querySelector( '[data-yp-chat-form]' );
 		var input = root.querySelector( '[data-yp-chat-input]' );
 
-		function addMessage( who, html ) {
+		/**
+		 * A bot message row gets a small mascot avatar next to its bubble
+		 * — direct request to give the widget a real face rather than
+		 * plain bubbles under a text-only "YeffoBot" header. A user
+		 * message has no avatar to show (it's not from the bot), so its
+		 * row is just the bubble, right-aligned by the row's own class.
+		 */
+		function buildMessageRow( who, html ) {
 			var row = document.createElement( 'div' );
-			row.className = 'yp-chat-message yp-chat-message--' + who;
-			row.innerHTML = html;
-			messagesEl.appendChild( row );
+			row.className = 'yp-chat-message-row yp-chat-message-row--' + who;
+
+			if ( 'bot' === who ) {
+				var avatar = document.createElement( 'img' );
+				avatar.className = 'yp-chat-message__avatar';
+				avatar.src = yeffoprintWebChat.mascotUrl;
+				avatar.alt = '';
+				row.appendChild( avatar );
+			}
+
+			var bubble = document.createElement( 'div' );
+			bubble.className = 'yp-chat-message yp-chat-message--' + who;
+			bubble.innerHTML = html;
+			row.appendChild( bubble );
+
+			return row;
+		}
+
+		function addMessage( who, html ) {
+			messagesEl.appendChild( buildMessageRow( who, html ) );
 			messagesEl.scrollTop = messagesEl.scrollHeight;
 		}
 
@@ -171,10 +198,10 @@
 			input.value = '';
 			isSending = true;
 
-			var typingEl = document.createElement( 'div' );
-			typingEl.className = 'yp-chat-message yp-chat-message--bot yp-chat-message--typing';
-			typingEl.textContent = '…';
-			messagesEl.appendChild( typingEl );
+			var typingRow = buildMessageRow( 'bot', '' );
+			typingRow.querySelector( '.yp-chat-message' ).classList.add( 'yp-chat-message--typing' );
+			typingRow.querySelector( '.yp-chat-message' ).textContent = '…';
+			messagesEl.appendChild( typingRow );
 			messagesEl.scrollTop = messagesEl.scrollHeight;
 
 			fetch( yeffoprintWebChat.restUrl + 'web-chat/message', {
@@ -191,11 +218,11 @@
 					} );
 				} )
 				.then( function ( data ) {
-					typingEl.remove();
+					typingRow.remove();
 					addMessage( 'bot', formatReply( data.reply ) );
 				} )
 				.catch( function ( error ) {
-					typingEl.remove();
+					typingRow.remove();
 					addMessage( 'bot', escapeHtml( error.message || 'Something went wrong — try again in a moment.' ) );
 				} )
 				.finally( function () {

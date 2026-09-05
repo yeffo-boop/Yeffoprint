@@ -33,11 +33,30 @@
 	transform: scale(1.05);
 }
 
+.yp-chat-fab svg,
+.yp-chat-fab__icon-open {
+	position: absolute;
+	transition: opacity 120ms ease, transform 120ms ease;
+}
+
 .yp-chat-fab svg {
 	width: 24px;
 	height: 24px;
-	position: absolute;
-	transition: opacity 120ms ease, transform 120ms ease;
+}
+
+/* The mascot's own face — direct request, giving the launcher a real
+   face instead of a generic chat-bubble icon. Filled to the edges of
+   the circular button (object-fit: cover crops rather than letterboxes
+   the source image's slightly-taller-than-square canvas) and nudged up
+   a couple pixels since the mascot's own head sits above center in its
+   source art — centering the crop as-is would push the face down
+   toward the antenna/body instead of framing it. */
+.yp-chat-fab__icon-open {
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	object-fit: cover;
+	object-position: center -4px;
 }
 
 .yp-chat-fab__icon-close {
@@ -96,6 +115,22 @@
 	color: var(--wp--preset--color--warm-white) !important;
 }
 
+.yp-chat-panel__title {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+}
+
+.yp-chat-panel__avatar {
+	width: 1.85rem;
+	height: 1.85rem;
+	border-radius: 50%;
+	object-fit: cover;
+	object-position: center -1px;
+	background: rgba(255, 255, 255, 0.15);
+	flex-shrink: 0;
+}
+
 .yp-chat-panel__body {
 	flex: 1;
 	overflow-y: auto;
@@ -106,8 +141,44 @@
 	background: var(--wp--preset--color--warm-white);
 }
 
-.yp-chat-message {
+/**
+ * A message row pairs a bubble with its avatar (bot only — a user
+ * message has nothing to show next to it, so its row is just the
+ * bubble) — direct request, giving bot replies a real face instead of
+ * a plain bubble under a text-only header. `max-width` moved here from
+ * the bubble itself so it constrains the row (avatar + bubble
+ * together) against the panel width; the bubble's own `min-width: 0`
+ * is what actually lets its text wrap instead of overflowing once it's
+ * a flex child rather than the width-constrained element directly.
+ */
+.yp-chat-message-row {
+	display: flex;
+	align-items: flex-end;
+	gap: 0.4rem;
 	max-width: 85%;
+}
+
+.yp-chat-message-row--bot {
+	align-self: flex-start;
+}
+
+.yp-chat-message-row--user {
+	align-self: flex-end;
+	justify-content: flex-end;
+}
+
+.yp-chat-message__avatar {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	object-fit: cover;
+	object-position: center -1px;
+	background: var(--wp--preset--color--light-gray);
+	flex-shrink: 0;
+}
+
+.yp-chat-message {
+	min-width: 0;
 	padding: 0.55rem 0.8rem;
 	border-radius: var(--wp--custom--radius--input);
 	font-size: 0.88rem;
@@ -121,7 +192,6 @@
 }
 
 .yp-chat-message--bot {
-	align-self: flex-start;
 	background: var(--wp--preset--color--white);
 	border: 1px solid var(--wp--preset--color--light-gray);
 	color: var(--wp--preset--color--near-black);
@@ -129,7 +199,6 @@
 }
 
 .yp-chat-message--user {
-	align-self: flex-end;
 	background: var(--wp--preset--color--near-black);
 	color: var(--wp--preset--color--warm-white);
 	border-bottom-right-radius: 4px;
