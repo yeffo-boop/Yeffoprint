@@ -93,6 +93,8 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-payment-webhook-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-coinbase-commerce-client.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-coinbase-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/maintenance/class-maintenance-sub-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/maintenance/class-stripe-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/maintenance/class-stripe-webhook-controller.php';
@@ -184,6 +186,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Saved_Design_Controller();
 		new YeffoPrint_Reorder();
 		new YeffoPrint_Payment_Webhook_Controller();
+		new YeffoPrint_Coinbase_Webhook_Controller();
 		new YeffoPrint_Maintenance_Sub_Meta();
 		new YeffoPrint_Stripe_Webhook_Controller();
 		new YeffoPrint_Order_Tracking();
@@ -221,9 +224,11 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-manual-payment-gateway.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-venmo-gateway.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-zelle-gateway.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-coinbase-gateway.php';
 
 			$gateways[] = 'YeffoPrint_Venmo_Gateway';
 			$gateways[] = 'YeffoPrint_Zelle_Gateway';
+			$gateways[] = 'YeffoPrint_Coinbase_Gateway';
 			return $gateways;
 		} );
 
@@ -242,9 +247,11 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-manual-payment-blocks-support.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-venmo-blocks-support.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-zelle-blocks-support.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-coinbase-blocks-support.php';
 
 			$registry->register( new YeffoPrint_Venmo_Blocks_Support() );
 			$registry->register( new YeffoPrint_Zelle_Blocks_Support() );
+			$registry->register( new YeffoPrint_Coinbase_Blocks_Support() );
 		} );
 
 		// Flush once whenever needed — not just on activation. The
