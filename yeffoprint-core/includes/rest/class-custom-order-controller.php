@@ -417,6 +417,15 @@ class YeffoPrint_Custom_Order_Controller {
 		$instructions = sanitize_textarea_field( (string) $request->get_param( 'instructions' ) );
 		$uploads      = $this->sanitize_upload_ids( $request->get_param( 'uploads' ) );
 
+		// Label Designer only — the original file(s) behind every image
+		// the customer placed on the canvas (usually a logo), separate
+		// from $uploads' flattened print-ready PNG export. See
+		// YeffoPrint_Custom_Order_Meta::CANVAS_SOURCE_IMAGE_UPLOADS' own
+		// doc comment for why staff need both.
+		$source_image_uploads = $is_canvas_submission
+			? $this->sanitize_upload_ids( $request->get_param( 'source_image_uploads' ) )
+			: [];
+
 		// Direct request: reorder a past, already-finished design without
 		// paying the fee again.
 		$source_custom_order_id = 0;
@@ -487,6 +496,9 @@ class YeffoPrint_Custom_Order_Controller {
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_HEIGHT_MM, $request_height_mm );
 			if ( '' !== $canvas_design_json ) {
 				update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_DESIGN_JSON, $canvas_design_json );
+			}
+			if ( $source_image_uploads ) {
+				update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_SOURCE_IMAGE_UPLOADS, $source_image_uploads );
 			}
 		}
 

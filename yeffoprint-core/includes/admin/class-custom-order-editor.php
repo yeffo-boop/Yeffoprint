@@ -185,6 +185,19 @@ class YeffoPrint_Custom_Order_Editor {
 						echo $this->render_upload_list( $label_files );
 						?>
 					</td></tr>
+					<?php
+					// Label Designer only — the original logo/image file(s)
+					// the customer uploaded onto the canvas, separate from
+					// the flattened PNG above. See CANVAS_SOURCE_IMAGE_UPLOADS'
+					// own doc comment for why staff need the source file too.
+					$source_images = (array) $m( YeffoPrint_Custom_Order_Meta::CANVAS_SOURCE_IMAGE_UPLOADS );
+					if ( $source_images ) :
+					?>
+						<tr><th><?php esc_html_e( 'Uploaded Logo/Image File(s)', 'yeffoprint-core' ); ?></th><td>
+							<?php echo $this->render_upload_list( $source_images ); ?>
+							<p class="description"><?php esc_html_e( 'Original file(s) the customer placed on their design — use these instead of the exported PNG above if you need higher quality for print.', 'yeffoprint-core' ); ?></p>
+						</td></tr>
+					<?php endif; ?>
 				<?php endif; ?>
 				<tr><th>
 					<?php
