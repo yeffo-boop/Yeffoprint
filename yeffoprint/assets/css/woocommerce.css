@@ -65,6 +65,29 @@
 	background: var(--wp--preset--color--charcoal) !important;
 }
 
+/**
+ * Cart page "how you can pay" icon strip — direct request, mockup
+ * approved (Option C: plain icon strip, no labels, "for a tighter cart
+ * drawer"). Injected by payment-icons.js just below the "Proceed to
+ * Checkout" button (.wc-block-cart__submit-container is the Cart
+ * block's own stable class, already relied on above/elsewhere in this
+ * file) since that container only exists once WooCommerce's React
+ * checkout renders client-side — there's nothing here for CSS alone to
+ * anchor to at page-load time.
+ */
+.yp-pay-icons {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	margin-top: 0.85rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-pay-icons__icon svg {
+	display: block;
+}
+
 /* The "Pay for order" page's own submit — the one classic-checkout
    button real customers actually click through to a charge, same weight
    as the accent-gradient primary CTA used everywhere else a customer
