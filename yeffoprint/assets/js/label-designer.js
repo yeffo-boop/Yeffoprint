@@ -12,11 +12,14 @@
  * "everything local except Google Fonts," since a production feature
  * shouldn't depend on a third-party CDN's uptime).
  *
- * Submits through the *existing* Custom Design own_design mode
- * (class-custom-order-controller.php) exactly like a customer who
- * already has a print-ready file elsewhere — no design fee, the
- * exported PNG becomes the print file, and it goes through the same
- * proof/status pipeline as any other Custom Design order. Pricing is
+ * Submits through the *existing* Custom Design new_design mode
+ * (class-custom-order-controller.php) — same $25 design fee as any
+ * other new-design request. Direct clarification: the exported canvas
+ * PNG is a template staff still build the real print file from, not a
+ * print-ready file itself, so it does *not* qualify for own_design's
+ * fee-free path (that's reserved for a customer's own already-finished,
+ * print-ready file). It goes through the same proof/status pipeline as
+ * any other Custom Design order either way. Pricing is
  * the one place this flow diverges from every other one on the site:
  * width_mm/height_mm (not a preset Size) drive a dynamic per-label
  * price server-side (YeffoPrint_Pricing_Rule::dynamic_base_price()) —
@@ -54,6 +57,7 @@
 	var bgColorInput  = document.getElementById( 'yp-ld-bg-color' );
 	var brandInput    = document.getElementById( 'yp-ld-brand' );
 	var notesInput    = document.getElementById( 'yp-ld-notes' );
+	var feeEl         = root.querySelector( '[data-yp-ld-fee]' );
 	var unitPriceEl   = root.querySelector( '[data-yp-ld-unit-price]' );
 	var totalEl       = root.querySelector( '[data-yp-ld-total]' );
 	var submitButton  = document.getElementById( 'yp-ld-submit' ) || root.querySelector( '[data-yp-ld-submit]' );
@@ -588,9 +592,18 @@
 		var materialId = parseInt( materialSelect.value, 10 ) || 0;
 		var quantity   = Math.max( 1, parseInt( quantityInput.value, 10 ) || 1 );
 
+		// Same $25 design fee as any other new-design request — this
+		// design is a template our designer still builds the real print
+		// file from, not a print-ready file itself (direct clarification:
+		// "I can't just download that and print").
+		var designFee = parseFloat( yeffoprintLabelDesigner.designFee ) || 0;
 		var unitPrice = 0.3168 + ( 0.0000351 * widthMm * heightMm ) + materialAdjustment( materialId );
+
+		if ( feeEl ) {
+			feeEl.textContent = formatMoney( designFee );
+		}
 		unitPriceEl.textContent = formatMoney( unitPrice );
-		totalEl.textContent     = formatMoney( unitPrice * quantity );
+		totalEl.textContent     = formatMoney( ( unitPrice * quantity ) + designFee );
 	}
 
 	function fetchAuthoritativePricing() {
@@ -608,7 +621,7 @@
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintLabelDesigner.nonce },
 			body: JSON.stringify( {
-				mode: 'own_design',
+				mode: 'new_design',
 				width_mm: widthMm,
 				height_mm: heightMm,
 				material_id: materialId,
@@ -619,6 +632,9 @@
 			.then( function ( data ) {
 				if ( ! data || ! data.rows || ! data.rows[ 0 ] ) {
 					return;
+				}
+				if ( feeEl ) {
+					feeEl.textContent = formatMoney( data.design_fee );
 				}
 				unitPriceEl.textContent = formatMoney( data.rows[ 0 ].unit_price_after_discount );
 				totalEl.textContent     = formatMoney( data.total );
@@ -758,7 +774,7 @@
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintLabelDesigner.nonce },
 					body: JSON.stringify( {
-						mode: 'own_design',
+						mode: 'new_design',
 						uploads: [ result.id ],
 						source_image_uploads: logoUploadIds,
 						width_mm: widthMm,

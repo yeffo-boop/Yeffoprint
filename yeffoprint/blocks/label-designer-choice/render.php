@@ -1,41 +1,40 @@
 <?php
 /**
- * The Label Designer's whole app shell, gated to admins only while the
- * feature is being finished (YeffoPrint_Feature_Gate — direct request:
- * "Customers should see a coming soon page unless they're logged in as
- * an admin"). A raw `wp:html` block in an FSE template can't run a PHP
- * conditional itself, so this dynamic block exists specifically to let
- * one — everything below the `is_admin_viewer()` check is the exact
- * markup that used to sit directly in templates/label-designer.html.
+ * Lives on the Custom Design page (templates/custom-design-form.html),
+ * right after the mode radiogroup — direct request: "combine everything
+ * into one flow and ask the customer at the beginning if they want to
+ * use our designer or fill out the form." Renders nothing at all for a
+ * non-admin (YeffoPrint_Feature_Gate — "I don't want to release all of
+ * these new features until I'm sure they're ready"): the page looks and
+ * behaves exactly as it does today for a real customer, with no trace
+ * of the Designer option anywhere in the markup. For an admin, renders
+ * the design-method choice (only meaningful under 'new_design' — a
+ * customer who already has their own file or is reordering has nothing
+ * to design) and the Designer's own canvas app shell, both starting
+ * hidden — custom-order-form.js's updateDesignMethodUi() drives their
+ * visibility alongside the existing mode radiogroup.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) :
-	?>
-	<div id="yp-label-designer" class="yp-label-designer yp-section">
-		<p class="yp-eyebrow">Design It Yourself</p>
-		<h1>Build Your Own Label</h1>
-		<p>Our freeform label designer is almost ready — check back soon. In the meantime, our Custom Design form covers peptide/vial labels and general product labels alike.</p>
-		<p><a class="wp-block-button__link is-style-accent" href="/custom-design/">Go to Custom Design</a></p>
-	</div>
-	<?php
+if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 	return;
-endif;
+}
 ?>
-<div id="yp-label-designer" class="yp-label-designer yp-section">
+<div class="yp-field yp-custom-order__design-method" role="radiogroup" aria-label="How would you like to design it?" hidden data-yp-co-design-method-group>
+	<label class="yp-radio-option">
+		<input type="radio" name="design_method" value="form" checked />
+		<span>Describe it for our designer <span class="description">— tell us what you want, we'll build it</span></span>
+	</label>
+	<label class="yp-radio-option">
+		<input type="radio" name="design_method" value="designer" />
+		<span>Use our online Designer <span class="description">— build it yourself with a live preview</span></span>
+	</label>
+</div>
 
-	<p class="yp-eyebrow">Design It Yourself</p>
-	<h1>Build Your Own Label</h1>
-	<p>Set your label size, then add text, shapes, icons, and images right on the canvas — see exactly what prints, before you order.</p>
+<div id="yp-label-designer" class="yp-label-designer" hidden data-yp-ld-container>
 
-	<div class="yp-form-redirect-notice" role="note">
-		<div class="yp-form-redirect-notice__icon" aria-hidden="true">i</div>
-		<div class="yp-form-redirect-notice__body">
-			<p><strong>Looking for peptide or vial labels?</strong> This tool is for freeform custom labels — cosmetics, skincare, and other products. For peptide and vial labels with our standard sizes and pricing, use the Custom Design form instead.</p>
-			<a class="yp-form-redirect-notice__cta" href="/custom-design/">Go to Custom Design &rarr;</a>
-		</div>
-	</div>
+	<p><button type="button" class="button-link" data-yp-ld-choice-back>&larr; Choose a different way to create your label</button></p>
 
 	<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
 
@@ -144,6 +143,10 @@ endif;
 
 		<div class="yp-custom-order__pricing">
 			<div class="yp-custom-order__fee">
+				<span>Design fee</span>
+				<strong data-yp-ld-fee>&mdash;</strong>
+			</div>
+			<div class="yp-custom-order__fee">
 				<span>Price per label</span>
 				<strong data-yp-ld-unit-price>&mdash;</strong>
 			</div>
@@ -152,7 +155,7 @@ endif;
 				<strong data-yp-ld-total>&mdash;</strong>
 			</div>
 		</div>
-		<p class="description">No design fee — you're designing it yourself. A designer still checks the file before anything prints.</p>
+		<p class="description">A designer builds your final print-ready label using this as a template and sends a proof before anything prints.</p>
 
 		<p>
 			<button type="submit" class="wp-block-button__link is-style-accent" data-yp-ld-submit>Continue to Payment</button>

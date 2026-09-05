@@ -353,9 +353,14 @@ add_action( 'wp_enqueue_scripts', function () {
 	}
 
 	// Label Designer — direct request: "a full live product label
-	// customizer." Submits through the same own_design Custom Design
-	// flow as the form above (reuses its /custom-orders/uploads and
-	// /custom-orders REST endpoints directly), so it shares that flow's
+	// customizer," later merged into the same page as the Custom Design
+	// form above so a customer picks one flow instead of two ("I don't
+	// like two different flows... combine everything into one builder").
+	// Submits through the same new_design Custom Design flow as the form
+	// above (reuses its /custom-orders/uploads and /custom-orders REST
+	// endpoints directly, and now its $25 design fee too — the exported
+	// canvas is a template staff still build the real print file from,
+	// not a print-ready file itself), so it shares that flow's
 	// configurator.css base — plus its own canvas/toolbar chrome
 	// (label-designer.css), Fabric.js (vendored locally, not a CDN —
 	// see label-designer.js's own docblock for why), a curated icon
@@ -363,10 +368,13 @@ add_action( 'wp_enqueue_scripts', function () {
 	// one loaded above (a font *picker* needs more than 3 families).
 	// Admin-only for now (YeffoPrint_Feature_Gate — "I don't want to
 	// release all of these new features until I'm sure they're ready")
-	// — a non-admin visitor sees the Coming Soon placeholder rendered by
-	// blocks/label-designer-app/render.php instead, which needs none of
-	// this: no reason to ship ~300KB of canvas library for that.
-	if ( is_page() && in_array( get_page_template_slug(), [ 'label-designer', 'label-designer.html' ], true ) && YeffoPrint_Feature_Gate::is_admin_viewer() ) {
+	// — a non-admin visitor's page has no Designer markup at all
+	// (blocks/label-designer-choice/render.php renders nothing for them):
+	// no reason to ship ~300KB of canvas library for that. True lazy-
+	// loading (deferring this until "Use our Designer" is actually
+	// clicked) is a follow-up for whenever this launches beyond admins —
+	// not needed while real customers never receive these assets at all.
+	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-design-form', 'custom-design-form.html' ], true ) && YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 		wp_enqueue_style(
 			'yeffoprint-label-designer-fonts',
 			'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Merriweather:wght@400;700&family=Poppins:wght@400;600;700&family=Pacifico&family=Bebas+Neue&family=Caveat:wght@600&family=Oswald:wght@500;700&family=Lora:wght@500;700&family=Josefin+Sans:wght@500;700&family=Dancing+Script:wght@600&display=swap',
@@ -417,8 +425,16 @@ add_action( 'wp_enqueue_scripts', function () {
 		}
 
 		wp_localize_script( 'yeffoprint-label-designer', 'yeffoprintLabelDesigner', [
-			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
-			'nonce'   => wp_create_nonce( 'wp_rest' ),
+			'restUrl'   => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'     => wp_create_nonce( 'wp_rest' ),
+			// Same $25 fee class-custom-order-controller.php charges
+			// server-side for any new_design submission — needed here for
+			// the instant client-side price estimate (localEstimate() in
+			// label-designer.js); the server's own pricing-preview
+			// response is still what actually gets displayed once it
+			// lands, same "instant estimate, server has final say"
+			// pattern as everywhere else pricing is estimated client-side.
+			'designFee' => class_exists( 'YeffoPrint_Pricing_Rule' ) ? YeffoPrint_Pricing_Rule::get_custom_design_fee() : 25.0,
 		] );
 	}
 
@@ -676,8 +692,7 @@ add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/gallery-toolbar' ) );
 	register_block_type( get_theme_file_path( 'blocks/announcement-bar' ) );
 	register_block_type( get_theme_file_path( 'blocks/promo-banner' ) );
-	register_block_type( get_theme_file_path( 'blocks/label-designer-app' ) );
-	register_block_type( get_theme_file_path( 'blocks/label-designer-notice' ) );
+	register_block_type( get_theme_file_path( 'blocks/label-designer-choice' ) );
 } );
 
 /**
@@ -824,6 +839,22 @@ add_action( 'template_redirect', function () {
 
 	wp_safe_redirect( wp_login_url( home_url( add_query_arg( [] ) ) ) );
 	exit;
+} );
+
+/**
+ * Direct request: "combine everything into one flow" — the Label
+ * Designer's canvas is no longer its own page, it's a choice inside
+ * Custom Design (blocks/label-designer-choice). The page itself is kept
+ * (rather than deleted) purely as a redirect target for anything that
+ * still links or has bookmarked the old URL — its own FSE template
+ * assignment no longer matters, since this fires before WordPress ever
+ * resolves one.
+ */
+add_action( 'template_redirect', function () {
+	if ( is_page( 'design-your-label' ) ) {
+		wp_safe_redirect( home_url( '/custom-design/' ), 301 );
+		exit;
+	}
 } );
 
 /**

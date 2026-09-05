@@ -167,11 +167,6 @@
 			"name": "web-design",
 			"title": "Web Design",
 			"postTypes": [ "page" ]
-		},
-		{
-			"name": "label-designer",
-			"title": "Label Designer",
-			"postTypes": [ "page" ]
 		}
 	]
 }

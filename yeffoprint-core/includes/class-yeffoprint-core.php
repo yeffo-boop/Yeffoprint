@@ -210,7 +210,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Login();
 		new YeffoPrint_Telegram_Order_Email_Badge();
 		new YeffoPrint_Proof_Reminder_Scheduler();
-		new YeffoPrint_Feature_Gate();
+		// YeffoPrint_Feature_Gate is a static-only helper (is_admin_viewer())
+		// — no instance/hooks to register.
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)

@@ -58,11 +58,14 @@ class YeffoPrint_Pages_Setup_Command {
 			'custom-stickers-form.html'
 		);
 
+		// No FSE template — the Label Designer moved into Custom Design as
+		// a choice (blocks/label-designer-choice), so this page only
+		// exists to 301 to /custom-design/ (functions.php's own
+		// template_redirect hook) for anything that still links here.
 		$this->create_page(
 			'design-your-label',
 			__( 'Build Your Own Label', 'yeffoprint-core' ),
-			'',
-			'label-designer.html'
+			''
 		);
 
 		$this->create_page(
