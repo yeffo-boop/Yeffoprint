@@ -248,3 +248,250 @@
 	border-radius: var(--wp--custom--radius--control);
 	cursor: pointer;
 }
+
+/*
+ * Fidelity/experience round (direct follow-up: "what other features can
+ * we add... to get the final product as close to it as possible" ->
+ * "Let's do them all!"): starter layouts, a safe-zone guide, alignment/
+ * snap guides, zoom, a layers panel, and a flat "Preview on Product"
+ * overlay. See label-designer.js for the logic each of these drives.
+ */
+
+/* ---------- Starter layouts ---------- */
+
+.yp-ld__layouts {
+	margin-bottom: 1.5rem;
+	padding: 1rem;
+	border: 1.5px dashed var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-ld__layouts-label {
+	margin: 0 0 0.75rem;
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-ld__layouts-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.yp-ld__layout-option {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.6rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	font-size: var(--wp--preset--font-size--small);
+	cursor: pointer;
+}
+
+.yp-ld__layout-option:hover {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.yp-ld__layout-preview {
+	display: block;
+	width: 3.5rem;
+	height: 2.5rem;
+	border-radius: calc(var(--wp--custom--radius--control) - 4px);
+	background: var(--wp--preset--color--light-gray);
+	position: relative;
+}
+
+.yp-ld__layout-preview::before,
+.yp-ld__layout-preview::after {
+	content: "";
+	position: absolute;
+	left: 15%;
+	right: 15%;
+	height: 18%;
+	background: var(--wp--preset--color--charcoal);
+	border-radius: 2px;
+}
+
+.yp-ld__layout-preview[data-layout-preview="centered"]::before { top: 28%; }
+.yp-ld__layout-preview[data-layout-preview="centered"]::after  { top: 58%; opacity: 0.6; }
+
+.yp-ld__layout-preview[data-layout-preview="banner"]::before { top: 15%; height: 34%; background: var(--wp--preset--color--near-black); }
+.yp-ld__layout-preview[data-layout-preview="banner"]::after  { top: 62%; opacity: 0.6; }
+
+.yp-ld__layout-preview[data-layout-preview="corner"]::before { top: 15%; left: 10%; right: 55%; }
+.yp-ld__layout-preview[data-layout-preview="corner"]::after  { top: 60%; opacity: 0.6; }
+
+/* ---------- Zoom + Preview toggle (toolbar additions) ---------- */
+
+.yp-ld__zoom-label {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	min-width: 2.6rem;
+	text-align: center;
+}
+
+/* ---------- Editor row: canvas + layers panel side by side ---------- */
+
+.yp-ld__editor-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 1rem;
+}
+
+.yp-ld__editor-row .yp-ld__canvas-wrap {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* ---------- Safe-zone guide ---------- */
+
+.yp-ld__canvas-stage {
+	position: relative;
+	display: inline-block;
+}
+
+.yp-ld__safe-zone-guide {
+	position: absolute;
+	border: 1px dashed var(--wp--preset--color--cyan);
+	pointer-events: none;
+}
+
+/* ---------- Layers panel ---------- */
+
+.yp-ld__layers {
+	flex: 0 0 200px;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	padding: 0.75rem;
+	max-height: 320px;
+	overflow-y: auto;
+}
+
+@media (max-width: 780px) {
+	.yp-ld__layers {
+		flex: 1 1 100%;
+		max-height: 160px;
+	}
+}
+
+.yp-ld__layers-label {
+	margin: 0 0 0.5rem;
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-ld__layers-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.yp-ld__layer-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.4rem;
+	padding: 0.35rem 0.5rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-ld__layer-row.is-active {
+	background: var(--wp--preset--color--near-black);
+}
+
+.yp-ld__layer-row.is-active .yp-ld__layer-select {
+	color: var(--wp--preset--color--warm-white);
+}
+
+.yp-ld__layer-select {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-align: left;
+	background: none;
+	border: 0;
+	padding: 0;
+	font-size: var(--wp--preset--font-size--small);
+	cursor: pointer;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-ld__layer-lock {
+	flex: none;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	font-size: 0.7rem;
+	padding: 0.2rem 0.45rem;
+	cursor: pointer;
+}
+
+.yp-ld__layer-lock.is-active {
+	border-color: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-ld__layers-empty {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	padding: 0.35rem 0.5rem;
+}
+
+/* ---------- Screen-vs-print color note ---------- */
+
+.yp-ld__color-note {
+	flex: 1 1 100%;
+	margin: 0.25rem 0 0;
+}
+
+/* ---------- Preview on Product ---------- */
+
+.yp-ld__product-preview {
+	text-align: center;
+	padding: 1.5rem 1rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--warm-white);
+	margin-bottom: 1.5rem;
+}
+
+.yp-ld__product-preview-note {
+	margin: 0 0 1.25rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-ld__product-preview-stage {
+	position: relative;
+	width: 100%;
+	max-width: 220px;
+	aspect-ratio: 200 / 340;
+	margin: 0 auto;
+}
+
+.yp-ld__product-preview-stage svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.yp-ld__product-preview-snapshot {
+	position: absolute;
+	object-fit: contain;
+	background: var(--wp--preset--color--white);
+}
