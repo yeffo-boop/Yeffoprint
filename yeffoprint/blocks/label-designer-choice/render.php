@@ -23,6 +23,20 @@
  * label-designer.js's own comment on the preset radios for why the
  * width/height `step` moved from 0.1 to 0.01 (needed for the presets'
  * mm-to-inch conversions to land on an exact step multiple).
+ *
+ * Fidelity/experience round (direct follow-up: "what other features can
+ * we add... to get the final product as close to it as possible" ->
+ * "Let's do them all!"): a starter-layout picker (data-yp-ld-layouts,
+ * shown only while the canvas is empty), a safe-zone guide overlay
+ * (data-yp-ld-safe-zone — a plain DOM element positioned over the canvas
+ * by label-designer.js, deliberately *not* a Fabric object, so it never
+ * has to be re-added after every clear()/undo/redo/draft-restore the
+ * way an in-canvas object would), a layers panel (data-yp-ld-layers),
+ * zoom controls, a "Preview on Product" flat-overlay toggle (data-yp-ld-
+ * product-preview — one inline SVG silhouette per size preset, matching
+ * this theme's existing flat-illustration style; deliberately not a
+ * photorealistic cylindrical wrap simulation), and a one-line screen-
+ * vs-print color disclaimer. See label-designer.js for all the logic.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -104,7 +118,26 @@ if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 			</div>
 		</div>
 
-		<div class="yp-ld__workspace">
+		<div class="yp-ld__layouts" data-yp-ld-layouts hidden>
+			<p class="yp-ld__layouts-label">Start from a layout, or start blank:</p>
+			<div class="yp-ld__layouts-row">
+				<button type="button" class="yp-ld__layout-option" data-yp-ld-layout="centered">
+					<span class="yp-ld__layout-preview" data-layout-preview="centered" aria-hidden="true"></span>
+					<span>Centered</span>
+				</button>
+				<button type="button" class="yp-ld__layout-option" data-yp-ld-layout="banner">
+					<span class="yp-ld__layout-preview" data-layout-preview="banner" aria-hidden="true"></span>
+					<span>Banner</span>
+				</button>
+				<button type="button" class="yp-ld__layout-option" data-yp-ld-layout="corner">
+					<span class="yp-ld__layout-preview" data-layout-preview="corner" aria-hidden="true"></span>
+					<span>Logo Corner</span>
+				</button>
+				<button type="button" class="button-link" data-yp-ld-layout-dismiss>Start blank</button>
+			</div>
+		</div>
+
+		<div class="yp-ld__workspace" data-yp-ld-workspace>
 
 			<div class="yp-ld__toolbar" role="toolbar" aria-label="Design tools">
 				<button type="button" class="button-link" data-yp-ld-add="text">+ Text</button>
@@ -123,13 +156,32 @@ if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 				<button type="button" class="button-link" data-yp-ld-front disabled>Bring to front</button>
 				<button type="button" class="button-link" data-yp-ld-back disabled>Send to back</button>
 				<span class="yp-ld__toolbar-sep" aria-hidden="true"></span>
+				<button type="button" class="button-link" data-yp-ld-zoom-out>&minus;</button>
+				<span class="yp-ld__zoom-label" data-yp-ld-zoom-label>100%</span>
+				<button type="button" class="button-link" data-yp-ld-zoom-in>+</button>
+				<button type="button" class="button-link" data-yp-ld-zoom-reset>Reset zoom</button>
+				<span class="yp-ld__toolbar-sep" aria-hidden="true"></span>
+				<button type="button" class="button-link" data-yp-ld-preview-toggle>Preview on Product</button>
+				<span class="yp-ld__toolbar-sep" aria-hidden="true"></span>
 				<button type="button" class="button-link" data-yp-ld-clear>Start over</button>
 			</div>
 
 			<div class="yp-ld__icon-panel" data-yp-ld-icon-panel hidden></div>
 
-			<div class="yp-ld__canvas-wrap">
-				<canvas id="yp-ld-canvas"></canvas>
+			<div class="yp-ld__editor-row">
+
+				<div class="yp-ld__canvas-wrap">
+					<div class="yp-ld__canvas-stage" data-yp-ld-canvas-stage>
+						<canvas id="yp-ld-canvas"></canvas>
+						<div class="yp-ld__safe-zone-guide" data-yp-ld-safe-zone aria-hidden="true"></div>
+					</div>
+				</div>
+
+				<div class="yp-ld__layers" data-yp-ld-layers>
+					<p class="yp-ld__layers-label">Layers</p>
+					<ul class="yp-ld__layers-list" data-yp-ld-layers-list></ul>
+				</div>
+
 			</div>
 
 			<div class="yp-ld__properties" data-yp-ld-properties hidden>
@@ -166,11 +218,35 @@ if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 					<label>Outline width</label>
 					<input type="number" min="0" max="40" step="1" data-yp-ld-stroke-width />
 				</div>
+				<p class="description yp-ld__color-note">Printed colors may look slightly different than on screen.</p>
 			</div>
 
 			<div class="yp-field yp-ld__background">
 				<label for="yp-ld-bg-color">Label background</label>
 				<input type="color" id="yp-ld-bg-color" value="#ffffff" />
+			</div>
+
+			<div class="yp-ld__product-preview" data-yp-ld-product-preview hidden>
+				<p class="yp-ld__product-preview-note">A flat preview of your label on the product shape — not an exact print simulation.</p>
+				<div class="yp-ld__product-preview-stage">
+					<svg data-preview-silhouette="peptide-vials" viewBox="0 0 200 340" aria-hidden="true">
+						<rect x="70" y="10" width="60" height="24" rx="4" fill="#B8C4CC" />
+						<rect x="78" y="2" width="44" height="12" rx="3" fill="#8FA0AA" />
+						<path d="M60 34 h80 a8 8 0 0 1 8 8 v250 a20 20 0 0 1 -20 20 h-56 a20 20 0 0 1 -20 -20 v-250 a8 8 0 0 1 8 -8 z" fill="#E7F4FA" stroke="#B8C4CC" stroke-width="2" />
+						<rect class="yp-ld__product-preview-label-area" data-preview-label-area x="46" y="140" width="108" height="60" rx="3" fill="#ffffff" stroke="#B8C4CC" />
+					</svg>
+					<svg data-preview-silhouette="oil-labels" viewBox="0 0 200 340" aria-hidden="true" hidden>
+						<rect x="82" y="8" width="36" height="20" rx="3" fill="#8FA0AA" />
+						<path d="M70 28 h60 v30 l14 14 a10 10 0 0 1 4 8 v220 a20 20 0 0 1 -20 20 h-56 a20 20 0 0 1 -20 -20 v-220 a10 10 0 0 1 4 -8 l14 -14 z" fill="#F2EFE8" stroke="#C9C2B0" stroke-width="2" />
+						<rect class="yp-ld__product-preview-label-area" data-preview-label-area x="42" y="150" width="116" height="80" rx="3" fill="#ffffff" stroke="#C9C2B0" />
+					</svg>
+					<svg data-preview-silhouette="custom" viewBox="0 0 200 340" aria-hidden="true" hidden>
+						<rect x="76" y="10" width="48" height="22" rx="4" fill="#C7B8CC" />
+						<path d="M64 32 h72 a10 10 0 0 1 10 10 v260 a24 24 0 0 1 -24 24 h-44 a24 24 0 0 1 -24 -24 v-260 a10 10 0 0 1 10 -10 z" fill="#F5EEF7" stroke="#C7B8CC" stroke-width="2" />
+						<rect class="yp-ld__product-preview-label-area" data-preview-label-area x="44" y="130" width="112" height="90" rx="3" fill="#ffffff" stroke="#C7B8CC" />
+					</svg>
+					<img class="yp-ld__product-preview-snapshot" data-preview-snapshot alt="" />
+				</div>
 			</div>
 
 		</div>

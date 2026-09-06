@@ -27,6 +27,14 @@
  * number always comes from a pricing-preview round trip, same
  * "instant estimate, server has final say" pattern configurator.js
  * already uses for Template pricing.
+ *
+ * Fidelity/experience round (direct follow-up: "what other features can
+ * we add... to get the final product as close to it as possible" ->
+ * "Let's do them all!"): a safe-zone guide (a DOM overlay, not a Fabric
+ * object — see updateSafeZoneGuide()'s own comment for why), alignment/
+ * snap guides while dragging, zoom, a layers panel with per-object lock,
+ * starter layouts for a fresh empty canvas, and a flat "Preview on
+ * Product" overlay. See each section below for the relevant comments.
  */
 ( function () {
 	'use strict';
@@ -46,6 +54,16 @@
 	var MAX_PX_PER_INCH      = 220;
 	var EXPORT_DPI           = 300;
 	var DRAFT_STORAGE_KEY    = 'yeffoprintLabelDesignerDraft';
+	var SAFE_ZONE_MARGIN_MM  = 2;
+	var SNAP_THRESHOLD_PX    = 6;
+	var ZOOM_MIN  = 0.5;
+	var ZOOM_MAX  = 2;
+	var ZOOM_STEP = 0.25;
+	// Extra per-object properties Fabric's default toJSON()/toObject()
+	// wouldn't otherwise serialize — needed so a locked layer (see the
+	// layers-panel section) stays locked across undo/redo and a draft
+	// reload, not just for the rest of the current page session.
+	var EXTRA_OBJECT_PROPS = [ 'selectable', 'evented', 'hasControls' ];
 
 	var statusEl   = root.querySelector( '.yp-configurator__status' );
 	var form       = document.getElementById( 'yp-label-designer-form' );
@@ -88,6 +106,24 @@
 	var strokeInput    = root.querySelector( '[data-yp-ld-stroke]' );
 	var strokeWidthInput = root.querySelector( '[data-yp-ld-stroke-width]' );
 
+	var layoutsEl = root.querySelector( '[data-yp-ld-layouts]' );
+	var layoutButtons = layoutsEl ? Array.prototype.slice.call( layoutsEl.querySelectorAll( '[data-yp-ld-layout]' ) ) : [];
+	var layoutDismissButton = root.querySelector( '[data-yp-ld-layout-dismiss]' );
+
+	var editorRowEl    = root.querySelector( '.yp-ld__editor-row' );
+	var safeZoneEl     = root.querySelector( '[data-yp-ld-safe-zone]' );
+	var layersListEl   = root.querySelector( '[data-yp-ld-layers-list]' );
+
+	var zoomOutButton   = root.querySelector( '[data-yp-ld-zoom-out]' );
+	var zoomInButton    = root.querySelector( '[data-yp-ld-zoom-in]' );
+	var zoomResetButton = root.querySelector( '[data-yp-ld-zoom-reset]' );
+	var zoomLabelEl     = root.querySelector( '[data-yp-ld-zoom-label]' );
+
+	var previewToggleButton = root.querySelector( '[data-yp-ld-preview-toggle]' );
+	var productPreviewEl    = root.querySelector( '[data-yp-ld-product-preview]' );
+	var previewSnapshotEl   = productPreviewEl ? productPreviewEl.querySelector( '[data-preview-snapshot]' ) : null;
+	var backgroundFieldEl   = root.querySelector( '.yp-ld__background' );
+
 	var FONT_FAMILIES = [
 		'Inter', 'Geist', 'Playfair Display', 'Merriweather',
 		'Poppins', 'Pacifico', 'Bebas Neue', 'Caveat',
@@ -105,6 +141,8 @@
 	var formErrorEl          = null;
 	var lastConfirmedDims    = null;
 	var lastConfirmedSizePreset = null;
+	var currentZoom          = 1;
+	var snapGuideLines       = [];
 
 	// Every image the customer uploads via "+ Image" (usually a logo) is
 	// kept here by upload id, separate from the flattened PNG the canvas
@@ -237,7 +275,13 @@
 		canvas.on( 'selection:created', onSelectionChanged );
 		canvas.on( 'selection:updated', onSelectionChanged );
 		canvas.on( 'selection:cleared', onSelectionChanged );
+		canvas.on( 'object:moving', onObjectMoving );
+		canvas.on( 'mouse:up', clearSnapGuides );
 
+		applyZoom( 1 );
+		renderLayersPanel();
+		maybeShowLayoutsPicker();
+		updateProductPreviewSilhouette();
 		pushHistory();
 	}
 
@@ -262,15 +306,454 @@
 		canvas.backgroundColor = bgColorInput.value || '#ffffff';
 
 		var dims  = currentDimensionsIn();
-		var scale = pxPerInch( dims.width, dims.height );
-		canvas.setWidth( dims.width * scale );
-		canvas.setHeight( dims.height * scale );
-		canvas.renderAll();
+		applyZoom( 1 ); // A new size invalidates any prior zoom level — same rationale as the confirm above: start clean.
 		lastConfirmedDims = dims;
 		lastConfirmedSizePreset = checkedSizePresetRadio();
+		renderLayersPanel();
+		maybeShowLayoutsPicker();
+		updateProductPreviewSilhouette();
 		pushHistory();
 		refreshPricing();
 		saveDraftDebounced();
+	}
+
+	/* ---------- Zoom ---------- */
+
+	/**
+	 * Zoom is purely a *view* magnification, never a resize of the label
+	 * itself — canvas.setZoom() scales how existing objects render
+	 * without touching their own left/top/scale properties, and setting
+	 * the canvas element's own width/height to the same multiple keeps
+	 * the whole (now bigger/smaller) label fully visible rather than
+	 * clipped, with .yp-ld__canvas-wrap's existing `overflow: auto`
+	 * handling anything that still doesn't fit. Because pxPerInch()/
+	 * currentDimensionsIn() are pure functions of the width/height
+	 * inputs (never of currentZoom), the submit handler's own export
+	 * multiplier math stays correct on its own — the one place zoom
+	 * still has to be actively reset is right before toDataURL() itself,
+	 * since Fabric's exported pixels otherwise reflect whatever zoom the
+	 * canvas currently happens to be at.
+	 */
+	function applyZoom( zoom ) {
+		if ( ! canvas ) {
+			return;
+		}
+		currentZoom = Math.max( ZOOM_MIN, Math.min( ZOOM_MAX, zoom ) );
+		var dims = currentDimensionsIn();
+		var baseScale = pxPerInch( dims.width, dims.height );
+		canvas.setZoom( currentZoom );
+		canvas.setWidth( dims.width * baseScale * currentZoom );
+		canvas.setHeight( dims.height * baseScale * currentZoom );
+		canvas.renderAll();
+		updateSafeZoneGuide();
+		if ( zoomLabelEl ) {
+			zoomLabelEl.textContent = Math.round( currentZoom * 100 ) + '%';
+		}
+	}
+
+	if ( zoomInButton ) {
+		zoomInButton.addEventListener( 'click', function () { applyZoom( currentZoom + ZOOM_STEP ); } );
+	}
+	if ( zoomOutButton ) {
+		zoomOutButton.addEventListener( 'click', function () { applyZoom( currentZoom - ZOOM_STEP ); } );
+	}
+	if ( zoomResetButton ) {
+		zoomResetButton.addEventListener( 'click', function () { applyZoom( 1 ); } );
+	}
+
+	/* ---------- Safe-zone guide ---------- */
+
+	/**
+	 * Direct request: keep the "final product as close to it as
+	 * possible" — a dashed inset line warning that anything closer to
+	 * the label's trim edge risks being cut off. Deliberately a plain
+	 * DOM element positioned over the canvas (yp-ld__canvas-stage is
+	 * position:relative and shrink-wraps to the canvas's own on-screen
+	 * size — see label-designer.css), not a Fabric object: a Fabric
+	 * object would need re-adding after every canvas.clear() (resize,
+	 * "Start over") and every loadFromJSON() (undo/redo, draft restore),
+	 * since none of those preserve arbitrary non-serialized objects. A
+	 * plain DOM overlay needs none of that — it only has to be repainted
+	 * when the canvas's on-screen size actually changes (dimensions or
+	 * zoom), and since it's not part of the <canvas> element at all, it
+	 * can never leak into canvas.toDataURL()'s export or canvas.toJSON()
+	 * the way a same-canvas guide object would risk doing.
+	 */
+	function updateSafeZoneGuide() {
+		if ( ! safeZoneEl || ! canvas ) {
+			return;
+		}
+		var dims = currentDimensionsIn();
+		var baseScale = pxPerInch( dims.width, dims.height );
+		var marginPx = ( SAFE_ZONE_MARGIN_MM / MM_PER_INCH ) * baseScale * currentZoom;
+		safeZoneEl.style.top    = marginPx + 'px';
+		safeZoneEl.style.left   = marginPx + 'px';
+		safeZoneEl.style.right  = marginPx + 'px';
+		safeZoneEl.style.bottom = marginPx + 'px';
+	}
+
+	/* ---------- Alignment / snap guides ---------- */
+
+	/**
+	 * Every object this tool itself creates (addText/addShape/addIcon/
+	 * the image-upload handler) sets originX/originY to 'center', so
+	 * .left/.top already *are* each object's center coordinates — this
+	 * lets edge/center snapping skip bounding-box origin math entirely
+	 * and just work off left/top plus getScaledWidth()/Height(). Guides
+	 * are temporary Fabric Lines (excludeFromExport, same as everything
+	 * else that must never reach the print export or a saved draft),
+	 * cleared and redrawn on every 'object:moving' tick and wiped on
+	 * 'mouse:up' — see onCanvasChanged()'s own excludeFromExport check
+	 * for why adding/removing these never pollutes undo history.
+	 */
+	function objectEdges( obj ) {
+		var w = obj.getScaledWidth();
+		var h = obj.getScaledHeight();
+		return {
+			centerX: obj.left,
+			centerY: obj.top,
+			left:    obj.left - ( w / 2 ),
+			right:   obj.left + ( w / 2 ),
+			top:     obj.top - ( h / 2 ),
+			bottom:  obj.top + ( h / 2 )
+		};
+	}
+
+	function findSnap( values, candidates ) {
+		var best = null;
+		values.forEach( function ( value ) {
+			candidates.forEach( function ( candidate ) {
+				var distance = Math.abs( value - candidate );
+				if ( distance <= SNAP_THRESHOLD_PX && ( ! best || distance < best.distance ) ) {
+					best = { value: value, target: candidate, distance: distance };
+				}
+			} );
+		} );
+		return best;
+	}
+
+	function addSnapGuide( isVertical, position ) {
+		var points = isVertical
+			? [ position, 0, position, canvas.getHeight() ]
+			: [ 0, position, canvas.getWidth(), position ];
+		var line = new fabric.Line( points, {
+			stroke: '#EC008C',
+			strokeWidth: 1,
+			strokeDashArray: [ 4, 4 ],
+			selectable: false,
+			evented: false,
+			excludeFromExport: true,
+			hoverCursor: 'default'
+		} );
+		canvas.add( line );
+		canvas.bringToFront( line );
+		snapGuideLines.push( line );
+	}
+
+	function clearSnapGuides() {
+		snapGuideLines.forEach( function ( line ) { canvas.remove( line ); } );
+		snapGuideLines = [];
+	}
+
+	function onObjectMoving( event ) {
+		var obj = event.target;
+		if ( ! obj || 'center' !== obj.originX || 'center' !== obj.originY ) {
+			return; // Safety net for the center-origin assumption above — every object this tool creates qualifies, so this only ever short-circuits on something unexpected.
+		}
+		clearSnapGuides();
+
+		var edges = objectEdges( obj );
+		var candidatesX = [ canvas.getWidth() / 2 ];
+		var candidatesY = [ canvas.getHeight() / 2 ];
+
+		canvas.getObjects().forEach( function ( other ) {
+			if ( other === obj || other.excludeFromExport ) {
+				return;
+			}
+			var otherEdges = objectEdges( other );
+			candidatesX.push( otherEdges.left, otherEdges.centerX, otherEdges.right );
+			candidatesY.push( otherEdges.top, otherEdges.centerY, otherEdges.bottom );
+		} );
+
+		var snapX = findSnap( [ edges.left, edges.centerX, edges.right ], candidatesX );
+		if ( snapX ) {
+			obj.set( 'left', obj.left + ( snapX.target - snapX.value ) );
+			addSnapGuide( true, snapX.target );
+		}
+
+		var snapY = findSnap( [ edges.top, edges.centerY, edges.bottom ], candidatesY );
+		if ( snapY ) {
+			obj.set( 'top', obj.top + ( snapY.target - snapY.value ) );
+			addSnapGuide( false, snapY.target );
+		}
+
+		obj.setCoords();
+	}
+
+	/* ---------- Layers panel ---------- */
+
+	function objectLabel( obj ) {
+		if ( 'textbox' === obj.type || 'text' === obj.type ) {
+			var text = ( obj.text || '' ).trim();
+			return 'Text: ' + ( text ? ( text.length > 20 ? text.slice( 0, 20 ) + '…' : text ) : '(empty)' );
+		}
+		if ( 'image' === obj.type ) { return 'Image'; }
+		if ( 'rect' === obj.type ) { return 'Rectangle'; }
+		if ( 'ellipse' === obj.type ) { return 'Ellipse'; }
+		if ( 'triangle' === obj.type ) { return 'Triangle'; }
+		if ( 'line' === obj.type ) { return 'Line'; }
+		return 'Icon';
+	}
+
+	/**
+	 * Locking is an editing convenience (prevents accidental selection/
+	 * move), not a hide/exclude — a locked object still renders and
+	 * still exports normally. Persists across undo/redo and a draft
+	 * reload because EXTRA_OBJECT_PROPS tells canvas.toJSON() to keep
+	 * `selectable`/`evented`/`hasControls` (Fabric's default serialization
+	 * doesn't include them).
+	 */
+	function renderLayersPanel() {
+		if ( ! layersListEl || ! canvas ) {
+			return;
+		}
+		var objects = canvas.getObjects().filter( function ( obj ) { return ! obj.excludeFromExport; } );
+		var active = canvas.getActiveObject();
+
+		if ( ! objects.length ) {
+			layersListEl.innerHTML = '<li class="yp-ld__layers-empty">No elements yet</li>';
+			return;
+		}
+
+		layersListEl.innerHTML = objects.slice().reverse().map( function ( obj ) {
+			var index = objects.indexOf( obj );
+			var isLocked = false === obj.selectable;
+			return '<li class="yp-ld__layer-row' + ( obj === active ? ' is-active' : '' ) + '">' +
+				'<button type="button" class="yp-ld__layer-select" data-layer-select="' + index + '">' + escapeHtml( objectLabel( obj ) ) + '</button>' +
+				'<button type="button" class="yp-ld__layer-lock' + ( isLocked ? ' is-active' : '' ) + '" data-layer-lock="' + index + '">' + ( isLocked ? 'Locked' : 'Lock' ) + '</button>' +
+			'</li>';
+		} ).join( '' );
+
+		layersListEl.querySelectorAll( '[data-layer-select]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var obj = objects[ parseInt( button.getAttribute( 'data-layer-select' ), 10 ) ];
+				if ( obj && false !== obj.selectable ) {
+					canvas.setActiveObject( obj );
+					canvas.renderAll();
+				}
+			} );
+		} );
+
+		layersListEl.querySelectorAll( '[data-layer-lock]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function ( event ) {
+				event.stopPropagation();
+				var obj = objects[ parseInt( button.getAttribute( 'data-layer-lock' ), 10 ) ];
+				if ( ! obj ) {
+					return;
+				}
+				var lock = false !== obj.selectable;
+				if ( lock && obj === canvas.getActiveObject() ) {
+					canvas.discardActiveObject();
+				}
+				obj.set( { selectable: ! lock, evented: ! lock, hasControls: ! lock } );
+				canvas.renderAll();
+				renderLayersPanel();
+				pushHistory();
+			} );
+		} );
+	}
+
+	/* ---------- Starter layouts ---------- */
+
+	/**
+	 * Shown only while the canvas is genuinely empty (fresh visit, or a
+	 * restored draft that happens to have nothing on it) — direct
+	 * request: give the customer something other than a blank canvas to
+	 * start from. Picking one just adds pre-positioned objects through
+	 * the same canvas.add() path every other "+ Add" toolbar button
+	 * already uses (percentage-of-canvas-size placement, same convention
+	 * as addText()/addShape() below); "Start blank" (or ignoring the
+	 * picker and using the toolbar directly) leaves today's empty-canvas
+	 * behavior completely unchanged.
+	 */
+	var LAYOUTS = {
+		centered: function () {
+			var w = canvas.getWidth(), h = canvas.getHeight();
+			return [
+				new fabric.Textbox( 'Your Brand', {
+					left: w / 2, top: h * 0.35, originX: 'center', originY: 'center',
+					fontFamily: 'Geist', fontWeight: '700', fontSize: Math.round( h * 0.16 ),
+					fill: '#141414', textAlign: 'center', width: w * 0.82
+				} ),
+				new fabric.Textbox( 'Product Name', {
+					left: w / 2, top: h * 0.62, originX: 'center', originY: 'center',
+					fontFamily: 'Inter', fontSize: Math.round( h * 0.09 ),
+					fill: '#3A3A3C', textAlign: 'center', width: w * 0.82
+				} )
+			];
+		},
+		banner: function () {
+			var w = canvas.getWidth(), h = canvas.getHeight();
+			return [
+				new fabric.Rect( {
+					left: w / 2, top: h * 0.24, originX: 'center', originY: 'center',
+					width: w * 0.96, height: h * 0.34, fill: '#141414'
+				} ),
+				new fabric.Textbox( 'Your Brand', {
+					left: w / 2, top: h * 0.24, originX: 'center', originY: 'center',
+					fontFamily: 'Geist', fontWeight: '700', fontSize: Math.round( h * 0.14 ),
+					fill: '#ffffff', textAlign: 'center', width: w * 0.86
+				} ),
+				new fabric.Textbox( 'Product Name', {
+					left: w / 2, top: h * 0.66, originX: 'center', originY: 'center',
+					fontFamily: 'Inter', fontSize: Math.round( h * 0.09 ),
+					fill: '#141414', textAlign: 'center', width: w * 0.86
+				} )
+			];
+		},
+		corner: function () {
+			var w = canvas.getWidth(), h = canvas.getHeight();
+			return [
+				new fabric.Textbox( 'Brand', {
+					left: w * 0.22, top: h * 0.2, originX: 'center', originY: 'center',
+					fontFamily: 'Geist', fontWeight: '700', fontSize: Math.round( h * 0.12 ),
+					fill: '#141414', textAlign: 'left', width: w * 0.5
+				} ),
+				new fabric.Textbox( 'Product Name', {
+					left: w / 2, top: h * 0.65, originX: 'center', originY: 'center',
+					fontFamily: 'Inter', fontSize: Math.round( h * 0.1 ),
+					fill: '#3A3A3C', textAlign: 'center', width: w * 0.86
+				} )
+			];
+		}
+	};
+
+	function hideLayoutsPicker() {
+		if ( layoutsEl ) {
+			layoutsEl.hidden = true;
+		}
+	}
+
+	function maybeShowLayoutsPicker() {
+		if ( ! layoutsEl || ! canvas ) {
+			return;
+		}
+		var hasContent = canvas.getObjects().some( function ( obj ) { return ! obj.excludeFromExport; } );
+		layoutsEl.hidden = hasContent;
+	}
+
+	function applyLayout( key ) {
+		var factory = LAYOUTS[ key ];
+		if ( ! factory || ! canvas ) {
+			return;
+		}
+		factory().forEach( function ( obj ) { canvas.add( obj ); } );
+		canvas.renderAll();
+		hideLayoutsPicker();
+		pushHistory();
+		refreshPricing();
+	}
+
+	layoutButtons.forEach( function ( button ) {
+		button.addEventListener( 'click', function () {
+			applyLayout( button.getAttribute( 'data-yp-ld-layout' ) );
+		} );
+	} );
+	if ( layoutDismissButton ) {
+		layoutDismissButton.addEventListener( 'click', hideLayoutsPicker );
+	}
+
+	/* ---------- Preview on Product ---------- */
+
+	/**
+	 * Deliberately a flat overlay, not a photorealistic cylindrical wrap
+	 * simulation — the existing Template configurator's own "Vial View"
+	 * (configurator.js) is a plain reference photo with no live
+	 * compositing at all, so this is already a step up from that
+	 * existing precedent, not a promise to exceed it. The silhouette is
+	 * one of three inline SVGs in render.php (one per size preset),
+	 * toggled by which one matches the checked size-preset radio's
+	 * value; the label-shaped rectangle inside each SVG is purely a
+	 * visual reference for where canvas.toDataURL()'s live snapshot gets
+	 * overlaid via CSS (label-designer.css).
+	 */
+	function activeSizePresetValue() {
+		var radio = checkedSizePresetRadio();
+		return radio ? radio.value : 'custom';
+	}
+
+	function updateProductPreviewSilhouette() {
+		if ( ! productPreviewEl ) {
+			return;
+		}
+		var value = activeSizePresetValue();
+		var visibleSvg = null;
+
+		productPreviewEl.querySelectorAll( '[data-preview-silhouette]' ).forEach( function ( svg ) {
+			var isMatch = svg.getAttribute( 'data-preview-silhouette' ) === value;
+			svg.hidden = ! isMatch;
+			if ( isMatch ) {
+				visibleSvg = svg;
+			}
+		} );
+
+		// Each silhouette SVG shares the same viewBox, so its own
+		// data-preview-label-area rect (in viewBox units) converts
+		// directly to a percentage position/size for the snapshot <img>
+		// — a plain sibling in the same position:relative stage
+		// (label-designer.css), not anything drawn into the SVG itself.
+		var labelArea = visibleSvg ? visibleSvg.querySelector( '[data-preview-label-area]' ) : null;
+		if ( labelArea && previewSnapshotEl && visibleSvg.viewBox && visibleSvg.viewBox.baseVal ) {
+			var viewBox = visibleSvg.viewBox.baseVal;
+			previewSnapshotEl.style.left   = ( ( parseFloat( labelArea.getAttribute( 'x' ) ) / viewBox.width ) * 100 ) + '%';
+			previewSnapshotEl.style.top    = ( ( parseFloat( labelArea.getAttribute( 'y' ) ) / viewBox.height ) * 100 ) + '%';
+			previewSnapshotEl.style.width  = ( ( parseFloat( labelArea.getAttribute( 'width' ) ) / viewBox.width ) * 100 ) + '%';
+			previewSnapshotEl.style.height = ( ( parseFloat( labelArea.getAttribute( 'height' ) ) / viewBox.height ) * 100 ) + '%';
+		}
+	}
+
+	function updateProductPreviewSnapshot() {
+		if ( ! productPreviewEl || productPreviewEl.hidden || ! canvas || ! previewSnapshotEl ) {
+			return;
+		}
+		previewSnapshotEl.src = canvas.toDataURL( { format: 'png' } );
+	}
+
+	function toggleProductPreview() {
+		if ( ! productPreviewEl ) {
+			return;
+		}
+		var opening = productPreviewEl.hidden;
+		productPreviewEl.hidden = ! opening;
+		if ( editorRowEl ) {
+			editorRowEl.hidden = opening;
+		}
+		if ( backgroundFieldEl ) {
+			backgroundFieldEl.hidden = opening;
+		}
+		if ( previewToggleButton ) {
+			previewToggleButton.textContent = opening ? 'Back to Editing' : 'Preview on Product';
+		}
+		if ( opening ) {
+			if ( propertiesEl ) {
+				propertiesEl.hidden = true;
+			}
+			if ( layoutsEl ) {
+				layoutsEl.hidden = true;
+			}
+			updateProductPreviewSilhouette();
+			updateProductPreviewSnapshot();
+		} else {
+			// Resyncs the properties panel to whatever's actually selected
+			// right now, rather than trying to remember its pre-preview
+			// state (which entering preview mode above just overwrote).
+			onSelectionChanged();
+			maybeShowLayoutsPicker();
+		}
+	}
+
+	if ( previewToggleButton ) {
+		previewToggleButton.addEventListener( 'click', toggleProductPreview );
 	}
 
 	/* ---------- Undo / redo ---------- */
@@ -280,15 +763,24 @@
 			return;
 		}
 		history = history.slice( 0, historyIndex + 1 );
-		history.push( JSON.stringify( canvas.toJSON() ) );
+		history.push( JSON.stringify( canvas.toJSON( EXTRA_OBJECT_PROPS ) ) );
 		historyIndex = history.length - 1;
 		updateHistoryButtons();
 		saveDraftDebounced();
 	}
 
-	function onCanvasChanged() {
+	function onCanvasChanged( event ) {
+		// Fires for the temporary snap-guide Lines too (they're plain
+		// canvas.add()/remove() calls like any other object) — those
+		// must never count as a real design change: no history entry,
+		// no pricing refresh, no layers-panel row.
+		if ( event && event.target && event.target.excludeFromExport ) {
+			return;
+		}
 		pushHistory();
 		refreshPricing();
+		renderLayersPanel();
+		updateProductPreviewSnapshot();
 	}
 
 	function updateHistoryButtons() {
@@ -303,6 +795,9 @@
 			isRestoringHistory = false;
 			historyIndex = index;
 			updateHistoryButtons();
+			renderLayersPanel();
+			maybeShowLayoutsPicker();
+			updateProductPreviewSnapshot();
 			saveDraftDebounced();
 		} );
 	}
@@ -326,6 +821,8 @@
 		canvas.clear();
 		canvas.backgroundColor = bgColorInput.value || '#ffffff';
 		canvas.renderAll();
+		renderLayersPanel();
+		maybeShowLayoutsPicker();
 		pushHistory();
 	} );
 
@@ -336,6 +833,7 @@
 		deleteButton.disabled = ! active;
 		frontButton.disabled  = ! active;
 		backButton.disabled   = ! active;
+		renderLayersPanel();
 
 		if ( ! active ) {
 			propertiesEl.hidden = true;
@@ -387,6 +885,7 @@
 		var active = canvas.getActiveObject();
 		if ( active ) {
 			canvas.bringToFront( active );
+			renderLayersPanel();
 			pushHistory();
 		}
 	} );
@@ -395,6 +894,7 @@
 		var active = canvas.getActiveObject();
 		if ( active ) {
 			canvas.sendToBack( active );
+			renderLayersPanel();
 			pushHistory();
 		}
 	} );
@@ -629,6 +1129,7 @@
 				return;
 			}
 			updateSizePresetHint( radio );
+			updateProductPreviewSilhouette();
 			if ( 'custom' === radio.value ) {
 				setSizeLock( false );
 				lastConfirmedSizePreset = radio;
@@ -741,7 +1242,7 @@
 				bgColor: bgColorInput.value,
 				brandName: brandInput.value,
 				notes: notesInput.value,
-				canvasJson: canvas.toJSON(),
+				canvasJson: canvas.toJSON( EXTRA_OBJECT_PROPS ),
 				logoUploadIds: logoUploadIds
 			} ) );
 		} catch ( e ) {
@@ -815,6 +1316,17 @@
 		submitButton.disabled = true;
 		submitButton.textContent = 'Exporting your design…';
 
+		// Zoom is a view-only magnification (see applyZoom()'s own
+		// comment) — exporting while zoomed in/out would otherwise feed
+		// Fabric's own current zoom state into toDataURL() on top of the
+		// multiplier below, which isn't a combination worth trusting.
+		// Reset to 1 right before export; restored below only on
+		// failure, since success navigates away before it'd matter.
+		var zoomBeforeExport = currentZoom;
+		if ( 1 !== currentZoom ) {
+			applyZoom( 1 );
+		}
+
 		var widthMm  = dims.width * MM_PER_INCH;
 		var heightMm = dims.height * MM_PER_INCH;
 		var currentScale = pxPerInch( dims.width, dims.height );
@@ -852,7 +1364,7 @@
 						quantity: quantity,
 						brand_name: brandName,
 						instructions: notesInput.value,
-						canvas_design: JSON.stringify( canvas.toJSON() )
+						canvas_design: JSON.stringify( canvas.toJSON( EXTRA_OBJECT_PROPS ) )
 					} )
 				} );
 			} )
@@ -872,6 +1384,9 @@
 				submitButton.disabled = false;
 				submitButton.textContent = 'Continue to Payment';
 				showFormError( error.message || "Couldn't submit your design. Please try again." );
+				if ( 1 !== zoomBeforeExport ) {
+					applyZoom( zoomBeforeExport );
+				}
 			} );
 	} );
 
@@ -908,12 +1423,15 @@
 		}
 
 		initCanvas();
+		updateProductPreviewSilhouette();
 
 		if ( draft.canvasJson ) {
 			isRestoringHistory = true;
 			canvas.loadFromJSON( draft.canvasJson, function () {
 				canvas.renderAll();
 				isRestoringHistory = false;
+				renderLayersPanel();
+				maybeShowLayoutsPicker();
 				pushHistory();
 				refreshPricing();
 			} );
