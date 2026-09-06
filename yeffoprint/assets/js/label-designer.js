@@ -86,6 +86,7 @@
 	var toolbarEl   = root.querySelector( '.yp-ld__toolbar' );
 	var undoButton  = root.querySelector( '[data-yp-ld-undo]' );
 	var redoButton  = root.querySelector( '[data-yp-ld-redo]' );
+	var duplicateButton = root.querySelector( '[data-yp-ld-duplicate]' );
 	var deleteButton = root.querySelector( '[data-yp-ld-delete]' );
 	var frontButton = root.querySelector( '[data-yp-ld-front]' );
 	var backButton  = root.querySelector( '[data-yp-ld-back]' );
@@ -143,6 +144,26 @@
 	var lastConfirmedSizePreset = null;
 	var currentZoom          = 1;
 	var snapGuideLines       = [];
+	var nudgeHistoryDebounceTimer = null;
+
+	// Incremented while a logo upload's fetch()+fabric.Image.fromURL()
+	// round-trip is in flight (see the imageInput change handler below)
+	// and checked by the submit handler — without this, hitting Submit
+	// mid-upload would silently export a design missing that image,
+	// since the object doesn't exist on the canvas until both steps
+	// finish.
+	var pendingUploadCount  = 0;
+
+	// The 12 curated fonts (FONT_FAMILIES, populated further down) load
+	// via one Google Fonts stylesheet with `display=swap` — the browser
+	// renders text in a fallback face immediately and swaps the real one
+	// in once its file downloads, with no automatic Fabric re-render on
+	// that swap. document.fonts.load() resolves once a face is actually
+	// usable; kicked off once canvas init knows FONT_FAMILIES exists, and
+	// awaited before export so a customer who picks an unusual font and
+	// submits within the first second doesn't ship text in the wrong
+	// typeface.
+	var fontsReadyPromise   = null;
 
 	// Every image the customer uploads via "+ Image" (usually a logo) is
 	// kept here by upload id, separate from the flattened PNG the canvas
@@ -184,6 +205,31 @@
 		fontFamilySelect.innerHTML = FONT_FAMILIES.map( function ( family ) {
 			return '<option value="' + escapeHtml( family ) + '" style="font-family:\'' + escapeHtml( family ) + '\'">' + escapeHtml( family ) + '</option>';
 		} ).join( '' );
+	}
+
+	/**
+	 * Standard CSS Font Loading API, not a new dependency — resolves once
+	 * each curated face is actually usable (immediately if the browser
+	 * already has it cached). document.fonts.ready is combined in too,
+	 * as a belt-and-suspenders fallback for a font whose family name
+	 * document.fonts.load() couldn't match exactly. Once ready, a single
+	 * requestRenderAll() catches any text already typed in a font that
+	 * was still swapping when it was drawn — the on-screen canvas ends
+	 * up matching what will export, not just the export step itself.
+	 */
+	function startFontPreload() {
+		if ( ! window.document.fonts || 'function' !== typeof document.fonts.load ) {
+			fontsReadyPromise = Promise.resolve();
+			return;
+		}
+		var loaders = FONT_FAMILIES.map( function ( family ) {
+			return document.fonts.load( '600 16px "' + family + '"' ).catch( function () {} );
+		} );
+		fontsReadyPromise = Promise.all( loaders.concat( [ document.fonts.ready ] ) ).then( function () {
+			if ( canvas ) {
+				canvas.requestRenderAll();
+			}
+		} );
 	}
 
 	function populateMaterialSelect() {
@@ -518,7 +564,12 @@
 			return;
 		}
 		var objects = canvas.getObjects().filter( function ( obj ) { return ! obj.excludeFromExport; } );
-		var active = canvas.getActiveObject();
+		// getActiveObjects() (plural) returns every selected object in
+		// both the single- and multi-select case, unlike
+		// getActiveObject() — which returns the ActiveSelection wrapper
+		// during a multi-select, something no individual obj here would
+		// ever === match, leaving every row unhighlighted.
+		var activeObjects = canvas.getActiveObjects();
 
 		if ( ! objects.length ) {
 			layersListEl.innerHTML = '<li class="yp-ld__layers-empty">No elements yet</li>';
@@ -528,7 +579,7 @@
 		layersListEl.innerHTML = objects.slice().reverse().map( function ( obj ) {
 			var index = objects.indexOf( obj );
 			var isLocked = false === obj.selectable;
-			return '<li class="yp-ld__layer-row' + ( obj === active ? ' is-active' : '' ) + '">' +
+			return '<li class="yp-ld__layer-row' + ( -1 !== activeObjects.indexOf( obj ) ? ' is-active' : '' ) + '">' +
 				'<button type="button" class="yp-ld__layer-select" data-layer-select="' + index + '">' + escapeHtml( objectLabel( obj ) ) + '</button>' +
 				'<button type="button" class="yp-ld__layer-lock' + ( isLocked ? ' is-active' : '' ) + '" data-layer-lock="' + index + '">' + ( isLocked ? 'Locked' : 'Lock' ) + '</button>' +
 			'</li>';
@@ -830,7 +881,8 @@
 
 	function onSelectionChanged() {
 		var active = canvas.getActiveObject();
-		deleteButton.disabled = ! active;
+		deleteButton.disabled    = ! active;
+		duplicateButton.disabled = ! active;
 		frontButton.disabled  = ! active;
 		backButton.disabled   = ! active;
 		renderLayersPanel();
@@ -871,13 +923,24 @@
 		return value.length === 7 ? value : null;
 	}
 
+	/**
+	 * canvas.remove() looks up each argument in canvas._objects by
+	 * identity — an active ActiveSelection (a shift-click or marquee
+	 * multi-select) is never itself a member of that array, it's a
+	 * virtual grouping object, so canvas.remove(active) on a multi-
+	 * select silently removed nothing at all. Discard the selection
+	 * first (dropping the ActiveSelection wrapper) and remove the
+	 * underlying objects directly — remove() already accepts multiple
+	 * arguments, so this covers both the single- and multi-select case.
+	 */
 	deleteButton.addEventListener( 'click', function () {
 		var active = canvas.getActiveObject();
 		if ( ! active ) {
 			return;
 		}
+		var targets = 'activeSelection' === active.type ? active.getObjects().slice() : [ active ];
 		canvas.discardActiveObject();
-		canvas.remove( active );
+		canvas.remove.apply( canvas, targets );
 		canvas.renderAll();
 	} );
 
@@ -899,9 +962,92 @@
 		}
 	} );
 
+	/**
+	 * Works on a single object or a multi-select alike. fabric.Object's
+	 * clone() is async in v5 (same callback shape as fabric.Image.fromURL()
+	 * above, since a clone may need to re-load an image source) — a
+	 * pending-count is used instead of Promise.all() to stay in the same
+	 * callback style the rest of this file already uses. Each clone gets
+	 * a small fixed offset so it reads as a new object sitting next to
+	 * the original, not directly on top of it; a real design tool leaves
+	 * the *new* copy selected (and moving) rather than the original, so
+	 * the clones become the active selection once every clone() callback
+	 * has fired.
+	 */
+	function duplicateActive() {
+		var active = canvas.getActiveObject();
+		if ( ! active ) {
+			return;
+		}
+		var sources = 'activeSelection' === active.type ? active.getObjects().slice() : [ active ];
+		var clones = [];
+		var remaining = sources.length;
+
+		canvas.discardActiveObject();
+
+		sources.forEach( function ( source ) {
+			source.clone( function ( clone ) {
+				clone.set( { left: source.left + 14, top: source.top + 14 } );
+				clone.setCoords();
+				canvas.add( clone );
+				clones.push( clone );
+				remaining--;
+				if ( 0 === remaining ) {
+					if ( clones.length > 1 ) {
+						canvas.setActiveObject( new fabric.ActiveSelection( clones, { canvas: canvas } ) );
+					} else {
+						canvas.setActiveObject( clones[ 0 ] );
+					}
+					canvas.requestRenderAll();
+				}
+			}, EXTRA_OBJECT_PROPS );
+		} );
+	}
+
+	duplicateButton.addEventListener( 'click', duplicateActive );
+
 	document.addEventListener( 'keydown', function ( event ) {
-		if ( ( 'Delete' === event.key || 'Backspace' === event.key ) && canvas && canvas.getActiveObject() && document.activeElement === document.body ) {
+		if ( ! canvas || document.activeElement !== document.body ) {
+			return;
+		}
+		var active = canvas.getActiveObject();
+
+		if ( ( 'Delete' === event.key || 'Backspace' === event.key ) && active ) {
 			deleteButton.click();
+			return;
+		}
+
+		if ( ( event.metaKey || event.ctrlKey ) && 'd' === event.key.toLowerCase() && active ) {
+			event.preventDefault();
+			duplicateActive();
+			return;
+		}
+
+		var arrowDeltas = { ArrowUp: [ 0, -1 ], ArrowDown: [ 0, 1 ], ArrowLeft: [ -1, 0 ], ArrowRight: [ 1, 0 ] };
+		if ( arrowDeltas[ event.key ] && active ) {
+			// Textbox-in-edit-mode gets to keep the arrow keys for
+			// moving its text cursor — only nudge the object when it's
+			// merely selected, not actively being typed into.
+			if ( active.isEditing ) {
+				return;
+			}
+			event.preventDefault();
+			var step  = event.shiftKey ? 10 : 1;
+			var delta = arrowDeltas[ event.key ];
+			active.set( { left: active.left + delta[ 0 ] * step, top: active.top + delta[ 1 ] * step } );
+			active.setCoords();
+			canvas.requestRenderAll();
+
+			// Debounced like saveDraftDebounced()/priceDebounceTimer
+			// elsewhere in this file — holding an arrow key fires many
+			// keydowns per second, and pushing one undo-history entry
+			// per repeat would make Undo useless for anything else.
+			clearTimeout( nudgeHistoryDebounceTimer );
+			nudgeHistoryDebounceTimer = setTimeout( function () {
+				pushHistory();
+				refreshPricing();
+				updateProductPreviewSnapshot();
+			}, 400 );
 		}
 	} );
 
@@ -1064,6 +1210,13 @@
 		var formData = new FormData();
 		formData.append( 'files[]', file );
 
+		// Counted from click to canvas-add (not just the network request):
+		// the submit handler checks this before export, since the object
+		// doesn't exist on the canvas — and so wouldn't make it into the
+		// exported PNG — until fabric.Image.fromURL()'s callback fires,
+		// which is a second async step after the upload itself finishes.
+		pendingUploadCount++;
+
 		fetch( yeffoprintLabelDesigner.restUrl + 'custom-orders/uploads', {
 			method: 'POST',
 			headers: { 'X-WP-Nonce': yeffoprintLabelDesigner.nonce },
@@ -1074,6 +1227,7 @@
 				var result = ( data.files || [] )[ 0 ];
 				if ( ! result || ! result.success ) {
 					showFormError( ( result && result.message ) || "Couldn't upload that image." );
+					pendingUploadCount--;
 					return;
 				}
 
@@ -1089,10 +1243,12 @@
 					var center = centerOf();
 					img.set( { left: center.left, top: center.top, originX: 'center', originY: 'center' } );
 					addAndSelect( img );
+					pendingUploadCount--;
 				}, { crossOrigin: 'anonymous' } );
 			} )
 			.catch( function () {
 				showFormError( "Couldn't upload that image. Please try again." );
+				pendingUploadCount--;
 			} );
 	} );
 
@@ -1312,82 +1468,98 @@
 			showFormError( 'Add at least one element to your label before continuing.' );
 			return;
 		}
-
-		submitButton.disabled = true;
-		submitButton.textContent = 'Exporting your design…';
-
-		// Zoom is a view-only magnification (see applyZoom()'s own
-		// comment) — exporting while zoomed in/out would otherwise feed
-		// Fabric's own current zoom state into toDataURL() on top of the
-		// multiplier below, which isn't a combination worth trusting.
-		// Reset to 1 right before export; restored below only on
-		// failure, since success navigates away before it'd matter.
-		var zoomBeforeExport = currentZoom;
-		if ( 1 !== currentZoom ) {
-			applyZoom( 1 );
+		// A logo upload is a two-step async round-trip (REST upload, then
+		// fabric.Image.fromURL() to actually add it to the canvas) — the
+		// object simply isn't there yet to export if this fires mid-upload.
+		if ( pendingUploadCount > 0 ) {
+			showFormError( 'Please wait for your image to finish uploading before continuing.' );
+			return;
 		}
 
-		var widthMm  = dims.width * MM_PER_INCH;
-		var heightMm = dims.height * MM_PER_INCH;
-		var currentScale = pxPerInch( dims.width, dims.height );
-		var multiplier    = ( EXPORT_DPI ) / currentScale;
+		submitButton.disabled = true;
+		submitButton.textContent = 'Finalizing fonts…';
 
-		var dataUrl = canvas.toDataURL( { format: 'png', multiplier: multiplier } );
-		var blob     = dataUrlToBlob( dataUrl );
-		var file     = new File( [ blob ], 'label-design.png', { type: 'image/png' } );
+		// Google Fonts load with display=swap — text can still be showing
+		// a fallback face at this exact moment if a font was only just
+		// picked. Wait for fontsReadyPromise (already resolved in the
+		// overwhelmingly common case, so this is normally instant) before
+		// exporting, so the print file never ships in the wrong typeface.
+		( fontsReadyPromise || Promise.resolve() ).then( function () {
+			submitButton.textContent = 'Exporting your design…';
 
-		var formData = new FormData();
-		formData.append( 'files[]', file );
+			// Zoom is a view-only magnification (see applyZoom()'s own
+			// comment) — exporting while zoomed in/out would otherwise feed
+			// Fabric's own current zoom state into toDataURL() on top of the
+			// multiplier below, which isn't a combination worth trusting.
+			// Reset to 1 right before export; restored below only on
+			// failure, since success navigates away before it'd matter.
+			var zoomBeforeExport = currentZoom;
+			if ( 1 !== currentZoom ) {
+				applyZoom( 1 );
+			}
 
-		fetch( yeffoprintLabelDesigner.restUrl + 'custom-orders/uploads', {
-			method: 'POST',
-			headers: { 'X-WP-Nonce': yeffoprintLabelDesigner.nonce },
-			body: formData
-		} )
-			.then( function ( response ) { return response.json(); } )
-			.then( function ( data ) {
-				var result = ( data.files || [] )[ 0 ];
-				if ( ! result || ! result.success ) {
-					throw new Error( ( result && result.message ) || "Couldn't upload your design." );
-				}
+			var widthMm  = dims.width * MM_PER_INCH;
+			var heightMm = dims.height * MM_PER_INCH;
+			var currentScale = pxPerInch( dims.width, dims.height );
+			var multiplier    = ( EXPORT_DPI ) / currentScale;
 
-				return fetch( yeffoprintLabelDesigner.restUrl + 'custom-orders', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintLabelDesigner.nonce },
-					body: JSON.stringify( {
-						mode: 'new_design',
-						uploads: [ result.id ],
-						source_image_uploads: logoUploadIds,
-						width_mm: widthMm,
-						height_mm: heightMm,
-						material_id: materialId,
-						quantity: quantity,
-						brand_name: brandName,
-						instructions: notesInput.value,
-						canvas_design: JSON.stringify( canvas.toJSON( EXTRA_OBJECT_PROPS ) )
-					} )
+			var dataUrl = canvas.toDataURL( { format: 'png', multiplier: multiplier } );
+			var blob     = dataUrlToBlob( dataUrl );
+			var file     = new File( [ blob ], 'label-design.png', { type: 'image/png' } );
+
+			var formData = new FormData();
+			formData.append( 'files[]', file );
+
+			fetch( yeffoprintLabelDesigner.restUrl + 'custom-orders/uploads', {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': yeffoprintLabelDesigner.nonce },
+				body: formData
+			} )
+				.then( function ( response ) { return response.json(); } )
+				.then( function ( data ) {
+					var result = ( data.files || [] )[ 0 ];
+					if ( ! result || ! result.success ) {
+						throw new Error( ( result && result.message ) || "Couldn't upload your design." );
+					}
+
+					return fetch( yeffoprintLabelDesigner.restUrl + 'custom-orders', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintLabelDesigner.nonce },
+						body: JSON.stringify( {
+							mode: 'new_design',
+							uploads: [ result.id ],
+							source_image_uploads: logoUploadIds,
+							width_mm: widthMm,
+							height_mm: heightMm,
+							material_id: materialId,
+							quantity: quantity,
+							brand_name: brandName,
+							instructions: notesInput.value,
+							canvas_design: JSON.stringify( canvas.toJSON( EXTRA_OBJECT_PROPS ) )
+						} )
+					} );
+				} )
+				.then( function ( response ) {
+					return response.json().then( function ( data ) {
+						return { ok: response.ok, data: data };
+					} );
+				} )
+				.then( function ( result ) {
+					if ( ! result.ok ) {
+						throw new Error( ( result.data && result.data.message ) || "Couldn't submit your design. Please try again." );
+					}
+					clearDraft();
+					window.location.href = result.data.checkout_url;
+				} )
+				.catch( function ( error ) {
+					submitButton.disabled = false;
+					submitButton.textContent = 'Continue to Payment';
+					showFormError( error.message || "Couldn't submit your design. Please try again." );
+					if ( 1 !== zoomBeforeExport ) {
+						applyZoom( zoomBeforeExport );
+					}
 				} );
-			} )
-			.then( function ( response ) {
-				return response.json().then( function ( data ) {
-					return { ok: response.ok, data: data };
-				} );
-			} )
-			.then( function ( result ) {
-				if ( ! result.ok ) {
-					throw new Error( ( result.data && result.data.message ) || "Couldn't submit your design. Please try again." );
-				}
-				clearDraft();
-				window.location.href = result.data.checkout_url;
-			} )
-			.catch( function ( error ) {
-				submitButton.disabled = false;
-				submitButton.textContent = 'Continue to Payment';
-				showFormError( error.message || "Couldn't submit your design. Please try again." );
-				if ( 1 !== zoomBeforeExport ) {
-					applyZoom( zoomBeforeExport );
-				}
-			} );
+		} );
 	} );
 
 	/* ---------- Init ---------- */
@@ -1450,6 +1622,7 @@
 
 	function init() {
 		populateFontFamilySelect();
+		startFontPreload();
 		renderIconPanel();
 
 		loadOptions().then( function () {

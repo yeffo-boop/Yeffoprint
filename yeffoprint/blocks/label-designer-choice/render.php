@@ -37,6 +37,14 @@
  * this theme's existing flat-illustration style; deliberately not a
  * photorealistic cylindrical wrap simulation), and a one-line screen-
  * vs-print color disclaimer. See label-designer.js for all the logic.
+ *
+ * Muscle-memory round (direct follow-up): a Duplicate button/Ctrl+D
+ * (data-yp-ld-duplicate, works on a single object or a shift-click/
+ * marquee multi-select), arrow-key nudging, a fix for Delete silently
+ * no-oping on a multi-select (Fabric's canvas.remove() never matched an
+ * active ActiveSelection against canvas._objects), and submit-time
+ * safety checks for a font still swapping in or an image upload still
+ * in flight. See label-designer.js for all the logic.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -151,6 +159,7 @@ if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
 				<span class="yp-ld__toolbar-sep" aria-hidden="true"></span>
 				<button type="button" class="button-link" data-yp-ld-undo disabled>Undo</button>
 				<button type="button" class="button-link" data-yp-ld-redo disabled>Redo</button>
+				<button type="button" class="button-link" data-yp-ld-duplicate disabled>Duplicate</button>
 				<button type="button" class="button-link" data-yp-ld-delete disabled>Delete</button>
 				<span class="yp-ld__toolbar-sep" aria-hidden="true"></span>
 				<button type="button" class="button-link" data-yp-ld-front disabled>Bring to front</button>
