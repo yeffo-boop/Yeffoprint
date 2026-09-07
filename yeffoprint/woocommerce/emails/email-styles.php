@@ -621,18 +621,24 @@ td.yp-stepper-step {
 td.yp-stepper-connector-cell {
 	width: 32px;
 	padding: 0;
+	vertical-align: middle;
 }
 
-td.yp-stepper-connector {
+/* A <div>, not a <td> in a nested table (see class-order-status-
+   stepper.php's own comment on render_email_html() for why) — the
+   mso-line-height-rule keeps Outlook desktop from inflating this to
+   its usual font-metric-based line height instead of the literal
+   2px asked for here. */
+div.yp-stepper-connector {
 	width: 100%;
 	height: 2px;
-	background-color: <?php echo esc_attr( $border ); ?>;
-	padding: 0;
 	line-height: 2px;
-	font-size: 0;
+	mso-line-height-rule: exactly;
+	font-size: 1px;
+	background-color: <?php echo esc_attr( $border ); ?>;
 }
 
-td.yp-stepper-connector.is-active {
+div.yp-stepper-connector.is-active {
 	background-color: <?php echo esc_attr( $link_color ); ?>;
 }
 

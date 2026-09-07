@@ -267,16 +267,23 @@ class YeffoPrint_Order_Status_Stepper {
 				// clients' differing table-layout algorithms. A fixed
 				// width sidesteps both failure modes.
 				//
-				// The colored line itself lives in a nested single-cell
-				// table with an explicit height="2" HTML attribute rather
-				// than directly on this outer <td> — a bare <td>'s
-				// background otherwise stretches to match this row's full
-				// height (set by the much taller circle+label cells next
-				// to it), painting a thick block instead of a thin line.
-				// valign="middle" on the outer cell centers that short
-				// nested table within the row.
+				// The colored line itself is a fixed-height <div>, not a
+				// nested single-cell <table> (an earlier version used
+				// one) — Gmail's app is known to flatten/collapse a
+				// pointless one-row-one-cell table like that, which is
+				// exactly what was happening: the line rendered as a
+				// thick colored block instead of a thin one, because
+				// Gmail discarded the inner table's own height and let
+				// the color paint the full (much taller) outer cell
+				// instead. A <div> with an explicit height plus a
+				// matching line-height and a non-breaking space (so the
+				// element isn't truly empty, which is what invites a
+				// renderer to collapse or auto-expand it) survives that.
+				// valign="middle" on the outer <td> centers it within the
+				// row, which is set by the taller circle+label cells next
+				// to it.
 				$cells .= sprintf(
-					'<td class="yp-stepper-connector-cell" width="32" valign="middle"><table role="presentation" cellpadding="0" cellspacing="0" width="100%%"><tr><td class="yp-stepper-connector%1$s" height="2"></td></tr></table></td>',
+					'<td class="yp-stepper-connector-cell" width="32" valign="middle"><div class="yp-stepper-connector%1$s">&nbsp;</div></td>',
 					$active ? ' is-active' : ''
 				);
 			}
