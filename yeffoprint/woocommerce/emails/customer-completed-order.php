@@ -1,16 +1,21 @@
 <?php
 /**
- * Order completed (customer) email — theme override, copied unchanged from
+ * Order completed (customer) email — theme override of
  * woocommerce/templates/emails/customer-completed-order.php.
  *
- * This file's actual content/copy is identical to WooCommerce's own
- * default — every visual change (colors, header/footer band, rounded
- * card) lives entirely in this same directory's email-header.php,
- * email-footer.php, and email-styles.php, which every email type
- * already shares via the woocommerce_email_header/_footer hooks below.
- * This copy exists so this specific email's wording is easy to find
- * and edit later without hunting through the WooCommerce plugin itself
- * — not because anything here needed to change today.
+ * Direct report: WooCommerce's own stock body copy for this email
+ * ("We have finished processing your order.") reads like a generic
+ * fulfillment notice — accurate for most stores, where "Completed"
+ * usually just means "shipped." On this store it means something more
+ * specific: class-order-delivery-status.php's hourly sweep only moves
+ * an order to Completed once every one of its shipments shows
+ * carrier-confirmed delivery, so by the time this email fires the
+ * package has actually arrived. The subject/heading get the same
+ * delivery-specific treatment in
+ * class-email-customer-completed-order.php; this file's only change is
+ * this one line of body copy — everything else (colors, header/footer
+ * band, rounded card) still lives entirely in this same directory's
+ * email-header.php, email-footer.php, and email-styles.php.
  *
  * @see https://woocommerce.com/document/template-structure/
  */
@@ -39,7 +44,7 @@ if ( ! empty( $order->get_billing_first_name() ) ) {
 }
 ?>
 </p>
-<p><?php esc_html_e( 'We have finished processing your order.', 'woocommerce' ); ?></p>
+<p><?php esc_html_e( 'Good news — your package has been delivered! We hope you love it.', 'yeffoprint' ); ?></p>
 <?php if ( $email_improvements_enabled ) : ?>
 	<p><?php esc_html_e( 'Here’s a reminder of what you’ve ordered:', 'woocommerce' ); ?></p>
 <?php endif; ?>

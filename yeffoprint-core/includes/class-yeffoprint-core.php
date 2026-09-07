@@ -119,6 +119,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delivery-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-status-stepper.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipped-email.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-completed-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-contact-controller.php';
@@ -197,6 +198,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Delivery_Status();
 		new YeffoPrint_Order_Status_Stepper();
 		new YeffoPrint_Order_Shipped_Email();
+		new YeffoPrint_Order_Completed_Email();
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Tracking_Controller();
 		new YeffoPrint_Contact_Controller();
