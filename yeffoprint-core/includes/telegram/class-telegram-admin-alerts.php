@@ -31,16 +31,22 @@ class YeffoPrint_Telegram_Admin_Alerts {
 		) );
 	}
 
-	/** @param array<string,string> $answers Same shape class-web-design-quote-controller.php::send() builds. */
+	/**
+	 * @param array<string,string> $answers Same shape class-web-design-
+	 *   quote-controller.php::submit() builds. Direct report: this used
+	 *   to hand-format just business/name/email/package, dropping every
+	 *   other answer the email notification already included (phone,
+	 *   what they sell, hosting/domain status, timeline, etc.) — now
+	 *   reuses that same controller's format_answers() so both channels
+	 *   show the identical full answer set and can't drift apart again.
+	 */
 	public function on_web_design_quote_submitted( array $answers ): void {
-		self::notify( sprintf(
-			/* translators: 1: business/brand name, 2: contact name, 3: contact email, 4: package they're interested in */
-			__( "New web design quote request\n\n%1\$s — %2\$s <%3\$s>\nPackage: %4\$s", 'yeffoprint-core' ),
-			$answers['business_name'] ?? '',
-			$answers['name'] ?? '',
-			$answers['email'] ?? '',
-			$answers['package'] ?? ''
-		) );
+		$lines = array_merge(
+			[ __( 'New web design quote request', 'yeffoprint-core' ), '' ],
+			YeffoPrint_Web_Design_Quote_Controller::format_answers( $answers )
+		);
+
+		self::notify( implode( "\n", $lines ) );
 	}
 
 	public function on_payment_complete( int $order_id ): void {

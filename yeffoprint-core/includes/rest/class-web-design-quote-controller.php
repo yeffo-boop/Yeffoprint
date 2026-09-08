@@ -136,12 +136,18 @@ class YeffoPrint_Web_Design_Quote_Controller {
 		return in_array( $value, $allowed, true ) ? $value : '';
 	}
 
-	private function send( array $answers ): void {
-		$recipient = get_option( YeffoPrint_Admin_Menu::CONTACT_RECIPIENT_EMAIL_OPTION, YeffoPrint_Admin_Menu::CONTACT_RECIPIENT_EMAIL_DEFAULT );
-		if ( ! is_email( $recipient ) ) {
-			$recipient = YeffoPrint_Admin_Menu::CONTACT_RECIPIENT_EMAIL_DEFAULT;
-		}
-
+	/**
+	 * Every answer as a human-readable "Label: value" line — shared by
+	 * send()'s own email body and class-telegram-admin-alerts.php's
+	 * Telegram notification, so the two channels can't drift out of
+	 * sync with each other (direct report: Telegram only ever showed
+	 * name/email/package, missing everything else the email already
+	 * had).
+	 *
+	 * @param array<string,string> $answers Same shape submit() builds.
+	 * @return string[]
+	 */
+	public static function format_answers( array $answers ): array {
 		$yes_no_unsure_labels = [ 'yes' => __( 'Yes', 'yeffoprint-core' ), 'no' => __( 'No', 'yeffoprint-core' ), 'unsure' => __( 'Not sure', 'yeffoprint-core' ) ];
 		$yes_no_labels        = [ 'yes' => __( 'Yes', 'yeffoprint-core' ), 'no' => __( 'No', 'yeffoprint-core' ) ];
 		$hosting_addon_labels = [ 'yes' => __( 'Yes', 'yeffoprint-core' ), 'no' => __( 'No', 'yeffoprint-core' ), 'tell_me_more' => __( 'Tell me more', 'yeffoprint-core' ) ];
@@ -182,13 +188,22 @@ class YeffoPrint_Web_Design_Quote_Controller {
 			$lines[] = $answers['details'];
 		}
 
+		return $lines;
+	}
+
+	private function send( array $answers ): void {
+		$recipient = get_option( YeffoPrint_Admin_Menu::CONTACT_RECIPIENT_EMAIL_OPTION, YeffoPrint_Admin_Menu::CONTACT_RECIPIENT_EMAIL_DEFAULT );
+		if ( ! is_email( $recipient ) ) {
+			$recipient = YeffoPrint_Admin_Menu::CONTACT_RECIPIENT_EMAIL_DEFAULT;
+		}
+
 		$subject = sprintf( /* translators: %s: business/brand name */ __( 'Web design quote request — %s', 'yeffoprint-core' ), $answers['business_name'] );
 
 		// Reply-To (not From) — same reasoning as the Contact form's own
 		// send(): "just hit reply" should reach the lead, not the site.
 		$headers = [ sprintf( 'Reply-To: %1$s <%2$s>', $answers['name'], $answers['email'] ) ];
 
-		wp_mail( $recipient, $subject, implode( "\n", $lines ), $headers );
+		wp_mail( $recipient, $subject, implode( "\n", self::format_answers( $answers ) ), $headers );
 
 		/**
 		 * Same "let other modules react without knowing this controller
