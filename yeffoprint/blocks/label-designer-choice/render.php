@@ -3,16 +3,15 @@
  * Lives on the Custom Design page (templates/custom-design-form.html),
  * right after the mode radiogroup — direct request: "combine everything
  * into one flow and ask the customer at the beginning if they want to
- * use our designer or fill out the form." Renders nothing at all for a
- * non-admin (YeffoPrint_Feature_Gate — "I don't want to release all of
- * these new features until I'm sure they're ready"): the page looks and
- * behaves exactly as it does today for a real customer, with no trace
- * of the Designer option anywhere in the markup. For an admin, renders
- * the design-method choice (only meaningful under 'new_design' — a
- * customer who already has their own file or is reordering has nothing
- * to design) and the Designer's own canvas app shell, both starting
- * hidden — custom-order-form.js's updateDesignMethodUi() drives their
- * visibility alongside the existing mode radiogroup.
+ * use our designer or fill out the form." Renders the design-method
+ * choice (only meaningful under 'new_design' — a customer who already
+ * has their own file or is reordering has nothing to design) and the
+ * Designer's own canvas app shell, both starting hidden — custom-order-
+ * form.js's updateDesignMethodUi() drives their visibility alongside
+ * the existing mode radiogroup. Launched to every visitor — direct
+ * request: "I'd like to launch the customizer for the labels... you can
+ * go ahead and remove the role gate now" — after previously being
+ * admin-only while the feature was still being finished.
  *
  * The canvas app shell also carries a label-size preset picker (direct
  * request: "some preset size options and also a custom option: Peptide
@@ -48,10 +47,6 @@
  */
 
 defined( 'ABSPATH' ) || exit;
-
-if ( ! YeffoPrint_Feature_Gate::is_admin_viewer() ) {
-	return;
-}
 ?>
 <div class="yp-field yp-custom-order__design-method yp-choice-cards yp-choice-cards--pair" role="radiogroup" aria-label="How would you like to design it?" hidden data-yp-co-design-method-group>
 	<label class="yp-choice-card">

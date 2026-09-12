@@ -4,7 +4,7 @@
 	"name": "yeffoprint/label-designer-choice",
 	"title": "Label Designer Choice",
 	"category": "theme",
-	"description": "On the Custom Design page, under 'Design something new': the design-method choice (describe it for our designer / use our online Designer) plus the Designer's own canvas app — admins only for now, renders nothing for everyone else. See class-feature-gate.php.",
+	"description": "On the Custom Design page, under 'Design something new': the design-method choice (describe it for our designer / use our online Designer) plus the Designer's own canvas app.",
 	"render": "file:./render.php",
 	"supports": {
 		"html": false,
