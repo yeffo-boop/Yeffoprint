@@ -366,15 +366,15 @@ add_action( 'wp_enqueue_scripts', function () {
 	// see label-designer.js's own docblock for why), a curated icon
 	// dataset, and a wider curated Google Fonts set than the sitewide
 	// one loaded above (a font *picker* needs more than 3 families).
-	// Admin-only for now (YeffoPrint_Feature_Gate — "I don't want to
-	// release all of these new features until I'm sure they're ready")
-	// — a non-admin visitor's page has no Designer markup at all
-	// (blocks/label-designer-choice/render.php renders nothing for them):
-	// no reason to ship ~300KB of canvas library for that. True lazy-
-	// loading (deferring this until "Use our Designer" is actually
-	// clicked) is a follow-up for whenever this launches beyond admins —
-	// not needed while real customers never receive these assets at all.
-	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-design-form', 'custom-design-form.html' ], true ) && YeffoPrint_Feature_Gate::is_admin_viewer() ) {
+	// Launched to every visitor — direct request: "I'd like to launch
+	// the customizer for the labels... you can go ahead and remove the
+	// role gate now" — after previously being admin-only
+	// (YeffoPrint_Feature_Gate, now removed) while the feature was still
+	// being finished. True lazy-loading (deferring these ~300KB of
+	// assets until "Use our Designer" is actually clicked, instead of
+	// on every Custom Design page load) is a known follow-up, not done
+	// here — this round is the gate removal only.
+	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-design-form', 'custom-design-form.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-label-designer-fonts',
 			'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Merriweather:wght@400;700&family=Poppins:wght@400;600;700&family=Pacifico&family=Bebas+Neue&family=Caveat:wght@600&family=Oswald:wght@500;700&family=Lora:wght@500;700&family=Josefin+Sans:wght@500;700&family=Dancing+Script:wght@600&display=swap',
