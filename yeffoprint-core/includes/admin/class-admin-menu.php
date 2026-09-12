@@ -1012,7 +1012,7 @@ class YeffoPrint_Admin_Menu {
 
 	/**
 	 * One row per known theme (YeffoPrint_Promo_Themes::all(), fixed at
-	 * 13 — no add/remove UI needed here the way a true repeater would,
+	 * 14 — no add/remove UI needed here the way a true repeater would,
 	 * since the full set of possible themes is already the full set of
 	 * rows) rather than a dynamic list of "added" banners — this classic
 	 * page is an unlinked fallback behind the admin-app's real Settings
@@ -1126,7 +1126,7 @@ class YeffoPrint_Admin_Menu {
 	/**
 	 * Active themes, in YeffoPrint_Promo_Themes::all()'s own definition
 	 * order — the rotation order on the frontend. No separate admin-
-	 * configurable ordering: with only 13 possible themes and no request
+	 * configurable ordering: with only 14 possible themes and no request
 	 * for reordering specifically, a fixed, predictable order (roughly
 	 * calendar order, with the always-on Web Design theme last) needs no
 	 * extra UI of its own.
