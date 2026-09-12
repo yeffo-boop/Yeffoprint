@@ -291,6 +291,40 @@ class YeffoPrint_Promo_Themes {
 				'cta_label'  => __( 'Explore Web Design', 'yeffoprint-core' ),
 				'cta_url'    => home_url( '/web-design/' ),
 			],
+
+			/**
+			 * Not seasonal, same reasoning as `web-design-launch` above —
+			 * direct request: "come up with a banner to add to the
+			 * homepage announcing" the Label Designer's launch to every
+			 * visitor (previously admin-only — see class-yeffoprint-
+			 * core.php's own launch entry in docs/ARCHITECTURE.md). Kept
+			 * the brand's own CMY colors for `bars` for the same reason
+			 * `web-design-launch` does: this banner IS the brand,
+			 * launching a new capability, not a seasonal reskin of it.
+			 * `cta_label`/`cta_url` point at the Custom Design page (where
+			 * the Designer choice now lives) rather than render.php's
+			 * "Shop the Sale" → /shop-labels/ default.
+			 */
+			'label-designer-launch' => [
+				'label'      => __( 'Label Designer Launch', 'yeffoprint-core' ),
+				'eyebrow'    => __( 'New Feature', 'yeffoprint-core' ),
+				/* translators: %s: the admin-entered offer, e.g. "free to try" */
+				'headline'   => __( 'Design your label online — %s', 'yeffoprint-core' ),
+				'body'       => __( 'Pick a size, add your art and text, and watch it update in real time — no software to download, no design experience required.', 'yeffoprint-core' ),
+				'bg'         => '#0A1620',
+				'glow_a'     => 'rgba(0,174,239,.32)',
+				'glow_b'     => 'rgba(255,242,0,.16)',
+				'ink'        => '#FAF9F6',
+				'ink_soft'   => '#B7C2CB',
+				'accent'     => '#00AEEF',
+				'accent_ink' => '#0A1620',
+				'bars'       => [ '#00AEEF', '#EC008C', '#FFF200' ],
+				'code_bg'    => '#FAF9F6',
+				'code_ink'   => '#0A1620',
+				'icon'       => '<rect x="3" y="6" width="13" height="12" rx="1.5"/><circle cx="7" cy="10" r="1.1"/><path d="M4 15.5l3-3 2 2 4-4"/><path d="M20.6 3.4a1.9 1.9 0 0 1 0 2.7l-6.8 6.8-3 .7.7-3 6.8-6.8a1.9 1.9 0 0 1 2.3-.4z"/>',
+				'cta_label'  => __( 'Try the Designer', 'yeffoprint-core' ),
+				'cta_url'    => home_url( '/custom-design/' ),
+			],
 		];
 	}
 

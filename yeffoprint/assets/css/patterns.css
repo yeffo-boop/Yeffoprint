@@ -1469,7 +1469,7 @@
 
 /* A translucent dark pill behind the dots, not theme-colored — the
    active slide's own palette ranges from near-black to near-white
-   across the 13 themes, so a fixed light or dark dot alone would
+   across the 14 themes, so a fixed light or dark dot alone would
    disappear against roughly half of them. This reads on all of them. */
 .yp-promo-rotator__dots {
 	position: absolute;
