@@ -171,15 +171,21 @@ class YeffoPrint_Order_Item_Meta {
 		$pricing     = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values, $tier_quantity );
 		$template_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
 
-		// TEMPLATE_ID is checked first: a manually-created Template order
-		// requiring proof approval (class-manual-order-creator.php) also
-		// carries CUSTOM_ORDER_ID, same as a Custom Design labels row, but
-		// it's a real Template + field_schema/variants underneath, not a
-		// Custom Design batch row — the customer-facing checkout flow
-		// never sets both at once (a Template add-to-cart never has a
-		// CUSTOM_ORDER_ID; a Custom Design labels row never has a
-		// TEMPLATE_ID), so this only ever branches for that one new path.
-		if ( $custom_order_id && ! $template_id ) {
+		// Branches on TEMPLATE_ID alone, not "has a custom_order_id" —
+		// direct report, with a screenshot: a manually-created Custom
+		// Design order with "Requires proof approval" left unchecked
+		// (class-manual-order-creator.php, custom_order_id stays 0 for
+		// that group) fell through to the Template/variants branch below
+		// instead, which has no field_schema for a Custom Design row —
+		// count(variants) is 0, and the Compound/Strength the staff typed
+		// in never made it onto the order at all. TEMPLATE_ID is only
+		// ever set by an actual Template flow (class-cart-controller.php's
+		// customer-facing add-to-cart, or class-manual-order-creator.php's
+		// own add_template_row()), both of which always pass a real,
+		// validated, nonzero template_id — so its mere absence already
+		// fully identifies "this is a Custom Order's own labels row,"
+		// with or without a linked proof-approval shell.
+		if ( ! $template_id ) {
 			// A Custom Order's own labels: same Size/Material/pricing
 			// snapshot shape as a Template batch, but there's no
 			// template/field_schema/variants behind it (Architecture §2).
