@@ -109,15 +109,14 @@ class YeffoPrint_Proof_Meta {
 			$site_name
 		);
 
-		$body = sprintf(
-			/* translators: 1: customer's first name or "there", 2: proof approval URL, 3: site name */
-			__( "Hi %1\$s,\n\nYour custom label proof is ready to review. Please take a look and let us know if it's good to print:\n\n%2\$s\n\nNo account needed — that link is yours alone, so don't share it.\n\nThanks,\n%3\$s", 'yeffoprint-core' ),
-			$name ? $name : __( 'there', 'yeffoprint-core' ),
-			$url,
-			$site_name
-		);
-
-		wp_mail( $email, $subject, $body );
+		self::send_branded_notice( $email, $subject, [
+			'email_heading'   => __( 'Your proof is ready to review', 'yeffoprint-core' ),
+			'name'            => $name ? $name : __( 'there', 'yeffoprint-core' ),
+			'eyebrow'         => __( 'Proof ready', 'yeffoprint-core' ),
+			'intro'           => __( "Take a look at your custom label proof and let us know if it's good to print.", 'yeffoprint-core' ),
+			'cta_url'         => $url,
+			'proof_image_url' => self::latest_proof_image_url( $custom_order_id ),
+		] );
 	}
 
 	/**
@@ -148,20 +147,64 @@ class YeffoPrint_Proof_Meta {
 			? sprintf( /* translators: %s: site name */ __( 'Still waiting on your OK — %s', 'yeffoprint-core' ), $site_name )
 			: sprintf( /* translators: %s: site name */ __( "Don't forget to review your proof — %s", 'yeffoprint-core' ), $site_name );
 
-		$urgency = 2 === $stage
-			? __( "It's been a couple of days since your custom label proof went up for review, and we haven't heard back yet. We'd love to get this printing for you — take a look when you get a chance:", 'yeffoprint-core' )
-			: __( "Just a friendly reminder — your custom label proof is still waiting on your review:", 'yeffoprint-core' );
+		$email_heading = 2 === $stage
+			? __( 'Still waiting on your OK', 'yeffoprint-core' )
+			: __( "Don't forget to review your proof", 'yeffoprint-core' );
 
-		$body = sprintf(
-			/* translators: 1: customer's first name or "there", 2: reminder copy, 3: proof approval URL, 4: site name */
-			__( "Hi %1\$s,\n\n%2\$s\n\n%3\$s\n\nNo account needed — that link is yours alone, so don't share it.\n\nThanks,\n%4\$s", 'yeffoprint-core' ),
-			$name ? $name : __( 'there', 'yeffoprint-core' ),
-			$urgency,
-			$url,
-			$site_name
-		);
+		$intro = 2 === $stage
+			? __( "It's been a couple of days since your custom label proof went up for review, and we haven't heard back yet. We'd love to get this printing for you.", 'yeffoprint-core' )
+			: __( 'Just a friendly reminder — your custom label proof is still waiting on your review.', 'yeffoprint-core' );
 
-		wp_mail( $email, $subject, $body );
+		self::send_branded_notice( $email, $subject, [
+			'email_heading'   => $email_heading,
+			'name'            => $name ? $name : __( 'there', 'yeffoprint-core' ),
+			'eyebrow'         => __( 'Still waiting', 'yeffoprint-core' ),
+			'intro'           => $intro,
+			'cta_url'         => $url,
+			'proof_image_url' => self::latest_proof_image_url( $custom_order_id ),
+		] );
+	}
+
+	/**
+	 * @see notify_customer()/send_reminder_email() above — the one place
+	 * both build the branded HTML email instead of a bare wp_mail()
+	 * string. `WC()->mailer()` first, same as class-manual-order-
+	 * creator.php's own `WC()->mailer()->customer_invoice()` call — the
+	 * base \WC_Email class our email class extends is only ever
+	 * `include_once`'d lazily, inside WC_Emails::init() (itself only
+	 * ever run the first time something calls WC()->mailer()), not
+	 * eagerly at plugin bootstrap. This runs from a WP-Cron sweep
+	 * (class-proof-reminder-scheduler.php) as well as normal admin/REST
+	 * requests, so it can't assume something else already forced that
+	 * init this request.
+	 */
+	private static function send_branded_notice( string $to, string $subject, array $args ): void {
+		WC()->mailer();
+
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-email-proof-notice.php';
+		( new YeffoPrint_Email_Proof_Notice() )->send_notice( $to, $subject, $args );
+	}
+
+	/**
+	 * The latest proof's own attachment URL, only when it's actually an
+	 * image — same wp_attachment_is_image() check the public proof-
+	 * approval page's own REST payload already makes
+	 * (class-proof-approval-controller.php::get_proof()) — so a PDF
+	 * proof correctly renders no thumbnail in the email rather than a
+	 * broken/empty one.
+	 */
+	private static function latest_proof_image_url( int $custom_order_id ): string {
+		$proof_ids = self::get_for_custom_order( $custom_order_id );
+		if ( ! $proof_ids ) {
+			return '';
+		}
+
+		$file_id = (int) get_post_meta( $proof_ids[0], self::FILE_ID, true );
+		if ( ! $file_id || ! wp_attachment_is_image( $file_id ) ) {
+			return '';
+		}
+
+		return (string) wp_get_attachment_url( $file_id );
 	}
 }
 

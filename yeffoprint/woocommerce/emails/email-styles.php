@@ -451,6 +451,78 @@ a.yp-payment-cta-button {
 	margin: 12px 0 0;
 }
 
+/* Proof-ready / proof-reminder CTA card (customer-proof-notice.php) —
+   same "Amount due" card language as .yp-payment-cta above, adapted for
+   a proof link instead of a price. Direct report, with a screenshot,
+   that these two emails rendered as bare unstyled text while every
+   other outgoing email already got the branded card treatment. Direct
+   follow-up ("any way to attach an image of their proof to that email?
+   Or better, display it inline?"): the proof image renders straight
+   into this card as a plain <img> pointing at the same media-library
+   file the admin already uploaded and the public approval page already
+   reads — never an attachment. customer-proof-notice.php only emits
+   the <img> tag when the latest proof is an image; a PDF proof just
+   skips it, no broken/empty image. */
+table.yp-proof-cta {
+	margin: 2px 0 22px;
+}
+
+table.yp-proof-cta > tbody > tr > td {
+	background-color: #FDF1F8;
+	border: 1px solid #F3C7E1;
+	border-radius: 10px;
+	padding: 20px;
+	text-align: center;
+}
+
+.yp-proof-cta-label {
+	display: block;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 0 0 12px;
+}
+
+img.yp-proof-cta-image {
+	display: block;
+	max-width: 220px;
+	width: 100%;
+	height: auto;
+	margin: 0 auto 14px;
+	border: 1px solid #F3C7E1;
+	border-radius: 8px;
+}
+
+.yp-proof-cta-title {
+	display: block;
+	font-size: 16px;
+	font-weight: 700;
+	color: <?php echo esc_attr( $text ); ?>;
+	font-family: <?php echo $font_family; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+	margin: 0 0 14px;
+}
+
+a.yp-proof-cta-button {
+	display: inline-block;
+	background-color: <?php echo esc_attr( $link_color ); ?>;
+	color: #FFFFFF !important;
+	font-weight: 700;
+	font-size: 15px;
+	text-decoration: none;
+	padding: 13px 30px;
+	border-radius: 8px;
+	letter-spacing: .01em;
+}
+
+.yp-proof-cta-sub {
+	display: block;
+	font-size: 11.5px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 12px 0 0;
+}
+
 /* YeffoBot notice card (class-telegram-order-email-badge.php) — bigger
    than .yp-email-callout above since it carries the mascot image
    alongside two explained ways to reach the bot. Direct feedback on an
