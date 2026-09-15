@@ -52,6 +52,92 @@ class YeffoPrint_Admin_Order_Controller {
 			'callback'            => [ $this, 'send_to_printer' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/orders', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'list_orders' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+	}
+
+	/**
+	 * Order History (direct request: "a way of pulling up previous
+	 * orders... searchable and should also just list out previous
+	 * orders that I can go through... paginated as I expect a lot of
+	 * orders"). Every WooCommerce order regardless of status — unlike
+	 * the Dashboard's Pending Orders panel (class-admin-dashboard-
+	 * controller.php), which only ever queries Processing/In Production
+	 * — reusing this same controller's own detail_payload() for the
+	 * click-through drawer rather than building a second detail
+	 * endpoint.
+	 *
+	 * Search goes through \WC_Data_Store::load('order')->search_orders(),
+	 * the exact same method the classic wp-admin Orders screen's own
+	 * search box calls — it matches billing/shipping address, name,
+	 * email, phone, order item names, and a bare numeric term against
+	 * the order ID itself. That call has no pagination or status
+	 * filtering of its own, so its id list is handed to wc_get_orders()
+	 * as `post__in` (an unmapped WC_Order_Query arg that passes straight
+	 * through to the underlying WP_Query, same as any native WP_Query
+	 * arg) — letting one real WP_Query apply the status filter and
+	 * pagination together, rather than slicing/filtering the id array
+	 * by hand in PHP.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function list_orders( \WP_REST_Request $request ) {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return new \WP_Error( 'yeffoprint_woocommerce_inactive', __( 'WooCommerce is not active.', 'yeffoprint-core' ), [ 'status' => 500 ] );
+		}
+
+		$search   = trim( (string) $request->get_param( 'search' ) );
+		$status   = sanitize_key( (string) $request->get_param( 'status' ) );
+		$page     = max( 1, (int) $request->get_param( 'page' ) );
+		$per_page = min( 100, max( 1, (int) ( $request->get_param( 'per_page' ) ?: 20 ) ) );
+
+		$args = [
+			'paginate' => true,
+			'limit'    => $per_page,
+			'page'     => $page,
+			'orderby'  => 'date',
+			'order'    => 'DESC',
+		];
+
+		if ( '' !== $status && array_key_exists( $status, $this->status_options() ) ) {
+			$args['status'] = $status;
+		}
+
+		if ( '' !== $search ) {
+			$order_ids = \WC_Data_Store::load( 'order' )->search_orders( wc_clean( $search ) );
+			if ( empty( $order_ids ) ) {
+				return rest_ensure_response( [ 'orders' => [], 'total' => 0, 'max_num_pages' => 0, 'page' => $page ] );
+			}
+			$args['post__in'] = $order_ids;
+		}
+
+		$result = wc_get_orders( $args );
+
+		return rest_ensure_response( [
+			'orders'        => array_map( [ $this, 'summary_payload' ], $result->orders ),
+			'total'         => $result->total,
+			'max_num_pages' => $result->max_num_pages,
+			'page'          => $page,
+		] );
+	}
+
+	/** A lighter row shape for the Order History list — detail_payload() (full items/shipping/Shippo panel data) only loads once a row is actually clicked open. */
+	private function summary_payload( \WC_Order $order ): array {
+		return [
+			'id'             => $order->get_id(),
+			'number'         => $order->get_order_number(),
+			'status'         => $order->get_status(),
+			'status_label'   => wc_get_order_status_name( $order->get_status() ),
+			'date'           => $order->get_date_created() ? $order->get_date_created()->date( 'c' ) : null,
+			'customer_name'  => trim( $order->get_formatted_billing_full_name() ),
+			'customer_email' => $order->get_billing_email(),
+			'total'          => (float) $order->get_total(),
+			'item_count'     => $order->get_item_count(),
+		];
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */

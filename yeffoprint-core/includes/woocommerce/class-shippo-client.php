@@ -259,7 +259,7 @@ class YeffoPrint_Shippo_Client {
 	 * pick from — so it's passed in here instead of re-derived from a
 	 * response that never reliably had it.
 	 *
-	 * @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string}|\WP_Error
+	 * @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string,transaction_id:string}|\WP_Error
 	 */
 	public function purchase_label( string $rate_id, string $carrier_id = '', string $carrier_label = '' ) {
 		$response = $this->call( 'POST', '/transactions/', [
@@ -288,7 +288,33 @@ class YeffoPrint_Shippo_Client {
 			'carrier_id'      => $carrier_id,
 			'carrier_label'   => '' !== $carrier_label ? $carrier_label : YeffoPrint_Order_Tracking::carrier_label( $carrier_id ),
 			'label_url'       => (string) ( $response['label_url'] ?? '' ),
+			'transaction_id'  => (string) ( $response['object_id'] ?? '' ),
 		];
+	}
+
+	/**
+	 * Voids a purchased label via Shippo's /refunds/ endpoint — direct
+	 * request: "keep both active by default, give me a way to void it if
+	 * necessary... in case a package goes missing." Shippo processes a
+	 * refund asynchronously: this call only ever gets back PENDING (queued
+	 * for review) or, for some carriers, an immediate SUCCESS/ERROR — the
+	 * caller (YeffoPrint_Order_Tracking::void_shippo_label()) stores
+	 * whatever status comes back rather than waiting on it, since there's
+	 * no synchronous "did it actually void" answer to have.
+	 *
+	 * @return array{status:string}|\WP_Error
+	 */
+	public function refund_label( string $transaction_id ) {
+		$response = $this->call( 'POST', '/refunds/', [
+			'transaction' => $transaction_id,
+			'async'       => false,
+		] );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return [ 'status' => strtoupper( (string) ( $response['status'] ?? 'PENDING' ) ) ];
 	}
 
 	/** Union of two raw-rate-object lists by `object_id`, later list's entry winning on a collision — see get_rates()'s own docblock note above. */

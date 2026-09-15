@@ -163,6 +163,19 @@ class YeffoPrint_Admin_App {
 			// own copy back too (class-admin-custom-order-controller.php),
 			// used to build that one order's own Status <select>.
 			'customOrderStatuses'    => YeffoPrint_Custom_Order_Meta::STATUSES,
+			// Order History's status filter (direct request: "a way of
+			// pulling up previous orders... searchable and should also
+			// just list out previous orders") needs the full WooCommerce
+			// status list before any order has loaded, same reasoning as
+			// customOrderStatuses above — wc_get_order_statuses()'s own
+			// keys carry the 'wc-' prefix, stripped here to match
+			// WC_Order::get_status()'s unprefixed return value (same
+			// stripping class-admin-order-controller.php's own
+			// status_options() already does server-side per request).
+			'wcOrderStatuses'        => array_combine(
+				array_map( static fn( $key ) => preg_replace( '/^wc-/', '', $key ), array_keys( wc_get_order_statuses() ) ),
+				array_values( wc_get_order_statuses() )
+			),
 			// Manual order creation's address-verify/shipping-rate step
 			// (views/manual-order.js) needs this before any order exists to
 			// carry its own copy the way class-admin-order-controller.php's
@@ -197,7 +210,7 @@ class YeffoPrint_Admin_App {
 		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
 		// always finish loading (and registering) before app.js's own
 		// DOMContentLoaded-triggered first route() call needs them.
-		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'maintenance', 'pricing', 'orders', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order' ] as $view ) {
+		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'maintenance', 'pricing', 'orders', 'order-history', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order' ] as $view ) {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',

@@ -189,6 +189,29 @@
 	padding: var(--wp--preset--spacing--md);
 }
 
+/* Order History's whole-row click target (views/order-history.js) — the row itself opens the drawer, unlike Materials/Sizes' own record tables where only an explicit Edit action does. */
+.yp-row-clickable {
+	cursor: pointer;
+}
+
+.yp-row-clickable:hover td {
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--wp--preset--spacing--sm);
+	margin-top: var(--wp--preset--spacing--sm);
+}
+
+.yp-pagination__status {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
 /* ---------- Pills / chips (mirrors the storefront's own
    .yp-card__badge / .yp-spec-chip idiom) ---------- */
 
@@ -334,6 +357,90 @@
    (above) covers most of it, this closes the rest. */
 .yp-shippo-get-rates {
 	margin-top: 0.25rem;
+}
+
+/**
+ * Shippo purchased-labels list — direct report, with a screenshot: "the
+ * print button is just a link... this whole area is ugly." Each label
+ * is now a real row (carrier/tracking on one side, real buttons on the
+ * other) instead of a plain `<li>carrier — tracking — <a>Print</a></li>`
+ * bullet list.
+ */
+.yp-shippo-labels-list {
+	list-style: none;
+	margin: 0 0 0.85rem;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.yp-shippo-label-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.6rem 0.85rem;
+}
+
+.yp-shippo-label-row--voided {
+	opacity: 0.6;
+}
+
+.yp-shippo-label-row__info {
+	font-size: 0.85rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-shippo-label-row__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.yp-shippo-label-row__actions .wp-block-button__link {
+	padding: 0.35rem 0.85rem;
+	font-size: 0.78rem;
+}
+
+/**
+ * The Shippo purchase/void confirm dialogs (YP.confirmModal(), app.js)
+ * — direct request: "use modal windows that match the sites style when
+ * confirming... style the print button for the labels." Narrower than
+ * the default .yp-drawer--center width (600px, sized for the full order
+ * detail modal) since a yes/no confirmation never needs that much room.
+ */
+.yp-drawer--confirm .yp-drawer__panel {
+	width: min(420px, calc(100% - 2rem));
+}
+
+.yp-confirm-modal__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.6rem;
+	margin-top: 1.25rem;
+}
+
+/**
+ * A dedicated destructive-action button — same red already used for
+ * .yp-pill--crit, distinct from the brand-accent color every routine
+ * primary button (Purchase, Save) already uses, so a genuinely
+ * destructive confirm (Void a label) never looks like a routine one.
+ */
+.yp-button--danger {
+	background: #b3311c;
+	color: var(--wp--preset--color--white);
+	border: none;
+}
+
+.yp-button--danger:hover {
+	background: #8f2716;
+	color: var(--wp--preset--color--white);
 }
 
 .yp-field {

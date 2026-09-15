@@ -211,6 +211,53 @@
 	};
 
 	/**
+	 * A small styled confirm dialog, same `.yp-drawer` visual language as
+	 * every other modal in this app — direct request: "the pop up window
+	 * using the browser method is ugly. Can we use modal windows that
+	 * match the sites style when confirming." Replaces window.confirm()
+	 * wherever this app asks for a yes/no before a real, hard-to-undo
+	 * action (first use: the Shippo purchase/void confirmations).
+	 *
+	 * @param {Object} options {title, message, confirmLabel, danger, onConfirm}
+	 *   `danger` styles the confirm button as a destructive action
+	 *   (Void a label) rather than a routine one (Purchase a label).
+	 *   `onConfirm` only ever fires from the confirm button — Cancel,
+	 *   the backdrop, and Escape all just close the dialog, same as
+	 *   every other drawer.
+	 */
+	YP.confirmModal = function ( options ) {
+		var drawer = document.createElement( 'div' );
+		drawer.className = 'yp-drawer yp-drawer--center yp-drawer--confirm';
+		drawer.setAttribute( 'aria-hidden', 'true' );
+		drawer.innerHTML =
+			'<div class="yp-drawer__backdrop"></div>' +
+			'<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="' + YP.escapeAttr( options.title || 'Confirm' ) + '">' +
+				'<div class="yp-drawer__header"><span class="yp-drawer__title-group">' + YP.escapeHtml( options.title || 'Confirm' ) + '</span>' +
+					'<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">&times;</button>' +
+				'</div>' +
+				'<div class="yp-drawer__body">' +
+					'<p class="yp-panel__hint">' + YP.escapeHtml( options.message || '' ) + '</p>' +
+					'<div class="yp-confirm-modal__actions">' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-confirm-cancel>Cancel</button>' +
+						'<button type="button" class="wp-block-button__link ' + ( options.danger ? 'yp-button--danger' : 'is-style-accent' ) + '" data-yp-confirm-ok>' + YP.escapeHtml( options.confirmLabel || 'Confirm' ) + '</button>' +
+					'</div>' +
+				'</div>' +
+			'</div>';
+
+		document.body.appendChild( drawer );
+		YP.initDrawer( drawer );
+		YP.openDrawer( drawer );
+
+		drawer.querySelector( '[data-yp-confirm-cancel]' ).addEventListener( 'click', function () { YP.closeDrawer( drawer ); } );
+		drawer.querySelector( '[data-yp-confirm-ok]' ).addEventListener( 'click', function () {
+			YP.closeDrawer( drawer );
+			if ( options.onConfirm ) {
+				options.onConfirm();
+			}
+		} );
+	};
+
+	/**
 	 * One entry per planned section (docs/ARCHITECTURE.md's phase list).
 	 * `id`s with no matching `YP.views[id]` render the shared
 	 * placeholder view until their own phase ships. Nothing here is a
@@ -230,6 +277,7 @@
 		] },
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },
+			{ id: 'order-history', label: 'Order History' },
 			{ id: 'pricing', label: 'Pricing Rules' },
 			{ id: 'orders', label: 'Custom Orders' },
 			{ id: 'proofs', label: 'Proofs' },
@@ -1115,29 +1163,45 @@
 	 * something with the shippo API to replace it? ... I'd like to run
 	 * alongside it a bit." Comparing rates never charges anything on the
 	 * Shippo account; only clicking "Purchase" does, which the warning
-	 * text and the confirm() in bindShippoPanel() below both make explicit
-	 * before it fires.
+	 * text and the styled confirm dialog (YP.confirmModal(),
+	 * renderShippoRates() below) both make explicit before it fires.
+	 * "(Beta)" dropped from this panel's heading — direct request:
+	 * "we're live with shippo."
 	 */
 	/**
 	 * Direct request: "need the ability to go back and print the label
-	 * later." Renders every label already on order.shippo_labels
-	 * (class-admin-order-controller.php's detail_payload(), sourced from
-	 * YeffoPrint_Order_Tracking::get_shippo_labels()) as a plain reprint
-	 * list — separate from the "Label purchased" confirmation message
-	 * purchaseShippoLabel() below shows, which only exists for the
-	 * duration of the drawer session a label was bought in.
+	 * later" plus, in the same round, "the print button is just a
+	 * link... style the print button for the labels." Renders every
+	 * label ever purchased on this order (class-admin-order-controller.php's
+	 * detail_payload(), sourced from YeffoPrint_Order_Tracking::
+	 * get_shippo_labels()) as a real row with real buttons — separate
+	 * from the "Label purchased" confirmation message purchaseShippoLabel()
+	 * below shows, which only exists for the duration of the drawer
+	 * session a label was bought in.
+	 *
+	 * A voided label (direct request: "keep both active by default, give
+	 * me a way to void it if necessary") stays in this list rather than
+	 * disappearing — dimmed, with a "Voided" badge instead of the Void
+	 * button, so the order's full label history stays visible ("I'll
+	 * need to see the previous shipping information also").
 	 */
 	function shippoLabelsListHtml( labels ) {
 		if ( ! labels.length ) {
 			return '';
 		}
 		return (
-			'<div class="yp-panel__hint" style="margin:0 0 0.75rem;"><strong>Purchased labels</strong></div>' +
-			'<ul class="yp-shippo-labels-list" style="margin:0 0 0.75rem;padding-left:1.1rem;">' +
+			'<div class="yp-panel__hint" style="margin:0 0 0.5rem;"><strong>Purchased labels</strong></div>' +
+			'<ul class="yp-shippo-labels-list">' +
 				labels.map( function ( label ) {
 					return (
-						'<li>' + YP.escapeHtml( label.carrier_label ) + ' — ' + YP.escapeHtml( label.tracking_number ) +
-							' — <a href="' + YP.escapeAttr( label.label_url ) + '" target="_blank" rel="noopener">Print</a>' +
+						'<li class="yp-shippo-label-row' + ( label.voided ? ' yp-shippo-label-row--voided' : '' ) + '">' +
+							'<span class="yp-shippo-label-row__info">' + YP.escapeHtml( label.carrier_label ) + ' — ' + YP.escapeHtml( label.tracking_number ) + '</span>' +
+							'<span class="yp-shippo-label-row__actions">' +
+								'<a class="wp-block-button__link is-style-outline" href="' + YP.escapeAttr( label.label_url ) + '" target="_blank" rel="noopener">Print</a>' +
+								( label.voided
+									? '<span class="yp-pill yp-pill--crit">Voided</span>'
+									: '<button type="button" class="wp-block-button__link yp-button--danger" data-yp-shippo-void="' + YP.escapeAttr( label.tracking_number ) + '" data-yp-shippo-void-carrier="' + YP.escapeAttr( label.carrier_label ) + '">Void</button>' ) +
+							'</span>' +
 						'</li>'
 					);
 				} ).join( '' ) +
@@ -1149,7 +1213,7 @@
 		if ( ! order.shippo_configured ) {
 			return (
 				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
+					'<div class="yp-panel__head"><h2>Shippo</h2></div>' +
 					'<p class="yp-panel__hint">An independent shipping-label option — add an API token under Settings &rarr; Shipping to turn this on for every order.</p>' +
 				'</div>'
 			);
@@ -1159,7 +1223,7 @@
 
 		return (
 			'<div class="yp-panel" data-yp-shippo-panel>' +
-				'<div class="yp-panel__head"><h2>Shippo <span style="font-weight:400;color:var(--yp-muted,#767676);">(Beta)</span></h2></div>' +
+				'<div class="yp-panel__head"><h2>Shippo</h2></div>' +
 				'<div data-yp-shippo-labels>' + shippoLabelsListHtml( order.shippo_labels || [] ) + '</div>' +
 				'<p class="yp-panel__hint">Comparing rates below is free. Purchasing a label is a real charge against your Shippo balance/carrier accounts.</p>' +
 				'<div class="yp-shippo-dims">' +
@@ -1185,6 +1249,60 @@
 		panel.querySelector( '[data-yp-shippo-get-rates]' ).addEventListener( 'click', function () {
 			fetchShippoRates( order, panel );
 		} );
+
+		bindShippoVoidButtons( order, panel );
+	}
+
+	/**
+	 * Delegated onto the labels list itself (rather than bound once at
+	 * panel-open time) because that list's innerHTML is rebuilt after
+	 * every purchase or void — a plain addEventListener on each button
+	 * would only ever cover whatever buttons existed at the moment this
+	 * ran, missing every row rendered after it. Re-called after each
+	 * re-render instead of using true event delegation on a stable
+	 * ancestor, matching this file's existing style elsewhere (e.g.
+	 * renderRateList()'s own per-render rebinding).
+	 */
+	function bindShippoVoidButtons( order, panel ) {
+		panel.querySelectorAll( '[data-yp-shippo-void]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var trackingNumber = button.getAttribute( 'data-yp-shippo-void' );
+				var carrierLabel = button.getAttribute( 'data-yp-shippo-void-carrier' );
+				YP.confirmModal( {
+					title: 'Void this label?',
+					message: 'Void the ' + carrierLabel + ' label for tracking number ' + trackingNumber + '? This only stops this store from treating it as an active shipment — it does not affect any other label on this order, and does not guarantee the carrier actually cancels it.',
+					confirmLabel: 'Void Label',
+					danger: true,
+					onConfirm: function () {
+						voidShippoLabel( order, panel, trackingNumber, button );
+					}
+				} );
+			} );
+		} );
+	}
+
+	function voidShippoLabel( order, panel, trackingNumber, button ) {
+		button.disabled = true;
+		button.textContent = 'Voiding…';
+
+		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/shippo/void', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( { tracking_number: trackingNumber } )
+		} )
+			.then( function ( response ) {
+				order.shippo_labels = response.labels || [];
+				var labelsListEl = panel.querySelector( '[data-yp-shippo-labels]' );
+				if ( labelsListEl ) {
+					labelsListEl.innerHTML = shippoLabelsListHtml( order.shippo_labels );
+					bindShippoVoidButtons( order, panel );
+				}
+			} )
+			.catch( function ( error ) {
+				button.disabled = false;
+				button.textContent = 'Void';
+				window.alert( 'Couldn’t void this label: ' + error.message );
+			} );
 	}
 
 	function fetchShippoRates( order, panel ) {
@@ -1400,9 +1518,22 @@
 				return;
 			}
 			var rate = rates.filter( function ( r ) { return r.id === selected.value; } )[ 0 ];
-			if ( rate && window.confirm( 'Purchase this ' + rate.carrier_label + ' ' + rate.service + ' label for $' + rate.amount.toFixed( 2 ) + '? This charges your Shippo balance/carrier account immediately.' ) ) {
-				purchaseShippoLabel( order, panel, rate );
+			if ( ! rate ) {
+				return;
 			}
+			// Direct request: "the pop up window using the browser method
+			// is ugly. Can we use modal windows that match the sites
+			// style when confirming I want to purchase a label" —
+			// replaces the old window.confirm() with the shared styled
+			// dialog (YP.confirmModal(), app.js).
+			YP.confirmModal( {
+				title: 'Purchase this label?',
+				message: 'Purchase this ' + rate.carrier_label + ' ' + rate.service + ' label for $' + rate.amount.toFixed( 2 ) + '? This charges your Shippo balance/carrier account immediately.',
+				confirmLabel: 'Purchase Label',
+				onConfirm: function () {
+					purchaseShippoLabel( order, panel, rate );
+				}
+			} );
 		} );
 	}
 
@@ -1431,9 +1562,8 @@
 		} )
 			.then( function ( response ) {
 				resultEl.innerHTML =
-					'<p class="yp-panel__hint"><strong>Label purchased.</strong> Tracking: ' + YP.escapeHtml( response.label.tracking_number ) + ' (' + YP.escapeHtml( response.label.carrier_label ) + ')' +
-					( response.label.label_url ? ' — <a href="' + YP.escapeAttr( response.label.label_url ) + '" target="_blank" rel="noopener">Print label</a>' : '' ) +
-					'</p>';
+					'<p class="yp-panel__hint"><strong>Label purchased.</strong> Tracking: ' + YP.escapeHtml( response.label.tracking_number ) + ' (' + YP.escapeHtml( response.label.carrier_label ) + ')</p>' +
+					( response.label.label_url ? '<a class="wp-block-button__link is-style-outline" style="margin-top:0.5rem;" href="' + YP.escapeAttr( response.label.label_url ) + '" target="_blank" rel="noopener">Print Label</a>' : '' );
 				panel.querySelector( '[data-yp-shippo-rates]' ).innerHTML = '';
 				order.status = response.status;
 
@@ -1452,11 +1582,14 @@
 				order.shippo_labels = ( order.shippo_labels || [] ).concat( [ {
 					carrier_label:    response.label.carrier_label,
 					tracking_number:  response.label.tracking_number,
-					label_url:        response.label.label_url
+					label_url:        response.label.label_url,
+					transaction_id:   response.label.transaction_id,
+					voided:           false
 				} ] );
 				var labelsListEl = panel.querySelector( '[data-yp-shippo-labels]' );
 				if ( labelsListEl ) {
 					labelsListEl.innerHTML = shippoLabelsListHtml( order.shippo_labels );
+					bindShippoVoidButtons( order, panel );
 				}
 				// Status now lives in the grid's other column (see
 				// renderWcOrderDetail()'s two-column layout) — walking up
