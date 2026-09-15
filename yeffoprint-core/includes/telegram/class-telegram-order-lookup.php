@@ -38,6 +38,20 @@ class YeffoPrint_Telegram_Order_Lookup {
 		return absint( $ref );
 	}
 
+	/** One line per order for /orders — format_status() above is the full single-order detail view, this is the compact list-row version of the same information. */
+	public static function format_summary_line( \WC_Order $order ): string {
+		$date = $order->get_date_created();
+
+		return sprintf(
+			/* translators: 1: order number, 2: order status label, 3: formatted order total, 4: order date */
+			__( '%1$s — %2$s — %3$s (%4$s)', 'yeffoprint-core' ),
+			$order->get_order_number(),
+			wc_get_order_status_name( $order->get_status() ),
+			self::plain_total( $order ),
+			$date ? wp_date( get_option( 'date_format' ), $date->getTimestamp() ) : '—'
+		);
+	}
+
 	public static function format_status( \WC_Order $order ): string {
 		$lines   = [];
 		$lines[] = sprintf(
