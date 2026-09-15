@@ -57,10 +57,30 @@ class YeffoPrint_Proof_Meta {
 		}
 	}
 
+	/**
+	 * Direct report: staff attaching a corrected second proof while the
+	 * order was still `awaiting_approval` (the customer hadn't yet
+	 * clicked "Request changes" on the first one — a phone call, or
+	 * staff catching their own mistake) sent no email at all. The old
+	 * guard here only allowed this from `design_in_progress`/`proof_ready`
+	 * — a fresh order and a completed "Request changes" round trip — on
+	 * the assumption a proof is only ever attached from one of those two
+	 * states. That's true for the *first* proof, but staff can and do
+	 * attach a follow-up proof before the customer has responded to the
+	 * one already up for review. Denylisting the handful of states where
+	 * the design is genuinely finished (same set FEE_FREE_REORDER_
+	 * STATUSES already uses for "this design is done") instead of
+	 * allowlisting the pre-states covers every legitimate "staff just
+	 * attached a proof" case, including re-entering `awaiting_approval`
+	 * from itself — which is also exactly the reset AWAITING_APPROVAL_AT/
+	 * PROOF_REMINDER_STAGE below already need: a new proof means a new
+	 * 24h/48h reminder clock, not the old one still ticking against a
+	 * proof that's no longer current.
+	 */
 	private static function advance_status_to_awaiting_approval( int $custom_order_id ): void {
 		$current = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
 
-		if ( ! in_array( $current, [ 'design_in_progress', 'proof_ready' ], true ) ) {
+		if ( in_array( $current, [ 'approved', 'printing', 'shipped' ], true ) ) {
 			return;
 		}
 
