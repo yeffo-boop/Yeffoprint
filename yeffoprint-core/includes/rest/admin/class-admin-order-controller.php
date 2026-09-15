@@ -8,9 +8,12 @@
  * classic WooCommerce order screen. Read-only past status, same shape
  * as that controller's own save_status() — this never lets staff edit
  * line items, addresses, or payment details; anything beyond what's
- * exposed here (refunds, order notes, editing) is still the classic
- * screen's job, reached via this detail view's own "Open in WooCommerce"
- * link.
+ * exposed here (order notes, editing) is still the classic screen's
+ * job, reached via this detail view's own "Open in WooCommerce" link.
+ * Refunds (direct request) are the one exception — create_refund()
+ * below wraps wc_create_refund() the same way the classic order
+ * screen's own refund panel does, so a full/partial refund no longer
+ * requires leaving this app.
  *
  * get_formatted_meta_data() (WC_Order_Item's own method) is what
  * actually supplies every customization/quantity/template-selection
@@ -50,6 +53,12 @@ class YeffoPrint_Admin_Order_Controller {
 		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/send-to-printer', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'send_to_printer' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/refund', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'create_refund' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
@@ -191,6 +200,68 @@ class YeffoPrint_Admin_Order_Controller {
 		return rest_ensure_response( [ 'id' => $order->get_id(), 'status' => $order->get_status() ] );
 	}
 
+	/**
+	 * Wraps wc_create_refund() — the exact same entry point the classic
+	 * order screen's own "Refund" panel calls. `refund_via_gateway`
+	 * (only meaningful, and only ever offered by the frontend, when
+	 * detail_payload()'s own `refund_gateway_supported` came back true
+	 * for this order's payment method) is passed straight through as
+	 * wc_create_refund()'s `refund_payment` flag — when the gateway
+	 * doesn't support automatic refunds (this store's Manual/Venmo/
+	 * Zelle/Coinbase gateways, none of which declare 'refunds' support),
+	 * wc_create_refund() already knows to just record the refund without
+	 * attempting to contact a processor, so nothing extra is needed here
+	 * for that case.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function create_refund( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$params = $request->get_json_params() ?: [];
+		$amount = (float) ( $params['amount'] ?? 0 );
+		$reason = sanitize_text_field( (string) ( $params['reason'] ?? '' ) );
+		$via_gateway = ! empty( $params['refund_via_gateway'] );
+
+		if ( $amount <= 0 ) {
+			return new \WP_Error( 'yeffoprint_refund_invalid_amount', __( 'Enter an amount to refund.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$remaining = (float) $order->get_remaining_refund_amount();
+		if ( $amount > $remaining + 0.01 ) {
+			return new \WP_Error(
+				'yeffoprint_refund_too_much',
+				sprintf(
+					/* translators: %s: the remaining refundable amount as a plain "$12.34" string — this reads as plain text in the admin app's error UI, so it deliberately skips wc_price()'s own HTML-wrapped output */
+					__( 'That’s more than what’s left to refund ($%s).', 'yeffoprint-core' ),
+					number_format( $remaining, 2 )
+				),
+				[ 'status' => 400 ]
+			);
+		}
+
+		$refund = wc_create_refund( [
+			'order_id'       => $order->get_id(),
+			'amount'         => $amount,
+			'reason'         => $reason,
+			'refund_payment' => $via_gateway,
+		] );
+
+		if ( is_wp_error( $refund ) ) {
+			return $refund;
+		}
+
+		// Re-fetched rather than reusing $order — wc_create_refund()
+		// writes the new total/refund records straight to the DB via
+		// its own fresh order instance, so this one's in-memory props
+		// (get_remaining_refund_amount() in particular) would otherwise
+		// still reflect the pre-refund state.
+		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
+	}
+
 	/** @return \WC_Order|\WP_Error */
 	private function validate_order( int $order_id ) {
 		if ( ! function_exists( 'wc_get_order' ) ) {
@@ -273,7 +344,37 @@ class YeffoPrint_Admin_Order_Controller {
 			// real stored amounts; before that, YeffoPrint_Rewards::calculate_points() is a safe,
 			// read-only live estimate of what finalize_order() would compute right now.
 			'rewards'                  => $this->rewards_payload( $order ),
+			// Direct request: refund an order without leaving this app.
+			// `refund_gateway_supported` tells the frontend whether to
+			// even offer an "also refund via {gateway}" checkbox —
+			// this store's Manual/Venmo/Zelle/Coinbase gateways don't
+			// declare `WC_Payment_Gateway::supports('refunds')`, so a
+			// refund on one of those orders can only ever be a local
+			// record, never an automatic processor refund.
+			'total_refunded'            => (float) $order->get_total_refunded(),
+			'remaining_refund_amount'   => (float) $order->get_remaining_refund_amount(),
+			'refund_gateway_supported'  => $this->refund_gateway_supported( $order ),
+			'refunds'                   => array_map( static function ( \WC_Order_Refund $refund ): array {
+				return [
+					'id'     => $refund->get_id(),
+					'amount' => (float) $refund->get_amount(),
+					'reason' => $refund->get_reason(),
+					'date'   => $refund->get_date_created() ? $refund->get_date_created()->date( 'c' ) : null,
+				];
+			}, $order->get_refunds() ),
+			// Direct request: "add notes to customers so when I print
+			// their future orders I can refer to them" — keyed by
+			// billing email (YeffoPrint_Customer_Notes), so this works
+			// identically for a guest or a registered account, and the
+			// drawer can add a note right here without a trip to the
+			// separate Customers screen.
+			'customer_notes'            => YeffoPrint_Customer_Notes::get_notes( $order->get_billing_email() ),
 		];
+	}
+
+	private function refund_gateway_supported( \WC_Order $order ): bool {
+		$gateway = wc_get_payment_gateway_by_order( $order );
+		return $gateway instanceof \WC_Payment_Gateway && $gateway->supports( 'refunds' );
 	}
 
 	private function rewards_payload( \WC_Order $order ): array {

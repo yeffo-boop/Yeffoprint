@@ -278,6 +278,7 @@
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },
 			{ id: 'order-history', label: 'Order History' },
+			{ id: 'customers', label: 'Customers' },
 			{ id: 'pricing', label: 'Pricing Rules' },
 			{ id: 'orders', label: 'Custom Orders' },
 			{ id: 'proofs', label: 'Proofs' },
@@ -285,6 +286,7 @@
 			{ id: 'maintenance', label: 'Maintenance Subscribers' }
 		] },
 		{ group: 'Store', items: [
+			{ id: 'coupons', label: 'Coupons' },
 			{ id: 'rewards', label: 'Rewards' },
 			{ id: 'surcharge', label: 'Card Surcharge' },
 			{ id: 'settings', label: 'Settings' }
@@ -1054,12 +1056,21 @@
 				'<div data-yp-wc-status-error></div>' +
 			'</div>' +
 
+			// Direct request: "add notes to customers so when I print
+			// their future orders I can refer to them" — right under
+			// Status, at the top of the drawer, since staff need to
+			// see this before or while working the order, not after
+			// scrolling past everything else.
+			customerNotesPanelHtml( order ) +
+
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Items</h2></div>' +
 				wcOrderItemsHtml( order.items ) +
 				'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
 				'<p class="yp-panel__hint">' + wcOrderRewardsLine( order.rewards ) + '</p>' +
 			'</div>' +
+
+			refundPanelHtml( order ) +
 
 			wcOrderShippingLabelHtml( order ) +
 			shippoPanelHtml( order ) +
@@ -1077,6 +1088,216 @@
 		}
 
 		bindShippoPanel( order, bodyEl );
+		bindCustomerNotesPanel( order, bodyEl );
+		bindRefundPanel( order, bodyEl, drawer );
+	}
+
+	/**
+	 * Direct request: "add notes to customers so when I print their
+	 * future orders I can refer to them." Same email-keyed note history
+	 * as the Customers screen's own notes panel (views/customers.js) —
+	 * order.customer_notes (class-admin-order-controller.php's
+	 * detail_payload()) and this panel's own add/delete calls both read
+	 * and write YeffoPrint_Customer_Notes, so a note added from either
+	 * place immediately shows up in the other.
+	 */
+	function customerNotesPanelHtml( order ) {
+		var notes = order.customer_notes || [];
+		var list = notes.length
+			? '<div class="yp-customer-notes-list">' + notes.map( function ( note ) {
+				return (
+					'<div class="yp-customer-note">' +
+						'<div class="yp-customer-note__meta">' +
+							'<span>' + YP.escapeHtml( note.created_by_name ) + '</span>' +
+							'<span>' + YP.escapeHtml( new Date( note.created_at.replace( ' ', 'T' ) ).toLocaleString() ) + '</span>' +
+						'</div>' +
+						'<div class="yp-customer-note__text">' + YP.escapeHtml( note.note ) + '</div>' +
+						'<button type="button" class="yp-row-action" data-yp-delete-note="' + note.id + '">Delete</button>' +
+					'</div>'
+				);
+			} ).join( '' ) + '</div>'
+			: '<p class="yp-field__hint">No notes on this customer yet.</p>';
+
+		return (
+			'<div class="yp-panel yp-panel--compact" data-yp-notes-panel>' +
+				'<div class="yp-panel__head"><h2>Customer Notes</h2></div>' +
+				'<div data-yp-notes-list>' + list + '</div>' +
+				'<textarea class="yp-customer-note-input" data-yp-note-input placeholder="Add a note about this customer&hellip;" rows="2"></textarea>' +
+				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-note>Add Note</button>' +
+				'<div data-yp-note-error></div>' +
+			'</div>'
+		);
+	}
+
+	function bindCustomerNotesPanel( order, bodyEl ) {
+		var panel = bodyEl.querySelector( '[data-yp-notes-panel]' );
+		if ( ! panel ) {
+			return;
+		}
+
+		function bindDeleteButtons() {
+			panel.querySelectorAll( '[data-yp-delete-note]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					var noteId = button.getAttribute( 'data-yp-delete-note' );
+					YP.confirmModal( {
+						title: 'Delete this note?',
+						message: 'This can’t be undone.',
+						confirmLabel: 'Delete Note',
+						danger: true,
+						onConfirm: function () {
+							YP.request( yeffoprintAdminApp.restUrl + 'admin/customer-notes/' + noteId, { method: 'DELETE' } )
+								.then( function () {
+									button.closest( '.yp-customer-note' ).remove();
+									var listEl = panel.querySelector( '[data-yp-notes-list]' );
+									if ( listEl && ! listEl.querySelector( '.yp-customer-note' ) ) {
+										listEl.innerHTML = '<p class="yp-field__hint">No notes on this customer yet.</p>';
+									}
+								} )
+								.catch( function ( error ) {
+									window.alert( 'Couldn’t delete this note: ' + error.message );
+								} );
+						}
+					} );
+				} );
+			} );
+		}
+
+		panel.querySelector( '[data-yp-add-note]' ).addEventListener( 'click', function () {
+			var input = panel.querySelector( '[data-yp-note-input]' );
+			var errorEl = panel.querySelector( '[data-yp-note-error]' );
+			var addButton = panel.querySelector( '[data-yp-add-note]' );
+			var note = input.value.trim();
+			if ( ! note ) {
+				return;
+			}
+
+			addButton.disabled = true;
+			errorEl.innerHTML = '';
+
+			YP.request( yeffoprintAdminApp.restUrl + 'admin/customer-notes', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { email: order.customer_email, note: note } )
+			} )
+				.then( function ( notes ) {
+					addButton.disabled = false;
+					order.customer_notes = notes;
+					var listEl = panel.querySelector( '[data-yp-notes-list]' );
+					var refreshed = customerNotesPanelHtml( order );
+					// Swap only the inner list markup, not the whole
+					// panel — replacing the panel wholesale would also
+					// wipe out whatever the staff member had mid-typed
+					// in the textarea a moment from now.
+					var temp = document.createElement( 'div' );
+					temp.innerHTML = refreshed;
+					listEl.innerHTML = temp.querySelector( '[data-yp-notes-list]' ).innerHTML;
+					input.value = '';
+					bindDeleteButtons();
+				} )
+				.catch( function ( error ) {
+					addButton.disabled = false;
+					errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
+		} );
+
+		bindDeleteButtons();
+	}
+
+	/**
+	 * Direct request: refund an order without leaving this app. Mirrors
+	 * the classic order screen's own refund panel — an amount (defaults
+	 * to whatever's still refundable), an optional reason, and, only
+	 * when this order's payment method actually supports it
+	 * (order.refund_gateway_supported — WooCommerce Payments does,
+	 * this store's Manual/Venmo/Zelle/Coinbase gateways don't), a
+	 * checkbox to also attempt a real refund through that processor
+	 * rather than just recording one locally.
+	 */
+	function refundPanelHtml( order ) {
+		var refundsList = ( order.refunds || [] ).length
+			? '<div class="yp-list-rows">' + order.refunds.map( function ( refund ) {
+				return (
+					'<div class="yp-list-row">' +
+						'<div class="yp-list-row__text">' +
+							'<span class="t">$' + refund.amount.toFixed( 2 ) + '</span>' +
+							'<span class="s">' + ( refund.reason ? YP.escapeHtml( refund.reason ) + ' — ' : '' ) + ( refund.date ? new Date( refund.date ).toLocaleDateString() : '' ) + '</span>' +
+						'</div>' +
+					'</div>'
+				);
+			} ).join( '' ) + '</div>'
+			: '';
+
+		var remaining = order.remaining_refund_amount || 0;
+		var form = remaining > 0
+			? (
+				'<div class="yp-form__row">' +
+					'<div class="yp-field"><label for="yp-refund-amount">Amount</label><input type="number" step="0.01" min="0.01" max="' + remaining.toFixed( 2 ) + '" id="yp-refund-amount" data-yp-refund-amount value="' + remaining.toFixed( 2 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-refund-reason">Reason (optional)</label><input type="text" id="yp-refund-reason" data-yp-refund-reason /></div>' +
+				'</div>' +
+				( order.refund_gateway_supported
+					? '<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-refund-gateway" data-yp-refund-gateway checked /><label for="yp-refund-gateway">Also refund through ' + YP.escapeHtml( order.payment_method_title || 'the payment processor' ) + '</label></div>'
+					: '<p class="yp-field__hint">' + YP.escapeHtml( order.payment_method_title || 'This order’s payment method' ) + ' doesn’t support automatic refunds — this only records the refund here; send the money back to the customer yourself.</p>' ) +
+				'<button type="button" class="wp-block-button__link yp-button--danger" data-yp-refund-submit>Refund Order</button>' +
+				'<div data-yp-refund-error></div>'
+			)
+			: '<p class="yp-field__hint">Nothing left to refund on this order.</p>';
+
+		return (
+			'<div class="yp-panel yp-panel--compact" data-yp-refund-panel>' +
+				'<div class="yp-panel__head"><h2>Refund</h2></div>' +
+				'<p class="yp-panel__hint">Total refunded so far: $' + ( order.total_refunded || 0 ).toFixed( 2 ) + ' of $' + order.total.toFixed( 2 ) + '</p>' +
+				refundsList +
+				form +
+			'</div>'
+		);
+	}
+
+	function bindRefundPanel( order, bodyEl, drawer ) {
+		var panel = bodyEl.querySelector( '[data-yp-refund-panel]' );
+		var submitButton = panel ? panel.querySelector( '[data-yp-refund-submit]' ) : null;
+		if ( ! submitButton ) {
+			return;
+		}
+
+		submitButton.addEventListener( 'click', function () {
+			var amount = parseFloat( panel.querySelector( '[data-yp-refund-amount]' ).value ) || 0;
+			var reason = panel.querySelector( '[data-yp-refund-reason]' ).value;
+			var gatewayCheckbox = panel.querySelector( '[data-yp-refund-gateway]' );
+			var viaGateway = gatewayCheckbox ? gatewayCheckbox.checked : false;
+			var errorEl = panel.querySelector( '[data-yp-refund-error]' );
+
+			if ( amount <= 0 ) {
+				errorEl.innerHTML = '<p class="yp-form__error">Enter an amount to refund.</p>';
+				return;
+			}
+
+			YP.confirmModal( {
+				title: 'Refund this order?',
+				message: 'Refund $' + amount.toFixed( 2 ) + ' on this order?' + ( viaGateway ? ' This will attempt a real refund through ' + ( order.payment_method_title || 'the payment processor' ) + '.' : ' This only records the refund — you’ll need to send the money back yourself.' ),
+				confirmLabel: 'Refund Order',
+				danger: true,
+				onConfirm: function () {
+					submitButton.disabled = true;
+					submitButton.textContent = 'Refunding…';
+					errorEl.innerHTML = '';
+
+					YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/refund', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( { amount: amount, reason: reason, refund_via_gateway: viaGateway } )
+					} )
+						.then( function ( updated ) {
+							renderWcOrderDetail( updated, drawer, bodyEl );
+							loadDashboard();
+						} )
+						.catch( function ( error ) {
+							submitButton.disabled = false;
+							submitButton.textContent = 'Refund Order';
+							errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+						} );
+				}
+			} );
+		} );
 	}
 
 	/**
