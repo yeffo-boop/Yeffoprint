@@ -1418,7 +1418,10 @@
 						'<li class="yp-shippo-label-row' + ( label.voided ? ' yp-shippo-label-row--voided' : '' ) + '">' +
 							'<span class="yp-shippo-label-row__info">' + YP.escapeHtml( label.carrier_label ) + ' — ' + YP.escapeHtml( label.tracking_number ) + '</span>' +
 							'<span class="yp-shippo-label-row__actions">' +
-								'<a class="wp-block-button__link is-style-outline" href="' + YP.escapeAttr( label.label_url ) + '" target="_blank" rel="noopener">Print</a>' +
+								// A button, not a plain <a target="_blank"> — printLabelUrl()
+								// below needs a real click handler to open the tab itself
+								// (see that function's own docblock for why).
+								'<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-print="' + YP.escapeAttr( label.label_url ) + '">Print</button>' +
 								( label.voided
 									? '<span class="yp-pill yp-pill--crit">Voided</span>'
 									: '<button type="button" class="wp-block-button__link yp-button--danger" data-yp-shippo-void="' + YP.escapeAttr( label.tracking_number ) + '" data-yp-shippo-void-carrier="' + YP.escapeAttr( label.carrier_label ) + '">Void</button>' ) +
@@ -1428,6 +1431,70 @@
 				} ).join( '' ) +
 			'</ul>'
 		);
+	}
+
+	/**
+	 * Direct request: "when I hit print on a shipping label... anyway to
+	 * make it automatically print without a new window? Or at least when
+	 * the new window opens it automatically has the print dialog open?"
+	 * A label PDF is hosted on Shippo's own domain, so a plain
+	 * `window.open( url )` tab can't be scripted afterward — calling
+	 * `.print()` on a cross-origin window is blocked by every browser,
+	 * for the same reason no website can silently print anything at all
+	 * without at least the OS/browser's own print dialog appearing (that
+	 * restriction can't be worked around from here; it's not this app
+	 * withholding it).
+	 *
+	 * The reliable middle ground: open a blank tab ourselves (same-origin,
+	 * since we just created it), write our own HTML into it with the
+	 * label loaded in an <iframe>, and let the browser's built-in PDF
+	 * viewer load it. The <iframe> *element* stays same-origin to our
+	 * script even though its content doesn't — only reaching into the
+	 * PDF's own contents would be blocked — so once it fires its `load`
+	 * event, `iframe.contentWindow.print()` still works and brings up the
+	 * print dialog automatically, no manual click needed once the tab
+	 * opens.
+	 */
+	function printLabelUrl( url ) {
+		var printWindow = window.open( '', '_blank', 'noopener' );
+		if ( ! printWindow ) {
+			// Popup blocked — fall back to the old direct-open behavior
+			// rather than silently doing nothing.
+			window.open( url, '_blank', 'noopener' );
+			return;
+		}
+
+		printWindow.document.write(
+			'<!doctype html><html><head><title>Print Shipping Label</title>' +
+			'<style>html,body{margin:0;height:100%;}iframe{border:0;width:100%;height:100%;}</style>' +
+			'</head><body><iframe src="' + YP.escapeAttr( url ) + '"></iframe></body></html>'
+		);
+		printWindow.document.close();
+
+		var iframe = printWindow.document.querySelector( 'iframe' );
+		iframe.addEventListener( 'load', function () {
+			try {
+				printWindow.focus();
+				iframe.contentWindow.print();
+			} catch ( error ) {
+				// Some browser/PDF-viewer combinations still refuse a scripted
+				// print — the tab is open and showing the label either way, so
+				// printing it manually (Ctrl/Cmd+P) works exactly as before.
+			}
+		} );
+	}
+
+	/**
+	 * Delegated/re-bound the same way bindShippoVoidButtons() documents —
+	 * the labels list is rebuilt after every purchase or void, so this is
+	 * called again at each of those points rather than bound once.
+	 */
+	function bindShippoPrintButtons( panel ) {
+		panel.querySelectorAll( '[data-yp-shippo-print]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				printLabelUrl( button.getAttribute( 'data-yp-shippo-print' ) );
+			} );
+		} );
 	}
 
 	function shippoPanelHtml( order ) {
@@ -1472,6 +1539,7 @@
 		} );
 
 		bindShippoVoidButtons( order, panel );
+		bindShippoPrintButtons( panel );
 	}
 
 	/**
@@ -1517,6 +1585,7 @@
 				if ( labelsListEl ) {
 					labelsListEl.innerHTML = shippoLabelsListHtml( order.shippo_labels );
 					bindShippoVoidButtons( order, panel );
+					bindShippoPrintButtons( panel );
 				}
 			} )
 			.catch( function ( error ) {
@@ -1784,18 +1853,24 @@
 			.then( function ( response ) {
 				resultEl.innerHTML =
 					'<p class="yp-panel__hint"><strong>Label purchased.</strong> Tracking: ' + YP.escapeHtml( response.label.tracking_number ) + ' (' + YP.escapeHtml( response.label.carrier_label ) + ')</p>' +
-					( response.label.label_url ? '<a class="wp-block-button__link is-style-outline" style="margin-top:0.5rem;" href="' + YP.escapeAttr( response.label.label_url ) + '" target="_blank" rel="noopener">Print Label</a>' : '' );
+					( response.label.label_url ? '<button type="button" class="wp-block-button__link is-style-outline" style="margin-top:0.5rem;" data-yp-shippo-print="' + YP.escapeAttr( response.label.label_url ) + '">Print Label</button>' : '' );
 				panel.querySelector( '[data-yp-shippo-rates]' ).innerHTML = '';
 				order.status = response.status;
 
 				// Direct request: "can it automatically open the label in a new tab to
-				// print?" — same URL the "Print label" link above already points to, just
-				// opened immediately instead of waiting for a click. Browsers only allow
-				// window.open() unprompted from a real click handler, which this is (the
-				// "Purchase Selected Label" click that kicked off this request).
+				// print?", later refined to "make it automatically print without a new
+				// window? Or at least when the new window opens it automatically has
+				// the print dialog open?" — printLabelUrl() opens the tab itself *and*
+				// triggers the print dialog once the label finishes loading, rather than
+				// just opening the raw PDF url. Called immediately instead of waiting for
+				// a click, same as before — browsers only allow window.open() unprompted
+				// from a real click handler, which this still is (the "Purchase Selected
+				// Label" click that kicked off this request).
 				if ( response.label.label_url ) {
-					window.open( response.label.label_url, '_blank', 'noopener' );
+					printLabelUrl( response.label.label_url );
 				}
+
+				bindShippoPrintButtons( panel ); // The "Print Label" button just inserted above.
 
 				// Direct request: "need the ability to go back and print the label
 				// later." Folds the new label into the reprint list (shippoLabelsListHtml())
@@ -1811,6 +1886,7 @@
 				if ( labelsListEl ) {
 					labelsListEl.innerHTML = shippoLabelsListHtml( order.shippo_labels );
 					bindShippoVoidButtons( order, panel );
+					bindShippoPrintButtons( panel );
 				}
 				// Status now lives in the grid's other column (see
 				// renderWcOrderDetail()'s two-column layout) — walking up
