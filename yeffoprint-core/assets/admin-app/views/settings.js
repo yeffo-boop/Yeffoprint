@@ -129,6 +129,14 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Away Mode</h2></div>' +
+					'<p class="yp-panel__hint">For the rare stretch when production is paused (vacation, out of town). Turning this on shows a delay notice on the storefront, at checkout, and in the order confirmation email — off by default, since this only fires occasionally.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-away-enabled"' + ( settings.away_mode_enabled ? ' checked' : '' ) + ' /><label for="yp-set-away-enabled">Show a delay notice everywhere</label></div>' +
+					'<div class="yp-field"><label for="yp-set-away-return">Resuming on</label><input type="date" id="yp-set-away-return" value="' + YP.escapeAttr( settings.away_mode_return_date ) + '" /></div>' +
+					'<p class="yp-panel__hint">Shown to customers exactly as this date — the notice automatically stops showing itself the day after.</p>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Label Configurator</h2></div>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-live-preview"' + ( settings.live_preview_enabled ? ' checked' : '' ) + ' /><label for="yp-set-live-preview">Show customers the live, per-keystroke text preview on Label View</label></div>' +
 					'<p class="yp-panel__hint">Turn off while adjusting field alignment on a Template so customers don’t see not-yet-correct positioning. Everything else keeps working either way.</p>' +
@@ -335,6 +343,8 @@
 				contact_recipient_email: viewEl.querySelector( '#yp-set-contact-email' ).value,
 				splash_enabled: viewEl.querySelector( '#yp-set-splash-enabled' ).checked,
 				splash_image_id: parseInt( viewEl.querySelector( '[data-yp-splash-id]' ).value, 10 ) || 0,
+				away_mode_enabled: viewEl.querySelector( '#yp-set-away-enabled' ).checked,
+				away_mode_return_date: viewEl.querySelector( '#yp-set-away-return' ).value,
 				dashboard_due_date_days: parseInt( viewEl.querySelector( '#yp-set-due-date' ).value, 10 ) || 7,
 				maintenance_payment_link: viewEl.querySelector( '#yp-set-maint-link' ).value,
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,

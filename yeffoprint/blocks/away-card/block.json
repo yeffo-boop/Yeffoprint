@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/away-card",
+	"title": "Away Mode Homepage Card",
+	"category": "theme",
+	"description": "Renders a homepage announcement card when Away Mode is enabled (Dashboard → YeffoPrint → Settings → Away Mode).",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}

@@ -159,6 +159,21 @@ class YeffoPrint_Admin_Menu {
 	const SPLASH_IMAGE_ID_OPTION = 'yeffoprint_splash_image_id';
 
 	/**
+	 * Direct request: "sometimes I am away from work or out of town and
+	 * printing pauses, can you mockup some ways we could notify people
+	 * that there may be a delay on their orders? It would have to be
+	 * something I enable because it doesn't happen frequently, I could
+	 * put in a return date." Mocked up first as an Artifact (storefront
+	 * top bar, homepage card, checkout notice, confirmation email) and
+	 * approved before implementation. Off by default — nothing shows
+	 * anywhere until both fields are set. See away_mode() below, the one
+	 * place that decides "is this actually on and configured right now"
+	 * for every one of those four renderers.
+	 */
+	const AWAY_MODE_ENABLED_OPTION     = 'yeffoprint_away_mode_enabled';
+	const AWAY_MODE_RETURN_DATE_OPTION = 'yeffoprint_away_mode_return_date';
+
+	/**
 	 * Also read by YeffoPrint_Dashboard_Widgets (includes/admin/class-
 	 * dashboard-widgets.php) — same reasoning as the options above.
 	 * Direct request: how many days after an order/custom-order-request
@@ -1155,6 +1170,42 @@ class YeffoPrint_Admin_Menu {
 		}
 
 		return $active;
+	}
+
+	/**
+	 * Single gate every Away Mode renderer (storefront top bar, homepage
+	 * card, checkout notice, confirmation email) calls instead of
+	 * reading the two options directly — same "off/unconfigured means
+	 * null, callers just early-return" shape as active_promo_banners()
+	 * above. Returns null when the flag is off, the date is blank, the
+	 * date fails to parse, or the date has already passed — "auto-hides
+	 * itself the day after this date," so an admin never has to
+	 * remember to switch it back off on return.
+	 *
+	 * @return array{return_date:string, return_label:string}|null
+	 */
+	public static function away_mode(): ?array {
+		if ( ! get_option( self::AWAY_MODE_ENABLED_OPTION, false ) ) {
+			return null;
+		}
+
+		$raw       = trim( (string) get_option( self::AWAY_MODE_RETURN_DATE_OPTION, '' ) );
+		$timestamp = $raw ? strtotime( $raw ) : false;
+		if ( ! $timestamp ) {
+			return null;
+		}
+
+		// Date-only comparison (not timestamp-exact) — "away until Mar 18"
+		// should still show on Mar 18 itself, only disappearing once
+		// that day has fully passed.
+		if ( strtotime( 'today' ) > strtotime( gmdate( 'Y-m-d', $timestamp ) ) ) {
+			return null;
+		}
+
+		return [
+			'return_date'  => $raw,
+			'return_label' => date_i18n( get_option( 'date_format' ), $timestamp ),
+		];
 	}
 
 	public function render_tracking_section_intro(): void {

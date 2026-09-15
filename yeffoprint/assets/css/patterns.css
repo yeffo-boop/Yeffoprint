@@ -1200,6 +1200,62 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
+/**
+ * Away Mode's homepage card (blocks/away-card) — the more visible
+ * companion to blocks/away-bar's site-wide top strip, both approved
+ * together from the same mockup ("let's implement all of them!").
+ * Deliberately its own warm/amber tone, not the CMY promo banner's
+ * palette (.yp-promo below) — an operational notice, not a marketing
+ * banner, sitting in the same slot right after it.
+ */
+.yp-away-card {
+	display: flex;
+	align-items: center;
+	gap: var(--wp--preset--spacing--sm);
+	max-width: 1200px;
+	margin: var(--wp--preset--spacing--md) auto 0 !important;
+	padding: 1.1rem 1.4rem;
+	background: #FBF0DB;
+	border: 1px solid #EFDCAE;
+	border-radius: var(--wp--custom--radius--card);
+}
+
+.yp-away-card__icon {
+	flex-shrink: 0;
+	width: 42px;
+	height: 42px;
+	border-radius: var(--wp--custom--radius--control);
+	background: #B5790A;
+	color: var(--wp--preset--color--white);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.15rem;
+}
+
+.yp-away-card__headline {
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 1.05rem;
+	font-weight: 700;
+	margin: 0 0 0.2rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-away-card__body {
+	font-size: 0.9rem;
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal);
+	margin: 0;
+}
+
+@media (max-width: 600px) {
+	.yp-away-card {
+		flex-direction: column;
+		align-items: flex-start;
+		text-align: left;
+	}
+}
+
 /* ---------- Homepage promo banner (blocks/promo-banner) ----------
    Dashboard → YeffoPrint → Settings → Homepage Promo. One set of rules
    for all 12 seasonal themes (YeffoPrint_Promo_Themes) — render.php

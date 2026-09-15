@@ -692,6 +692,8 @@ add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/gallery-toolbar' ) );
 	register_block_type( get_theme_file_path( 'blocks/announcement-bar' ) );
 	register_block_type( get_theme_file_path( 'blocks/promo-banner' ) );
+	register_block_type( get_theme_file_path( 'blocks/away-bar' ) );
+	register_block_type( get_theme_file_path( 'blocks/away-card' ) );
 	register_block_type( get_theme_file_path( 'blocks/label-designer-choice' ) );
 } );
 
