@@ -42,6 +42,12 @@ class YeffoPrint_Admin_Shippo_Controller {
 			'callback'            => [ $this, 'purchase_label' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/shippo/void', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'void_label' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */
@@ -117,13 +123,96 @@ class YeffoPrint_Admin_Shippo_Controller {
 			return $label;
 		}
 
-		YeffoPrint_Order_Tracking::record_shippo_label( $order, $label['tracking_number'], $label['carrier_id'], $label['label_url'] );
+		// Direct request: "The site would need to send a new tracking
+		// notification if I generate a second label for an order." An
+		// order still moving toward Shipped picks this label up for
+		// free via class-order-shipment-status.php's own
+		// maybe_advance_to_shipped() hook on $order->save() below — but
+		// an order *already* Shipped has nowhere further to transition
+		// into, so that hook never fires again for a second label on
+		// the same order. Captured before record_shippo_label()/save()
+		// below change anything, then acted on after, so a fresh label
+		// on an already-shipped order always gets its own notification.
+		$was_already_shipped = $order->has_status( YeffoPrint_Order_Shipment_Status::STATUS );
+
+		YeffoPrint_Order_Tracking::record_shippo_label( $order, $label['tracking_number'], $label['carrier_id'], $label['label_url'], $label['transaction_id'] );
 		$order->save();
+
+		if ( $was_already_shipped ) {
+			$this->resend_shipped_email( $order );
+		}
 
 		return rest_ensure_response( [
 			'label'  => $label,
 			'id'     => $order->get_id(),
 			'status' => $order->get_status(),
+		] );
+	}
+
+	/**
+	 * Manually re-triggers the "Shipped" customer email without a status
+	 * transition — see class-email-customer-shipped-order.php's own
+	 * trigger(), which only ever needs an order (a real status change
+	 * isn't a precondition, it just sets up $this->object/$this->recipient
+	 * and calls send_notification()). Registered under the semantic id
+	 * 'customer_shipped_order' (class-order-shipped-email.php) rather
+	 * than a stock WooCommerce class name — there's no core email at
+	 * that key to collide with, so a plain array lookup is enough. A
+	 * missing registry entry (WooCommerce mailer not yet booted, or the
+	 * email class disabled by a filter) is a best-effort no-op: the
+	 * label purchase itself already succeeded and shouldn't fail over a
+	 * notification.
+	 */
+	private function resend_shipped_email( \WC_Order $order ): void {
+		if ( ! function_exists( 'WC' ) ) {
+			return;
+		}
+		$emails = WC()->mailer()->get_emails();
+		if ( isset( $emails['customer_shipped_order'] ) ) {
+			$emails['customer_shipped_order']->trigger( $order->get_id(), $order );
+		}
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function void_label( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$client = $this->client();
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
+		$params          = $request->get_json_params() ?: [];
+		$tracking_number = sanitize_text_field( (string) ( $params['tracking_number'] ?? '' ) );
+		if ( '' === $tracking_number ) {
+			return new \WP_Error( 'yeffoprint_shippo_missing_tracking', __( 'Missing tracking number.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$transaction_id = YeffoPrint_Order_Tracking::void_shippo_label( $order, $tracking_number );
+		if ( null === $transaction_id ) {
+			return new \WP_Error( 'yeffoprint_shippo_label_not_found', __( 'That label was not found on this order, or is already voided.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		if ( '' !== $transaction_id ) {
+			// Best-effort, same reasoning as register_webhook()'s own
+			// docblock: Shippo's refund is asynchronous (often PENDING,
+			// resolving later) and this store has no way to react to that
+			// resolution anyway, so a failed/slow refund call here still
+			// leaves the label marked voided locally — staff explicitly
+			// asked for a *local* way to stop treating a label as active
+			// ("give me a way to void it"), not a guarantee Shippo/the
+			// carrier actually cancels it.
+			$client->refund_label( $transaction_id );
+		}
+
+		$order->save();
+
+		return rest_ensure_response( [
+			'labels' => YeffoPrint_Order_Tracking::get_shippo_labels( $order ),
+			'id'     => $order->get_id(),
 		] );
 	}
 

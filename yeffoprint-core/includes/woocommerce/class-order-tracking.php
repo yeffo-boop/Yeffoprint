@@ -208,17 +208,27 @@ class YeffoPrint_Order_Tracking {
 	}
 
 	/**
-	 * Every still-valid Shippo-purchased label on this order, with the
+	 * Every Shippo-purchased label ever bought on this order, with the
 	 * actual printable PDF link (`label_url`) — deliberately separate
-	 * from get_shipments() above, which drops that field since it's
-	 * built for the customer-facing carrier tracking link instead.
-	 * Direct request: staff need to come back and reprint a label after
-	 * the purchase-confirmation panel that showed it is long gone (e.g.
-	 * reopening the order detail drawer later, or from a different
-	 * browser tab), so this is read straight off the stored label
-	 * records rather than anything session-scoped.
+	 * from get_shipments() above, which drops that field (and drops any
+	 * voided label entirely) since it's built for the customer-facing
+	 * carrier tracking link instead. Direct request: staff need to come
+	 * back and reprint a label after the purchase-confirmation panel
+	 * that showed it is long gone (e.g. reopening the order detail
+	 * drawer later, or from a different browser tab), so this is read
+	 * straight off the stored label records rather than anything
+	 * session-scoped.
 	 *
-	 * @return array{carrier_label:string,tracking_number:string,label_url:string}[]
+	 * Unlike get_shipments(), a voided label is included here (with
+	 * `voided: true`) instead of dropped — direct request: "keep both
+	 * active by default, give me a way to void it if necessary... I'll
+	 * need to see the previous shipping information also." Staff need
+	 * to see a voided label still sat in the order's history, not have
+	 * it vanish the moment it's voided; get_shipments() (live tracking,
+	 * the auto-delivery sweep, the shipped-order count) is the one place
+	 * a voided label genuinely shouldn't count anymore.
+	 *
+	 * @return array{carrier_label:string,tracking_number:string,label_url:string,transaction_id:string,voided:bool}[]
 	 */
 	public static function get_shippo_labels( \WC_Order $order ): array {
 		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
@@ -228,9 +238,6 @@ class YeffoPrint_Order_Tracking {
 
 		$result = [];
 		foreach ( $labels as $label ) {
-			if ( ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'] ) {
-				continue;
-			}
 			$label_url = trim( (string) ( $label['label_url'] ?? '' ) );
 			if ( '' === $label_url ) {
 				continue;
@@ -246,6 +253,8 @@ class YeffoPrint_Order_Tracking {
 				'carrier_label'   => self::carrier_label( $carrier_id ),
 				'tracking_number' => $tracking_number,
 				'label_url'       => $label_url,
+				'transaction_id'  => (string) ( $label['transaction_id'] ?? '' ),
+				'voided'          => ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'],
 			];
 		}
 
@@ -322,17 +331,60 @@ class YeffoPrint_Order_Tracking {
 	 * single save() also carries the order-status auto-advance and any
 	 * other meta changes made in the same request.
 	 */
-	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url ): void {
+	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '' ): void {
 		$labels   = $order->get_meta( self::SHIPPO_LABELS_META, true );
 		$labels   = is_array( $labels ) ? $labels : [];
 		$labels[] = [
-			'tracking'   => $tracking_number,
-			'carrier_id' => $carrier_id,
-			'label_url'  => $label_url,
-			'refund'     => [],
+			'tracking'       => $tracking_number,
+			'carrier_id'     => $carrier_id,
+			'label_url'      => $label_url,
+			'transaction_id' => $transaction_id,
+			'refund'         => [],
 		];
 
 		$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );
+	}
+
+	/**
+	 * Marks a Shippo-purchased label as voided — the write side of
+	 * get_shippo_labels()'s `voided` flag above. Matched by tracking
+	 * number (the id the drawer's label rows already key on) rather than
+	 * array index, since the frontend never has anything more stable to
+	 * send. Does not save() the order; the caller (class-admin-shippo-
+	 * controller.php's void_label()) does that once alongside recording
+	 * whatever status Shippo's refund call returned.
+	 *
+	 * @return string|null The label's transaction_id (to hand to
+	 *                      YeffoPrint_Shippo_Client::refund_label()), or
+	 *                      null if no matching, not-already-voided label
+	 *                      was found.
+	 */
+	public static function void_shippo_label( \WC_Order $order, string $tracking_number ): ?string {
+		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
+		if ( ! is_array( $labels ) ) {
+			return null;
+		}
+
+		$transaction_id = null;
+		foreach ( $labels as &$label ) {
+			if ( ( $label['tracking'] ?? '' ) !== $tracking_number ) {
+				continue;
+			}
+			if ( ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'] ) {
+				continue;
+			}
+			$label['refund'] = [ 'status' => 'refunded' ];
+			$transaction_id  = (string) ( $label['transaction_id'] ?? '' );
+			break;
+		}
+		unset( $label );
+
+		if ( null === $transaction_id ) {
+			return null;
+		}
+
+		$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );
+		return $transaction_id;
 	}
 
 	/**
