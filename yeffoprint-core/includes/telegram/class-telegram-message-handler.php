@@ -38,11 +38,31 @@ class YeffoPrint_Telegram_Message_Handler {
 			return $this->handle_pending_reject( $chat_id, $text );
 		}
 
+		// A prior `/address` reply is waiting on the customer's next
+		// message to parse as the new address — see class-telegram-
+		// address-update.php. Same short-circuit shape as the three
+		// pending checks above.
+		if ( YeffoPrint_Telegram_Address_Update::has_pending( $chat_id ) ) {
+			return $this->handle_pending_address( $chat_id, $text );
+		}
+
 		if ( '' === $text ) {
 			return $this->help_text();
 		}
 
 		$command = strtolower( strtok( $text, " \n" ) ?: '' );
+
+		// Store-owner-only commands — is_admin_chat() is the entire gate;
+		// every other chat id falls straight through to the customer-
+		// facing routing below exactly as if these two didn't exist.
+		if ( YeffoPrint_Telegram_Admin_Commands::is_admin_chat( $chat_id ) ) {
+			if ( '/pending' === $command ) {
+				return YeffoPrint_Telegram_Admin_Commands::pending_reply();
+			}
+			if ( '/today' === $command ) {
+				return YeffoPrint_Telegram_Admin_Commands::today_reply();
+			}
+		}
 
 		// `/start link_CODE` — the deep-link button on My Account's
 		// "Connect Telegram" tab (class-account-endpoints.php) opens the
@@ -78,6 +98,14 @@ class YeffoPrint_Telegram_Message_Handler {
 			return $this->reorder_reply( trim( substr( $text, strlen( $command ) ) ) );
 		}
 
+		if ( in_array( $command, [ '/orders', '/myorders' ], true ) ) {
+			return $this->orders_reply( $chat_id );
+		}
+
+		if ( '/address' === $command ) {
+			return $this->address_reply( trim( substr( $text, strlen( $command ) ) ), $chat_id );
+		}
+
 		if ( in_array( $command, [ '/search', '/find' ], true ) ) {
 			return $this->search_reply( trim( substr( $text, strlen( $command ) ) ) );
 		}
@@ -109,8 +137,32 @@ class YeffoPrint_Telegram_Message_Handler {
 			return $search_reply;
 		}
 
+		// Nothing answered this — log it for the weekly digest
+		// (class-telegram-unanswered-digest.php) before escalating, since
+		// this is exactly the set of real questions the FAQ doesn't cover
+		// yet. $can_push_notifications doubles as "which channel": true
+		// only ever comes from real Telegram (class-telegram-webhook-
+		// controller.php), false only from the website widget
+		// (class-web-chat-controller.php) — see this method's own
+		// docblock on that parameter.
+		YeffoPrint_Telegram_Unanswered_Log::log( $chat_id, $text, $can_push_notifications ? 'telegram' : 'web' );
+
 		YeffoPrint_Telegram_Escalation::store_pending( $chat_id, $text );
 		return $this->fallback_text();
+	}
+
+	private function handle_pending_address( int $chat_id, string $text ): string {
+		$order_id = YeffoPrint_Telegram_Address_Update::consume_pending( $chat_id );
+
+		if ( YeffoPrint_Telegram_Address_Update::is_cancel_word( $text ) ) {
+			return __( "No changes made.", 'yeffoprint-core' );
+		}
+
+		if ( ! $order_id ) {
+			return __( "That request timed out — send /address to start again.", 'yeffoprint-core' );
+		}
+
+		return YeffoPrint_Telegram_Address_Update::apply( $order_id, $text );
 	}
 
 	private function handle_pending_escalation( int $chat_id, string $text, array $from ): string {
@@ -176,6 +228,13 @@ class YeffoPrint_Telegram_Message_Handler {
 			$reply .= "\n\n" . __( "I'll message you here when your proof is ready or your order ships.", 'yeffoprint-core' );
 		}
 
+		// Only worth mentioning while this order is still something the
+		// pause could actually affect — a shipped/completed/cancelled/
+		// refunded order isn't waiting on production anymore.
+		if ( ! $order->has_status( [ 'completed', 'cancelled', 'refunded', YeffoPrint_Order_Shipment_Status::STATUS ] ) ) {
+			$reply .= $this->away_mode_note();
+		}
+
 		return $reply;
 	}
 
@@ -210,6 +269,89 @@ class YeffoPrint_Telegram_Message_Handler {
 		return implode( "\n", $lines );
 	}
 
+	/** Every recent order on a linked account, one line each — no re-typing order number + email the way /order and /reorder still require. */
+	private function orders_reply( int $chat_id ): string {
+		$user_id = YeffoPrint_Telegram_Account_Link::get_user_id_for_chat( $chat_id );
+
+		if ( ! $user_id ) {
+			return __( "Connect your account first so I know which orders are yours — open My Account → Connect Telegram on the site, or send /link plus the code shown there.", 'yeffoprint-core' );
+		}
+
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return __( "Order lookup isn't available right now — please try again shortly.", 'yeffoprint-core' );
+		}
+
+		$orders = wc_get_orders( [
+			'customer_id' => $user_id,
+			'limit'       => 10,
+			'orderby'     => 'date',
+			'order'       => 'DESC',
+		] );
+
+		if ( ! $orders ) {
+			return __( "I don't see any orders on this account yet.", 'yeffoprint-core' );
+		}
+
+		$lines = [ __( 'Your recent orders:', 'yeffoprint-core' ), '' ];
+		foreach ( $orders as $order ) {
+			$lines[] = YeffoPrint_Telegram_Order_Lookup::format_summary_line( $order );
+		}
+		$lines[] = '';
+		$lines[] = __( 'Send /order plus a number and your email for full details on any of them.', 'yeffoprint-core' );
+
+		return implode( "\n", $lines );
+	}
+
+	private function address_reply( string $args_text, int $chat_id ): string {
+		$parsed = self::extract_order_ref_and_email( $args_text );
+
+		if ( ! $parsed ) {
+			return __( "To update a shipping address, send your order number and the email you used at checkout, like:\n/address YP-1042 jane@example.com", 'yeffoprint-core' );
+		}
+
+		if ( ! function_exists( 'wc_get_order' ) ) {
+			return __( "Address updates aren't available right now — please try again shortly.", 'yeffoprint-core' );
+		}
+
+		$order = YeffoPrint_Telegram_Order_Lookup::find( $parsed['order_ref'], $parsed['email'] );
+
+		if ( ! $order ) {
+			return __( "I couldn't find an order matching that number and email. Double-check both and try again.", 'yeffoprint-core' );
+		}
+
+		$blocked = YeffoPrint_Telegram_Address_Update::blocked_reason( $order );
+		if ( $blocked ) {
+			return $blocked;
+		}
+
+		YeffoPrint_Telegram_Address_Update::store_pending( $chat_id, $order->get_id() );
+
+		return YeffoPrint_Telegram_Address_Update::prompt_text();
+	}
+
+	/**
+	 * Direct gap found while wiring up Away Mode's other three touchpoints
+	 * (storefront bar/card, checkout notice, confirmation email): a
+	 * customer messaging the bot mid-pause got no hint of it at all — the
+	 * one channel most likely to see "where's my order?" traffic while
+	 * the store owner is away didn't know they were away. Same single
+	 * gate (yeffoprint_core_away_mode()) every other touchpoint already
+	 * uses. Returns '' when Away Mode is off, so every call site can
+	 * simply concatenate this with no extra branching of its own.
+	 */
+	private function away_mode_note(): string {
+		$away = function_exists( 'yeffoprint_core_away_mode' ) ? yeffoprint_core_away_mode() : null;
+		if ( ! $away ) {
+			return '';
+		}
+
+		return "\n\n" . sprintf(
+			/* translators: %s: the date production resumes, e.g. "March 18, 2026" */
+			__( "🌙 Heads up: we're currently away and resuming production on %s. Orders placed now are queued and will start as soon as we're back.", 'yeffoprint-core' ),
+			$away['return_label']
+		);
+	}
+
 	private function search_reply( string $query ): string {
 		if ( '' === $query ) {
 			return __( "Tell me what you're looking for, like:\n/search labs", 'yeffoprint-core' );
@@ -239,16 +381,20 @@ class YeffoPrint_Telegram_Message_Handler {
 	}
 
 	private function help_text(): string {
-		return __(
+		$text = __(
 			"Hi! I'm the YeffoDesign order & FAQ bot. I can help with:\n\n" .
 			"📦 Order status — send your order number and checkout email, e.g. \"YP-1042 jane@example.com\"\n" .
+			"📋 All your orders — /orders, once your account is connected\n" .
 			"🔁 Reorder — /reorder plus your order number and email\n" .
+			"📮 Update a shipping address — /address plus your order number and email (only before a shipping label is generated)\n" .
 			"🔍 Find a design — /search plus a name or keyword, e.g. \"/search labs\"\n" .
 			"🔗 Connect your account — /link plus the code from My Account → Connect Telegram, so I can message you directly and let you approve proofs right here\n" .
 			"❓ Questions — ask about sizes, materials, shipping, the custom design fee, or accounts\n\n" .
-			'Commands: /order, /reorder, /search, /link, /faq, /help',
+			'Commands: /order, /orders, /reorder, /address, /search, /link, /faq, /help',
 			'yeffoprint-core'
 		);
+
+		return $text . $this->away_mode_note();
 	}
 
 	private function fallback_text(): string {

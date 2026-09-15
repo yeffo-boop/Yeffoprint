@@ -75,4 +75,9 @@ register_deactivation_hook( __FILE__, function () {
 	// listening once the plugin's files are gone.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delivery-status.php';
 	YeffoPrint_Order_Delivery_Status::unschedule();
+
+	// Same reasoning again — the unanswered-questions digest's own cron
+	// event otherwise just keeps firing weekly with nothing listening.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-digest.php';
+	YeffoPrint_Telegram_Unanswered_Digest::unschedule();
 } );
