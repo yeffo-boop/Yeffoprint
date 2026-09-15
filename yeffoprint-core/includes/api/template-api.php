@@ -90,6 +90,22 @@ if ( ! function_exists( 'yeffoprint_core_get_announcement_bar_text' ) ) {
 	}
 }
 
+if ( ! function_exists( 'yeffoprint_core_away_mode' ) ) {
+	/**
+	 * Set from the YeffoPrint admin menu (class-admin-menu.php); read
+	 * here by the theme's away-bar/away-card blocks and the checkout-
+	 * notice/email-notice classes below, instead of any of them calling
+	 * get_option() or YeffoPrint_Admin_Menu::away_mode() directly — same
+	 * "theme/other classes consume a plugin API, never plugin-owned data,
+	 * directly" split as every other template tag in this file.
+	 *
+	 * @return array{return_date:string, return_label:string}|null Null when off/unconfigured/past.
+	 */
+	function yeffoprint_core_away_mode(): ?array {
+		return class_exists( 'YeffoPrint_Admin_Menu' ) ? YeffoPrint_Admin_Menu::away_mode() : null;
+	}
+}
+
 if ( ! function_exists( 'yeffoprint_core_rewards_points_per_dollar_label' ) ) {
 	/**
 	 * Used by patterns/rewards-promo.php so the homepage promo's earn

@@ -157,6 +157,40 @@ main.wp-block-group {
 	display: none;
 }
 
+/**
+ * Away Mode's site-wide notice bar (blocks/away-bar) — direct request:
+ * "I'd like people to know before placing their orders when I'll be
+ * resuming orders." Sits above the announcement bar so it's read
+ * first; deliberately its own warm/amber tone rather than the
+ * announcement bar's near-black or any promo banner's brand colors —
+ * this is an operational notice, not marketing, and shouldn't be
+ * mistaken for either. No `:empty` rule needed the way the
+ * announcement bar has one: render.php either outputs the whole
+ * `.yp-away-bar` element or returns before printing anything at all,
+ * so there's never an empty wrapper left behind to hide.
+ */
+.yp-away-bar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	background: #FBF0DB;
+	color: var(--wp--preset--color--near-black);
+	text-align: center;
+	font-size: var(--wp--preset--font-size--small);
+	padding: 0.55rem 1rem;
+	border-bottom: 1px solid #EFDCAE;
+}
+
+.yp-away-bar__icon {
+	flex-shrink: 0;
+	font-size: 0.95em;
+}
+
+.yp-away-bar__text {
+	margin: 0;
+}
+
 /* ---------- Header ---------- */
 
 .yp-header {

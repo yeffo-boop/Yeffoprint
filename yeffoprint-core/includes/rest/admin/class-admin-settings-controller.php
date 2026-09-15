@@ -85,6 +85,9 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::SPLASH_ENABLED_OPTION, (bool) ( $params['splash_enabled'] ?? false ) );
 		update_option( $M::SPLASH_IMAGE_ID_OPTION, absint( $params['splash_image_id'] ?? 0 ) );
 
+		update_option( $M::AWAY_MODE_ENABLED_OPTION, (bool) ( $params['away_mode_enabled'] ?? false ) );
+		update_option( $M::AWAY_MODE_RETURN_DATE_OPTION, sanitize_text_field( (string) ( $params['away_mode_return_date'] ?? '' ) ) );
+
 		update_option( $M::DASHBOARD_DUE_DATE_DAYS_OPTION, max( 1, (int) ( $params['dashboard_due_date_days'] ?? $M::DASHBOARD_DUE_DATE_DAYS_DEFAULT ) ) );
 
 		update_option( $M::MAINTENANCE_PAYMENT_LINK_OPTION, esc_url_raw( (string) ( $params['maintenance_payment_link'] ?? '' ) ) );
@@ -150,6 +153,8 @@ class YeffoPrint_Admin_Settings_Controller {
 			'splash_enabled'             => (bool) get_option( $M::SPLASH_ENABLED_OPTION, false ),
 			'splash_image_id'            => $splash_image_id,
 			'splash_image_url'           => $splash_image_id ? ( wp_get_attachment_image_url( $splash_image_id, 'medium' ) ?: '' ) : '',
+			'away_mode_enabled'          => (bool) get_option( $M::AWAY_MODE_ENABLED_OPTION, false ),
+			'away_mode_return_date'      => (string) get_option( $M::AWAY_MODE_RETURN_DATE_OPTION, '' ),
 			'dashboard_due_date_days'    => (int) get_option( $M::DASHBOARD_DUE_DATE_DAYS_OPTION, $M::DASHBOARD_DUE_DATE_DAYS_DEFAULT ),
 			'maintenance_payment_link'   => (string) get_option( $M::MAINTENANCE_PAYMENT_LINK_OPTION, '' ),
 			'maintenance_webhook_secret' => YeffoPrint_Stripe_Webhook_Secret::get(),

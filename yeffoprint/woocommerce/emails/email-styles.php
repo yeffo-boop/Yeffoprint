@@ -523,6 +523,41 @@ a.yp-proof-cta-button {
 	margin: 12px 0 0;
 }
 
+/* Away Mode's confirmation-email reminder (class-away-mode-email-notice.php)
+   — direct request: "Maybe even include a reminder on the confirmation
+   email?" Same warm/amber tone as the storefront's away-bar/away-card
+   and the checkout notice (assets/css/woocommerce.css's
+   .yp-away-checkout-notice), so it reads as the same notice wherever a
+   customer runs into it across the whole order flow. */
+table.yp-away-email-notice {
+	margin: 0 0 22px;
+}
+
+table.yp-away-email-notice > tbody > tr > td {
+	background-color: #FBF0DB;
+	border: 1px solid #EFDCAE;
+	border-radius: 12px;
+	padding: 16px 18px;
+	text-align: <?php echo is_rtl() ? 'right' : 'left'; ?>;
+}
+
+.yp-away-email-notice-eyebrow {
+	display: block;
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: #8A5C08;
+	font-weight: 700;
+	margin: 0 0 6px;
+}
+
+.yp-away-email-notice-body {
+	font-size: 12.5px;
+	color: <?php echo esc_attr( $text ); ?>;
+	line-height: 150%;
+	margin: 0;
+}
+
 /* YeffoBot notice card (class-telegram-order-email-badge.php) — bigger
    than .yp-email-callout above since it carries the mascot image
    alongside two explained ways to reach the bot. Direct feedback on an
