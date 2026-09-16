@@ -20,6 +20,29 @@
 	padding: var(--wp--preset--spacing--xl) 0;
 }
 
+/**
+ * Real, always-visible title/description/specs summary ahead of the
+ * interactive tool — direct report: "ChatGPT and the like cannot index
+ * my site." This is the only page content a crawler that doesn't
+ * execute JavaScript ever sees; blocks/label-configurator/render.php
+ * is the server-rendered counterpart. `.yp-configurator__title` (the
+ * relocated `<h1>`) keeps its existing `margin-top: 0` rule below —
+ * that rule is unscoped to any old parent, so it still applies here.
+ */
+.yp-configurator__intro {
+	padding-top: var(--wp--preset--spacing--md);
+}
+
+.yp-configurator__intro-description {
+	color: var(--wp--preset--color--charcoal);
+	max-width: 65ch;
+}
+
+.yp-configurator__intro-specs {
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+}
+
 .yp-configurator__layout {
 	display: grid;
 	grid-template-columns: 58fr 42fr;

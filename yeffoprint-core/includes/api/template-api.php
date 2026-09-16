@@ -74,6 +74,69 @@ if ( ! function_exists( 'yeffoprint_core_compatible_record_label' ) ) {
 	}
 }
 
+if ( ! function_exists( 'yeffoprint_core_compatible_record_names' ) ) {
+	/**
+	 * Every published compatible Size/Material's own title, in full —
+	 * the sibling of yeffoprint_core_compatible_record_label() above,
+	 * which only ever returns a one-record name or a bare count. Used
+	 * by yeffoprint_core_get_template_seo_data() below to list every
+	 * option out for real, crawlable page copy, where a gallery card's
+	 * "4 materials" teaser would say nothing useful.
+	 *
+	 * @return string[]
+	 */
+	function yeffoprint_core_compatible_record_names( int $template_id, string $meta_key ): array {
+		$ids = array_map( 'absint', (array) get_post_meta( $template_id, $meta_key, true ) );
+
+		$names = [];
+		foreach ( $ids as $id ) {
+			if ( 'publish' === get_post_status( $id ) ) {
+				$names[] = get_the_title( $id );
+			}
+		}
+
+		return $names;
+	}
+}
+
+if ( ! function_exists( 'yeffoprint_core_get_template_seo_data' ) ) {
+	/**
+	 * Direct report: "ChatGPT and the like cannot index my site" — a
+	 * Template's single page is a JS-only configurator (assets/js/
+	 * configurator.js fetches everything from the /templates/{id}/
+	 * configurator REST endpoint and fills it in client-side); a crawler
+	 * that doesn't execute JavaScript — most AI-answer-engine bots
+	 * included — sees an empty `<h1>` and no other page copy at all. This
+	 * is the server-side counterpart of that same REST endpoint
+	 * (class-template-schema-controller.php), read by the theme's new
+	 * blocks/label-configurator block to render a real, always-visible
+	 * title/description/specs summary alongside the (unchanged)
+	 * JS-hydrated interactive tool — same "theme consumes a plugin API,
+	 * never plugin-owned data, directly" split as every other template
+	 * tag in this file.
+	 *
+	 * @return array{title:string, description:string, starting_price:string, size_names:string[], material_names:string[]}|null
+	 */
+	function yeffoprint_core_get_template_seo_data( int $post_id ): ?array {
+		$post = get_post( $post_id );
+
+		if ( ! $post || 'yp_template' !== $post->post_type ) {
+			return null;
+		}
+
+		return [
+			'title'           => get_the_title( $post_id ),
+			// Same the_content-filtered-then-stripped shape as the REST
+			// endpoint's own 'description' field, so this always matches
+			// exactly what the interactive configurator itself would show.
+			'description'     => wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) ),
+			'starting_price'  => yeffoprint_core_starting_price_label(),
+			'size_names'      => yeffoprint_core_compatible_record_names( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_SIZES ),
+			'material_names'  => yeffoprint_core_compatible_record_names( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS ),
+		];
+	}
+}
+
 if ( ! function_exists( 'yeffoprint_core_get_announcement_bar_text' ) ) {
 	/**
 	 * Set from the YeffoPrint admin menu (class-admin-menu.php); read
