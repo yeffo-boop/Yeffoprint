@@ -3,69 +3,7 @@
 <!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"1400px"}} -->
 <main class="wp-block-group">
 
-	<!-- wp:html -->
-	<div id="yp-configurator" class="yp-configurator" data-loading="true">
-		<noscript>
-			<p class="yp-configurator__noscript">This design's live configurator needs JavaScript enabled. You can still <a href="/shop-labels/">browse the full gallery</a> or contact us to order.</p>
-		</noscript>
-		<div class="yp-configurator__status" role="status" aria-live="polite">Loading design&hellip;</div>
-		<div class="yp-configurator__layout" hidden>
-			<div class="yp-configurator__preview">
-				<div class="yp-configurator__view-toggle" role="tablist" aria-label="Preview mode">
-					<button type="button" id="yp-view-tab-label" class="yp-view-tab is-active" role="tab" aria-selected="true" aria-controls="yp-configurator-stage" tabindex="0" data-yp-view="label">Label View</button>
-					<button type="button" id="yp-view-tab-vial" class="yp-view-tab" role="tab" aria-selected="false" aria-controls="yp-configurator-stage" tabindex="-1" data-yp-view="vial">Vial View</button>
-				</div>
-				<div class="yp-configurator__stage" id="yp-configurator-stage" role="tabpanel" aria-labelledby="yp-view-tab-label" tabindex="0" data-yp-stage></div>
-				<p class="yp-configurator__live-preview-note" data-yp-live-preview-note hidden>Live preview is temporarily off while we fine-tune this design — your label will still print exactly as you enter it below.</p>
-				<div class="yp-configurator__overflow-warning" data-yp-overflow-warning hidden>Text is too long for this design.</div>
-				<p class="yp-configurator__description" data-yp-description hidden></p>
-			</div>
-			<div class="yp-configurator__controls">
-				<h1 class="yp-configurator__title" data-yp-title></h1>
-				<div class="yp-configurator__section" data-yp-section="size">
-					<div class="yp-section-heading-row">
-						<h2 id="yp-size-heading">Size</h2>
-						<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-size-info-modal" aria-haspopup="dialog" aria-label="See label size dimensions">?</button>
-					</div>
-					<div class="yp-option-group" role="radiogroup" aria-labelledby="yp-size-heading" data-yp-size-options></div>
-				</div>
-				<div class="yp-configurator__section" data-yp-section="material">
-					<div class="yp-section-heading-row">
-						<h2 id="yp-material-heading">Material</h2>
-						<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-material-info-modal" aria-haspopup="dialog" aria-label="Learn about each material">?</button>
-					</div>
-					<div class="yp-option-group" role="radiogroup" aria-labelledby="yp-material-heading" data-yp-material-options></div>
-				</div>
-				<div class="yp-configurator__section" data-yp-section="fields">
-					<h2>Customize</h2>
-					<div class="yp-field-inputs" data-yp-field-inputs></div>
-				</div>
-				<div class="yp-configurator__section" data-yp-section="quantity">
-					<h2>Quantity</h2>
-					<div class="yp-quantity-control" data-yp-quantity></div>
-				</div>
-				<div class="yp-configurator__section" data-yp-section="bulk-pricing" data-yp-bulk-pricing-section hidden>
-					<h2>Bulk Pricing</h2>
-					<p class="yp-bulk-pricing__intro">The more you order, the less each label costs. Discounts apply to your whole order across every design you add, not just this one.</p>
-					<div data-yp-bulk-pricing-table></div>
-				</div>
-				<div class="yp-configurator__section" data-yp-section="variants">
-					<div class="yp-variants-header">
-						<h2>Batch</h2>
-						<button type="button" class="yp-add-variant-btn" data-yp-add-variant>+ Add another label</button>
-					</div>
-					<p class="yp-variants-blurb">Add another label to split this batch's quantity across different text — same design, size, and material, one combined order that still qualifies for bulk pricing.</p>
-					<div class="yp-variant-cards" data-yp-variant-cards></div>
-				</div>
-				<div class="yp-configurator__summary" aria-live="polite" aria-atomic="true" data-yp-summary></div>
-				<p class="yp-configurator__desktop-cta">
-					<button type="button" class="wp-block-button__link is-style-accent" data-yp-add-to-cart>Add to Cart</button>
-					<button type="button" class="wp-block-button__link is-style-outline" data-yp-save-design>Save this design</button>
-				</p>
-			</div>
-		</div>
-	</div>
-	<!-- /wp:html -->
+	<!-- wp:yeffoprint/label-configurator /-->
 
 </main>
 <!-- /wp:group -->

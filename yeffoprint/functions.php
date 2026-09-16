@@ -695,6 +695,7 @@ add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/away-bar' ) );
 	register_block_type( get_theme_file_path( 'blocks/away-card' ) );
 	register_block_type( get_theme_file_path( 'blocks/label-designer-choice' ) );
+	register_block_type( get_theme_file_path( 'blocks/label-configurator' ) );
 } );
 
 /**

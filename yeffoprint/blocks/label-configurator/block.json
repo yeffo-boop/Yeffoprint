@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/label-configurator",
+	"title": "Label Configurator",
+	"category": "theme",
+	"description": "The live label configurator on a Template's single page — a real, server-rendered title/description/specs summary alongside the JS-hydrated interactive tool (assets/js/configurator.js).",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}
