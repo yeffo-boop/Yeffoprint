@@ -27,6 +27,20 @@ class YeffoPrint_Admin_Menu {
 	const ANNOUNCEMENT_BAR_DEFAULT = 'Free proofing on every fully custom order.';
 
 	/**
+	 * Site-wide fallback `<meta name="description">` (and Open Graph/
+	 * Twitter Card description) — direct follow-up to an SEO/AI-readability
+	 * audit that found no meta description anywhere on the site (no SEO
+	 * plugin is active). Read by YeffoPrint_Seo_Meta_Tags
+	 * (includes/seo/class-seo-meta-tags.php), which also builds an
+	 * llmstxt.org-style Notes for AI assistants section from it — used
+	 * only for the homepage and any page/post with no excerpt of its
+	 * own; a Template's single page always uses its own real description
+	 * (yeffoprint_core_get_template_seo_data()) instead.
+	 */
+	const SITE_META_DESCRIPTION_OPTION  = 'yeffoprint_site_meta_description';
+	const SITE_META_DESCRIPTION_DEFAULT = 'Custom vinyl labels for peptide and research-chemical vials — order a ready-made design or build your own with a live online configurator, plus custom sticker printing and web design for peptide resellers.';
+
+	/**
 	 * Also read by YeffoPrint_Rewards (includes/rewards/class-rewards.php)
 	 * — same reasoning as the announcement bar option above. Registered
 	 * and edited on the dedicated Rewards page (class-rewards-admin.php),

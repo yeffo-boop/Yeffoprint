@@ -144,6 +144,8 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-callback-handler.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-login.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-order-email-badge.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/seo/class-seo-meta-tags.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/seo/class-llms-txt.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-admin-commands.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-address-update.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-log.php';
@@ -224,6 +226,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Order_Notifications();
 		new YeffoPrint_Telegram_Login();
 		new YeffoPrint_Telegram_Order_Email_Badge();
+		new YeffoPrint_Seo_Meta_Tags();
+		new YeffoPrint_Llms_Txt();
 		new YeffoPrint_Telegram_Unanswered_Log();
 		new YeffoPrint_Telegram_Unanswered_Digest();
 		new YeffoPrint_Proof_Reminder_Scheduler();

@@ -90,6 +90,12 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Search & AI Summary</h2></div>' +
+					'<div class="yp-field"><label for="yp-set-meta-description">Site description</label><textarea id="yp-set-meta-description" rows="3">' + YP.escapeHtml( settings.site_meta_description ) + '</textarea></div>' +
+					'<p class="yp-panel__hint">Shown to Google and AI assistants (ChatGPT, Perplexity, etc.) as the summary of your site — on the homepage, and on any page without its own description. A design’s own page always describes that design instead. Aim for one or two plain sentences.</p>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Splash Screen</h2></div>' +
 					'<p class="yp-panel__hint">A dismissible "we’ve upgraded" welcome screen on the homepage — each visitor sees it once per browser session until switched off here.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-splash-enabled"' + ( settings.splash_enabled ? ' checked' : '' ) + ' /><label for="yp-set-splash-enabled">Show it on the homepage</label></div>' +
@@ -325,6 +331,7 @@
 
 			var body = {
 				announcement_bar_text: viewEl.querySelector( '#yp-set-announcement' ).value,
+				site_meta_description: viewEl.querySelector( '#yp-set-meta-description' ).value,
 				promo_enabled: viewEl.querySelector( '#yp-set-promo-enabled' ).checked,
 				promo_banners: promoBanners,
 				live_preview_enabled: viewEl.querySelector( '#yp-set-live-preview' ).checked,

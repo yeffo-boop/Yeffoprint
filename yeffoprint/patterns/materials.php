@@ -44,7 +44,7 @@ $materials = get_posts( [
 				<div class="yp-material-swatch">
 					<div class="yp-material-swatch__chip<?php echo $swatch_url ? '' : ' yp-material-swatch__chip--' . esc_attr( $slug ); ?>">
 						<?php if ( $swatch_url ) : ?>
-							<img class="yp-material-swatch__image yp-material-swatch__image--primary" src="<?php echo esc_url( $swatch_url ); ?>" alt="" />
+							<img class="yp-material-swatch__image yp-material-swatch__image--primary" src="<?php echo esc_url( $swatch_url ); ?>" alt="<?php echo esc_attr( get_the_title( $material ) ); ?>" />
 							<?php if ( $hover_url ) : ?>
 								<img class="yp-material-swatch__image yp-material-swatch__image--hover" src="<?php echo esc_url( $hover_url ); ?>" alt="" />
 							<?php endif; ?>

@@ -84,7 +84,7 @@ $materials = yeffoprint_material_guide_entries();
 				<?php if ( $zoom_url ) : ?>
 					<button type="button" class="yp-material-guide__photo-btn" data-yp-drawer-trigger="<?php echo esc_attr( $zoom_id ); ?>" aria-haspopup="dialog" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: material name */ __( 'See a larger photo of %s', 'yeffoprint' ), $material['name'] ) ); ?>">
 						<?php if ( $photo_url ) : ?>
-							<img class="yp-material-guide__photo" src="<?php echo esc_url( $photo_url ); ?>" alt="" width="88" height="88" />
+							<img class="yp-material-guide__photo" src="<?php echo esc_url( $photo_url ); ?>" alt="<?php echo esc_attr( $material['name'] ); ?>" width="88" height="88" />
 						<?php else : ?>
 							<span class="yp-material-guide__photo yp-material-guide__photo--<?php echo esc_attr( $material['slug'] ); ?>" aria-hidden="true"></span>
 						<?php endif; ?>
@@ -96,7 +96,7 @@ $materials = yeffoprint_material_guide_entries();
 						</span>
 					</button>
 				<?php elseif ( $photo_url ) : ?>
-					<img class="yp-material-guide__photo" src="<?php echo esc_url( $photo_url ); ?>" alt="" width="88" height="88" />
+					<img class="yp-material-guide__photo" src="<?php echo esc_url( $photo_url ); ?>" alt="<?php echo esc_attr( $material['name'] ); ?>" width="88" height="88" />
 				<?php else : ?>
 					<div class="yp-material-guide__photo yp-material-guide__photo--<?php echo esc_attr( $material['slug'] ); ?>" aria-hidden="true"></div>
 				<?php endif; ?>
