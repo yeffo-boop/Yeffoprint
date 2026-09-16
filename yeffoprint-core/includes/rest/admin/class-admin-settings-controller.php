@@ -51,6 +51,7 @@ class YeffoPrint_Admin_Settings_Controller {
 		$M      = 'YeffoPrint_Admin_Menu';
 
 		update_option( $M::ANNOUNCEMENT_BAR_OPTION, sanitize_text_field( (string) ( $params['announcement_bar_text'] ?? '' ) ) );
+		update_option( $M::SITE_META_DESCRIPTION_OPTION, sanitize_textarea_field( (string) ( $params['site_meta_description'] ?? '' ) ) );
 
 		update_option( $M::UPS_CLIENT_ID_OPTION, sanitize_text_field( (string) ( $params['ups_client_id'] ?? '' ) ) );
 		update_option( $M::UPS_CLIENT_SECRET_OPTION, sanitize_text_field( (string) ( $params['ups_client_secret'] ?? '' ) ) );
@@ -128,6 +129,7 @@ class YeffoPrint_Admin_Settings_Controller {
 
 		return [
 			'announcement_bar_text'      => (string) get_option( $M::ANNOUNCEMENT_BAR_OPTION, $M::ANNOUNCEMENT_BAR_DEFAULT ),
+			'site_meta_description'      => (string) get_option( $M::SITE_META_DESCRIPTION_OPTION, $M::SITE_META_DESCRIPTION_DEFAULT ),
 			'ups_client_id'              => (string) get_option( $M::UPS_CLIENT_ID_OPTION, '' ),
 			'ups_client_secret'          => (string) get_option( $M::UPS_CLIENT_SECRET_OPTION, '' ),
 			'usps_consumer_key'          => (string) get_option( $M::USPS_CONSUMER_KEY_OPTION, '' ),

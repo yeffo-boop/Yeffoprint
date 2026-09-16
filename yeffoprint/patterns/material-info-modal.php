@@ -45,7 +45,7 @@ $materials = yeffoprint_material_guide_entries();
 				<?php foreach ( $materials as $material ) : ?>
 					<div class="yp-material-guide__item">
 						<?php if ( $material['photo_url'] ) : ?>
-							<img class="yp-material-guide__photo" src="<?php echo esc_url( $material['photo_url'] ); ?>" alt="" width="64" height="64" />
+							<img class="yp-material-guide__photo" src="<?php echo esc_url( $material['photo_url'] ); ?>" alt="<?php echo esc_attr( $material['name'] ); ?>" width="64" height="64" />
 						<?php else : ?>
 							<div class="yp-material-guide__photo yp-material-guide__photo--<?php echo esc_attr( $material['slug'] ); ?>" aria-hidden="true"></div>
 						<?php endif; ?>

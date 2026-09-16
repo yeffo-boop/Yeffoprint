@@ -43,7 +43,7 @@ $primary_image_url = $card['vial_mockup_url'] ?: $card['artwork_url'];
 			<img
 				class="yp-template-card__image"
 				src="<?php echo esc_url( $primary_image_url ); ?>"
-				alt=""
+				alt="<?php echo esc_attr( $card['title'] ); ?>"
 				loading="lazy"
 				decoding="async"
 			/>
