@@ -101,6 +101,17 @@ class YeffoPrint_Admin_Dashboard_Controller {
 	 * row's own status so the frontend can show which is which and only
 	 * offer "Send to Printer" on the ones still actually in Processing.
 	 */
+	/**
+	 * "Ship it together" (direct request): flag Processing/In Production
+	 * orders that share a root (YeffoPrint_Order_Addon::root_id_for())
+	 * so the frontend can bracket them for packing. Grouping is computed
+	 * only among orders already in this fetched page — if a root order
+	 * has already shipped and dropped out of this list, its still-
+	 * processing add-on just renders as a normal standalone row here.
+	 * Documented scope limit (docs/ARCHITECTURE.md), not a bug: the
+	 * order note class-order-addon-checkout.php writes on both orders at
+	 * placement time is the durable record of the pairing either way.
+	 */
 	private function pending_wc_orders(): array {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			return [];
@@ -113,17 +124,42 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			'order'   => 'ASC',
 		] );
 
-		return array_map( function ( \WC_Order $order ) {
-			$date = $order->get_date_created();
+		$root_ids      = [];
+		$numbers_by_id = [];
+		foreach ( $orders as $order ) {
+			$root_ids[ $order->get_id() ]      = class_exists( 'YeffoPrint_Order_Addon' )
+				? YeffoPrint_Order_Addon::root_id_for( $order )
+				: $order->get_id();
+			$numbers_by_id[ $order->get_id() ] = $order->get_order_number();
+		}
+
+		$groups = [];
+		foreach ( $root_ids as $order_id => $root_id ) {
+			$groups[ $root_id ][] = $order_id;
+		}
+
+		return array_map( function ( \WC_Order $order ) use ( $root_ids, $groups, $numbers_by_id ) {
+			$date     = $order->get_date_created();
+			$order_id = $order->get_id();
+			$group    = $groups[ $root_ids[ $order_id ] ] ?? [ $order_id ];
+
+			$ship_group_key = count( $group ) > 1 ? $root_ids[ $order_id ] : null;
+
 			return [
-				'id'           => $order->get_id(),
+				'id'                 => $order_id,
 				/* translators: %s: order number */
-				'label'        => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
-				'customer'     => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
-				'edit_url'     => $order->get_edit_order_url(),
-				'date'         => $date ? $date->date( 'c' ) : null,
-				'status'       => $order->get_status(),
-				'status_label' => wc_get_order_status_name( $order->get_status() ),
+				'label'              => sprintf( __( 'Order %s', 'yeffoprint-core' ), $order->get_order_number() ),
+				'customer'           => $order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
+				'edit_url'           => $order->get_edit_order_url(),
+				'date'               => $date ? $date->date( 'c' ) : null,
+				'status'             => $order->get_status(),
+				'status_label'       => wc_get_order_status_name( $order->get_status() ),
+				'ship_group_key'     => $ship_group_key,
+				'ship_group_numbers' => $ship_group_key
+					? array_values( array_map( function ( $id ) use ( $numbers_by_id ) {
+						return $numbers_by_id[ $id ];
+					}, array_diff( $group, [ $order_id ] ) ) )
+					: [],
 			];
 		}, $orders );
 	}

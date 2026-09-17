@@ -809,6 +809,34 @@
 	flex: 0 0 auto;
 }
 
+/* "Ship it together" (direct request): brackets Pending Orders rows that
+   share a ship_group_key (class-admin-dashboard-controller.php) so staff
+   pack them into one box. Its own dashed border stands in for the
+   .yp-list-row border-top it visually replaces on the rows it wraps. */
+.yp-ship-group {
+	border: 1px dashed var(--wp--preset--color--charcoal);
+	border-radius: 6px;
+	padding: 0 0.6rem;
+	margin: 0.4rem 0;
+}
+
+.yp-ship-group .yp-list-row {
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-ship-group .yp-list-row:first-child {
+	border-top: 0;
+}
+
+.yp-ship-group__label {
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: var(--wp--preset--color--charcoal);
+	padding: 0.5rem 0 0.35rem;
+}
+
 @media (max-width: 40rem) {
 	.yp-list-row {
 		flex-wrap: wrap;

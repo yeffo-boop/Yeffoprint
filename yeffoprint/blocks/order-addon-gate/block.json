@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/order-addon-gate",
+	"title": "Add to Order Gate",
+	"category": "theme",
+	"description": "The /add-to-order/ page: verifies the order (by link token or a manual order number + email), checks it can still take an add-on, and starts the no-extra-shipping session if so.",
+	"render": "file:./render.php",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"textdomain": "yeffoprint"
+}

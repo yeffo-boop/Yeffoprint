@@ -1,0 +1,99 @@
+/*
+ * /add-to-order/ page (blocks/order-addon-gate/render.php). Reuses
+ * .yp-field from configurator.css for the manual-lookup form's spacing —
+ * this file only adds what's specific to the gate: the order-status
+ * card, the eligible/blocked banners, and the form's error text.
+ */
+
+.yp-addon-gate {
+	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
+}
+
+.yp-addon-gate__card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--warm-white);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-addon-gate__meta {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.yp-addon-gate__label {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-addon-gate__order {
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 700;
+}
+
+.yp-addon-gate__status-pill {
+	display: inline-block;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	padding: 0.35rem 0.85rem;
+	border-radius: var(--wp--custom--radius--control);
+	white-space: nowrap;
+}
+
+.yp-addon-gate__status-pill--good {
+	background: color-mix(in srgb, var(--wp--preset--color--cyan) 18%, var(--wp--preset--color--warm-white));
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-addon-gate__status-pill--warn {
+	background: color-mix(in srgb, var(--wp--preset--color--magenta) 16%, var(--wp--preset--color--warm-white));
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-addon-gate__banner {
+	border-radius: var(--wp--custom--radius--card);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-addon-gate__banner strong {
+	display: block;
+	margin-bottom: 0.4rem;
+}
+
+.yp-addon-gate__banner p {
+	margin: 0;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-addon-gate__banner--good {
+	border-color: color-mix(in srgb, var(--wp--preset--color--cyan) 35%, var(--wp--preset--color--light-gray));
+}
+
+.yp-addon-gate__banner--warn {
+	border-color: color-mix(in srgb, var(--wp--preset--color--magenta) 35%, var(--wp--preset--color--light-gray));
+}
+
+.yp-addon-gate__cta {
+	margin: 0;
+}
+
+.yp-addon-gate__form {
+	display: flex;
+	flex-direction: column;
+}
+
+.yp-form__error {
+	margin-top: 0.75rem;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--magenta-deep);
+}

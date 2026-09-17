@@ -125,6 +125,11 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipped-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-completed-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-checkout.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-account.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-email-notice.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-addon-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-contact-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-quote-controller.php';
@@ -215,6 +220,10 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Shipped_Email();
 		new YeffoPrint_Order_Completed_Email();
 		new YeffoPrint_Order_Number_Format();
+		new YeffoPrint_Order_Addon_Checkout();
+		new YeffoPrint_Order_Addon_Account();
+		new YeffoPrint_Order_Addon_Email_Notice();
+		new YeffoPrint_Order_Addon_Controller();
 		new YeffoPrint_Order_Tracking_Controller();
 		new YeffoPrint_Contact_Controller();
 		new YeffoPrint_Web_Design_Quote_Controller();
