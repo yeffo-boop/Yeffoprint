@@ -17,6 +17,14 @@
  * storefront — window chrome (traffic-light dots in the brand's
  * cyan/magenta/yellow), a gradient hero band, a 3-card product grid, and
  * a cart badge — reads as "we build stores like this" at a glance.
+ *
+ * The demo-site card (direct request, mocked up first as 4 concepts —
+ * approved as a hybrid of "a dedicated section with a real preview" and
+ * "a quiet link, no new section") sits right under the buttons rather
+ * than getting a section of its own: a real link to demo.yeffodesign.com,
+ * a mini browser-mock reusing the same SVG technique and color classes
+ * as the illustration above (`.yp-browser-mock__dot--*`/`__swatch--*`),
+ * scaled down rather than duplicated, plus its own small heading/CTA.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -57,6 +65,41 @@ defined( 'ABSPATH' ) || exit;
 				<!-- /wp:button -->
 			</div>
 			<!-- /wp:buttons -->
+
+			<!-- wp:html -->
+			<a class="yp-hero__demo-card" href="https://demo.yeffodesign.com" target="_blank" rel="noopener noreferrer">
+				<span class="yp-hero__demo-thumb" aria-hidden="true">
+					<svg viewBox="0 0 96 64" fill="none">
+						<defs>
+							<linearGradient id="ypWebDesignDemoBannerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+								<stop offset="0%" style="stop-color:var(--wp--preset--color--magenta)" />
+								<stop offset="100%" style="stop-color:var(--wp--preset--color--cyan)" />
+							</linearGradient>
+						</defs>
+						<rect class="yp-hero__demo-thumb-frame" x="0.5" y="0.5" width="95" height="63" rx="8" />
+						<rect class="yp-hero__demo-thumb-chrome" x="0.5" y="0.5" width="95" height="15" rx="8" />
+						<rect class="yp-hero__demo-thumb-chrome" x="0.5" y="8" width="95" height="7.5" />
+						<circle class="yp-browser-mock__dot yp-browser-mock__dot--c" cx="9" cy="8" r="2" />
+						<circle class="yp-browser-mock__dot yp-browser-mock__dot--m" cx="16" cy="8" r="2" />
+						<circle class="yp-browser-mock__dot yp-browser-mock__dot--y" cx="23" cy="8" r="2" />
+						<rect class="yp-hero__demo-thumb-banner" x="8" y="21" width="80" height="15" rx="4" />
+						<rect class="yp-browser-mock__swatch yp-browser-mock__swatch--c" x="8" y="42" width="24" height="14" rx="3" />
+						<rect class="yp-browser-mock__swatch yp-browser-mock__swatch--m" x="36" y="42" width="24" height="14" rx="3" />
+						<rect class="yp-browser-mock__swatch yp-browser-mock__swatch--y" x="64" y="42" width="24" height="14" rx="3" />
+					</svg>
+				</span>
+				<span class="yp-hero__demo-text">
+					<strong>See it live before you commit</strong>
+					<span>Browse our real demo storefront</span>
+				</span>
+				<span class="yp-hero__demo-cta">
+					Visit Demo Site
+					<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+						<path d="M4 12L12 4M12 4H6M12 4V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+				</span>
+			</a>
+			<!-- /wp:html -->
 
 			<!-- wp:html -->
 			<ul class="yp-hero__stats">

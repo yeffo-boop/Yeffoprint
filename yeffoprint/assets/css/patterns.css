@@ -345,6 +345,98 @@
 	flex-shrink: 0;
 }
 
+/* Demo-site card, web-design-hero.php — the "hybrid" concept approved
+   from 4 mocked-up options: a real preview (like a dedicated section
+   would show), sized to sit quietly under the buttons (like a plain
+   link would) instead of costing a section of its own. */
+.yp-hero__demo-card {
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	width: fit-content;
+	max-width: 100%;
+	margin-top: 0.4rem;
+	padding: 0.6rem 1rem 0.6rem 0.6rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	text-decoration: none;
+	color: inherit;
+	transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.yp-hero__demo-card:hover,
+.yp-hero__demo-card:focus-visible {
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+	transform: translateY(-1px);
+}
+
+.yp-hero__demo-thumb {
+	flex: none;
+	width: 96px;
+}
+
+.yp-hero__demo-thumb svg {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.yp-hero__demo-thumb-frame {
+	fill: var(--wp--preset--color--white);
+	stroke: var(--wp--preset--color--light-gray);
+	stroke-width: 1.5;
+}
+
+.yp-hero__demo-thumb-chrome {
+	fill: var(--wp--preset--color--warm-white);
+}
+
+.yp-hero__demo-thumb-banner {
+	fill: url(#ypWebDesignDemoBannerGradient);
+}
+
+.yp-hero__demo-text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	min-width: 0;
+}
+
+.yp-hero__demo-text strong {
+	font-size: 0.85rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-hero__demo-text span {
+	font-size: 0.78rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-hero__demo-cta {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	margin-left: 0.25rem;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--cyan-deep);
+	white-space: nowrap;
+}
+
+@media (max-width: 500px) {
+	.yp-hero__demo-card {
+		flex-wrap: wrap;
+	}
+
+	.yp-hero__demo-cta {
+		margin-left: 0;
+		padding-left: calc(96px + 0.85rem);
+	}
+}
+
 .yp-view-all-link {
 	display: inline-flex;
 	align-items: center;
