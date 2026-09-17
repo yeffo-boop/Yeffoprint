@@ -16,6 +16,7 @@
 
 	var META = {
 		price: '_yp_price',
+		checkoutPrice: '_yp_checkout_price',
 		tagline: '_yp_tagline',
 		featured: '_yp_featured',
 		features: '_yp_features'
@@ -35,8 +36,8 @@
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-add>+ Add Package</button>' +
 			'</div>' +
 			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
-				'<th>Package</th><th>Price</th><th>Tagline</th><th>Featured</th><th>Status</th><th></th>' +
-			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="6">Loading&hellip;</td></tr></tbody></table></div>';
+				'<th>Package</th><th>Price</th><th>Checkout Price</th><th>Tagline</th><th>Featured</th><th>Status</th><th></th>' +
+			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="7">Loading&hellip;</td></tr></tbody></table></div>';
 
 		var rowsEl = viewEl.querySelector( '[data-yp-rows]' );
 		var searchEl = viewEl.querySelector( '[data-yp-search]' );
@@ -60,12 +61,13 @@
 				: packages;
 
 			if ( ! filtered.length ) {
-				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">' + ( packages.length ? 'No packages match your search.' : 'No packages yet — add the first one above.' ) + '</td></tr>';
+				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="7">' + ( packages.length ? 'No packages match your search.' : 'No packages yet — add the first one above.' ) + '</td></tr>';
 				return;
 			}
 
 			rowsEl.innerHTML = filtered.map( function ( pkg, index ) {
 				var price = pkg.meta ? ( pkg.meta[ META.price ] || '&mdash;' ) : '&mdash;';
+				var checkoutPrice = pkg.meta ? parseFloat( pkg.meta[ META.checkoutPrice ] ) : 0;
 				var tagline = pkg.meta ? ( pkg.meta[ META.tagline ] || '' ) : '';
 				var isFeatured = !! ( pkg.meta && pkg.meta[ META.featured ] );
 				var isPublished = 'publish' === pkg.status;
@@ -74,6 +76,9 @@
 					'<tr data-id="' + pkg.id + '">' +
 						'<td><div class="yp-record-name">' + YP.escapeHtml( pkg.title.raw ) + '</div></td>' +
 						'<td><span class="yp-chip">' + YP.escapeHtml( price ) + '</span></td>' +
+						'<td>' + ( checkoutPrice > 0
+							? '<span class="yp-pill yp-pill--good">$' + checkoutPrice.toFixed( 2 ) + '</span>'
+							: '<span class="yp-pill yp-pill--neutral">Not set</span>' ) + '</td>' +
 						'<td>' + ( tagline ? YP.escapeHtml( tagline ) : '<span class="yp-chip">&mdash;</span>' ) + '</td>' +
 						'<td>' + ( isFeatured ? '<span class="yp-pill yp-pill--good">Featured</span>' : '&mdash;' ) + '</td>' +
 						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span></td>' +
@@ -180,6 +185,9 @@
 								'<div class="yp-field"><label for="yp-pkg-price">Price</label><input type="text" id="yp-pkg-price" name="price" value="' + YP.escapeAttr( meta[ META.price ] || '' ) + '" placeholder="$1,500" /></div>' +
 								'<div class="yp-field"><label for="yp-pkg-tagline">Tagline</label><input type="text" id="yp-pkg-tagline" name="tagline" value="' + YP.escapeAttr( meta[ META.tagline ] || '' ) + '" placeholder="Best for most businesses" /></div>' +
 							'</div>' +
+							'<div class="yp-field"><label for="yp-pkg-checkout-price">Checkout Price (USD)</label><input type="number" id="yp-pkg-checkout-price" name="checkoutPrice" step="0.01" min="0" value="' + YP.escapeAttr( meta[ META.checkoutPrice ] || '' ) + '" placeholder="1500.00" />' +
+								'<p class="yp-field__hint">The real amount to charge — separate from the display text above. Set this to actually be able to charge a customer: search this package’s name from Orders → Add New in WooCommerce once it’s set.</p>' +
+							'</div>' +
 							'<div class="yp-field"><label for="yp-pkg-features">Features</label><textarea id="yp-pkg-features" name="features" placeholder="One per line">' + YP.escapeHtml( features ) + '</textarea>' +
 								'<p class="yp-field__hint">One bullet per line — shown in this order on the pricing card.</p>' +
 							'</div>' +
@@ -224,6 +232,7 @@
 				meta: {}
 			};
 			body.meta[ META.price ] = form.price.value.trim();
+			body.meta[ META.checkoutPrice ] = form.checkoutPrice.value ? Math.max( 0, parseFloat( form.checkoutPrice.value ) ) : 0;
 			body.meta[ META.tagline ] = form.tagline.value.trim();
 			body.meta[ META.featured ] = form.featured.checked;
 			body.meta[ META.features ] = form.features.value.split( '\n' ).map( function ( line ) { return line.trim(); } ).filter( function ( line ) { return line.length; } );

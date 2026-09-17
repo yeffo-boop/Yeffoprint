@@ -31,6 +31,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-commerce-record-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-web-design-package-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-web-design-addon-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-saved-design-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-sticker-size-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/schema/class-field-schema.php';
@@ -164,6 +165,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Template_Meta();
 		new YeffoPrint_Commerce_Record_Meta();
 		new YeffoPrint_Web_Design_Package_Meta();
+		new YeffoPrint_Web_Design_Addon_Meta();
 		new YeffoPrint_Sticker_Size_Meta();
 		new YeffoPrint_Template_Query();
 		new YeffoPrint_Template_Search();
@@ -352,6 +354,7 @@ final class YeffoPrint_Core {
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-shipping-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-pages-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-web-design-packages-setup-command.php';
+			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-web-design-addons-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-telegram-setup-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-material-guide-backfill-command.php';
 			require_once YEFFOPRINT_CORE_PATH . 'includes/cli/class-product-templates-seed-command.php';
@@ -359,6 +362,7 @@ final class YeffoPrint_Core {
 			( new YeffoPrint_Shipping_Setup_Command() )->register();
 			( new YeffoPrint_Pages_Setup_Command() )->register();
 			( new YeffoPrint_Web_Design_Packages_Setup_Command() )->register();
+			( new YeffoPrint_Web_Design_Addons_Setup_Command() )->register();
 			( new YeffoPrint_Telegram_Setup_Command() )->register();
 			( new YeffoPrint_Material_Guide_Backfill_Command() )->register();
 			( new YeffoPrint_Product_Templates_Seed_Command() )->register();

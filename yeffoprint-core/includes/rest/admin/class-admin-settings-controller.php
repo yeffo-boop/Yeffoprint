@@ -91,7 +91,6 @@ class YeffoPrint_Admin_Settings_Controller {
 
 		update_option( $M::DASHBOARD_DUE_DATE_DAYS_OPTION, max( 1, (int) ( $params['dashboard_due_date_days'] ?? $M::DASHBOARD_DUE_DATE_DAYS_DEFAULT ) ) );
 
-		update_option( $M::MAINTENANCE_PAYMENT_LINK_OPTION, esc_url_raw( (string) ( $params['maintenance_payment_link'] ?? '' ) ) );
 		update_option( YeffoPrint_Stripe_Webhook_Secret::OPTION_KEY, sanitize_text_field( (string) ( $params['maintenance_webhook_secret'] ?? '' ) ) );
 
 		update_option( $M::TELEGRAM_BOT_TOKEN_OPTION, sanitize_text_field( (string) ( $params['telegram_bot_token'] ?? '' ) ) );
@@ -158,7 +157,6 @@ class YeffoPrint_Admin_Settings_Controller {
 			'away_mode_enabled'          => (bool) get_option( $M::AWAY_MODE_ENABLED_OPTION, false ),
 			'away_mode_return_date'      => (string) get_option( $M::AWAY_MODE_RETURN_DATE_OPTION, '' ),
 			'dashboard_due_date_days'    => (int) get_option( $M::DASHBOARD_DUE_DATE_DAYS_OPTION, $M::DASHBOARD_DUE_DATE_DAYS_DEFAULT ),
-			'maintenance_payment_link'   => (string) get_option( $M::MAINTENANCE_PAYMENT_LINK_OPTION, '' ),
 			'maintenance_webhook_secret' => YeffoPrint_Stripe_Webhook_Secret::get(),
 			'maintenance_webhook_url'    => esc_url_raw( rest_url( 'yeffoprint-core/v1/stripe/webhook' ) ),
 			'telegram_bot_token'         => (string) get_option( $M::TELEGRAM_BOT_TOKEN_OPTION, '' ),

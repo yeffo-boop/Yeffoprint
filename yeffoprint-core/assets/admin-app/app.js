@@ -283,6 +283,7 @@
 			{ id: 'orders', label: 'Custom Orders' },
 			{ id: 'proofs', label: 'Proofs' },
 			{ id: 'web-design-packages', label: 'Web Design Packages' },
+			{ id: 'web-design-addons', label: 'Web Design Add-ons' },
 			{ id: 'maintenance', label: 'Maintenance Subscribers' }
 		] },
 		{ group: 'Store', items: [

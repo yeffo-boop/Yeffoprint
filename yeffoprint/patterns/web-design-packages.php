@@ -40,35 +40,62 @@
  * (assets/js/site.js's openDrawer/closeDrawer, the same one already
  * driving the header's search/cart panels and the material guide's
  * photo lightboxes) in its centered-modal variant, wired purely
- * through data-yp-drawer-trigger/-close — no new JS. The Payment-Link-
- * with-/contact/-fallback logic (reads
- * 'yeffoprint_maintenance_payment_link' directly, falling back until
- * that Stripe setup is done — see docs/ARCHITECTURE.md) now drives the
- * modal's own CTA button instead of the badge's href.
+ * through data-yp-drawer-trigger/-close — no new JS.
  *
- * Direct follow-up: packages don't include hosting or domain
- * registration — those are the customer's own cost, unless they add
- * the new Hosting add-on ($35/mo, includes email + a 1-year domain
- * registration; a one-time $75 setup fee applies only if the customer
- * has no existing host and doesn't want to use their own). A second
- * badge, same `.yp-web-design-maintenance-badge` class as the
- * Maintenance one above (the styling is generic despite the name) and
- * the identical badge→modal pattern, just its own copy and a new
- * `#yp-hosting-modal` id. No Stripe payment link exists for hosting the
- * way Maintenance has one, so its CTA is a lead-in to the new quote
- * form rather than a subscribe button.
+ * Both badges (Maintenance, Hosting) are now real, admin-editable
+ * yp_web_design_addon records (direct follow-up: "remember the add-ons
+ * we offer. I'd like to be able to add/edit available add-on options
+ * that can be added to web design orders") instead of hardcoded HTML —
+ * see class-web-design-addon-meta.php. This loop renders however many
+ * are published, in the admin's own drag-order, so adding a third
+ * add-on later needs no code change at all. `icon_svg()` below maps
+ * each record's own ICON_CHOICES slug to real, hardcoded inline SVG —
+ * an admin-editable field never renders as raw markup on this page.
  *
  * Every "Get a Quote" link on this page (the intro paragraph, each
- * package card, the hosting modal) now points at the new
- * `/web-design-quote/` intake form (class-web-design-quote-controller.php)
- * instead of the generic `/contact/` form — direct request for a richer
- * intake than name/email/message.
+ * package card) points at the `/web-design-quote/` intake form
+ * (class-web-design-quote-controller.php) instead of the generic
+ * `/contact/` form — direct request for a richer intake than
+ * name/email/message. Each add-on's own CTA does the same whenever it
+ * has no payment link of its own set (YeffoPrint_Web_Design_Addon_Meta::CTA_URL).
  */
 
 defined( 'ABSPATH' ) || exit;
 
-$maintenance_payment_link = get_option( 'yeffoprint_maintenance_payment_link', '' );
-$maintenance_url          = $maintenance_payment_link ? $maintenance_payment_link : home_url( '/contact/' );
+// A plain function, not a const array, for the same reason $placeholder_price
+// below is a local variable: this pattern file can run more than once per
+// request (every page that includes it), and a bare function declaration
+// would fatal on the second inclusion without this guard.
+if ( ! function_exists( 'yeffoprint_web_design_addon_icon_svg' ) ) {
+	/** Hardcoded server-side, keyed by YeffoPrint_Web_Design_Addon_Meta::ICON_CHOICES — never raw markup from the admin field itself. */
+	function yeffoprint_web_design_addon_icon_svg( string $icon ): string {
+		$icons = [
+			'wrench' => '<path d="M12.5 3.5a4 4 0 0 0-5.4 4.9L2.5 13a1.8 1.8 0 0 0 2.5 2.5l4.6-4.6a4 4 0 0 0 4.9-5.4l-2.6 2.6-2-2 2.6-2.6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />',
+			'globe'  => '<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.6" /><ellipse cx="10" cy="10" rx="3" ry="7.5" stroke="currentColor" stroke-width="1.6" /><line x1="2.5" y1="10" x2="17.5" y2="10" stroke="currentColor" stroke-width="1.6" />',
+			'shield' => '<path d="M10 2.5l6 2.2v4.6c0 4-2.6 6.9-6 8.2-3.4-1.3-6-4.2-6-8.2V4.7l6-2.2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />',
+			'clock'  => '<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.6" /><path d="M10 5.5V10l3.2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />',
+			'tag'    => '<path d="M11 3H4.5A1.5 1.5 0 0 0 3 4.5V11l7.3 7.3a1.5 1.5 0 0 0 2.1 0l5.9-5.9a1.5 1.5 0 0 0 0-2.1L11 3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /><circle cx="7.3" cy="7.3" r="1.1" fill="currentColor" />',
+			'star'   => '<path d="M10 2.5l2.2 4.9 5.3.6-4 3.7 1.1 5.3L10 14.3l-4.6 2.7 1.1-5.3-4-3.7 5.3-.6L10 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />',
+		];
+
+		return $icons[ $icon ] ?? $icons['tag'];
+	}
+}
+
+$addons = array_map( static function ( $post ) {
+	return [
+		'id'            => $post->ID,
+		'name'          => get_the_title( $post ),
+		'price'         => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::PRICE, true ),
+		'badge_text'    => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::BADGE_TEXT, true ),
+		'modal_heading' => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::MODAL_HEADING, true ),
+		'modal_body'    => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::MODAL_BODY, true ),
+		'features'      => (array) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::FEATURES, true ),
+		'cta_label'     => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::CTA_LABEL, true ),
+		'cta_url'       => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::CTA_URL, true ) ?: home_url( '/web-design-quote/' ),
+		'icon'          => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Addon_Meta::ICON, true ),
+	];
+}, YeffoPrint_Web_Design_Addon_Meta::get_published() );
 
 // The seed command's own starting value — still exactly this means the
 // owner hasn't edited this tier's price yet. A local variable, not a
@@ -102,135 +129,62 @@ $packages = array_map( static function ( $post ) {
 	<p class="has-text-align-center">Every project is scoped to what you're actually building — these are starting points, not a fixed menu. <a href="/web-design-quote/">Tell us about your store</a> and we'll put together a real quote.</p>
 	<!-- /wp:paragraph -->
 
-	<!-- wp:html -->
-	<div class="yp-web-design-badge-row">
-		<button type="button" class="yp-web-design-maintenance-badge" data-yp-drawer-trigger="yp-maintenance-modal" aria-haspopup="dialog">
-			<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-				<path d="M12.5 3.5a4 4 0 0 0-5.4 4.9L2.5 13a1.8 1.8 0 0 0 2.5 2.5l4.6-4.6a4 4 0 0 0 4.9-5.4l-2.6 2.6-2-2 2.6-2.6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
-			</svg>
-			<span>Every package can add <strong>ongoing maintenance &amp; monitoring</strong> for <strong>$35/mo</strong></span>
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-				<path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-			</svg>
-		</button>
-		<button type="button" class="yp-web-design-maintenance-badge" data-yp-drawer-trigger="yp-hosting-modal" aria-haspopup="dialog">
-			<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-				<circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.6" />
-				<ellipse cx="10" cy="10" rx="3" ry="7.5" stroke="currentColor" stroke-width="1.6" />
-				<line x1="2.5" y1="10" x2="17.5" y2="10" stroke="currentColor" stroke-width="1.6" />
-			</svg>
-			<span>Need hosting too? Add it from <strong>$35/mo</strong> — email &amp; a domain included</span>
-			<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-				<path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-			</svg>
-		</button>
-	</div>
-	<!-- /wp:html -->
-
-	<!-- wp:html -->
-	<div id="yp-hosting-modal" class="yp-drawer yp-drawer--center" aria-hidden="true">
-		<div class="yp-drawer__backdrop"></div>
-		<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="yp-hosting-modal-heading">
-			<div class="yp-drawer__header">
-				<span id="yp-hosting-modal-heading">Hosting Add-On</span>
-				<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">
-					<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-						<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-						<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+	<?php if ( $addons ) : ?>
+		<!-- wp:html -->
+		<div class="yp-web-design-badge-row">
+			<?php foreach ( $addons as $addon ) : ?>
+				<button type="button" class="yp-web-design-maintenance-badge" data-yp-drawer-trigger="yp-addon-modal-<?php echo (int) $addon['id']; ?>" aria-haspopup="dialog">
+					<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+						<?php echo yeffoprint_web_design_addon_icon_svg( $addon['icon'] ); ?>
+					</svg>
+					<span><?php echo esc_html( $addon['badge_text'] ); ?></span>
+					<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+						<path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
 					</svg>
 				</button>
-			</div>
-			<div class="yp-drawer__body">
-				<p>None of the packages above include hosting or domain registration — those are ongoing costs you hold directly, or you can add our hosting for <strong>$35/mo</strong>:</p>
-				<ul class="yp-web-design-package__features">
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						Hosting for your storefront
-					</li>
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						Business email at your own domain
-					</li>
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						1 year of domain registration
-					</li>
-				</ul>
-				<p>Don't have a host yet and don't want to use your own? There's a one-time <strong>$75 setup fee</strong> to get everything configured and moved in — otherwise, if you're bringing your own host, that fee doesn't apply.</p>
-				<div class="wp-block-buttons">
-					<div class="wp-block-button is-style-accent yp-maintenance-modal__cta">
-						<a class="wp-block-button__link wp-element-button" href="/web-design-quote/">Ask About Hosting</a>
+			<?php endforeach; ?>
+		</div>
+		<!-- /wp:html -->
+
+		<?php foreach ( $addons as $addon ) : ?>
+			<!-- wp:html -->
+			<div id="yp-addon-modal-<?php echo (int) $addon['id']; ?>" class="yp-drawer yp-drawer--center" aria-hidden="true">
+				<div class="yp-drawer__backdrop"></div>
+				<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="yp-addon-modal-<?php echo (int) $addon['id']; ?>-heading">
+					<div class="yp-drawer__header">
+						<span id="yp-addon-modal-<?php echo (int) $addon['id']; ?>-heading"><?php echo esc_html( $addon['modal_heading'] ); ?></span>
+						<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">
+							<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+								<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+								<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+							</svg>
+						</button>
+					</div>
+					<div class="yp-drawer__body">
+						<p><?php echo esc_html( $addon['modal_body'] ); ?></p>
+						<?php if ( $addon['features'] ) : ?>
+							<ul class="yp-web-design-package__features">
+								<?php foreach ( $addon['features'] as $feature ) : ?>
+									<li>
+										<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+											<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+										<?php echo esc_html( $feature ); ?>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php endif; ?>
+						<div class="wp-block-buttons">
+							<div class="wp-block-button is-style-accent yp-maintenance-modal__cta">
+								<a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( $addon['cta_url'] ); ?>"><?php echo esc_html( $addon['cta_label'] ); ?></a>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
-	</div>
-	<!-- /wp:html -->
-
-	<!-- wp:html -->
-	<div id="yp-maintenance-modal" class="yp-drawer yp-drawer--center" aria-hidden="true">
-		<div class="yp-drawer__backdrop"></div>
-		<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="yp-maintenance-modal-heading">
-			<div class="yp-drawer__header">
-				<span id="yp-maintenance-modal-heading">Ongoing Maintenance &amp; Monitoring</span>
-				<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">
-					<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-						<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-						<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-					</svg>
-				</button>
-			</div>
-			<div class="yp-drawer__body">
-				<p>A launched site still needs attention — plugin and core updates, and someone watching for issues before your customers find them. Add this to any package for <strong>$35/mo</strong> and we'll keep your store current and monitored, month to month.</p>
-				<ul class="yp-web-design-package__features">
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						Core, theme, and plugin updates — applied and tested, not just installed blind
-					</li>
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						Uptime monitoring, so we know before your customers do
-					</li>
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						Regular backups
-					</li>
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						Security monitoring for common vulnerabilities
-					</li>
-					<li>
-						<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-							<path d="M3 8.5L6.5 12L13 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						Priority support if something needs attention
-					</li>
-				</ul>
-				<div class="wp-block-buttons">
-					<div class="wp-block-button is-style-accent yp-maintenance-modal__cta">
-						<a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( $maintenance_url ); ?>">
-							<?php echo esc_html( $maintenance_payment_link ? 'Subscribe to Maintenance' : 'Ask About Maintenance' ); ?>
-						</a>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-	<!-- /wp:html -->
+			<!-- /wp:html -->
+		<?php endforeach; ?>
+	<?php endif; ?>
 
 	<?php if ( $packages ) : ?>
 		<!-- wp:html -->
