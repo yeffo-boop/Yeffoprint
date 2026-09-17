@@ -95,6 +95,24 @@
  * bot's own order-status reply (class-telegram-order-lookup.php),
  * fixed alongside this to list every shell's status instead of just
  * the first one `get_posts()` happened to return.
+ *
+ * Web Design Package orders (this revision) — direct request: "Can we
+ * build the add new order for web design customers to my yeffodesign
+ * dashboard" — staff had to leave this screen for classic wp-admin's
+ * Orders → Add New to charge a customer for a package once its
+ * Checkout Price was set (see class-web-design-package-product.php).
+ * A `web_design` group is deliberately never added to SHELL_TYPES
+ * below: a package purchase isn't fulfilled through the print shop's
+ * own proof/production pipeline, so it never gets a `yp_custom_order`
+ * shell regardless of the order-wide "requires proof approval"
+ * checkbox — see the `isset( self::SHELL_TYPES[ $type ] )` guard in
+ * create()'s own per-group loop. It's also the only group type that
+ * adds its line item with no per-item pricing calculation or
+ * `YeffoPrint_Order_Item_Meta::apply()` snapshot at all: the linked
+ * product's own price (kept in sync by class-web-design-package-
+ * product.php) is already the real, final total, and a virtual
+ * package/add-on purchase has no cart-item-key snapshot to feed
+ * downstream reorder/QR/customization readers in the first place.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -122,12 +140,15 @@ class YeffoPrint_Manual_Order_Creator {
 	 *                                 attachment IDs, already uploaded via /custom-orders/uploads.
 	 *     @type array  $template      Optional — { template_id, size_id, material_id,
 	 *                                 variants: [ { quantity, values: { field_id: value } } ], instructions }.
-	 *                                 At least one of $custom_design/$sticker/$template is required — direct
-	 *                                 request: "customers order custom design items mixed with template
-	 *                                 items... I need the ability... to order them at the same time." Any
-	 *                                 combination of the three adds its own line item(s) onto this one
-	 *                                 order; see the class docblock above for how proof approval handles
-	 *                                 more than one group being present at once.
+	 *     @type array  $web_design    Optional — { package_id } — a yp_web_design_pkg with a real Checkout
+	 *                                 Price set. Never gets a proof-approval shell; see the class docblock's
+	 *                                 own "Web Design Package orders" section.
+	 *                                 At least one of $custom_design/$sticker/$template/$web_design is
+	 *                                 required — direct request: "customers order custom design items mixed
+	 *                                 with template items... I need the ability... to order them at the same
+	 *                                 time." Any combination adds its own line item(s) onto this one order;
+	 *                                 see the class docblock above for how proof approval handles more than
+	 *                                 one group being present at once.
 	 *     @type bool   $requires_proof
 	 *     @type bool   $send_invoice_email  Direct request: email the customer their order details and a
 	 *                                       payment link right on creation, via WooCommerce's own built-in
@@ -242,7 +263,11 @@ class YeffoPrint_Manual_Order_Creator {
 		foreach ( $groups as $type => $group ) {
 			$custom_order_id = 0;
 
-			if ( $requires_proof ) {
+			// 'web_design' is never in SHELL_TYPES (see this class's own
+			// docblock, "Web Design Package orders") — a package purchase
+			// never gets a proof-approval shell, regardless of this
+			// order-wide checkbox.
+			if ( $requires_proof && isset( self::SHELL_TYPES[ $type ] ) ) {
 				$custom_order_id = YeffoPrint_Custom_Order_Meta::create_shell(
 					self::SHELL_TYPES[ $type ],
 					self::shell_title( $type, $group ),
@@ -261,8 +286,10 @@ class YeffoPrint_Manual_Order_Creator {
 				$result = self::add_custom_design_rows( $order, $group['batch'], $custom_order_id, $group['waive_design_fee'] );
 			} elseif ( 'sticker' === $type ) {
 				$result = self::add_sticker_row( $order, $group, $custom_order_id );
-			} else {
+			} elseif ( 'template' === $type ) {
 				$result = self::add_template_row( $order, $group, $custom_order_id );
+			} else {
+				$result = self::add_web_design_row( $order, $group );
 			}
 
 			if ( is_wp_error( $result ) ) {
@@ -451,8 +478,16 @@ class YeffoPrint_Manual_Order_Creator {
 			$groups['template'] = $template;
 		}
 
+		if ( ! empty( $payload['web_design'] ) && is_array( $payload['web_design'] ) ) {
+			$web_design = self::validate_web_design_fields( $payload['web_design'] );
+			if ( is_wp_error( $web_design ) ) {
+				return $web_design;
+			}
+			$groups['web_design'] = $web_design;
+		}
+
 		if ( ! $groups ) {
-			return new \WP_Error( 'yeffoprint_empty_order', __( 'Add at least one item — Custom Design, Custom Stickers, or a Template Label — before creating the order.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			return new \WP_Error( 'yeffoprint_empty_order', __( 'Add at least one item — Custom Design, Custom Stickers, a Template Label, or a Web Design Package — before creating the order.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
 		return $groups;
@@ -819,6 +854,43 @@ class YeffoPrint_Manual_Order_Creator {
 		if ( $item instanceof \WC_Order_Item_Product ) {
 			YeffoPrint_Order_Item_Meta::apply( $item, $values, $total_quantity );
 			$item->save();
+		}
+
+		return true;
+	}
+
+	/** @return array{package_id:int}|\WP_Error */
+	private static function validate_web_design_fields( array $payload ) {
+		$package_id = absint( $payload['package_id'] ?? 0 );
+		if ( ! self::is_published( 'yp_web_design_pkg', $package_id ) ) {
+			return new \WP_Error( 'yeffoprint_invalid_package', __( 'Please choose a valid package.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return [ 'package_id' => $package_id ];
+	}
+
+	/**
+	 * A single line item at quantity 1, no fee, no batching, no
+	 * cart-item-key snapshot — the package's own linked product
+	 * (class-web-design-package-product.php) is already priced at
+	 * exactly what should be charged, the same product WooCommerce's
+	 * own Orders → Add New product search would find by name. Draft
+	 * (unpriced, or the package itself unpublished) is rejected here
+	 * rather than silently adding a $0 line item.
+	 *
+	 * @return true|\WP_Error
+	 */
+	private static function add_web_design_row( \WC_Order $order, array $web_design ) {
+		$product_id = YeffoPrint_Web_Design_Package_Product::get_linked_product_id( $web_design['package_id'] );
+		$product    = $product_id ? wc_get_product( $product_id ) : false;
+
+		if ( ! $product instanceof \WC_Product || 'publish' !== $product->get_status() ) {
+			return new \WP_Error( 'yeffoprint_package_not_chargeable', __( "This package doesn't have a Checkout Price set yet — set one on the package record (Web Design Packages) before charging for it.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$item_id = $order->add_product( $product, 1 );
+		if ( ! $item_id ) {
+			return new \WP_Error( 'yeffoprint_add_item_failed', __( "Couldn't add this package to the order.", 'yeffoprint-core' ), [ 'status' => 500 ] );
 		}
 
 		return true;

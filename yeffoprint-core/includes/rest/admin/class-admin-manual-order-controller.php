@@ -125,6 +125,16 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			// post.php?post=…&action=edit link — resolves correctly
 			// whether this store is on classic post-based orders or HPOS.
 			'order_edit_url'  => $order->get_edit_order_url(),
+			// Direct request: a way to hand the customer a working payment
+			// link right from this screen instead of finding it on the
+			// order screen afterward (or via the "email the customer their
+			// order details" checkbox's own invoice email, which already
+			// includes this same URL — see class-manual-order-creator.php's
+			// own docblock on that). needs_payment() is false for an order
+			// this call itself already completed payment on some other way
+			// (shouldn't happen here, defensive only) — get_checkout_payment_url()
+			// still returns a URL either way, so no extra branching needed.
+			'payment_url'     => $order->get_checkout_payment_url(),
 			// Direct request: "customers order custom design items mixed
 			// with template items... order them at the same time" — this
 			// order can now carry more than one proof-approval shell (one

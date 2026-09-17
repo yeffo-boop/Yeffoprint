@@ -38,6 +38,17 @@
  * own price preview) can be visible and filled in at once; submit()
  * sends whichever are active as their own nested key in the request
  * body instead of one order_type picking a single shape.
+ *
+ * Web Design Package (this revision) — direct request: "Can we build
+ * the add new order for web design customers to my yeffodesign
+ * dashboard" — a fourth, much simpler item type: pick a package
+ * (fetched from `/wp/v2/yp_web_design_pkg`, same REST route
+ * views/web-design-packages.js itself edits), no proof approval, no
+ * shipping address/method — see class-manual-order-creator.php's own
+ * docblock for why a package purchase skips both. When it's the only
+ * active type, the Shipping & billing panel is left out of render()
+ * entirely rather than asking for a delivery address nothing will
+ * ever ship to.
  */
 
 ( function () {
@@ -112,7 +123,8 @@
 	var ORDER_TYPE_LABELS = {
 		custom_design: 'Custom Design',
 		sticker: 'Custom Sticker',
-		template: 'Template Label'
+		template: 'Template Label',
+		web_design: 'Web Design Package'
 	};
 
 	YP.views[ 'manual-order' ] = function ( viewEl ) {
@@ -121,9 +133,10 @@
 		};
 
 		var state = {
-			activeTypes: { custom_design: true, sticker: false, template: false },
+			activeTypes: { custom_design: true, sticker: false, template: false, web_design: false },
 			options: null, // custom-orders/options — Custom Design's own sizes/materials.
 			stickerOptions: null, // custom-stickers/options — Custom Stickers' own sizes/materials/types/shapes.
+			webDesignPackages: null, // /wp/v2/yp_web_design_pkg — every published package, priced or not (see webDesignFieldsHtml()).
 			stickerUploads: [], // [{ name, id, error }] — same shape as the customer-facing form's own uploadedFiles.
 			selectedCustomer: null, // { id, display_name, email }
 			newCustomerMode: false,
@@ -150,11 +163,13 @@
 
 		Promise.all( [
 			YP.request( coreEndpoint( 'custom-orders/options' ) ),
-			YP.request( coreEndpoint( 'custom-stickers/options' ) )
+			YP.request( coreEndpoint( 'custom-stickers/options' ) ),
+			YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_web_design_pkg?context=edit&status=publish&per_page=100&orderby=menu_order&order=asc' )
 		] )
 			.then( function ( results ) {
 				state.options = results[ 0 ];
 				state.stickerOptions = results[ 1 ];
+				state.webDesignPackages = results[ 2 ];
 				render();
 			} )
 			.catch( function ( error ) {
@@ -165,6 +180,12 @@
 			var typeButtonsHtml = Object.keys( ORDER_TYPE_LABELS ).map( function ( type ) {
 				return '<button type="button" class="wp-block-button__link ' + ( state.activeTypes[ type ] ? 'is-style-accent' : 'is-style-outline' ) + '" data-yp-order-type="' + type + '">' + ORDER_TYPE_LABELS[ type ] + '</button>';
 			} ).join( '' );
+
+			// A Web Design Package is a virtual, one-time service — nothing
+			// ships. Only pull in the Shipping & billing panel when at least
+			// one *other*, physical item type is active alongside it (or
+			// instead of it).
+			var hasPhysicalItem = state.activeTypes.custom_design || state.activeTypes.sticker || state.activeTypes.template;
 
 			viewEl.innerHTML =
 				'<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' +
@@ -179,11 +200,12 @@
 					'<div data-yp-customer-picker></div>' +
 				'</div>' +
 
-				shippingPanelHtml() +
+				( hasPhysicalItem ? shippingPanelHtml() : '' ) +
 
 				( state.activeTypes.custom_design ? customDesignFieldsHtml() : '' ) +
 				( state.activeTypes.sticker ? stickerFieldsHtml() : '' ) +
 				( state.activeTypes.template ? templateFieldsHtml() : '' ) +
+				( state.activeTypes.web_design ? webDesignFieldsHtml() : '' ) +
 
 				'<div class="yp-panel">' +
 					'<div class="yp-field yp-field--checkbox">' +
@@ -209,13 +231,15 @@
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>Create Order</button>';
 
 			renderCustomerPicker();
-			bindShippingPanel();
-			// render() rebuilds the shipping panel's HTML from scratch (e.g.
+			// Both are no-ops (via their own null-guards) when
+			// hasPhysicalItem left the shipping panel out of the markup
+			// above. render() rebuilds the panel's HTML from scratch (e.g.
 			// on every item-type toggle) with an empty verify-result
 			// container — state.shipping itself survives that rebuild (see
 			// its own docblock above; the shipping-method <select> reads its
 			// own selected option straight from that state when the markup
 			// is built, so only the verify result needs playing back here).
+			bindShippingPanel();
 			renderVerifyResult();
 
 			viewEl.querySelectorAll( '[data-yp-order-type]' ).forEach( function ( button ) {
@@ -805,6 +829,42 @@
 				} );
 		}
 
+		/* ---------- Web Design Package (this revision) ---------- */
+
+		function webDesignFieldsHtml() {
+			// Same "priced or not" filter class-manual-order-creator.php's
+			// own add_web_design_row() enforces server-side — only a
+			// published package with a real Checkout Price is chargeable,
+			// so an unpriced one is left out of the picker entirely rather
+			// than offered and then rejected on submit.
+			var pricedPackages = ( state.webDesignPackages || [] ).filter( function ( pkg ) {
+				return pkg.meta && parseFloat( pkg.meta._yp_checkout_price ) > 0;
+			} );
+
+			if ( ! pricedPackages.length ) {
+				return (
+					'<div class="yp-panel">' +
+						'<div class="yp-panel__head"><h2>Web Design Package details</h2></div>' +
+						'<p class="yp-form__error">No packages have a Checkout Price set yet — set one on a package record (Web Design Packages) before charging for it.</p>' +
+					'</div>'
+				);
+			}
+
+			return (
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Web Design Package details</h2></div>' +
+					'<div class="yp-field"><label for="yp-mo-web-design-package">Package</label><select id="yp-mo-web-design-package">' +
+						'<option value="">Choose a package…</option>' +
+						pricedPackages.map( function ( pkg ) {
+							var price = parseFloat( pkg.meta._yp_checkout_price );
+							return '<option value="' + pkg.id + '">' + YP.escapeHtml( pkg.title.raw || pkg.title.rendered ) + ' — $' + price.toFixed( 2 ) + '</option>';
+						} ).join( '' ) +
+					'</select></div>' +
+					'<p class="yp-panel__hint">No proof approval and no shipping — a package purchase is a virtual service, not a physical print job.</p>' +
+				'</div>'
+			);
+		}
+
 		/* ---------- Customer picker (shared by every order type) ---------- */
 
 		function renderCustomerPicker() {
@@ -1100,7 +1160,10 @@
 		}
 
 		function renderVerifyResult() {
-			var panel    = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			var panel = viewEl.querySelector( '[data-yp-shipping-panel]' );
+			if ( ! panel ) {
+				return; // No physical item type active — see hasPhysicalItem in render().
+			}
 			var resultEl = panel.querySelector( '[data-yp-verify-result]' );
 			var result   = state.shipping.verifyResult;
 
@@ -1185,15 +1248,27 @@
 				};
 			}
 
-			readAddressState( 'ship' );
-			body.shipping_address = shippingAddressPayload( state.shipping.address );
-			if ( state.shipping.billingDiffers ) {
-				readAddressState( 'bill' );
-				body.billing_address = shippingAddressPayload( state.shipping.billingAddress );
+			if ( state.activeTypes.web_design ) {
+				body.web_design = {
+					package_id: parseInt( ( viewEl.querySelector( '#yp-mo-web-design-package' ) || {} ).value, 10 ) || 0
+				};
 			}
-			var selectedShipping = selectedShippingPayload();
-			if ( selectedShipping ) {
-				body.shipping = selectedShipping;
+
+			// Mirrors render()'s own hasPhysicalItem — the shipping panel
+			// (and its fields) simply isn't in the DOM when nothing physical
+			// is active, so there's nothing here to read.
+			var hasPhysicalItem = state.activeTypes.custom_design || state.activeTypes.sticker || state.activeTypes.template;
+			if ( hasPhysicalItem ) {
+				readAddressState( 'ship' );
+				body.shipping_address = shippingAddressPayload( state.shipping.address );
+				if ( state.shipping.billingDiffers ) {
+					readAddressState( 'bill' );
+					body.billing_address = shippingAddressPayload( state.shipping.billingAddress );
+				}
+				var selectedShipping = selectedShippingPayload();
+				if ( selectedShipping ) {
+					body.shipping = selectedShipping;
+				}
 			}
 
 			submitButton.disabled = true;
@@ -1217,7 +1292,18 @@
 						var label = ORDER_TYPE_LABELS[ customOrder.order_type ] || customOrder.order_type;
 						links += ' &middot; <a href="#/orders/' + customOrder.id + '">Add a proof (' + YP.escapeHtml( label ) + ')</a>';
 					} );
-					statusEl.innerHTML = '<p class="yp-panel__hint">Order created. ' + links + '</p>';
+
+					// A Web Design Package order has no proof, no shipping —
+					// the payment link is the one thing staff need to hand
+					// the customer, same "readonly, click-to-select" pattern
+					// as views/orders.js's own copy-link field.
+					var paymentLinkHtml = result.payment_url
+						? '<div class="yp-field"><label for="yp-mo-payment-link">Payment link</label>' +
+							'<input type="text" id="yp-mo-payment-link" readonly onclick="this.select();" value="' + YP.escapeAttr( result.payment_url ) + '" style="width:100%;margin-top:0.35rem;padding:0.4rem 0.6rem;font-family:var(--wp--preset--font-family--mono);font-size:0.78rem;border:1.5px solid var(--wp--preset--color--light-gray);border-radius:var(--wp--custom--radius--control);" />' +
+						'</div>'
+						: '';
+
+					statusEl.innerHTML = '<p class="yp-panel__hint">Order created. ' + links + '</p>' + paymentLinkHtml;
 				} )
 				.catch( function ( error ) {
 					submitButton.disabled = false;
