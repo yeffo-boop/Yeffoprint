@@ -513,6 +513,59 @@
 		return { text: daysOpen + ( 1 === daysOpen ? ' day ago' : ' days ago' ), overdue: false, overdueBy: 0 };
 	}
 
+	function rowHtml( row, dueDateDays, onOrderClick, rowAction, clickAttr ) {
+		var age = daysAgoLabel( row.date, dueDateDays );
+		var label = onOrderClick
+			? '<button type="button" class="yp-row-action" style="padding:0;font-weight:700;" ' + ( clickAttr || 'data-yp-dashboard-order' ) + '="' + row.id + '">' + YP.escapeHtml( row.label ) + '</button>'
+			: '<a href="' + YP.escapeAttr( row.edit_url ) + '">' + YP.escapeHtml( row.label ) + '</a>';
+		return (
+			'<div class="yp-list-row">' +
+				'<div class="yp-list-row__text">' +
+					'<span class="t">' + label + '</span>' +
+					'<span class="s">' + YP.escapeHtml( row.customer || '—' ) + '</span>' +
+				'</div>' +
+				'<div class="yp-list-row__meta">' + ( age.overdue ? '<span class="yp-pill yp-pill--crit">' + age.text + '</span>' : '<span class="yp-list-row__age">' + age.text + '</span>' ) + '</div>' +
+				( rowAction ? '<div class="yp-list-row__action">' + rowAction( row ) + '</div>' : '' ) +
+			'</div>'
+		);
+	}
+
+	/**
+	 * "Ship it together" (direct request): Pending Orders rows that share
+	 * a ship_group_key (class-admin-dashboard-controller.php's
+	 * pending_wc_orders() — only ever set within this one fetched page,
+	 * see that method's own docblock) get bracketed into one visual
+	 * group so staff notice the pairing before either order ships
+	 * separately. No other panel's rows ever carry ship_group_key, so
+	 * this degrades to plain rowHtml() there.
+	 */
+	function renderRowsWithShipGroups( rows, dueDateDays, onOrderClick, rowAction, clickAttr ) {
+		var rendered = {};
+		return rows.map( function ( row ) {
+			if ( rendered[ row.id ] ) {
+				return '';
+			}
+
+			if ( ! row.ship_group_key ) {
+				return rowHtml( row, dueDateDays, onOrderClick, rowAction, clickAttr );
+			}
+
+			var group = rows.filter( function ( candidate ) {
+				return candidate.ship_group_key === row.ship_group_key;
+			} );
+			group.forEach( function ( member ) { rendered[ member.id ] = true; } );
+
+			var labels = group.map( function ( member ) { return member.label; } ).join( ' + ' );
+
+			return (
+				'<div class="yp-ship-group">' +
+					'<div class="yp-ship-group__label">&#128279; Ship together — ' + YP.escapeHtml( labels ) + '</div>' +
+					group.map( function ( member ) { return rowHtml( member, dueDateDays, onOrderClick, rowAction, clickAttr ); } ).join( '' ) +
+				'</div>'
+			);
+		} ).join( '' );
+	}
+
 	/**
 	 * Direct request: "a functional dashboard that gives me what I need
 	 * at a glance, looks polished, and just works." Rows used to render
@@ -525,27 +578,9 @@
 	 * across the whole dashboard instead of a table per panel.
 	 */
 	function dashboardSectionHtml( title, description, viewAllHref, rows, dueDateDays, onOrderClick, rowAction, clickAttr ) {
-		var body;
-		if ( ! rows.length ) {
-			body = '<p class="yp-field__hint">Nothing here right now.</p>';
-		} else {
-			body = rows.map( function ( row ) {
-				var age = daysAgoLabel( row.date, dueDateDays );
-				var label = onOrderClick
-					? '<button type="button" class="yp-row-action" style="padding:0;font-weight:700;" ' + ( clickAttr || 'data-yp-dashboard-order' ) + '="' + row.id + '">' + YP.escapeHtml( row.label ) + '</button>'
-					: '<a href="' + YP.escapeAttr( row.edit_url ) + '">' + YP.escapeHtml( row.label ) + '</a>';
-				return (
-					'<div class="yp-list-row">' +
-						'<div class="yp-list-row__text">' +
-							'<span class="t">' + label + '</span>' +
-							'<span class="s">' + YP.escapeHtml( row.customer || '—' ) + '</span>' +
-						'</div>' +
-						'<div class="yp-list-row__meta">' + ( age.overdue ? '<span class="yp-pill yp-pill--crit">' + age.text + '</span>' : '<span class="yp-list-row__age">' + age.text + '</span>' ) + '</div>' +
-						( rowAction ? '<div class="yp-list-row__action">' + rowAction( row ) + '</div>' : '' ) +
-					'</div>'
-				);
-			} ).join( '' );
-		}
+		var body = rows.length
+			? renderRowsWithShipGroups( rows, dueDateDays, onOrderClick, rowAction, clickAttr )
+			: '<p class="yp-field__hint">Nothing here right now.</p>';
 
 		return (
 			'<div class="yp-panel">' +

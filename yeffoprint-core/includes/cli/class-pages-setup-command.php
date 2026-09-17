@@ -95,6 +95,13 @@ class YeffoPrint_Pages_Setup_Command {
 			'',
 			'web-design-quote.html'
 		);
+
+		$this->create_page(
+			'add-to-order',
+			__( 'Add to Order', 'yeffoprint-core' ),
+			'',
+			'add-to-order.html'
+		);
 	}
 
 	private function create_page( string $slug, string $title, string $content, string $template = '' ): void {

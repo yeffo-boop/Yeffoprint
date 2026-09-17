@@ -558,6 +558,38 @@ table.yp-away-email-notice > tbody > tr > td {
 	margin: 0;
 }
 
+/* "Ship it together" add-on nudge (class-order-addon-email-notice.php)
+   — cyan-tinted rather than the away-mode notice's amber above, since
+   this is an upsell/convenience, not a heads-up about a delay. */
+table.yp-addon-email-notice {
+	margin: 0 0 22px;
+}
+
+table.yp-addon-email-notice > tbody > tr > td {
+	background-color: #E5F7FD;
+	border: 1px solid #B8E9F7;
+	border-radius: 12px;
+	padding: 16px 18px;
+	text-align: <?php echo is_rtl() ? 'right' : 'left'; ?>;
+}
+
+.yp-addon-email-notice-eyebrow {
+	display: block;
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: #0078A4;
+	font-weight: 700;
+	margin: 0 0 6px;
+}
+
+.yp-addon-email-notice-body {
+	font-size: 12.5px;
+	color: <?php echo esc_attr( $text ); ?>;
+	line-height: 150%;
+	margin: 0;
+}
+
 /* YeffoBot notice card (class-telegram-order-email-badge.php) — bigger
    than .yp-email-callout above since it carries the mascot image
    alongside two explained ways to reach the bot. Direct feedback on an

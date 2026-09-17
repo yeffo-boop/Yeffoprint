@@ -560,6 +560,38 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
+	if ( is_page() && in_array( get_page_template_slug(), [ 'add-to-order', 'add-to-order.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-add-to-order',
+			get_theme_file_uri( 'assets/css/add-to-order.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/add-to-order.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-order-addon-form',
+			get_theme_file_uri( 'assets/js/order-addon-form.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/order-addon-form.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		// The manual-lookup fallback form's endpoint (/addon/verify) is
+		// unauthenticated on purpose — same as its own
+		// class-order-addon-controller.php permission_callback — so, unlike
+		// every other form on this theme, no nonce is needed here.
+		wp_localize_script( 'yeffoprint-order-addon-form', 'yeffoprintOrderAddon', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+		] );
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'contact-form', 'contact-form.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',
@@ -696,6 +728,7 @@ add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/away-card' ) );
 	register_block_type( get_theme_file_path( 'blocks/label-designer-choice' ) );
 	register_block_type( get_theme_file_path( 'blocks/label-configurator' ) );
+	register_block_type( get_theme_file_path( 'blocks/order-addon-gate' ) );
 } );
 
 /**

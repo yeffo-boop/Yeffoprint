@@ -193,3 +193,31 @@ if ( ! function_exists( 'yeffoprint_core_badge_label' ) ) {
 		return $labels[ $badge ] ?? '';
 	}
 }
+
+if ( ! function_exists( 'yeffoprint_core_order_addon_owns_order' ) ) {
+	/**
+	 * Used by blocks/order-addon-gate/render.php to verify the order+key
+	 * pair in the /add-to-order/ URL before showing anything about that
+	 * order — never plugin-owned data read or trusted directly.
+	 */
+	function yeffoprint_core_order_addon_owns_order( \WC_Order $order, string $key ): bool {
+		return class_exists( 'YeffoPrint_Order_Addon' ) && YeffoPrint_Order_Addon::owns_order( $order, $key );
+	}
+}
+
+if ( ! function_exists( 'yeffoprint_core_order_addon_eligibility' ) ) {
+	/**
+	 * @return array{eligible:bool, reason:string, root:\WC_Order}|null
+	 */
+	function yeffoprint_core_order_addon_eligibility( \WC_Order $order ): ?array {
+		return class_exists( 'YeffoPrint_Order_Addon' ) ? YeffoPrint_Order_Addon::eligibility( $order ) : null;
+	}
+}
+
+if ( ! function_exists( 'yeffoprint_core_order_addon_start_session' ) ) {
+	function yeffoprint_core_order_addon_start_session( int $root_id ): void {
+		if ( class_exists( 'YeffoPrint_Order_Addon' ) ) {
+			YeffoPrint_Order_Addon::start_session( $root_id );
+		}
+	}
+}
