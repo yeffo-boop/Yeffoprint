@@ -175,6 +175,24 @@ class YeffoPrint_Post_Type_Registry {
 			false,
 			false // Phase 8: replaced by the custom admin app's own Web Design Packages screen.
 		) );
+
+		// One record per badge/modal above the pricing table (Maintenance,
+		// Hosting, and whatever gets added later) — direct request: "I'd
+		// like to be able to add/edit available add-on options that can be
+		// added to web design orders" instead of the two hardcoded badges
+		// patterns/web-design-packages.php used to hold. Built admin-app-
+		// first (no classic editor class) — this codebase's own Phase 8
+		// convention already treats the SPA as the real UI for these
+		// record types, and yp_web_design_pkg's own classic editor going
+		// stale the moment its SPA screen shipped is exactly the drift a
+		// second, from-scratch classic editor would just repeat.
+		register_post_type( 'yp_web_design_addon', $this->args(
+			__( 'Web Design Add-ons', 'yeffoprint-core' ),
+			__( 'Web Design Add-on', 'yeffoprint-core' ),
+			[ 'title', 'page-attributes', 'custom-fields' ],
+			false,
+			false
+		) );
 	}
 
 	/**
