@@ -70,6 +70,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin/class-dashboard-widgets.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-item-keys.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-linked-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-package-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-card-surcharge.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-card-surcharge-blocks-integration.php';
@@ -170,6 +171,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Pricing_Controller();
 		new YeffoPrint_Qr_Controller();
 		new YeffoPrint_Linked_Product();
+		new YeffoPrint_Web_Design_Package_Product();
 		new YeffoPrint_Cart_Pricing();
 		new YeffoPrint_Card_Surcharge();
 		new YeffoPrint_Card_Surcharge_Blocks_Integration();

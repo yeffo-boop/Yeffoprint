@@ -42,15 +42,22 @@ class YeffoPrint_Web_Design_Package_Editor {
 	public function render_box( \WP_Post $post ): void {
 		wp_nonce_field( self::NONCE_ACTION, self::NONCE_NAME );
 
-		$price    = get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::PRICE, true );
-		$tagline  = get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::TAGLINE, true );
-		$featured = (bool) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURED, true );
-		$features = (array) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURES, true );
+		$price          = get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::PRICE, true );
+		$checkout_price = (float) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::CHECKOUT_PRICE, true );
+		$tagline        = get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::TAGLINE, true );
+		$featured       = (bool) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURED, true );
+		$features       = (array) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURES, true );
 		?>
 		<p>
 			<label for="yp-package-price"><strong><?php esc_html_e( 'Price', 'yeffoprint-core' ); ?></strong></label><br />
 			<input type="text" id="yp-package-price" name="yp_package_price" value="<?php echo esc_attr( $price ); ?>" class="widefat" placeholder="$1,500" />
 			<span class="description"><?php esc_html_e( 'Shown exactly as typed on the page — include the $ sign, "Starting at," etc. however you\'d like it to read.', 'yeffoprint-core' ); ?></span>
+		</p>
+		<p>
+			<label for="yp-package-checkout-price"><strong><?php esc_html_e( 'Checkout Price (USD)', 'yeffoprint-core' ); ?></strong></label><br />
+			<input type="number" id="yp-package-checkout-price" name="yp_package_checkout_price" value="<?php echo esc_attr( $checkout_price ?: '' ); ?>" step="0.01" min="0" class="small-text" placeholder="1500.00" />
+			<span class="description"><?php esc_html_e( "The real amount to charge — separate from the display text above. Set this to actually be able to charge a customer for this package: search this package's name when creating a new order in WooCommerce and it'll be there, priced correctly.", 'yeffoprint-core' ); ?></span>
+			<?php $this->render_linked_product_note( $post->ID, $checkout_price ); ?>
 		</p>
 		<p>
 			<label for="yp-package-tagline"><strong><?php esc_html_e( 'Tagline', 'yeffoprint-core' ); ?></strong></label><br />
@@ -70,6 +77,23 @@ class YeffoPrint_Web_Design_Package_Editor {
 		<?php
 	}
 
+	/** Points staff at the exact next step once a package is actually chargeable — the linked product itself is deliberately invisible everywhere else (see class-web-design-package-product.php's own docblock). */
+	private function render_linked_product_note( int $post_id, float $checkout_price ): void {
+		if ( $checkout_price <= 0 || ! function_exists( 'wc_get_product' ) ) {
+			return;
+		}
+
+		$product_id = YeffoPrint_Web_Design_Package_Product::get_linked_product_id( $post_id );
+		if ( ! $product_id || ! wc_get_product( $product_id ) ) {
+			return;
+		}
+
+		printf(
+			'<br /><span class="description">%s</span>',
+			esc_html__( 'Ready to charge — search this package\'s name from Orders → Add New once a customer agrees to it.', 'yeffoprint-core' )
+		);
+	}
+
 	public function save( int $post_id ): void {
 		if ( ! isset( $_POST[ self::NONCE_NAME ] ) || ! wp_verify_nonce( wp_unslash( $_POST[ self::NONCE_NAME ] ), self::NONCE_ACTION ) ) {
 			return;
@@ -87,6 +111,12 @@ class YeffoPrint_Web_Design_Package_Editor {
 			$post_id,
 			YeffoPrint_Web_Design_Package_Meta::PRICE,
 			isset( $_POST['yp_package_price'] ) ? sanitize_text_field( wp_unslash( $_POST['yp_package_price'] ) ) : ''
+		);
+
+		update_post_meta(
+			$post_id,
+			YeffoPrint_Web_Design_Package_Meta::CHECKOUT_PRICE,
+			isset( $_POST['yp_package_checkout_price'] ) ? max( 0, (float) wp_unslash( $_POST['yp_package_checkout_price'] ) ) : 0
 		);
 
 		update_post_meta(
