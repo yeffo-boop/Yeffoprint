@@ -2044,3 +2044,228 @@
 	width: 100%;
 	text-align: center;
 }
+
+/* ---------- Product Type browse (mock) ---------- */
+
+.yp-product-type-browse {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: var(--wp--preset--spacing--md);
+	margin-top: var(--wp--preset--spacing--md);
+}
+
+@media (max-width: 900px) {
+	.yp-product-type-browse {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.yp-product-type-browse__card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	padding: 1.25rem 1.35rem;
+	border-radius: var(--wp--custom--radius--card);
+	background:
+		linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(245, 248, 250, 0.88)),
+		repeating-linear-gradient(
+			-12deg,
+			transparent,
+			transparent 10px,
+			rgba(0, 0, 0, 0.015) 10px,
+			rgba(0, 0, 0, 0.015) 11px
+		);
+	border: 1px solid var(--wp--custom--glass--border, rgba(0, 0, 0, 0.08));
+	text-decoration: none;
+	color: inherit;
+	transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-product-type-browse__card:hover,
+.yp-product-type-browse__card:focus-visible {
+	transform: translateY(-2px);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+}
+
+.yp-product-type-browse__name {
+	font-family: var(--wp--preset--font-family--heading, var(--wp--preset--font-family--geist));
+	font-weight: 700;
+	font-size: 1.15rem;
+}
+
+.yp-product-type-browse__count {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+/* ---------- Web Design polish ---------- */
+
+.yp-web-design-steps {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1rem;
+	list-style: none;
+	margin: 1.5rem 0 0;
+	padding: 0;
+	counter-reset: wd-step;
+}
+
+@media (max-width: 781px) {
+	.yp-web-design-steps {
+		grid-template-columns: 1fr;
+	}
+}
+
+.yp-web-design-steps li {
+	counter-increment: wd-step;
+	position: relative;
+	padding: 1rem 1rem 1rem 2.75rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: rgba(255, 255, 255, 0.55);
+	border: 1px solid var(--wp--custom--glass--border, rgba(0, 0, 0, 0.06));
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-web-design-steps li::before {
+	content: counter(wd-step);
+	position: absolute;
+	left: 0.85rem;
+	top: 0.95rem;
+	width: 1.4rem;
+	height: 1.4rem;
+	border-radius: 999px;
+	display: grid;
+	place-items: center;
+	background: var(--wp--preset--color--charcoal);
+	color: var(--wp--preset--color--white);
+	font-weight: 700;
+	font-size: 0.75rem;
+}
+
+.yp-web-design-package__cta-note {
+	margin: 0.5rem 0 0;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	text-align: center;
+}
+
+/* ---------- Sticker size guide (mock) ---------- */
+
+.yp-sticker-guide__subhead {
+	margin: 1.25rem 0 0.75rem;
+	font-size: 1rem;
+}
+
+.yp-sticker-guide__shapes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.yp-sticker-guide__shape {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: var(--wp--custom--radius--control);
+	border: 1px solid var(--wp--custom--glass--border, rgba(0, 0, 0, 0.08));
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-sticker-guide__shape-icon {
+	width: 28px;
+	height: 28px;
+	background: var(--wp--preset--color--fog, #e8ecef);
+	border: 1.5px solid currentColor;
+}
+
+.yp-sticker-guide__shape-icon--circle,
+.yp-sticker-guide__shape-icon--round {
+	border-radius: 50%;
+}
+
+.yp-sticker-guide__shape-icon--square,
+.yp-sticker-guide__shape-icon--rounded_square {
+	border-radius: 4px;
+}
+
+.yp-sticker-guide__shape-icon--rounded_square {
+	border-radius: 8px;
+}
+
+.yp-sticker-guide__shape-icon--rectangle,
+.yp-sticker-guide__shape-icon--rounded_rectangle {
+	width: 36px;
+	border-radius: 6px;
+}
+
+.yp-sticker-guide__shape-icon--die_cut,
+.yp-sticker-guide__shape-icon--custom {
+	border-radius: 40% 60% 55% 45% / 45% 40% 60% 55%;
+}
+
+.yp-sticker-guide__sizes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.yp-sticker-guide__sizes li {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.55rem 0;
+	border-bottom: 1px solid var(--wp--custom--glass--border, rgba(0, 0, 0, 0.06));
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* ---------- Shared mock chrome ---------- */
+
+.yp-mock-banner {
+	display: inline-block;
+	margin: 0 0 0.75rem;
+	padding: 0.2rem 0.55rem;
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.08);
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.yp-abandoned-design-mock {
+	margin: 1.5rem 0;
+	padding: 1.25rem 1.35rem;
+	border-radius: var(--wp--custom--radius--card);
+	border: 1px dashed var(--wp--preset--color--charcoal);
+	background:
+		linear-gradient(135deg, rgba(255, 250, 240, 0.9), rgba(255, 255, 255, 0.85));
+}
+
+.yp-abandoned-design-mock strong {
+	display: block;
+	margin-bottom: 0.35rem;
+}
+
+.yp-abandoned-design-mock__preview {
+	margin-top: 1rem;
+}
+
+.yp-abandoned-design-mock__email-label {
+	margin: 0 0 0.4rem;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-abandoned-design-mock__email {
+	padding: 1rem;
+	border-radius: 8px;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--custom--glass--border, rgba(0, 0, 0, 0.08));
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}

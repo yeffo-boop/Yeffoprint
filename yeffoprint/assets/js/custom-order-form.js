@@ -554,6 +554,81 @@
 
 	/* ---------- Mode switching ---------- */
 
+	var designerLoadPromise = null;
+
+	function loadScript( src ) {
+		return new Promise( function ( resolve, reject ) {
+			var existing = document.querySelector( 'script[src="' + src + '"]' );
+			if ( existing ) {
+				if ( existing.dataset.loaded === 'true' ) {
+					resolve();
+					return;
+				}
+				existing.addEventListener( 'load', function () { resolve(); } );
+				existing.addEventListener( 'error', reject );
+				return;
+			}
+			var script = document.createElement( 'script' );
+			script.src = src;
+			script.async = false;
+			script.addEventListener( 'load', function () {
+				script.dataset.loaded = 'true';
+				resolve();
+			} );
+			script.addEventListener( 'error', reject );
+			document.head.appendChild( script );
+		} );
+	}
+
+	function loadStylesheet( href, id ) {
+		if ( document.getElementById( id ) ) {
+			return;
+		}
+		var link = document.createElement( 'link' );
+		link.id = id;
+		link.rel = 'stylesheet';
+		link.href = href;
+		document.head.appendChild( link );
+	}
+
+	/**
+	 * Defers Fabric + designer fonts/CSS/JS (~300KB) until the customer
+	 * actually picks "Use our online Designer" (or lands with ?edit_canvas=).
+	 */
+	function ensureDesignerLoaded() {
+		if ( typeof fabric !== 'undefined' && window.yeffoprintLabelDesignerIcons ) {
+			return Promise.resolve();
+		}
+
+		if ( designerLoadPromise ) {
+			return designerLoadPromise;
+		}
+
+		var assets = yeffoprintCustomOrder.designerAssets;
+		if ( ! assets ) {
+			return Promise.reject( new Error( 'designer-assets-missing' ) );
+		}
+
+		window.yeffoprintLabelDesigner = {
+			restUrl: assets.restUrl,
+			nonce: assets.nonce,
+			designFee: assets.designFee
+		};
+
+		loadStylesheet( assets.fontsCss, 'yeffoprint-label-designer-fonts' );
+		loadStylesheet( assets.css + ( assets.cssVer ? '?ver=' + encodeURIComponent( assets.cssVer ) : '' ), 'yeffoprint-label-designer-css' );
+
+		var fabricSrc = assets.fabric + ( assets.fabricVer ? '?ver=' + encodeURIComponent( assets.fabricVer ) : '' );
+		var iconsSrc  = assets.icons + ( assets.iconsVer ? '?ver=' + encodeURIComponent( assets.iconsVer ) : '' );
+		var jsSrc     = assets.js + ( assets.jsVer ? '?ver=' + encodeURIComponent( assets.jsVer ) : '' );
+
+		designerLoadPromise = loadScript( fabricSrc )
+			.then( function () { return loadScript( iconsSrc ); } )
+			.then( function () { return loadScript( jsSrc ); } );
+
+		return designerLoadPromise;
+	}
+
 	/**
 	 * Shows the design-method choice only under 'new_design' (own_design/
 	 * reorder customers already have their artwork — there's nothing to
@@ -572,11 +647,35 @@
 
 		var useDesigner = showChoice && 'designer' === state.designMethod;
 
-		if ( labelDesignerContainerEl ) {
-			labelDesignerContainerEl.hidden = ! useDesigner;
+		if ( useDesigner ) {
+			if ( labelDesignerContainerEl ) {
+				labelDesignerContainerEl.hidden = false;
+				var statusNode = labelDesignerContainerEl.querySelector( '.yp-configurator__status' );
+				if ( statusNode && typeof fabric === 'undefined' ) {
+					statusNode.hidden = false;
+					statusNode.textContent = 'Loading designer…';
+					statusNode.removeAttribute( 'data-state' );
+				}
+			}
+			form.hidden = true;
+			ensureDesignerLoaded().catch( function () {
+				if ( labelDesignerContainerEl ) {
+					var statusNode = labelDesignerContainerEl.querySelector( '.yp-configurator__status' );
+					if ( statusNode ) {
+						statusNode.hidden = false;
+						statusNode.textContent = "Couldn't load the designer. Please refresh and try again.";
+						statusNode.setAttribute( 'data-state', 'error' );
+					}
+				}
+			} );
+			return;
 		}
 
-		form.hidden = ! formLoaded || useDesigner;
+		if ( labelDesignerContainerEl ) {
+			labelDesignerContainerEl.hidden = true;
+		}
+
+		form.hidden = ! formLoaded;
 	}
 
 	function applyModeUi() {

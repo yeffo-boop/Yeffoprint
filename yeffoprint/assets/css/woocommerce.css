@@ -928,7 +928,15 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
-/* ---------- Order detail "Reorder" link ---------- */
+/* ---------- Order detail "Reorder & edit" primary CTA ---------- */
+
+.yp-reorder-cta {
+	margin-top: 0.75rem;
+}
+
+.yp-reorder-cta .wp-block-button__link {
+	display: inline-flex;
+}
 
 .yp-reorder-link {
 	margin-top: 0.5rem;
@@ -937,6 +945,32 @@
 .yp-reorder-link a {
 	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
+}
+
+.yp-proof-card__thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: inherit;
+}
+
+.yp-proof-card__thumb-badge {
+	position: absolute;
+	top: 0.35rem;
+	left: 0.35rem;
+	padding: 0.1rem 0.35rem;
+	border-radius: 4px;
+	background: var(--wp--preset--color--charcoal);
+	color: var(--wp--preset--color--white);
+	font-size: 0.65rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.yp-proof-card__thumb {
+	position: relative;
+	overflow: hidden;
 }
 
 /* ---------- Saved Designs (My Account) ---------- */

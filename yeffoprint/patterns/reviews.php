@@ -22,12 +22,16 @@ $placeholder_reviews = [
 <section class="wp-block-group yp-section">
 
 	<!-- wp:paragraph {"align":"center","className":"yp-eyebrow"} -->
-	<p class="has-text-align-center yp-eyebrow">Reviews</p>
+	<p class="has-text-align-center yp-eyebrow"><?php esc_html_e( 'Mock · Reviews', 'yeffoprint' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"textAlign":"center","level":2} -->
 	<h2 class="wp-block-heading has-text-align-center">What Customers Say</h2>
 	<!-- /wp:heading -->
+
+	<!-- wp:paragraph {"align":"center"} -->
+	<p class="has-text-align-center"><?php esc_html_e( 'Placeholder quotes for layout — swap for real attributed reviews before keeping this on the homepage.', 'yeffoprint' ); ?></p>
+	<!-- /wp:paragraph -->
 
 	<!-- wp:html -->
 	<div class="yp-reviews-grid">

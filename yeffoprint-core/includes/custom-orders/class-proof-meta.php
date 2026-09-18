@@ -206,6 +206,14 @@ class YeffoPrint_Proof_Meta {
 	}
 
 	/**
+	 * Public wrapper for account Proofs thumbs (and anything else that
+	 * wants the latest image proof without reimplementing the PDF skip).
+	 */
+	public static function get_latest_proof_image_url( int $custom_order_id ): string {
+		return self::latest_proof_image_url( $custom_order_id );
+	}
+
+	/**
 	 * The latest proof's own attachment URL, only when it's actually an
 	 * image — same wp_attachment_is_image() check the public proof-
 	 * approval page's own REST payload already makes

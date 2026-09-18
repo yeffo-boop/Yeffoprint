@@ -121,6 +121,20 @@ add_action( 'wp_enqueue_scripts', function () {
 		[ 'strategy' => 'defer' ]
 	);
 
+	// Recently viewed templates — records on singular, rail reads cookie in PHP.
+	if ( is_singular( 'yp_template' ) || is_post_type_archive( 'yp_template' ) ) {
+		wp_enqueue_script(
+			'yeffoprint-recently-viewed',
+			get_theme_file_uri( 'assets/js/recently-viewed.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/recently-viewed.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+		wp_localize_script( 'yeffoprint-recently-viewed', 'yeffoprintRecentlyViewed', [
+			'templateId' => is_singular( 'yp_template' ) ? (int) get_the_ID() : 0,
+		] );
+	}
+
 	wp_enqueue_script(
 		'yeffoprint-search',
 		get_theme_file_uri( 'assets/js/search.js' ),
@@ -348,94 +362,30 @@ add_action( 'wp_enqueue_scripts', function () {
 			// that option for a guest instead of letting them pick it
 			// and only then discovering the picker has nothing to show.
 			'isLoggedIn'   => is_user_logged_in(),
+			// Label Designer assets are lazy-loaded when the customer
+			// picks "Use our online Designer" (or lands with ?edit_canvas=)
+			// — keeps ~300KB of Fabric/fonts off the describe-it path.
+			'designerAssets' => [
+				'fontsCss'  => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Merriweather:wght@400;700&family=Poppins:wght@400;600;700&family=Pacifico&family=Bebas+Neue&family=Caveat:wght@600&family=Oswald:wght@500;700&family=Lora:wght@500;700&family=Josefin+Sans:wght@500;700&family=Dancing+Script:wght@600&display=swap',
+				'css'       => esc_url_raw( get_theme_file_uri( 'assets/css/label-designer.css' ) ),
+				'cssVer'    => yeffoprint_asset_version( 'assets/css/label-designer.css' ),
+				'fabric'    => esc_url_raw( get_theme_file_uri( 'assets/vendor/fabric.min.js' ) ),
+				'fabricVer' => yeffoprint_asset_version( 'assets/vendor/fabric.min.js' ),
+				'icons'     => esc_url_raw( get_theme_file_uri( 'assets/js/label-designer-icons.js' ) ),
+				'iconsVer'  => yeffoprint_asset_version( 'assets/js/label-designer-icons.js' ),
+				'js'        => esc_url_raw( get_theme_file_uri( 'assets/js/label-designer.js' ) ),
+				'jsVer'     => yeffoprint_asset_version( 'assets/js/label-designer.js' ),
+				'restUrl'   => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+				'nonce'     => wp_create_nonce( 'wp_rest' ),
+				'designFee' => class_exists( 'YeffoPrint_Pricing_Rule' ) ? YeffoPrint_Pricing_Rule::get_custom_design_fee() : 25.0,
+			],
 		] );
 	}
 
-	// Label Designer — direct request: "a full live product label
-	// customizer," later merged into the same page as the Custom Design
-	// form above so a customer picks one flow instead of two ("I don't
-	// like two different flows... combine everything into one builder").
-	// Submits through the same new_design Custom Design flow as the form
-	// above (reuses its /custom-orders/uploads and /custom-orders REST
-	// endpoints directly, and now its $25 design fee too — the exported
-	// canvas is a template staff still build the real print file from,
-	// not a print-ready file itself), so it shares that flow's
-	// configurator.css base — plus its own canvas/toolbar chrome
-	// (label-designer.css), Fabric.js (vendored locally, not a CDN —
-	// see label-designer.js's own docblock for why), a curated icon
-	// dataset, and a wider curated Google Fonts set than the sitewide
-	// one loaded above (a font *picker* needs more than 3 families).
-	// Launched to every visitor — direct request: "I'd like to launch
-	// the customizer for the labels... you can go ahead and remove the
-	// role gate now" — after previously being admin-only
-	// (YeffoPrint_Feature_Gate, now removed) while the feature was still
-	// being finished. True lazy-loading (deferring these ~300KB of
-	// assets until "Use our Designer" is actually clicked, instead of
-	// on every Custom Design page load) is a known follow-up, not done
-	// here — this round is the gate removal only.
-	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-design-form', 'custom-design-form.html' ], true ) ) {
-		wp_enqueue_style(
-			'yeffoprint-label-designer-fonts',
-			'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@500;600;700&family=Playfair+Display:wght@600;700&family=Merriweather:wght@400;700&family=Poppins:wght@400;600;700&family=Pacifico&family=Bebas+Neue&family=Caveat:wght@600&family=Oswald:wght@500;700&family=Lora:wght@500;700&family=Josefin+Sans:wght@500;700&family=Dancing+Script:wght@600&display=swap',
-			[],
-			null
-		);
-
-		wp_enqueue_style(
-			'yeffoprint-configurator',
-			get_theme_file_uri( 'assets/css/configurator.css' ),
-			[ 'yeffoprint-global' ],
-			yeffoprint_asset_version( 'assets/css/configurator.css' )
-		);
-
-		wp_enqueue_style(
-			'yeffoprint-label-designer',
-			get_theme_file_uri( 'assets/css/label-designer.css' ),
-			[ 'yeffoprint-configurator' ],
-			yeffoprint_asset_version( 'assets/css/label-designer.css' )
-		);
-
-		wp_enqueue_script(
-			'yeffoprint-fabric',
-			get_theme_file_uri( 'assets/vendor/fabric.min.js' ),
-			[],
-			yeffoprint_asset_version( 'assets/vendor/fabric.min.js' ),
-			[ 'strategy' => 'defer' ]
-		);
-
-		wp_enqueue_script(
-			'yeffoprint-label-designer-icons',
-			get_theme_file_uri( 'assets/js/label-designer-icons.js' ),
-			[],
-			yeffoprint_asset_version( 'assets/js/label-designer-icons.js' ),
-			[ 'strategy' => 'defer' ]
-		);
-
-		wp_enqueue_script(
-			'yeffoprint-label-designer',
-			get_theme_file_uri( 'assets/js/label-designer.js' ),
-			[ 'yeffoprint-fabric', 'yeffoprint-label-designer-icons' ],
-			yeffoprint_asset_version( 'assets/js/label-designer.js' ),
-			[ 'strategy' => 'defer' ]
-		);
-
-		if ( is_user_logged_in() ) {
-			nocache_headers();
-		}
-
-		wp_localize_script( 'yeffoprint-label-designer', 'yeffoprintLabelDesigner', [
-			'restUrl'   => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
-			'nonce'     => wp_create_nonce( 'wp_rest' ),
-			// Same $25 fee class-custom-order-controller.php charges
-			// server-side for any new_design submission — needed here for
-			// the instant client-side price estimate (localEstimate() in
-			// label-designer.js); the server's own pricing-preview
-			// response is still what actually gets displayed once it
-			// lands, same "instant estimate, server has final say"
-			// pattern as everywhere else pricing is estimated client-side.
-			'designFee' => class_exists( 'YeffoPrint_Pricing_Rule' ) ? YeffoPrint_Pricing_Rule::get_custom_design_fee() : 25.0,
-		] );
-	}
+	// Label Designer CSS/JS are no longer enqueued on every Custom Design
+	// page load — custom-order-form.js loads them on demand via
+	// designerAssets above. configurator.css is already enqueued with the
+	// form block above.
 
 	if ( is_page() && in_array( get_page_template_slug(), [ 'custom-stickers-form', 'custom-stickers-form.html' ], true ) ) {
 		wp_enqueue_style(
@@ -1006,3 +956,60 @@ function yeffoprint_material_guide_entries(): array {
 	}, $materials );
 }
 
+
+/**
+ * Render a grid of template-card blocks for the given post IDs.
+ * Same WP_Block context pattern as patterns/featured-designs.php.
+ *
+ * @param int[] $template_ids
+ */
+function yeffoprint_render_template_card_grid( array $template_ids ): void {
+	$template_ids = array_values( array_filter( array_map( 'absint', $template_ids ) ) );
+	if ( ! $template_ids ) {
+		return;
+	}
+	echo '<div class="wp-block-query"><ul class="wp-block-post-template yp-card-grid">';
+	foreach ( $template_ids as $template_id ) {
+		$post = get_post( $template_id );
+		if ( ! $post || 'yp_template' !== $post->post_type || 'publish' !== $post->post_status ) {
+			continue;
+		}
+		echo '<li>';
+		$card_block = new WP_Block(
+			[
+				'blockName'    => 'yeffoprint/template-card',
+				'attrs'        => [],
+				'innerBlocks'  => [],
+				'innerHTML'    => '',
+				'innerContent' => [],
+			],
+			[
+				'postType' => 'yp_template',
+				'postId'   => $template_id,
+			]
+		);
+		echo $card_block->render(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '</li>';
+	}
+	echo '</ul></div>';
+}
+
+/**
+ * Recently-viewed template IDs from the yp_recent_templates cookie
+ * (written by assets/js/recently-viewed.js on singular template pages).
+ *
+ * @return int[]
+ */
+function yeffoprint_recent_template_ids( int $limit = 4, int $exclude_id = 0 ): array {
+	$raw = isset( $_COOKIE['yp_recent_templates'] ) ? (string) wp_unslash( $_COOKIE['yp_recent_templates'] ) : '';
+	if ( '' === $raw ) {
+		return [];
+	}
+	$ids = array_values( array_unique( array_filter( array_map( 'absint', explode( ',', $raw ) ) ) ) );
+	if ( $exclude_id > 0 ) {
+		$ids = array_values( array_filter( $ids, static function ( $id ) use ( $exclude_id ) {
+			return $id !== $exclude_id;
+		} ) );
+	}
+	return array_slice( $ids, 0, $limit );
+}
