@@ -4,9 +4,8 @@
  * Slug: yeffoprint/product-type-browse
  * Categories: yeffoprint
  *
- * MOCK — first-class Product Type browse cards linking into the gallery
- * filter URLs (?yp_product_type=). Replace copy/art when this graduates
- * from prototype.
+ * First-class Product Type browse cards linking into the gallery
+ * filter URLs (?yp_product_type=).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -26,7 +25,7 @@ $base = get_post_type_archive_link( 'yp_template' ) ?: home_url( '/shop-labels/'
 <section class="wp-block-group yp-section" id="yp-product-type-browse">
 
 	<!-- wp:paragraph {"align":"center","className":"yp-eyebrow"} -->
-	<p class="has-text-align-center yp-eyebrow"><?php esc_html_e( 'Mock · Browse by product', 'yeffoprint' ); ?></p>
+	<p class="has-text-align-center yp-eyebrow"><?php esc_html_e( 'Browse by product', 'yeffoprint' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"textAlign":"center","level":2} -->

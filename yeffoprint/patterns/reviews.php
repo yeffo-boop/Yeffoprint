@@ -4,42 +4,55 @@
  * Slug: yeffoprint/reviews
  * Categories: yeffoprint
  *
- * Placeholder testimonials — replace with real, attributed customer
- * reviews before launch. Left generic and unattributed on purpose so
- * this section never gets mistaken for real reviews if it ships
- * before that swap happens.
+ * Approved WooCommerce product reviews only. Hidden when there are
+ * none — never invents quotes or a "Verified Buyer" badge.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-$placeholder_reviews = [
-	__( 'Turnaround was fast and the print quality matched the preview almost exactly.', 'yeffoprint' ),
-	__( 'Being able to split one order across a few label variants saved us a second order entirely.', 'yeffoprint' ),
-	__( 'The custom design process was easy — proof came back quickly and the changes were painless.', 'yeffoprint' ),
+$review_args = [
+	'status'  => 'approve',
+	'type'    => 'review',
+	'number'  => 3,
+	'orderby' => 'comment_date_gmt',
+	'order'   => 'DESC',
 ];
+
+$reviews = get_comments( $review_args );
+
+if ( ! $reviews ) {
+	return;
+}
 ?>
 <!-- wp:group {"tagName":"section","className":"yp-section","layout":{"type":"constrained","contentSize":"1200px"}} -->
 <section class="wp-block-group yp-section">
 
 	<!-- wp:paragraph {"align":"center","className":"yp-eyebrow"} -->
-	<p class="has-text-align-center yp-eyebrow"><?php esc_html_e( 'Mock · Reviews', 'yeffoprint' ); ?></p>
+	<p class="has-text-align-center yp-eyebrow">Reviews</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"textAlign":"center","level":2} -->
 	<h2 class="wp-block-heading has-text-align-center">What Customers Say</h2>
 	<!-- /wp:heading -->
 
-	<!-- wp:paragraph {"align":"center"} -->
-	<p class="has-text-align-center"><?php esc_html_e( 'Placeholder quotes for layout — swap for real attributed reviews before keeping this on the homepage.', 'yeffoprint' ); ?></p>
-	<!-- /wp:paragraph -->
-
 	<!-- wp:html -->
 	<div class="yp-reviews-grid">
-		<?php foreach ( $placeholder_reviews as $review ) : ?>
+		<?php foreach ( $reviews as $review ) :
+			$rating = (int) get_comment_meta( $review->comment_ID, 'rating', true );
+			$author = $review->comment_author ? $review->comment_author : __( 'Customer', 'yeffoprint' );
+			$body   = wp_strip_all_tags( $review->comment_content );
+			if ( '' === $body ) {
+				continue;
+			}
+			?>
 			<div class="yp-review-card">
-				<div class="yp-review-card__stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-				<p>&ldquo;<?php echo esc_html( $review ); ?>&rdquo;</p>
-				<p class="yp-review-card__author"><em><?php esc_html_e( 'Placeholder review — Verified Buyer', 'yeffoprint' ); ?></em></p>
+				<?php if ( $rating > 0 ) : ?>
+					<div class="yp-review-card__stars" aria-label="<?php echo esc_attr( sprintf( /* translators: %d: star rating */ __( '%d out of 5 stars', 'yeffoprint' ), $rating ) ); ?>">
+						<?php echo esc_html( str_repeat( '★', min( 5, $rating ) ) ); ?>
+					</div>
+				<?php endif; ?>
+				<p>&ldquo;<?php echo esc_html( $body ); ?>&rdquo;</p>
+				<p class="yp-review-card__author"><?php echo esc_html( $author ); ?></p>
 			</div>
 		<?php endforeach; ?>
 	</div>

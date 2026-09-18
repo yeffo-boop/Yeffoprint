@@ -716,6 +716,39 @@
 	font-weight: 600;
 }
 
+.yp-configurator__save-msg {
+	margin: 0 0 0.5rem;
+}
+
+.yp-configurator__email-save {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: stretch;
+	margin: 0.5rem 0;
+}
+
+.yp-configurator__email-save input[type="email"] {
+	flex: 1 1 12rem;
+	min-width: 0;
+	padding: 0.55rem 0.75rem;
+	border: 1px solid var(--wp--preset--color--fog, #e5e5e5);
+	border-radius: var(--wp--custom--radius--control);
+	font: inherit;
+}
+
+.yp-configurator__email-save .wp-block-button__link {
+	flex: 0 0 auto;
+}
+
+.yp-configurator__save-login {
+	margin: 0.35rem 0 0;
+}
+
+.yp-configurator__save-login a {
+	font-weight: 600;
+}
+
 .yp-sticky-bar {
 	position: sticky;
 	bottom: 0;

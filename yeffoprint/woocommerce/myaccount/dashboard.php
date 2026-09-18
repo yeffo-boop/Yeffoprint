@@ -53,17 +53,13 @@ $display_name = $current_user->first_name ?: $current_user->display_name;
 	</a>
 </div>
 
-<aside class="yp-abandoned-design-mock" aria-label="<?php esc_attr_e( 'Abandoned design reminder mock', 'yeffoprint' ); ?>">
-	<p class="yp-mock-banner"><?php esc_html_e( 'Mock · Abandoned-design nudge', 'yeffoprint' ); ?></p>
-	<strong><?php esc_html_e( 'Still want to finish that label?', 'yeffoprint' ); ?></strong>
-	<p><?php esc_html_e( 'Prototype for an email / Telegram reminder when a guest stashes a design or leaves a batch in the cart. The real send would deep-link back into the configurator.', 'yeffoprint' ); ?></p>
-	<div class="yp-abandoned-design-mock__preview">
-		<p class="yp-abandoned-design-mock__email-label"><?php esc_html_e( 'Email preview', 'yeffoprint' ); ?></p>
-		<div class="yp-abandoned-design-mock__email">
-			<p><?php esc_html_e( 'Hi — you left a label design on YeffoDesign. Pick it back up anytime; your size, material, and text are waiting.', 'yeffoprint' ); ?></p>
-			<p><a class="wp-block-button__link is-style-accent" href="<?php echo esc_url( home_url( '/shop-labels/' ) ); ?>"><?php esc_html_e( 'Resume design', 'yeffoprint' ); ?></a></p>
-		</div>
-	</div>
+<aside class="yp-continue-design" aria-label="<?php esc_attr_e( 'Continue a design', 'yeffoprint' ); ?>">
+	<strong><?php esc_html_e( 'Still finishing a label?', 'yeffoprint' ); ?></strong>
+	<p><?php esc_html_e( 'Saved designs and the gallery are ready whenever you are — pick up a draft or start a new one.', 'yeffoprint' ); ?></p>
+	<p>
+		<a class="wp-block-button__link is-style-accent" href="<?php echo esc_url( wc_get_account_endpoint_url( 'saved-designs' ) ); ?>"><?php esc_html_e( 'Saved Designs', 'yeffoprint' ); ?></a>
+		<a class="wp-block-button__link" href="<?php echo esc_url( home_url( '/shop-labels/' ) ); ?>"><?php esc_html_e( 'Browse gallery', 'yeffoprint' ); ?></a>
+	</p>
 </aside>
 
 <?php do_action( 'woocommerce_account_dashboard' ); ?>

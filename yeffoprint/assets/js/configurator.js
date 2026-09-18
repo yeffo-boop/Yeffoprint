@@ -146,6 +146,7 @@
 		var editKey = params.get( 'edit' );
 		var reorderRef = params.get( 'reorder' ); // "<order_id>:<item_id>"
 		var savedId = params.get( 'saved' );
+		var pendingToken = params.get( 'pending' );
 
 		if ( editKey ) {
 			// "Edit customization" (PROJECT_SPEC §14): rehydrates from a
@@ -179,6 +180,18 @@
 				yeffoprintConfigurator.restUrl + 'saved-designs/' + encodeURIComponent( savedId ),
 				{ headers: { 'X-WP-Nonce': yeffoprintConfigurator.nonce } },
 				hydrateFromBatch
+			);
+		} else if ( pendingToken ) {
+			// Guest email-resume link (?pending={token}): durable transient
+			// from class-guest-saved-design.php — works after the session
+			// cookie expires.
+			loadExternalBatch(
+				yeffoprintConfigurator.restUrl + 'saved-designs/pending/' + encodeURIComponent( pendingToken ),
+				{},
+				function ( item ) {
+					hydrateFromBatch( item );
+					showCartStatus( 'Draft restored — keep editing, then add to cart or log in to save it under Saved Designs.', false );
+				}
 			);
 		} else {
 			applyDefaultState();
@@ -1221,13 +1234,9 @@
 	var cartStatusEl = null;
 
 	function showCartStatus( message, isError ) {
-		if ( ! cartStatusEl ) {
-			cartStatusEl = document.createElement( 'p' );
-			cartStatusEl.className = 'yp-configurator__cart-status';
-			summaryEl.insertAdjacentElement( 'afterend', cartStatusEl );
-		}
-		cartStatusEl.textContent = message;
-		cartStatusEl.classList.toggle( 'is-error', !! isError );
+		var el = ensureCartStatusEl();
+		el.textContent = message;
+		el.classList.toggle( 'is-error', !! isError );
 	}
 
 	function clearCartStatus() {
@@ -1235,6 +1244,15 @@
 			cartStatusEl.remove();
 			cartStatusEl = null;
 		}
+	}
+
+	function ensureCartStatusEl() {
+		if ( ! cartStatusEl ) {
+			cartStatusEl = document.createElement( 'div' );
+			cartStatusEl.className = 'yp-configurator__cart-status';
+			summaryEl.insertAdjacentElement( 'afterend', cartStatusEl );
+		}
+		return cartStatusEl;
 	}
 
 	// Both this endpoint's own explicit nonce check (class-rest-
@@ -1346,10 +1364,78 @@
 	/* ---------- Save this design ---------- */
 	// Logged-in customers POST /saved-designs immediately. Guests POST
 	// /saved-designs/pending (class-guest-saved-design.php), which stashes
-	// the batch in the WooCommerce session and returns a login URL — on
-	// login/register the pending payload is claimed into a real
-	// yp_saved_design. Buttons stay visible either way (templates/*.html
-	// can't conditionally omit them).
+	// the batch in the WooCommerce session + a durable token. Guests can
+	// email themselves a resume link (?pending=) or log in so the batch
+	// is claimed into a real yp_saved_design. Buttons stay visible either
+	// way (templates/*.html can't conditionally omit them).
+
+	var pendingSaveToken = null;
+
+	function showGuestSavePanel( resultData ) {
+		pendingSaveToken = resultData.token || null;
+		var el = ensureCartStatusEl();
+		el.classList.remove( 'is-error' );
+		el.innerHTML =
+			'<p class="yp-configurator__save-msg">' + escapeHtml( resultData.message || 'Design saved for this browser.' ) + '</p>' +
+			'<form class="yp-configurator__email-save" data-yp-email-save>' +
+				'<label class="screen-reader-text" for="yp-pending-email">Email</label>' +
+				'<input id="yp-pending-email" type="email" name="email" required placeholder="Email yourself a link" autocomplete="email" />' +
+				'<button type="submit" class="wp-block-button__link is-style-outline">Email link</button>' +
+			'</form>' +
+			( resultData.login_url
+				? '<p class="yp-configurator__save-login"><a href="' + escapeHtml( resultData.login_url ) + '">Log in to keep it under Saved Designs</a></p>'
+				: '' );
+
+		var form = el.querySelector( '[data-yp-email-save]' );
+		if ( form ) {
+			form.addEventListener( 'submit', function ( event ) {
+				event.preventDefault();
+				submitPendingEmail( form );
+			} );
+		}
+	}
+
+	function submitPendingEmail( form ) {
+		var emailInput = form.querySelector( 'input[type="email"]' );
+		var email = emailInput ? emailInput.value.trim() : '';
+		var submitBtn = form.querySelector( 'button[type="submit"]' );
+
+		if ( ! email || ! pendingSaveToken ) {
+			showCartStatus( 'Enter an email address to get your resume link.', true );
+			return;
+		}
+
+		if ( submitBtn ) {
+			submitBtn.disabled = true;
+		}
+
+		fetch( yeffoprintConfigurator.restUrl + 'saved-designs/pending/email', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintConfigurator.nonce },
+			body: JSON.stringify( { token: pendingSaveToken, email: email } )
+		} )
+			.then( function ( response ) {
+				return response.json().then( function ( data ) {
+					return { ok: response.ok, data: data };
+				} );
+			} )
+			.then( function ( result ) {
+				if ( submitBtn ) {
+					submitBtn.disabled = false;
+				}
+				if ( ! result.ok ) {
+					showCartStatus( ( result.data && result.data.message ) || "Couldn't send that email.", true );
+					return;
+				}
+				showCartStatus( result.data.message || 'Check your email for a link to finish this design anytime.', false );
+			} )
+			.catch( function () {
+				if ( submitBtn ) {
+					submitBtn.disabled = false;
+				}
+				showCartStatus( "Couldn't reach the server — please try again.", true );
+			} );
+	}
 
 	if ( saveDesignButtons.length ) {
 		if ( ! yeffoprintConfigurator.isLoggedIn ) {
@@ -1398,11 +1484,12 @@
 							return;
 						}
 
-						if ( result.data && result.data.pending && result.data.login_url ) {
-							showCartStatus( result.data.message || 'Log in to keep this design — we\'ll save it for you.', false );
-							window.setTimeout( function () {
-								window.location.href = result.data.login_url;
-							}, 600 );
+						if ( result.data && result.data.pending ) {
+							if ( result.data.emailed ) {
+								showCartStatus( result.data.message || 'Check your email for a link to finish this design anytime.', false );
+								return;
+							}
+							showGuestSavePanel( result.data );
 							return;
 						}
 

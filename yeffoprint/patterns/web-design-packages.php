@@ -240,7 +240,7 @@ $packages = array_map( static function ( $post ) {
 							data-package-id="<?php echo esc_attr( (string) $package['id'] ); ?>"
 							data-package-name="<?php echo esc_attr( $package['name'] ); ?>"
 						><?php esc_html_e( 'Order Now — pay this price', 'yeffoprint' ); ?></button>
-						<p class="yp-web-design-package__cta-note"><?php esc_html_e( 'Mock polish: fixed Checkout Price → WooCommerce pay link in one step.', 'yeffoprint' ); ?></p>
+						<p class="yp-web-design-package__cta-note"><?php esc_html_e( 'Pay the listed price and we’ll get started.', 'yeffoprint' ); ?></p>
 						<a class="yp-web-design-package__quote-link" href="<?php echo esc_url( home_url( '/web-design-quote/' ) ); ?>"><?php esc_html_e( 'Need different scope? Get a quote', 'yeffoprint' ); ?></a>
 					<?php else : ?>
 						<a class="wp-block-button__link wp-element-button yp-web-design-package__cta" href="<?php echo esc_url( home_url( '/web-design-quote/' ) ); ?>"><?php esc_html_e( 'Get a Quote', 'yeffoprint' ); ?></a>
