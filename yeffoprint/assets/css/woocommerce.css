@@ -890,11 +890,15 @@
 	height: 5rem;
 	flex-shrink: 0;
 	border-radius: var(--wp--custom--radius--control);
-	/* No real artwork exists for a one-off Custom Order yet — same
-	   "coming soon," not-broken placeholder language as the Customer
-	   Inspiration tiles, until real AI-generated previews replace it. */
-	background: linear-gradient(135deg, rgba(0, 174, 239, 0.14), rgba(236, 0, 140, 0.14));
-	color: var(--wp--preset--color--magenta-deep);
+	background: var(--wp--preset--color--light-gray);
+	color: var(--wp--preset--color--charcoal);
+	position: relative;
+	overflow: hidden;
+}
+
+.yp-proof-card__thumb--empty {
+	background: var(--wp--preset--color--fog, #ececec);
+	color: var(--wp--preset--color--charcoal);
 }
 
 .yp-proof-card__body {
@@ -952,11 +956,6 @@
 	height: 100%;
 	object-fit: cover;
 	border-radius: inherit;
-}
-
-.yp-proof-card__thumb {
-	position: relative;
-	overflow: hidden;
 }
 
 /* ---------- Saved Designs (My Account) ---------- */

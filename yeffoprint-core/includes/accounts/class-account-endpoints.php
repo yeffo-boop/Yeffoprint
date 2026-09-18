@@ -485,23 +485,7 @@ class YeffoPrint_Account_Endpoints {
 		$order_type  = YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id );
 		$has_canvas  = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_DESIGN_JSON, true ) !== '';
 		$is_sticker  = 'sticker' === $order_type;
-		$proof_thumb = YeffoPrint_Proof_Meta::get_latest_proof_image_url( $custom_order_id );
-		$thumb_url   = $proof_thumb;
-
-		// Prefer the latest proof image; otherwise the first artwork /
-		// inspiration upload when it's an image.
-		if ( ! $thumb_url ) {
-			$fallback_ids = array_merge(
-				array_map( 'absint', (array) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, true ) ),
-				array_map( 'absint', (array) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, true ) )
-			);
-			foreach ( $fallback_ids as $attachment_id ) {
-				if ( $attachment_id && wp_attachment_is_image( $attachment_id ) ) {
-					$thumb_url = (string) wp_get_attachment_image_url( $attachment_id, 'thumbnail' );
-					break;
-				}
-			}
-		}
+		$thumb_url   = $this->proof_card_thumb_url( $custom_order_id );
 
 		if ( $is_sticker ) {
 			$reorder_url   = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-stickers/' ) );
@@ -515,7 +499,7 @@ class YeffoPrint_Account_Endpoints {
 		}
 		?>
 		<div class="yp-proof-card">
-			<div class="yp-proof-card__thumb" aria-hidden="true">
+			<div class="yp-proof-card__thumb<?php echo $thumb_url ? '' : ' yp-proof-card__thumb--empty'; ?>" aria-hidden="true">
 				<?php if ( $thumb_url ) : ?>
 					<img src="<?php echo esc_url( $thumb_url ); ?>" alt="" />
 				<?php else : ?>
@@ -554,6 +538,36 @@ class YeffoPrint_Account_Endpoints {
 			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Thumb priority: latest image proof → canvas/print-ready artwork PNG
+	 * (Label Designer export in ARTWORK_UPLOADS) → inspiration uploads.
+	 * PDF proofs are skipped so the card never shows a broken image icon.
+	 */
+	private function proof_card_thumb_url( int $custom_order_id ): string {
+		$proof_thumb = YeffoPrint_Proof_Meta::get_latest_proof_image_url( $custom_order_id );
+		if ( $proof_thumb ) {
+			return $proof_thumb;
+		}
+
+		$candidate_ids = array_merge(
+			array_map( 'absint', (array) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, true ) ),
+			array_map( 'absint', (array) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_SOURCE_IMAGE_UPLOADS, true ) ),
+			array_map( 'absint', (array) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, true ) )
+		);
+
+		foreach ( $candidate_ids as $attachment_id ) {
+			if ( ! $attachment_id || ! wp_attachment_is_image( $attachment_id ) ) {
+				continue;
+			}
+			$url = (string) wp_get_attachment_image_url( $attachment_id, 'medium' );
+			if ( $url ) {
+				return $url;
+			}
+		}
+
+		return '';
 	}
 
 	/**

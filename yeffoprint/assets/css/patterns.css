@@ -516,14 +516,24 @@
 }
 
 .yp-customer-tile {
-	/* Real customer photos aren't in yet — a soft brand-gradient wash
-	   with a photo icon reads as "coming soon," not as a broken/missing
-	   image the way a flat gray box (the .yp-card__media default) did. */
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: linear-gradient(135deg, rgba(0, 174, 239, 0.14), rgba(236, 0, 140, 0.14));
-	color: var(--wp--preset--color--magenta-deep);
+	display: block;
+	overflow: hidden;
+	text-decoration: none;
+	color: inherit;
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-customer-tile--photo img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.35s ease;
+}
+
+.yp-customer-tile--photo:hover img,
+.yp-customer-tile--photo:focus-visible img {
+	transform: scale(1.04);
 }
 
 /* ---------- Template card (gallery + homepage rails) ---------- */
@@ -2045,7 +2055,7 @@
 	text-align: center;
 }
 
-/* ---------- Product Type browse (mock) ---------- */
+/* ---------- Product Type browse ---------- */
 
 .yp-product-type-browse {
 	display: grid;
@@ -2149,7 +2159,7 @@
 	text-align: center;
 }
 
-/* ---------- Sticker size guide (mock) ---------- */
+/* ---------- Sticker size guide ---------- */
 
 .yp-sticker-guide__subhead {
 	margin: 1.25rem 0 0.75rem;

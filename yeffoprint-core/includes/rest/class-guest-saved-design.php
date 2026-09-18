@@ -1,20 +1,21 @@
 <?php
 /**
- * Guest "save this design" + post-checkout claim into Saved Designs.
+ * Guest "save this design" + claim into Saved Designs.
  *
  * Guests can buy without an account, but Saved Designs need a
- * post_author. This stashes a pending batch in the WooCommerce session
- * (or creates one from an order line item) and claims it into a real
- * yp_saved_design once the customer is logged in.
+ * post_author. Pending batches are stored in the WooCommerce session
+ * *and* a durable token (transient) so an email resume link still
+ * works after the session expires. Claiming on login/register, or
+ * opening ?pending={token} on the template, restores the batch.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Guest_Saved_Design {
 
-	private const NAMESPACE     = 'yeffoprint-core/v1';
-	private const SESSION_KEY   = 'yp_pending_saved_design';
-	private const CLAIM_NONCE   = 'yp_claim_saved_design';
+	private const NAMESPACE   = 'yeffoprint-core/v1';
+	private const SESSION_KEY = 'yp_pending_saved_design';
+	private const TOKEN_TTL   = WEEK_IN_SECONDS;
 
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
@@ -28,6 +29,18 @@ class YeffoPrint_Guest_Saved_Design {
 		register_rest_route( self::NAMESPACE, '/saved-designs/pending', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'stash_pending' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'guest_or_nonced_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/saved-designs/pending/(?P<token>[a-f0-9]{32})', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'get_pending_by_token' ],
+			'permission_callback' => '__return_true',
+		] );
+
+		register_rest_route( self::NAMESPACE, '/saved-designs/pending/email', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'email_pending_link' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'guest_or_nonced_write' ],
 		] );
 
@@ -45,7 +58,8 @@ class YeffoPrint_Guest_Saved_Design {
 	}
 
 	/**
-	 * Guest mid-configurator save — stash the batch so login can claim it.
+	 * Guest mid-configurator save — stash the batch (session + token)
+	 * so login or an emailed resume link can restore it.
 	 */
 	public function stash_pending( \WP_REST_Request $request ) {
 		$payload = $this->normalize_batch_payload( $request );
@@ -66,8 +80,18 @@ class YeffoPrint_Guest_Saved_Design {
 			] );
 		}
 
+		$token      = $this->persist_pending( $payload );
+		$resume_url = $this->resume_url_for( $token, $payload['template_id'] );
+
 		$this->ensure_cart();
 		WC()->session->set( self::SESSION_KEY, $payload );
+		WC()->session->set( self::SESSION_KEY . '_token', $token );
+
+		$email = sanitize_email( (string) $request->get_param( 'email' ) );
+		$emailed = false;
+		if ( is_email( $email ) ) {
+			$emailed = $this->send_resume_email( $email, $resume_url, $payload['template_id'] );
+		}
 
 		$account_url = function_exists( 'wc_get_page_permalink' )
 			? wc_get_page_permalink( 'myaccount' )
@@ -76,14 +100,75 @@ class YeffoPrint_Guest_Saved_Design {
 		return rest_ensure_response( [
 			'saved'      => false,
 			'pending'    => true,
+			'token'      => $token,
+			'resume_url' => $resume_url,
+			'emailed'    => $emailed,
 			'login_url'  => add_query_arg( 'yp_claim_design', '1', $account_url ),
-			'message'    => __( 'Log in or create an account to keep this design — we\'ll save it for you automatically.', 'yeffoprint-core' ),
+			'message'    => $emailed
+				? __( 'Check your email for a link to finish this design anytime.', 'yeffoprint-core' )
+				: __( 'Design saved for this browser. Email yourself a link, or log in to keep it in Saved Designs.', 'yeffoprint-core' ),
+		] );
+	}
+
+	public function get_pending_by_token( \WP_REST_Request $request ) {
+		$token   = (string) $request->get_param( 'token' );
+		$payload = $this->load_pending( $token );
+
+		if ( ! is_array( $payload ) ) {
+			return new \WP_Error( 'yeffoprint_pending_expired', __( 'That saved design link has expired. Please customize again.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		// Refresh session so a subsequent login can claim the same batch.
+		$this->ensure_cart();
+		if ( WC()->session ) {
+			WC()->session->set( self::SESSION_KEY, $payload );
+			WC()->session->set( self::SESSION_KEY . '_token', $token );
+		}
+
+		return rest_ensure_response( [
+			'template_id' => (int) $payload['template_id'],
+			'size_id'     => (int) $payload['size_id'],
+			'material_id' => (int) $payload['material_id'],
+			'variants'    => $payload['variants'],
+		] );
+	}
+
+	public function email_pending_link( \WP_REST_Request $request ) {
+		$token = preg_replace( '/[^a-f0-9]/', '', (string) $request->get_param( 'token' ) );
+		$email = sanitize_email( (string) $request->get_param( 'email' ) );
+
+		if ( ! is_email( $email ) ) {
+			return new \WP_Error( 'yeffoprint_invalid_email', __( 'Please enter a valid email address.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$payload = $this->load_pending( $token );
+		if ( ! is_array( $payload ) ) {
+			return new \WP_Error( 'yeffoprint_pending_expired', __( 'That saved design link has expired. Please customize again.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		$resume_url = $this->resume_url_for( $token, (int) $payload['template_id'] );
+		$sent       = $this->send_resume_email( $email, $resume_url, (int) $payload['template_id'] );
+
+		if ( ! $sent ) {
+			return new \WP_Error( 'yeffoprint_email_failed', __( 'Could not send that email. Please try again or log in instead.', 'yeffoprint-core' ), [ 'status' => 500 ] );
+		}
+
+		return rest_ensure_response( [
+			'emailed' => true,
+			'message' => __( 'Check your email for a link to finish this design anytime.', 'yeffoprint-core' ),
 		] );
 	}
 
 	public function claim_pending(): \WP_REST_Response|\WP_Error {
 		$this->ensure_cart();
 		$payload = WC()->session ? WC()->session->get( self::SESSION_KEY ) : null;
+
+		if ( ! is_array( $payload ) ) {
+			$token = WC()->session ? (string) WC()->session->get( self::SESSION_KEY . '_token' ) : '';
+			if ( $token ) {
+				$payload = $this->load_pending( $token );
+			}
+		}
 
 		if ( ! is_array( $payload ) ) {
 			return new \WP_Error( 'yeffoprint_no_pending_design', __( 'No pending design to save.', 'yeffoprint-core' ), [ 'status' => 404 ] );
@@ -95,6 +180,7 @@ class YeffoPrint_Guest_Saved_Design {
 		}
 
 		WC()->session->set( self::SESSION_KEY, null );
+		WC()->session->set( self::SESSION_KEY . '_token', null );
 
 		return rest_ensure_response( [
 			'saved'    => true,
@@ -167,12 +253,20 @@ class YeffoPrint_Guest_Saved_Design {
 
 		$payload = WC()->session->get( self::SESSION_KEY );
 		if ( ! is_array( $payload ) ) {
+			$token = (string) WC()->session->get( self::SESSION_KEY . '_token' );
+			if ( $token ) {
+				$payload = $this->load_pending( $token );
+			}
+		}
+
+		if ( ! is_array( $payload ) ) {
 			return;
 		}
 
 		$created = $this->create_saved_design( $user_id, $payload );
 		if ( ! is_wp_error( $created ) ) {
 			WC()->session->set( self::SESSION_KEY, null );
+			WC()->session->set( self::SESSION_KEY . '_token', null );
 		}
 	}
 
@@ -278,11 +372,6 @@ class YeffoPrint_Guest_Saved_Design {
 		<?php
 	}
 
-	/**
-	 * Thank-you nudge to keep a design in the customer's account after
-	 * checkout — complements render_thankyou_save_prompts() for guests
-	 * who paid without saving.
-	 */
 	public function render_thankyou_continue_design( $order_id ): void {
 		unset( $order_id );
 		$account_url = function_exists( 'wc_get_page_permalink' )
@@ -372,9 +461,69 @@ class YeffoPrint_Guest_Saved_Design {
 		return (int) $post_id;
 	}
 
+	/**
+	 * @param array{template_id:int,size_id:int,material_id:int,variants:array} $payload
+	 */
+	private function persist_pending( array $payload ): string {
+		$token = bin2hex( random_bytes( 16 ) );
+		set_transient( $this->transient_key( $token ), $payload, self::TOKEN_TTL );
+		return $token;
+	}
+
+	private function load_pending( string $token ): ?array {
+		if ( ! preg_match( '/^[a-f0-9]{32}$/', $token ) ) {
+			return null;
+		}
+		$payload = get_transient( $this->transient_key( $token ) );
+		return is_array( $payload ) ? $payload : null;
+	}
+
+	private function transient_key( string $token ): string {
+		return 'yp_pending_design_' . $token;
+	}
+
+	private function resume_url_for( string $token, int $template_id ): string {
+		$permalink = get_permalink( $template_id );
+		return $permalink ? (string) add_query_arg( 'pending', $token, $permalink ) : '';
+	}
+
 	private function edit_url_for( int $design_id, int $template_id ): string {
 		$permalink = get_permalink( $template_id );
 		return $permalink ? (string) add_query_arg( 'saved', $design_id, $permalink ) : '';
+	}
+
+	private function send_resume_email( string $email, string $resume_url, int $template_id ): bool {
+		$title = get_the_title( $template_id ) ?: __( 'your label', 'yeffoprint-core' );
+		$subject = sprintf(
+			/* translators: %s: template title */
+			__( 'Finish your %s design on YeffoDesign', 'yeffoprint-core' ),
+			$title
+		);
+
+		$heading = __( 'Your design is waiting', 'yeffoprint-core' );
+		$intro   = sprintf(
+			/* translators: %s: template title */
+			__( 'You saved a draft of “%s”. Open the link below anytime in the next 7 days to pick up where you left off — then log in to keep it under Saved Designs.', 'yeffoprint-core' ),
+			$title
+		);
+
+		// Prefer the branded proof-notice email shell when WooCommerce is up.
+		if ( function_exists( 'WC' ) && WC()->mailer() ) {
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-email-proof-notice.php';
+			$notice = new YeffoPrint_Email_Proof_Notice();
+			return (bool) $notice->send_notice( $email, $subject, [
+				'email_heading'   => $heading,
+				'name'            => '',
+				'eyebrow'         => __( 'Saved design', 'yeffoprint-core' ),
+				'intro'           => $intro,
+				'cta_url'         => $resume_url,
+				'cta_label'       => __( 'Resume design', 'yeffoprint-core' ),
+				'proof_image_url' => '',
+			] );
+		}
+
+		$body = '<p>' . esc_html( $intro ) . '</p><p><a href="' . esc_url( $resume_url ) . '">' . esc_html__( 'Resume design', 'yeffoprint-core' ) . '</a></p>';
+		return (bool) wp_mail( $email, $subject, $body, [ 'Content-Type: text/html; charset=UTF-8' ] );
 	}
 
 	private function ensure_cart(): void {
