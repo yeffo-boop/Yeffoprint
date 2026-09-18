@@ -6,6 +6,9 @@
 *.sql.gz
 ~*
 
+# Local MCP secrets (API tokens) — keep out of git
+.cursor/mcp.json
+
 .htaccess
 .maintenance
 
