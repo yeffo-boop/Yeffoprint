@@ -358,41 +358,91 @@ main.wp-block-group {
 }
 
 /*
- * Mobile overlay menu — must be a true full-viewport layer.
+ * Mobile overlay menu — full-viewport layer (not a clipped header strip).
  *
- * Direct report + screenshot: Away Mode bar clipped "Shop Labels", only
- * one/two links showed, and the search bar / page stayed visible under
- * the "menu." Root cause: the glass header's `backdrop-filter` creates
- * a containing block, so the Navigation block's `position: fixed;
- * inset: 0` overlay was trapped inside the sticky header strip instead
- * of covering the viewport. Disable that while the menu is open, force
- * full-viewport coverage, top-align links, and keep a bottom fade so
- * any overflow still reads as scrollable.
+ * Live screenshot: Away bar covered "Shop Labels", search + page content
+ * stayed visible under a half-open "menu." Root cause: glass header
+ * `backdrop-filter` creates a containing block, so the Navigation
+ * block's `position: fixed` overlay stays trapped inside the sticky
+ * header band. Fix: promote `.yp-header` itself to a fixed full-screen
+ * shell while the menu is open (no escaping fixed needed), hide chrome
+ * / away / search, top-align links, keep a bottom fade for overflow.
  */
-html.has-modal-open .yp-header,
-.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open) {
-	backdrop-filter: none !important;
-	-webkit-backdrop-filter: none !important;
-	background: transparent !important;
-	border-bottom-color: transparent !important;
-	box-shadow: none !important;
+html.has-modal-open,
+html.yp-nav-modal-open,
+html:has(.wp-block-navigation__responsive-container.is-menu-open) {
+	overflow: hidden;
 }
 
-/* Away / announcement bars sit above the header in the DOM; hide them
-   while the modal is open so they can't paint over the first link. */
 html.has-modal-open .yp-away-bar,
-html.has-modal-open .yp-announcement-bar {
-	visibility: hidden;
+html.has-modal-open .yp-announcement-bar,
+html.has-modal-open .yp-search-bar,
+html.yp-nav-modal-open .yp-away-bar,
+html.yp-nav-modal-open .yp-announcement-bar,
+html.yp-nav-modal-open .yp-search-bar,
+body:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-away-bar,
+body:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-announcement-bar,
+body:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-search-bar {
+	display: none !important;
 }
 
-.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open {
+.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open) {
 	position: fixed !important;
 	inset: 0 !important;
+	top: 0 !important;
+	left: 0 !important;
+	right: 0 !important;
+	bottom: 0 !important;
 	width: 100% !important;
+	max-width: none !important;
 	height: 100% !important;
 	height: 100dvh !important;
 	max-height: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
 	z-index: 100000 !important;
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+	filter: none !important;
+	transform: none !important;
+	contain: none !important;
+	background: var(--wp--preset--color--near-black) !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	overflow: hidden;
+}
+
+.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-header__row {
+	display: block !important;
+	position: relative;
+	height: 100%;
+	max-width: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	gap: 0 !important;
+}
+
+.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-header__logo,
+.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-header__actions {
+	display: none !important;
+}
+
+.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-header__nav {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	flex: none;
+	max-width: none;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open {
+	position: absolute !important;
+	inset: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	max-height: none !important;
+	z-index: 1 !important;
 	overflow-y: auto;
 	-webkit-overflow-scrolling: touch;
 	overscroll-behavior: contain;
@@ -410,9 +460,11 @@ html.has-modal-open .yp-announcement-bar {
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content {
-	padding-top: calc(3rem + 24px);
+	padding-top: calc(3rem + env(safe-area-inset-top, 0px));
 	padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 	padding-inline: 1.25rem;
+	min-height: 100%;
+	box-sizing: border-box;
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container {
@@ -449,18 +501,18 @@ html.has-modal-open .yp-announcement-bar {
 	color: var(--wp--preset--color--cyan) !important;
 }
 
-/* Sticky bottom fade — always visible while the overlay is open so a
-   clipped last link still reads as “more below / scroll.” */
-.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open::after {
+/* Bottom fade pinned to the fullscreen header shell so overflow still
+   reads as “more below / scroll,” even when the link list is short. */
+.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open)::after {
 	content: "";
-	position: fixed;
+	position: absolute;
 	left: 0;
 	right: 0;
 	bottom: 0;
 	height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 	pointer-events: none;
 	background: linear-gradient(to top, var(--wp--preset--color--near-black) 35%, transparent 100%);
-	z-index: 100001;
+	z-index: 2;
 }
 
 .yp-header__actions {

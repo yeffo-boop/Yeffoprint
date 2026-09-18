@@ -398,6 +398,42 @@
 		start();
 	}
 
+	/* ---------- Mobile nav modal class ---------- */
+
+	/**
+	 * Mirror WordPress' has-modal-open onto a theme-owned class so our
+	 * fullscreen-header CSS still applies if core's html class lags or
+	 * is missing. Watches the Navigation block overlay for is-menu-open.
+	 */
+	function initMobileNavModalClass() {
+		var containers = document.querySelectorAll(
+			'.yp-header__nav .wp-block-navigation__responsive-container'
+		);
+		if ( ! containers.length || !( 'MutationObserver' in window ) ) {
+			return;
+		}
+
+		function sync() {
+			var open = false;
+			for ( var i = 0; i < containers.length; i++ ) {
+				if ( containers[ i ].classList.contains( 'is-menu-open' ) ) {
+					open = true;
+					break;
+				}
+			}
+			document.documentElement.classList.toggle( 'yp-nav-modal-open', open );
+		}
+
+		var observer = new MutationObserver( sync );
+		for ( var j = 0; j < containers.length; j++ ) {
+			observer.observe( containers[ j ], {
+				attributes: true,
+				attributeFilter: [ 'class' ],
+			} );
+		}
+		sync();
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		initHeaderScroll();
 		initDrawers();
@@ -406,5 +442,6 @@
 		initSplashScreen();
 		initReferralCopy();
 		initPromoRotator();
+		initMobileNavModalClass();
 	} );
 } )();
