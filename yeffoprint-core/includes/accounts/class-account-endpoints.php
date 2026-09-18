@@ -482,33 +482,55 @@ class YeffoPrint_Account_Endpoints {
 		$status      = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
 		$brand       = get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
 		$proof_ids   = YeffoPrint_Proof_Meta::get_for_custom_order( $custom_order_id );
-		// A Custom Order has no premade artwork to show a real thumbnail
-		// of — this generic vial glyph fills that slot honestly (matches
-		// the same "coming soon"-style placeholder treatment used for
-		// Customer Inspiration tiles) until real AI-generated preview
-		// images are wired up as a follow-up.
 		$order_type  = YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id );
 		$has_canvas  = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_DESIGN_JSON, true ) !== '';
 		$is_sticker  = 'sticker' === $order_type;
+		$proof_thumb = YeffoPrint_Proof_Meta::get_latest_proof_image_url( $custom_order_id );
+		$thumb_url   = $proof_thumb;
+		$is_mock_thumb = false;
+
+		// Mock: when there's no proof image yet, fall back to the first
+		// artwork / inspiration upload if it's an image — stands in for
+		// the eventual canvas/template thumbnail pipeline.
+		if ( ! $thumb_url ) {
+			$fallback_ids = array_merge(
+				array_map( 'absint', (array) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, true ) ),
+				array_map( 'absint', (array) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSPIRATION_UPLOADS, true ) )
+			);
+			foreach ( $fallback_ids as $attachment_id ) {
+				if ( $attachment_id && wp_attachment_is_image( $attachment_id ) ) {
+					$thumb_url     = (string) wp_get_attachment_image_url( $attachment_id, 'thumbnail' );
+					$is_mock_thumb = (bool) $thumb_url;
+					break;
+				}
+			}
+		}
 
 		if ( $is_sticker ) {
 			$reorder_url   = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-stickers/' ) );
-			$reorder_label = __( 'Reorder these stickers', 'yeffoprint-core' );
+			$reorder_label = __( 'Reorder & edit stickers', 'yeffoprint-core' );
 		} elseif ( $has_canvas ) {
 			$reorder_url   = add_query_arg( 'edit_canvas', $custom_order_id, home_url( '/custom-design/' ) );
-			$reorder_label = __( 'Reopen in Label Designer', 'yeffoprint-core' );
+			$reorder_label = __( 'Reorder & edit in Designer', 'yeffoprint-core' );
 		} else {
 			$reorder_url   = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
-			$reorder_label = __( 'Reorder this custom design', 'yeffoprint-core' );
+			$reorder_label = __( 'Reorder & edit', 'yeffoprint-core' );
 		}
 		?>
 		<div class="yp-proof-card">
 			<div class="yp-proof-card__thumb" aria-hidden="true">
-				<svg width="26" height="26" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-					<rect x="6" y="2" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.5" />
-					<line x1="8" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-					<line x1="8" y1="9.5" x2="12" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-				</svg>
+				<?php if ( $thumb_url ) : ?>
+					<img src="<?php echo esc_url( $thumb_url ); ?>" alt="" />
+					<?php if ( $is_mock_thumb ) : ?>
+						<span class="yp-proof-card__thumb-badge"><?php esc_html_e( 'Mock', 'yeffoprint-core' ); ?></span>
+					<?php endif; ?>
+				<?php else : ?>
+					<svg width="26" height="26" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+						<rect x="6" y="2" width="8" height="16" rx="2" stroke="currentColor" stroke-width="1.5" />
+						<line x1="8" y1="6.5" x2="12" y2="6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+						<line x1="8" y1="9.5" x2="12" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+					</svg>
+				<?php endif; ?>
 			</div>
 			<div class="yp-proof-card__body">
 				<div class="yp-proof-card__header">
@@ -532,9 +554,9 @@ class YeffoPrint_Account_Endpoints {
 					<p class="description"><?php esc_html_e( 'No proof uploaded yet.', 'yeffoprint-core' ); ?></p>
 				<?php endif; ?>
 				<?php if ( 'awaiting_approval' === $status ) : ?>
-					<p class="yp-reorder-link"><a href="<?php echo esc_url( add_query_arg( 'custom_order', $custom_order_id, home_url( '/proof-approval/' ) ) ); ?>"><?php esc_html_e( 'Review & approve this proof', 'yeffoprint-core' ); ?></a></p>
+					<p class="yp-reorder-cta"><a class="wp-block-button__link is-style-accent" href="<?php echo esc_url( add_query_arg( 'custom_order', $custom_order_id, home_url( '/proof-approval/' ) ) ); ?>"><?php esc_html_e( 'Review & approve this proof', 'yeffoprint-core' ); ?></a></p>
 				<?php endif; ?>
-				<p class="yp-reorder-link"><a href="<?php echo esc_url( $reorder_url ); ?>"><?php echo esc_html( $reorder_label ); ?></a></p>
+				<p class="yp-reorder-cta"><a class="wp-block-button__link" href="<?php echo esc_url( $reorder_url ); ?>"><?php echo esc_html( $reorder_label ); ?></a></p>
 			</div>
 		</div>
 		<?php

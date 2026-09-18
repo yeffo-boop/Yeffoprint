@@ -47,12 +47,7 @@ class YeffoPrint_Reorder {
 
 		if ( $template_id ) {
 			$url = add_query_arg( 'reorder', $order->get_id() . ':' . $item_id, get_permalink( $template_id ) );
-
-			printf(
-				'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
-				esc_url( $url ),
-				esc_html__( 'Reorder this design', 'yeffoprint-core' )
-			);
+			self::print_reorder_cta( $url, __( 'Reorder & edit', 'yeffoprint-core' ) );
 			return;
 		}
 
@@ -75,21 +70,23 @@ class YeffoPrint_Reorder {
 
 		if ( $is_sticker ) {
 			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-stickers/' ) );
-
-			printf(
-				'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
-				esc_url( $url ),
-				esc_html__( 'Reorder these stickers', 'yeffoprint-core' )
-			);
+			self::print_reorder_cta( $url, __( 'Reorder & edit stickers', 'yeffoprint-core' ) );
 			return;
 		}
 
 		$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
+		self::print_reorder_cta( $url, __( 'Reorder & edit', 'yeffoprint-core' ) );
+	}
 
+	/**
+	 * Primary account CTA — same weight as Saved Designs "Edit & Order",
+	 * not a quiet text link under the line item.
+	 */
+	private static function print_reorder_cta( string $url, string $label ): void {
 		printf(
-			'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
+			'<p class="yp-reorder-cta"><a class="wp-block-button__link is-style-accent" href="%s">%s</a></p>',
 			esc_url( $url ),
-			esc_html__( 'Reorder this custom design', 'yeffoprint-core' )
+			esc_html( $label )
 		);
 	}
 

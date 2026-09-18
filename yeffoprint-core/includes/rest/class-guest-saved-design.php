@@ -21,6 +21,7 @@ class YeffoPrint_Guest_Saved_Design {
 		add_action( 'wp_login', [ $this, 'claim_pending_on_login' ], 20, 2 );
 		add_action( 'user_register', [ $this, 'claim_pending_on_register' ], 20 );
 		add_action( 'woocommerce_thankyou', [ $this, 'render_thankyou_save_prompts' ], 25 );
+		add_action( 'woocommerce_thankyou', [ $this, 'render_thankyou_abandoned_mock' ], 26 );
 	}
 
 	public function register_routes(): void {
@@ -274,6 +275,26 @@ class YeffoPrint_Guest_Saved_Design {
 			});
 		})();
 		</script>
+		<?php
+	}
+
+	/**
+	 * MOCK — visual prototype of an abandoned-design reminder that would
+	 * fire when a guest stashed a pending save but never logged in / paid.
+	 * No cron or mailer yet; UI only for design review.
+	 */
+	public function render_thankyou_abandoned_mock( $order_id ): void {
+		unset( $order_id );
+		$account_url = function_exists( 'wc_get_page_permalink' )
+			? wc_get_page_permalink( 'myaccount' )
+			: home_url( '/my-account/' );
+		?>
+		<section class="yp-abandoned-design-mock yp-abandoned-design-mock--thankyou" aria-label="<?php esc_attr_e( 'Abandoned design reminder mock', 'yeffoprint-core' ); ?>">
+			<p class="yp-mock-banner"><?php esc_html_e( 'Mock · Abandoned-design nudge', 'yeffoprint-core' ); ?></p>
+			<strong><?php esc_html_e( 'Almost done — save this design to your account', 'yeffoprint-core' ); ?></strong>
+			<p><?php esc_html_e( 'Prototype of the follow-up we’d send if someone customized a label and left without saving. Deep link would restore their batch.', 'yeffoprint-core' ); ?></p>
+			<p><a class="wp-block-button__link is-style-accent" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Create an account to keep it', 'yeffoprint-core' ); ?></a></p>
+		</section>
 		<?php
 	}
 

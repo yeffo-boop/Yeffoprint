@@ -135,8 +135,16 @@ $packages = array_map( static function ( $post ) {
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph {"align":"center"} -->
-	<p class="has-text-align-center">Every project is scoped to what you're actually building — these are starting points, not a fixed menu. <a href="/web-design-quote/">Tell us about your store</a> and we'll put together a real quote.</p>
+	<p class="has-text-align-center">Every project is scoped to what you're actually building — these are starting points, not a fixed menu. Packages with a set Checkout Price can be paid for immediately; everything else starts with a quote.</p>
 	<!-- /wp:paragraph -->
+
+	<!-- wp:html -->
+	<ol class="yp-web-design-steps" aria-label="What happens next">
+		<li><strong>Pick a package</strong> — Order Now if the price is set, or request a custom quote.</li>
+		<li><strong>Pay or talk</strong> — Checkout for fixed-price tiers; a short intake form for custom scope.</li>
+		<li><strong>We build &amp; launch</strong> — Design through handoff, with optional maintenance after.</li>
+	</ol>
+	<!-- /wp:html -->
 
 	<?php if ( $addons ) : ?>
 		<!-- wp:html -->
@@ -231,10 +239,12 @@ $packages = array_map( static function ( $post ) {
 							data-yp-wd-order
 							data-package-id="<?php echo esc_attr( (string) $package['id'] ); ?>"
 							data-package-name="<?php echo esc_attr( $package['name'] ); ?>"
-						><?php esc_html_e( 'Order Now', 'yeffoprint' ); ?></button>
-						<a class="yp-web-design-package__quote-link" href="<?php echo esc_url( home_url( '/web-design-quote/' ) ); ?>"><?php esc_html_e( 'Or get a custom quote', 'yeffoprint' ); ?></a>
+						><?php esc_html_e( 'Order Now — pay this price', 'yeffoprint' ); ?></button>
+						<p class="yp-web-design-package__cta-note"><?php esc_html_e( 'Mock polish: fixed Checkout Price → WooCommerce pay link in one step.', 'yeffoprint' ); ?></p>
+						<a class="yp-web-design-package__quote-link" href="<?php echo esc_url( home_url( '/web-design-quote/' ) ); ?>"><?php esc_html_e( 'Need different scope? Get a quote', 'yeffoprint' ); ?></a>
 					<?php else : ?>
 						<a class="wp-block-button__link wp-element-button yp-web-design-package__cta" href="<?php echo esc_url( home_url( '/web-design-quote/' ) ); ?>"><?php esc_html_e( 'Get a Quote', 'yeffoprint' ); ?></a>
+						<p class="yp-web-design-package__cta-note"><?php esc_html_e( 'Scoped per project — we’ll send a real proposal.', 'yeffoprint' ); ?></p>
 					<?php endif; ?>
 				</div>
 			<?php endforeach; ?>
