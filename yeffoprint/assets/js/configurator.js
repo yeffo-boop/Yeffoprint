@@ -61,6 +61,7 @@
 	}
 
 	var statusEl = root.querySelector( '.yp-configurator__status' );
+	var skeletonEl = root.querySelector( '[data-yp-skeleton]' );
 	var layoutEl = root.querySelector( '.yp-configurator__layout' );
 	var stageEl = root.querySelector( '[data-yp-stage]' );
 	var overflowWarningEl = root.querySelector( '[data-yp-overflow-warning]' );
@@ -122,6 +123,10 @@
 	function onLoadError() {
 		statusEl.textContent = "This design couldn't be loaded. Please refresh, or browse the full gallery instead.";
 		statusEl.setAttribute( 'data-state', 'error' );
+		if ( skeletonEl ) {
+			skeletonEl.hidden = true;
+		}
+		root.removeAttribute( 'data-loading' );
 	}
 
 	function onSchemaLoaded( data ) {
@@ -132,7 +137,11 @@
 		}
 
 		statusEl.hidden = true;
+		if ( skeletonEl ) {
+			skeletonEl.hidden = true;
+		}
 		layoutEl.hidden = false;
+		root.removeAttribute( 'data-loading' );
 
 		titleEl.textContent = schema.title || '';
 		document.title = schema.title ? schema.title + ' — YeffoDesign' : document.title;

@@ -82,6 +82,17 @@ if ( $seo ) {
 		<?php endif; ?>
 	</div>
 	<div class="yp-configurator__status" role="status" aria-live="polite"><?php esc_html_e( 'Loading design…', 'yeffoprint' ); ?></div>
+	<div class="yp-configurator__skeleton" data-yp-skeleton aria-hidden="true">
+		<div class="yp-skel yp-skel--stage"></div>
+		<div class="yp-configurator__skeleton-controls">
+			<div class="yp-skel yp-skel--line yp-skel--w60"></div>
+			<div class="yp-skel yp-skel--line yp-skel--w80"></div>
+			<div class="yp-skel yp-skel--pill"></div>
+			<div class="yp-skel yp-skel--pill"></div>
+			<div class="yp-skel yp-skel--pill"></div>
+			<div class="yp-skel yp-skel--line yp-skel--cta"></div>
+		</div>
+	</div>
 	<div class="yp-configurator__layout" hidden>
 		<div class="yp-configurator__preview">
 			<div class="yp-configurator__view-toggle" role="tablist" aria-label="<?php esc_attr_e( 'Preview mode', 'yeffoprint' ); ?>">

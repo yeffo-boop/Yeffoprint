@@ -1017,3 +1017,100 @@ fieldset {
 		padding: 1.25rem 1.5rem 0;
 	}
 }
+
+/* ---------- UI polish 2026 (approved mock) ---------- */
+
+/* Glass sticky header */
+.yp-header {
+	background: var(--wp--custom--glass--background);
+	backdrop-filter: blur(var(--wp--custom--glass--blur));
+	-webkit-backdrop-filter: blur(var(--wp--custom--glass--blur));
+	border-bottom: 1px solid var(--wp--custom--glass--border);
+}
+
+.yp-header.is-scrolled {
+	background: rgba(255, 255, 255, 0.88);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+/* Search results with thumbs */
+.yp-search-results__item {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.yp-search-results__thumb {
+	width: 48px;
+	height: 48px;
+	border-radius: 10px;
+	object-fit: cover;
+	background: #0d1130;
+	flex-shrink: 0;
+}
+
+.yp-search-results__text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	min-width: 0;
+}
+
+.yp-search-results__title {
+	display: block;
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.yp-search-results__meta {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+/* Cart count pulse */
+@keyframes yp-cart-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	40% {
+		transform: scale(1.25);
+	}
+}
+
+.yp-icon-button__count.is-pulse,
+.yp-icon-button__count.is-updating {
+	animation: yp-cart-pulse 1.2s ease 1;
+}
+
+/* Cart drawer denser items */
+.yp-cart-drawer__item {
+	gap: 0.75rem;
+	padding: 0.85rem 0;
+}
+
+.yp-cart-drawer__thumb {
+	width: 56px;
+	height: 56px;
+	border-radius: 10px;
+	background: #0d1130;
+}
+
+.yp-cart-drawer__details strong {
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 0.9rem;
+	display: block;
+}
+
+.yp-cart-drawer__actions {
+	gap: 0.75rem;
+	margin-top: 1.15rem;
+}
+
+.yp-cart-drawer__actions .wp-block-button__link {
+	width: 100%;
+	text-align: center;
+	font-weight: 700;
+}

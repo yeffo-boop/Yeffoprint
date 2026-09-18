@@ -844,3 +844,124 @@
 	margin: 0;
 	font-weight: 600;
 }
+
+/* ---------- UI polish 2026 (approved mock) ---------- */
+
+/* Sticky ATC: safe-area + denser mobile */
+.yp-sticky-bar {
+	padding: 0.75rem 0.85rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 600px) {
+	.yp-sticky-bar {
+		gap: 0.5rem;
+		padding: 0.65rem 0.75rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	.yp-sticky-bar__total {
+		font-size: 0.85rem;
+	}
+
+	.yp-sticky-bar__actions {
+		gap: 0.35rem;
+	}
+
+	.yp-sticky-bar__actions .wp-block-button__link {
+		padding: 0.55rem 0.8rem;
+		font-size: 0.8rem;
+	}
+}
+
+/* Loading skeleton */
+.yp-configurator__skeleton {
+	display: none;
+	grid-template-columns: 1.1fr 0.9fr;
+	gap: 1rem;
+	padding: 1rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	margin-bottom: var(--wp--preset--spacing--md);
+}
+
+@media (max-width: 700px) {
+	.yp-configurator__skeleton {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* Show skeleton while the interactive layout is still hidden.
+   Prefer :has() over [data-loading] alone — JS hides the status /
+   reveals the layout but does not always clear data-loading. */
+.yp-configurator[data-loading="true"]:has(.yp-configurator__layout[hidden]) .yp-configurator__skeleton,
+.yp-configurator:has(.yp-configurator__layout[hidden]):has(.yp-configurator__skeleton) .yp-configurator__skeleton {
+	display: grid;
+}
+
+.yp-configurator[data-loading="true"] .yp-configurator__status:not([hidden]):not([data-state="error"]),
+.yp-configurator:has(.yp-configurator__layout[hidden]) .yp-configurator__status:not([hidden]):not([data-state="error"]) {
+	opacity: 0.55;
+	font-size: var(--wp--preset--font-size--small);
+	padding-block: 0.75rem;
+}
+
+.yp-skel {
+	background: linear-gradient(90deg, #ececeb 25%, #f6f5f3 50%, #ececeb 75%);
+	background-size: 200% 100%;
+	animation: yp-shimmer 1.4s infinite;
+	border-radius: 12px;
+}
+
+.yp-skel--stage {
+	aspect-ratio: 1;
+}
+
+.yp-skel--line {
+	height: 14px;
+	margin-bottom: 0.5rem;
+}
+
+.yp-skel--line.w60 {
+	width: 60%;
+}
+
+.yp-skel--line.w80 {
+	width: 80%;
+}
+
+.yp-skel--pill {
+	height: 36px;
+	width: 88px;
+	display: inline-block;
+	margin-right: 0.4rem;
+	margin-bottom: 0.4rem;
+}
+
+@keyframes yp-shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yp-skel {
+		animation: none;
+	}
+}
+
+/* Option pill press + focus */
+.yp-option-pill {
+	transition: transform 120ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-option-pill:active:not(:disabled):not(.yp-option-pill--out-of-stock) {
+	transform: scale(0.96);
+}
+
+.yp-option-pill:focus-visible {
+	outline: 2px solid var(--wp--preset--color--cyan);
+	outline-offset: 2px;
+}

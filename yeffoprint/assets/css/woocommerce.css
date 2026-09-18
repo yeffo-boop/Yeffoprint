@@ -1006,3 +1006,103 @@
 .yp-saved-design-card__actions form {
 	margin: 0;
 }
+
+/* ---------- UI polish 2026 (approved mock) ---------- */
+
+/* Account quicklinks: CMY left borders */
+.yp-account-quicklink {
+	border-left: 3px solid var(--wp--preset--color--cyan);
+}
+
+.yp-account-quicklink:nth-child(2) {
+	border-left-color: var(--wp--preset--color--magenta);
+}
+
+.yp-account-quicklink:nth-child(3) {
+	border-left-color: var(--wp--preset--color--yellow);
+}
+
+.yp-account-quicklink:nth-child(4) {
+	border-left-color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-account-quicklink:nth-child(5) {
+	border-left-color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-account-quicklink:nth-child(6) {
+	border-left-color: var(--wp--preset--color--cyan);
+}
+
+/* Checkout steps: card sections with numbered feel */
+.wc-block-components-checkout-step {
+	position: relative !important;
+	padding: 1rem 1.15rem 1rem 1.15rem !important;
+	margin-bottom: 0.75rem !important;
+	border: 1px solid var(--wp--preset--color--light-gray) !important;
+	border-radius: 16px !important;
+	background: var(--wp--preset--color--white) !important;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray) !important;
+}
+
+.wc-block-components-checkout-step:last-child {
+	border-bottom: 1px solid var(--wp--preset--color--light-gray) !important;
+	margin-bottom: 0 !important;
+	padding-bottom: 1rem !important;
+}
+
+.wc-block-components-checkout-step__heading {
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.65rem !important;
+}
+
+/* Prefer WC Blocks' own step number when present; style it as a mono badge. */
+.wc-block-components-checkout-step__number,
+.wc-block-components-checkout-step-heading__number,
+.wc-block-components-checkout-step__heading .wc-block-components-checkout-step__number {
+	display: inline-grid !important;
+	place-items: center !important;
+	width: 22px !important;
+	height: 22px !important;
+	min-width: 22px !important;
+	border-radius: 50% !important;
+	background: var(--wp--preset--color--near-black) !important;
+	color: #fff !important;
+	font-size: 0.7rem !important;
+	font-family: var(--wp--preset--font-family--mono) !important;
+	line-height: 1 !important;
+}
+
+.wc-block-components-checkout-step--with-step-number.is-active .wc-block-components-checkout-step__number,
+.wc-block-components-checkout-step.is-active .wc-block-components-checkout-step__number {
+	background: var(--wp--preset--color--cyan-deep) !important;
+}
+
+/* Order summary: navy panel */
+.wc-block-checkout__sidebar {
+	background: var(--wp--custom--gradient-navy) !important;
+	color: #fff !important;
+	border: 0 !important;
+}
+
+.wc-block-checkout__sidebar h2,
+.wc-block-checkout__sidebar .wc-block-components-title,
+.wc-block-checkout__sidebar .wc-block-components-product-name,
+.wc-block-checkout__sidebar .wc-block-components-product-metadata,
+.wc-block-checkout__sidebar .wc-block-components-totals-item,
+.wc-block-checkout__sidebar .wc-block-components-totals-item__label,
+.wc-block-checkout__sidebar .wc-block-components-totals-item__value,
+.wc-block-checkout__sidebar .wc-block-components-order-summary-item__description {
+	color: #fff !important;
+}
+
+.wc-block-checkout__sidebar a {
+	color: var(--wp--preset--color--cyan) !important;
+}
+
+.wc-block-checkout__sidebar .wc-block-components-product-metadata__description,
+.wc-block-checkout__sidebar .wc-block-components-product-details__name,
+.wc-block-checkout__sidebar .wc-block-components-product-details__value {
+	color: rgba(255, 255, 255, 0.75) !important;
+}
