@@ -954,20 +954,6 @@
 	border-radius: inherit;
 }
 
-.yp-proof-card__thumb-badge {
-	position: absolute;
-	top: 0.35rem;
-	left: 0.35rem;
-	padding: 0.1rem 0.35rem;
-	border-radius: 4px;
-	background: var(--wp--preset--color--charcoal);
-	color: var(--wp--preset--color--white);
-	font-size: 0.65rem;
-	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-}
-
 .yp-proof-card__thumb {
 	position: relative;
 	overflow: hidden;

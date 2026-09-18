@@ -2221,51 +2221,23 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
-/* ---------- Shared mock chrome ---------- */
+/* ---------- Continue design (account + thank-you) ---------- */
 
-.yp-mock-banner {
-	display: inline-block;
-	margin: 0 0 0.75rem;
-	padding: 0.2rem 0.55rem;
-	border-radius: 4px;
-	background: rgba(0, 0, 0, 0.08);
-	font-size: 0.7rem;
-	font-weight: 700;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-}
-
-.yp-abandoned-design-mock {
+.yp-continue-design {
 	margin: 1.5rem 0;
 	padding: 1.25rem 1.35rem;
 	border-radius: var(--wp--custom--radius--card);
-	border: 1px dashed var(--wp--preset--color--charcoal);
+	border: 1px solid var(--wp--custom--glass--border, rgba(0, 0, 0, 0.08));
 	background:
 		linear-gradient(135deg, rgba(255, 250, 240, 0.9), rgba(255, 255, 255, 0.85));
 }
 
-.yp-abandoned-design-mock strong {
+.yp-continue-design strong {
 	display: block;
 	margin-bottom: 0.35rem;
 }
 
-.yp-abandoned-design-mock__preview {
-	margin-top: 1rem;
-}
-
-.yp-abandoned-design-mock__email-label {
-	margin: 0 0 0.4rem;
-	font-size: 0.7rem;
-	font-weight: 700;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-	color: var(--wp--preset--color--charcoal);
-}
-
-.yp-abandoned-design-mock__email {
-	padding: 1rem;
-	border-radius: 8px;
-	background: var(--wp--preset--color--white);
-	border: 1px solid var(--wp--custom--glass--border, rgba(0, 0, 0, 0.08));
-	box-shadow: var(--wp--custom--shadow-elevation--low);
+.yp-continue-design .wp-block-button__link {
+	margin-right: 0.5rem;
+	margin-top: 0.5rem;
 }

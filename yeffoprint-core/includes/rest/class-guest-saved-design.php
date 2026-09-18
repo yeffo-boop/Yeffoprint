@@ -21,7 +21,7 @@ class YeffoPrint_Guest_Saved_Design {
 		add_action( 'wp_login', [ $this, 'claim_pending_on_login' ], 20, 2 );
 		add_action( 'user_register', [ $this, 'claim_pending_on_register' ], 20 );
 		add_action( 'woocommerce_thankyou', [ $this, 'render_thankyou_save_prompts' ], 25 );
-		add_action( 'woocommerce_thankyou', [ $this, 'render_thankyou_abandoned_mock' ], 26 );
+		add_action( 'woocommerce_thankyou', [ $this, 'render_thankyou_continue_design' ], 26 );
 	}
 
 	public function register_routes(): void {
@@ -279,21 +279,24 @@ class YeffoPrint_Guest_Saved_Design {
 	}
 
 	/**
-	 * MOCK — visual prototype of an abandoned-design reminder that would
-	 * fire when a guest stashed a pending save but never logged in / paid.
-	 * No cron or mailer yet; UI only for design review.
+	 * Thank-you nudge to keep a design in the customer's account after
+	 * checkout — complements render_thankyou_save_prompts() for guests
+	 * who paid without saving.
 	 */
-	public function render_thankyou_abandoned_mock( $order_id ): void {
+	public function render_thankyou_continue_design( $order_id ): void {
 		unset( $order_id );
 		$account_url = function_exists( 'wc_get_page_permalink' )
 			? wc_get_page_permalink( 'myaccount' )
 			: home_url( '/my-account/' );
+		$gallery_url = home_url( '/shop-labels/' );
 		?>
-		<section class="yp-abandoned-design-mock yp-abandoned-design-mock--thankyou" aria-label="<?php esc_attr_e( 'Abandoned design reminder mock', 'yeffoprint-core' ); ?>">
-			<p class="yp-mock-banner"><?php esc_html_e( 'Mock · Abandoned-design nudge', 'yeffoprint-core' ); ?></p>
-			<strong><?php esc_html_e( 'Almost done — save this design to your account', 'yeffoprint-core' ); ?></strong>
-			<p><?php esc_html_e( 'Prototype of the follow-up we’d send if someone customized a label and left without saving. Deep link would restore their batch.', 'yeffoprint-core' ); ?></p>
-			<p><a class="wp-block-button__link is-style-accent" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Create an account to keep it', 'yeffoprint-core' ); ?></a></p>
+		<section class="yp-continue-design yp-continue-design--thankyou" aria-label="<?php esc_attr_e( 'Save your design', 'yeffoprint-core' ); ?>">
+			<strong><?php esc_html_e( 'Want this design next time too?', 'yeffoprint-core' ); ?></strong>
+			<p><?php esc_html_e( 'Create an account (or log in) to keep labels under Saved Designs — or browse the gallery to start another.', 'yeffoprint-core' ); ?></p>
+			<p>
+				<a class="wp-block-button__link is-style-accent" href="<?php echo esc_url( $account_url ); ?>"><?php esc_html_e( 'Go to My Account', 'yeffoprint-core' ); ?></a>
+				<a class="wp-block-button__link" href="<?php echo esc_url( $gallery_url ); ?>"><?php esc_html_e( 'Browse gallery', 'yeffoprint-core' ); ?></a>
+			</p>
 		</section>
 		<?php
 	}

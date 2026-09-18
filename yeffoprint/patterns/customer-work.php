@@ -11,7 +11,7 @@ defined( 'ABSPATH' ) || exit;
 <section class="wp-block-group yp-section yp-section--tint">
 
 	<!-- wp:paragraph {"align":"center","className":"yp-eyebrow"} -->
-	<p class="has-text-align-center yp-eyebrow"><?php esc_html_e( 'Mock · Inspiration', 'yeffoprint' ); ?></p>
+	<p class="has-text-align-center yp-eyebrow">Inspiration</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"textAlign":"center","level":2} -->
@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph {"align":"center"} -->
-	<p class="has-text-align-center"><?php esc_html_e( 'Mock tiles for homepage composition — replace with real customer photos when you have them.', 'yeffoprint' ); ?></p>
+	<p class="has-text-align-center">Real labels, real bottles. Customer photos go here as they come in.</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:html -->

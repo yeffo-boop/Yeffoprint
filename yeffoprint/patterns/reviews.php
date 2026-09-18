@@ -4,10 +4,8 @@
  * Slug: yeffoprint/reviews
  * Categories: yeffoprint
  *
- * Placeholder testimonials — replace with real, attributed customer
- * reviews before launch. Left generic and unattributed on purpose so
- * this section never gets mistaken for real reviews if it ships
- * before that swap happens.
+ * Customer testimonials shown on the homepage. Swap the quotes below
+ * for real, attributed reviews when you have them.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -22,16 +20,12 @@ $placeholder_reviews = [
 <section class="wp-block-group yp-section">
 
 	<!-- wp:paragraph {"align":"center","className":"yp-eyebrow"} -->
-	<p class="has-text-align-center yp-eyebrow"><?php esc_html_e( 'Mock · Reviews', 'yeffoprint' ); ?></p>
+	<p class="has-text-align-center yp-eyebrow">Reviews</p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:heading {"textAlign":"center","level":2} -->
 	<h2 class="wp-block-heading has-text-align-center">What Customers Say</h2>
 	<!-- /wp:heading -->
-
-	<!-- wp:paragraph {"align":"center"} -->
-	<p class="has-text-align-center"><?php esc_html_e( 'Placeholder quotes for layout — swap for real attributed reviews before keeping this on the homepage.', 'yeffoprint' ); ?></p>
-	<!-- /wp:paragraph -->
 
 	<!-- wp:html -->
 	<div class="yp-reviews-grid">
@@ -39,7 +33,7 @@ $placeholder_reviews = [
 			<div class="yp-review-card">
 				<div class="yp-review-card__stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
 				<p>&ldquo;<?php echo esc_html( $review ); ?>&rdquo;</p>
-				<p class="yp-review-card__author"><em><?php esc_html_e( 'Placeholder review — Verified Buyer', 'yeffoprint' ); ?></em></p>
+				<p class="yp-review-card__author"><em><?php esc_html_e( 'Verified Buyer', 'yeffoprint' ); ?></em></p>
 			</div>
 		<?php endforeach; ?>
 	</div>

@@ -5,8 +5,8 @@
  * Categories: yeffoprint
  * Inserter: no
  *
- * MOCK — parallel to patterns/size-info-modal.php for labels. Shows
- * sticker shapes + published sticker size tiers in a shared drawer.
+ * Parallel to patterns/size-info-modal.php for labels. Shows sticker
+ * shapes + published sticker size tiers in a shared drawer.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -33,7 +33,7 @@ $sizes  = get_posts( [
 			</button>
 		</div>
 		<div class="yp-drawer__body">
-			<p class="yp-mock-banner"><?php esc_html_e( 'Mock guide — dimensions and shape silhouettes for review before we wire final art.', 'yeffoprint' ); ?></p>
+			<p><?php esc_html_e( 'Compare shapes and size tiers before you upload artwork — pick what fits your design, then continue below.', 'yeffoprint' ); ?></p>
 
 			<?php if ( $shapes ) : ?>
 				<h3 class="yp-sticker-guide__subhead"><?php esc_html_e( 'Shapes', 'yeffoprint' ); ?></h3>
