@@ -337,10 +337,107 @@ main.wp-block-group {
    light-on-dark color the rule above already sets for that state. */
 .yp-header__nav .wp-block-navigation__responsive-container-open {
 	color: var(--wp--preset--color--near-black) !important;
+	/* Keep a real tap target — flex-nowrap on .yp-header__row was
+	   able to squeeze this to 0×24 on narrow phones, hiding the menu. */
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0.5rem;
+	flex-shrink: 0;
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-close {
 	color: var(--wp--preset--color--warm-white) !important;
+	min-width: 44px;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/*
+ * Mobile overlay menu — top-aligned list with clear scroll affordance.
+ * Direct report: "I have to scroll but don’t know I have to scroll."
+ * Core uses overflow:auto on the full-screen panel with invisible
+ * iOS scrollbars; links felt cut off. Fix: start from the top (not
+ * vertically centered), full-width tap rows, and a bottom fade that
+ * hints more content sits below the fold.
+ */
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open {
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
+	/* Fade at the bottom edge while content can scroll underneath */
+	background:
+		linear-gradient(to top, var(--wp--preset--color--near-black) 0%, transparent 100%) bottom / 100% 4.5rem no-repeat,
+		var(--wp--preset--color--near-black);
+	background-attachment: local, local;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content,
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content .wp-block-navigation__container {
+	justify-content: flex-start !important;
+	align-items: stretch !important;
+	width: 100%;
+	max-width: 28rem;
+	margin-inline: auto;
+	gap: 0 !important;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content {
+	padding-top: calc(3rem + 24px);
+	padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+	padding-inline: 1.25rem;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container {
+	flex-direction: column !important;
+	flex-wrap: nowrap !important;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation-item {
+	width: 100%;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open a.wp-block-navigation-item__content {
+	display: flex !important;
+	align-items: center;
+	width: 100%;
+	box-sizing: border-box;
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 1.25rem !important;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	line-height: 1.25;
+	padding: 1rem 0.25rem !important;
+	border-radius: 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+	background: transparent !important;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation-item:last-child a.wp-block-navigation-item__content {
+	border-bottom: 0;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open a.wp-block-navigation-item__content:hover,
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open a.wp-block-navigation-item__content:focus-visible {
+	color: var(--wp--preset--color--cyan) !important;
+}
+
+/* Sticky bottom fade — always visible while the overlay is open so a
+   clipped last link still reads as “more below / scroll.” */
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open::after {
+	content: "";
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+	pointer-events: none;
+	background: linear-gradient(to top, var(--wp--preset--color--near-black) 35%, transparent 100%);
+	z-index: 100001;
 }
 
 .yp-header__actions {
@@ -1004,6 +1101,20 @@ fieldset {
 @media (max-width: 781px) {
 	.yp-header__row {
 		flex-wrap: nowrap;
+		gap: 0.5rem;
+	}
+
+	.yp-header__nav {
+		flex: 0 0 auto;
+	}
+
+	.yp-header__actions {
+		flex-shrink: 0;
+	}
+
+	.yp-header__logo {
+		min-width: 0;
+		flex: 1 1 auto;
 	}
 
 	/* Less room to give the screenshot on a phone-height screen, so
