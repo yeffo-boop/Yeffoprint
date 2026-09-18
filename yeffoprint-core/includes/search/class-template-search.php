@@ -21,6 +21,39 @@ class YeffoPrint_Template_Search {
 		add_filter( 'posts_join', [ $this, 'join_search_index' ], 10, 2 );
 		add_filter( 'posts_search', [ $this, 'match_search_index' ], 10, 2 );
 		add_filter( 'posts_distinct', [ $this, 'distinct_when_joined' ], 10, 2 );
+		add_action( 'rest_api_init', [ $this, 'register_rest_preview_fields' ] );
+	}
+
+	/**
+	 * Predictive search dropdown needs vial/artwork + starting price
+	 * (theme assets/js/search.js) without a second round trip.
+	 */
+	public function register_rest_preview_fields(): void {
+		register_rest_field( 'yp_template', 'yp_preview', [
+			'get_callback' => static function ( array $post ): array {
+				$card = function_exists( 'yeffoprint_core_get_template_card_data' )
+					? yeffoprint_core_get_template_card_data( (int) $post['id'] )
+					: null;
+
+				if ( ! $card ) {
+					return [
+						'image_url'      => '',
+						'starting_price' => '',
+					];
+				}
+
+				return [
+					'image_url'      => (string) ( $card['vial_mockup_url'] ?: $card['artwork_url'] ?: '' ),
+					'starting_price' => (string) ( $card['starting_price'] ?? '' ),
+				];
+			},
+			'schema'       => [
+				'description' => 'Storefront search preview (vial/artwork + starting price).',
+				'type'        => 'object',
+				'context'     => [ 'view', 'embed' ],
+				'readonly'    => true,
+			],
+		] );
 	}
 
 	public function rebuild_search_index( int $post_id ): void {

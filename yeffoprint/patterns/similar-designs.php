@@ -6,6 +6,7 @@
  * Inserter: no
  *
  * Same product type (and style as a soft boost) as the current template.
+ * Featured Designs rhythm (tint + View all).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -60,17 +61,30 @@ $ids = get_posts( $query_args );
 if ( ! $ids ) {
 	return;
 }
+
+$gallery = get_post_type_archive_link( 'yp_template' ) ?: home_url( '/shop-labels/' );
 ?>
 <!-- wp:group {"tagName":"section","className":"yp-section yp-section--tint","layout":{"type":"constrained","contentSize":"1200px"}} -->
 <section class="wp-block-group yp-section yp-section--tint">
 
-	<!-- wp:paragraph {"className":"yp-eyebrow"} -->
-	<p class="yp-eyebrow"><?php esc_html_e( 'You might also like', 'yeffoprint' ); ?></p>
-	<!-- /wp:paragraph -->
+	<!-- wp:group {"layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap"}} -->
+	<div class="wp-block-group">
+		<!-- wp:group {"layout":{"type":"constrained"}} -->
+		<div class="wp-block-group">
+			<!-- wp:paragraph {"className":"yp-eyebrow"} -->
+			<p class="yp-eyebrow"><?php esc_html_e( 'You might also like', 'yeffoprint' ); ?></p>
+			<!-- /wp:paragraph -->
+			<!-- wp:heading {"level":2} -->
+			<h2 class="wp-block-heading"><?php esc_html_e( 'Similar designs', 'yeffoprint' ); ?></h2>
+			<!-- /wp:heading -->
+		</div>
+		<!-- /wp:group -->
 
-	<!-- wp:heading {"level":2} -->
-	<h2 class="wp-block-heading"><?php esc_html_e( 'Similar designs', 'yeffoprint' ); ?></h2>
-	<!-- /wp:heading -->
+		<!-- wp:paragraph -->
+		<p><a class="yp-view-all-link" href="<?php echo esc_url( $gallery ); ?>"><?php esc_html_e( 'View all designs', 'yeffoprint' ); ?> &rarr;</a></p>
+		<!-- /wp:paragraph -->
+	</div>
+	<!-- /wp:group -->
 
 	<!-- wp:html -->
 	<?php yeffoprint_render_template_card_grid( $ids ); ?>

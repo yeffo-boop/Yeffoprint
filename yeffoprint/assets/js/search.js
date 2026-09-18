@@ -52,11 +52,32 @@
 				link.className = 'yp-search-results__item';
 				link.href = template.link;
 
+				var preview = template.yp_preview || {};
+				if ( preview.image_url ) {
+					var thumb = document.createElement( 'img' );
+					thumb.className = 'yp-search-results__thumb';
+					thumb.src = preview.image_url;
+					thumb.alt = '';
+					thumb.loading = 'lazy';
+					link.appendChild( thumb );
+				}
+
+				var text = document.createElement( 'span' );
+				text.className = 'yp-search-results__text';
+
 				var title = document.createElement( 'span' );
 				title.className = 'yp-search-results__title';
 				title.textContent = template.title && template.title.rendered ? template.title.rendered : '';
+				text.appendChild( title );
 
-				link.appendChild( title );
+				if ( preview.starting_price ) {
+					var meta = document.createElement( 'span' );
+					meta.className = 'yp-search-results__meta';
+					meta.textContent = preview.starting_price;
+					text.appendChild( meta );
+				}
+
+				link.appendChild( text );
 				item.appendChild( link );
 				list.appendChild( item );
 			} );
@@ -72,7 +93,7 @@
 			var controller = ( typeof AbortController !== 'undefined' ) ? new AbortController() : null;
 			currentRequest = controller;
 
-			var url = yeffoprintSearch.restUrl + '?search=' + encodeURIComponent( term ) + '&per_page=6&_fields=id,link,title';
+			var url = yeffoprintSearch.restUrl + '?search=' + encodeURIComponent( term ) + '&per_page=6&_fields=id,link,title,yp_preview';
 
 			fetch( url, { signal: controller ? controller.signal : undefined } )
 				.then( function ( response ) {

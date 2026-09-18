@@ -4,11 +4,7 @@
  * Slug: yeffoprint/rewards-promo
  * Categories: yeffoprint
  *
- * Real as of this pass (includes/rewards/class-rewards.php) — the
- * earn rate below is pulled live from the same admin-configurable
- * setting the points engine itself reads (Dashboard → YeffoPrint →
- * Settings), never hardcoded here, so this promo can't drift out of
- * sync with what actually happens at checkout.
+ * Navy press-proof panel with live earn rate from the rewards engine.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -20,33 +16,37 @@ $points_per_dollar = function_exists( 'yeffoprint_core_rewards_points_per_dollar
 <!-- wp:group {"tagName":"section","className":"yp-section","layout":{"type":"constrained","contentSize":"1200px"}} -->
 <section class="wp-block-group yp-section">
 
-	<!-- wp:group {"className":"yp-rewards-promo","layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap"}} -->
-	<div class="wp-block-group yp-rewards-promo">
-
-		<!-- wp:group {"layout":{"type":"constrained"}} -->
-		<div class="wp-block-group">
-			<!-- wp:paragraph {"className":"yp-eyebrow"} -->
-			<p class="yp-eyebrow">Rewards</p>
-			<!-- /wp:paragraph -->
-			<!-- wp:heading {"level":2,"fontSize":"x-large"} -->
-			<h2 class="wp-block-heading has-x-large-font-size">YeffoDesign Rewards</h2>
-			<!-- /wp:heading -->
-			<!-- wp:paragraph -->
-			<p>Earn <?php echo esc_html( $points_per_dollar ); ?> point(s) for every $1 you spend, automatically — redeem your balance for a discount whenever you're ready. Create an account to start earning.</p>
-			<!-- /wp:paragraph -->
+	<!-- wp:html -->
+	<div class="yp-rewards-promo yp-rewards-promo--panel">
+		<div class="yp-rewards-promo__copy">
+			<span class="yp-rewards-promo__cmy" aria-hidden="true"><i></i><i></i><i></i></span>
+			<p class="yp-eyebrow"><?php esc_html_e( 'Rewards', 'yeffoprint' ); ?></p>
+			<h2 class="yp-rewards-promo__title"><?php esc_html_e( 'YeffoDesign Rewards', 'yeffoprint' ); ?></h2>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: points earned per dollar */
+					esc_html__( 'Earn %s point(s) for every $1 you spend, automatically — redeem your balance for a discount whenever you’re ready.', 'yeffoprint' ),
+					esc_html( $points_per_dollar )
+				);
+				?>
+			</p>
+			<p class="yp-rewards-promo__actions">
+				<a class="wp-block-button__link is-style-outline yp-rewards-promo__cta" href="<?php echo esc_url( home_url( '/my-account/rewards/' ) ); ?>"><?php esc_html_e( 'View My Rewards', 'yeffoprint' ); ?></a>
+			</p>
 		</div>
-		<!-- /wp:group -->
-
-		<!-- wp:buttons -->
-		<div class="wp-block-buttons">
-			<!-- wp:button {"className":"is-style-outline"} -->
-			<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="/my-account/rewards/">View My Rewards</a></div>
-			<!-- /wp:button -->
+		<div class="yp-rewards-promo__stats">
+			<div class="yp-rewards-promo__stat">
+				<strong><?php echo esc_html( $points_per_dollar ); ?>×</strong>
+				<span><?php esc_html_e( 'points per dollar', 'yeffoprint' ); ?></span>
+			</div>
+			<div class="yp-rewards-promo__stat">
+				<strong>$1</strong>
+				<span><?php esc_html_e( 'redeem anytime at checkout', 'yeffoprint' ); ?></span>
+			</div>
 		</div>
-		<!-- /wp:buttons -->
-
 	</div>
-	<!-- /wp:group -->
+	<!-- /wp:html -->
 
 </section>
 <!-- /wp:group -->

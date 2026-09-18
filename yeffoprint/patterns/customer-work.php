@@ -4,9 +4,8 @@
  * Slug: yeffoprint/customer-work
  * Categories: yeffoprint
  *
- * Shows published Templates that have a vial mockup (real product
- * imagery). Hidden entirely when none are available — no placeholder
- * tiles or "coming soon" empty states on the live homepage.
+ * Published Templates with vial mockups, captioned like Featured cards.
+ * Hidden when none are available.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -33,15 +32,17 @@ if ( ! $inspiration_ids ) {
 
 $tiles = [];
 foreach ( $inspiration_ids as $template_id ) {
-	$vial_id = (int) get_post_meta( $template_id, YeffoPrint_Template_Meta::VIAL_MOCKUP, true );
-	$url     = $vial_id ? (string) wp_get_attachment_image_url( $vial_id, 'medium_large' ) : '';
+	$card = function_exists( 'yeffoprint_core_get_template_card_data' )
+		? yeffoprint_core_get_template_card_data( (int) $template_id )
+		: null;
+	$url  = $card ? (string) ( $card['vial_mockup_url'] ?: $card['artwork_url'] ?: '' ) : '';
 	if ( ! $url ) {
 		continue;
 	}
 	$tiles[] = [
 		'url'       => $url,
-		'title'     => get_the_title( $template_id ),
-		'permalink' => get_permalink( $template_id ),
+		'title'     => $card['title'] ?: get_the_title( $template_id ),
+		'permalink' => $card['permalink'] ?: get_permalink( $template_id ),
 	];
 }
 
@@ -67,13 +68,19 @@ if ( ! $tiles ) {
 	<!-- wp:html -->
 	<div class="yp-card-grid">
 		<?php foreach ( $tiles as $tile ) : ?>
-			<a class="yp-card yp-card__media yp-customer-tile yp-customer-tile--photo" href="<?php echo esc_url( $tile['permalink'] ); ?>">
-				<img
-					src="<?php echo esc_url( $tile['url'] ); ?>"
-					alt="<?php echo esc_attr( $tile['title'] ); ?>"
-					loading="lazy"
-					decoding="async"
-				/>
+			<a class="yp-customer-tile yp-customer-tile--captioned" href="<?php echo esc_url( $tile['permalink'] ); ?>">
+				<span class="yp-customer-tile__media">
+					<img
+						src="<?php echo esc_url( $tile['url'] ); ?>"
+						alt="<?php echo esc_attr( $tile['title'] ); ?>"
+						loading="lazy"
+						decoding="async"
+					/>
+				</span>
+				<span class="yp-customer-tile__body">
+					<strong class="yp-customer-tile__title"><?php echo esc_html( $tile['title'] ); ?></strong>
+					<span class="yp-customer-tile__cta"><?php esc_html_e( 'Customize', 'yeffoprint' ); ?> →</span>
+				</span>
 			</a>
 		<?php endforeach; ?>
 	</div>

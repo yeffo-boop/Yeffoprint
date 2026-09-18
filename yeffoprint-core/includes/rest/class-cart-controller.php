@@ -246,8 +246,15 @@ class YeffoPrint_Cart_Controller {
 		$material    = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
 		$variants    = (array) $cart_item[ YeffoPrint_Cart_Item_Keys::VARIANTS ];
 		$line_total  = $cart_item['data']->get_price() * (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ];
-		$thumbnail   = $template_id ? get_the_post_thumbnail_url( $template_id, 'thumbnail' ) : '';
-		$edit_url    = $template_id ? add_query_arg( 'edit', $cart_item_key, get_permalink( $template_id ) ) : '';
+		$thumbnail = '';
+		if ( $template_id && function_exists( 'yeffoprint_core_get_template_card_data' ) ) {
+			$card      = yeffoprint_core_get_template_card_data( $template_id );
+			$thumbnail = $card ? (string) ( $card['vial_mockup_url'] ?: $card['artwork_url'] ?: '' ) : '';
+		}
+		if ( ! $thumbnail && $template_id ) {
+			$thumbnail = (string) get_the_post_thumbnail_url( $template_id, 'medium' );
+		}
+		$edit_url = $template_id ? add_query_arg( 'edit', $cart_item_key, get_permalink( $template_id ) ) : '';
 		?>
 		<div class="yp-cart-drawer__item">
 			<?php if ( $thumbnail ) : ?>

@@ -219,7 +219,14 @@
 
 		function setCount( count ) {
 			countEls.forEach( function ( el ) {
+				var prev = el.textContent;
 				el.textContent = count;
+				if ( String( prev ) !== String( count ) ) {
+					el.classList.remove( 'is-pulse' );
+					// Force reflow so the animation can replay.
+					void el.offsetWidth;
+					el.classList.add( 'is-pulse' );
+				}
 			} );
 		}
 
