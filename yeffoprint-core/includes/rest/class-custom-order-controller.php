@@ -129,6 +129,22 @@ class YeffoPrint_Custom_Order_Controller {
 			}
 		}
 
+		$order_type = YeffoPrint_Custom_Order_Meta::get_order_type( $id );
+
+		$artwork_ids  = array_map( 'absint', (array) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, true ) );
+		$artwork_data = [];
+		foreach ( $artwork_ids as $attachment_id ) {
+			$url = wp_get_attachment_url( $attachment_id );
+			if ( $url ) {
+				$artwork_data[] = [
+					'id'   => $attachment_id,
+					'name' => get_the_title( $attachment_id ) ?: basename( $url ),
+				];
+			}
+		}
+
+		$canvas_json = (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CANVAS_DESIGN_JSON, true );
+
 		return rest_ensure_response( [
 			// Direct report: reordering a past design that had more than
 			// one label row (different compound/strength combos) only
@@ -141,6 +157,7 @@ class YeffoPrint_Custom_Order_Controller {
 			// (falls back to a single row built from the fields below for
 			// any order submitted before batching existed, which never
 			// wrote a BATCH row at all).
+			'order_type'        => $order_type,
 			'size_id'           => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::SIZE_ID, true ),
 			'material_id'       => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::MATERIAL_ID, true ),
 			'quantity'          => (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::QUANTITY, true ),
@@ -150,6 +167,17 @@ class YeffoPrint_Custom_Order_Controller {
 			'style_notes'       => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::STYLE_NOTES, true ),
 			'instructions'      => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, true ),
 			'uploads'           => $upload_data,
+			// Sticker reorder + Label Designer reopen (same GET, gated by
+			// order_type / canvas presence on the client).
+			'sticker_type'      => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::STICKER_TYPE, true ),
+			'shape'             => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::SHAPE, true ),
+			'custom_width_in'   => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOM_WIDTH_IN, true ),
+			'custom_height_in'  => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOM_HEIGHT_IN, true ),
+			'artwork'           => $artwork_data,
+			'canvas_design'     => $canvas_json,
+			'canvas_width_mm'   => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CANVAS_WIDTH_MM, true ),
+			'canvas_height_mm'  => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CANVAS_HEIGHT_MM, true ),
+			'has_canvas'        => '' !== $canvas_json,
 		] );
 	}
 

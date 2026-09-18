@@ -166,7 +166,78 @@
 		updatePricePreview();
 	}
 
+	function closestQuantity( wanted ) {
+		if ( ! quantityPresets.length ) {
+			return wanted || 10;
+		}
+		var best = quantityPresets[ 0 ];
+		var bestDiff = Math.abs( best - wanted );
+		quantityPresets.forEach( function ( preset ) {
+			var diff = Math.abs( preset - wanted );
+			if ( diff < bestDiff ) {
+				best = preset;
+				bestDiff = diff;
+			}
+		} );
+		return best;
+	}
+
+	function prefillFromPastOrder( reorderId ) {
+		return fetch( yeffoprintCustomSticker.restUrl + 'custom-orders/' + encodeURIComponent( reorderId ), {
+			headers: { 'X-WP-Nonce': yeffoprintCustomSticker.nonce }
+		} )
+			.then( function ( response ) {
+				return response.json().then( function ( data ) {
+					return { ok: response.ok, data: data };
+				} );
+			} )
+			.then( function ( result ) {
+				if ( ! result.ok || ( result.data && result.data.order_type && 'sticker' !== result.data.order_type ) ) {
+					showFormError( ( result.data && result.data.message ) || "Couldn't load that past sticker order. Please fill the form manually." );
+					return;
+				}
+
+				var data = result.data;
+				if ( data.sticker_type ) {
+					typeSelect.value = data.sticker_type;
+				}
+				if ( data.shape ) {
+					shapeSelect.value = data.shape;
+				}
+				if ( data.size_id ) {
+					sizeSelect.value = String( data.size_id );
+				}
+				if ( data.material_id ) {
+					materialSelect.value = String( data.material_id );
+				}
+				if ( data.custom_width_in ) {
+					widthInput.value = data.custom_width_in;
+				}
+				if ( data.custom_height_in ) {
+					heightInput.value = data.custom_height_in;
+				}
+				if ( data.quantity ) {
+					quantity = closestQuantity( parseInt( data.quantity, 10 ) || quantity );
+					renderQuantity();
+				}
+				if ( data.instructions ) {
+					document.getElementById( 'yp-cs-instructions' ).value = data.instructions;
+				}
+
+				uploadedFiles = ( data.artwork || [] ).map( function ( file ) {
+					return { name: file.name || ( 'Artwork #' + file.id ), id: file.id, error: null };
+				} );
+				renderFileList();
+				onSizeChange();
+			} )
+			.catch( function () {
+				showFormError( "Couldn't load that past sticker order. Please fill the form manually." );
+			} );
+	}
+
 	function init() {
+		var reorderId = new URLSearchParams( window.location.search ).get( 'reorder' );
+
 		fetch( yeffoprintCustomSticker.restUrl + 'custom-stickers/options' )
 			.then( function ( response ) {
 				return response.ok ? response.json() : Promise.reject( new Error( 'options-failed' ) );
@@ -186,6 +257,10 @@
 
 				statusEl.hidden = true;
 				form.hidden = false;
+
+				if ( reorderId ) {
+					return prefillFromPastOrder( reorderId );
+				}
 			} )
 			.catch( function () {
 				statusEl.textContent = "This form couldn't be loaded. Please refresh, or contact us directly.";

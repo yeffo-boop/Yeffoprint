@@ -244,10 +244,9 @@ add_action( 'wp_enqueue_scripts', function () {
 			// too — guests aren't checked (class-rest-security.php), but a
 			// signed-in customer's request needs a valid nonce to pass.
 			'nonce'       => wp_create_nonce( 'wp_rest' ),
-			// Saved Designs needs an account (nothing to attach an
-			// anonymous save to) — the button's label/behavior branches
-			// on this rather than hiding it outright, since
-			// templates/*.html isn't PHP and can't conditionally omit it.
+			// Guests can stash a pending save (class-guest-saved-design.php);
+			// logged-in customers save immediately. Label/redirect still
+			// branches on this in configurator.js.
 			'isLoggedIn'  => is_user_logged_in(),
 			'accountUrl'  => function_exists( 'wc_get_page_permalink' ) ? esc_url_raw( wc_get_page_permalink( 'myaccount' ) ) : esc_url_raw( home_url( '/my-account/' ) ),
 		] );
@@ -664,6 +663,35 @@ add_action( 'wp_enqueue_scripts', function () {
 			// package <select> is built from this list client-side rather
 			// than a separate REST call, since it's already known here.
 			'packages' => array_values( array_map( 'get_the_title', YeffoPrint_Web_Design_Package_Meta::get_published() ) ),
+		] );
+	}
+
+	if ( is_page() && in_array( get_page_template_slug(), [ 'web-design', 'web-design.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-custom-order',
+			get_theme_file_uri( 'assets/css/custom-order.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/custom-order.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-web-design-order',
+			get_theme_file_uri( 'assets/js/web-design-order.js' ),
+			[ 'yeffoprint-site' ],
+			yeffoprint_asset_version( 'assets/js/web-design-order.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		$user = wp_get_current_user();
+		wp_localize_script( 'yeffoprint-web-design-order', 'yeffoprintWebDesignOrder', [
+			'restUrl'      => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'        => wp_create_nonce( 'wp_rest' ),
+			'defaultName'  => $user && $user->ID ? (string) $user->display_name : '',
+			'defaultEmail' => $user && $user->ID ? (string) $user->user_email : '',
 		] );
 	}
 } );

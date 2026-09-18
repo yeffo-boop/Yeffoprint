@@ -1879,6 +1879,27 @@
 	   list is — independent of, and a firmer guarantee than, the
 	   flex-grow already on .yp-web-design-package__features above. */
 	margin-top: auto;
+	width: 100%;
+}
+
+.yp-web-design-package__quote-link {
+	display: block;
+	margin-top: 0.75rem;
+	text-align: center;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-wd-order-form {
+	display: grid;
+	gap: 1rem;
+}
+
+.yp-wd-order-form .yp-field--honeypot {
+	position: absolute;
+	left: -9999px;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
 }
 
 /* "What's Included" icon grid */

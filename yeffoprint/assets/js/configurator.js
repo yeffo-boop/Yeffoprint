@@ -77,7 +77,10 @@
 	var stickyBar = document.querySelector( '[data-yp-sticky-bar]' );
 	var stickyTotalEl = stickyBar ? stickyBar.querySelector( '[data-yp-sticky-total]' ) : null;
 	var addToCartButtons = document.querySelectorAll( '[data-yp-add-to-cart]' );
-	var saveDesignButton = root.querySelector( '[data-yp-save-design]' );
+	// Includes the sticky bar's Save button (outside root) as well as the
+	// desktop CTA pair inside the configurator.
+	var saveDesignButtons = document.querySelectorAll( '[data-yp-save-design]' );
+	var desktopCtaEl = root.querySelector( '.yp-configurator__desktop-cta' );
 
 	var schema = null;
 	var state = {
@@ -244,14 +247,74 @@
 		renderStage();
 		renderSummary();
 
-		if ( stickyBar ) {
-			stickyBar.hidden = false;
-		}
+		setupStickyBar();
 
 		if ( state.editKey ) {
 			addToCartButtons.forEach( function ( button ) {
 				button.textContent = 'Update Cart';
 			} );
+		}
+	}
+
+	/**
+	 * Mobile: always pin the sticky ATC/save bar once the configurator
+	 * is ready. Desktop: only show it when the in-panel CTA scrolls out
+	 * of view (IntersectionObserver), so the bar isn't a permanent
+	 * footer duplicate of buttons the customer can already see.
+	 */
+	function setupStickyBar() {
+		if ( ! stickyBar ) {
+			return;
+		}
+
+		var desktopMq = window.matchMedia( '(min-width: 961px)' );
+
+		function showForMobile() {
+			stickyBar.hidden = false;
+		}
+
+		function setPinned( pinned ) {
+			stickyBar.hidden = ! pinned;
+		}
+
+		if ( ! desktopMq.matches ) {
+			showForMobile();
+		} else {
+			// Start hidden on desktop until the observer reports the CTA
+			// is off-screen (or if there's no CTA / no IO support).
+			setPinned( false );
+		}
+
+		if ( ! desktopCtaEl || typeof IntersectionObserver === 'undefined' ) {
+			if ( ! desktopMq.matches ) {
+				showForMobile();
+			} else {
+				setPinned( true );
+			}
+			return;
+		}
+
+		var observer = new IntersectionObserver( function ( entries ) {
+			if ( ! desktopMq.matches ) {
+				return;
+			}
+			var entry = entries[ 0 ];
+			setPinned( ! entry.isIntersecting );
+		}, { threshold: 0, rootMargin: '0px' } );
+
+		observer.observe( desktopCtaEl );
+
+		function onMqChange() {
+			if ( ! desktopMq.matches ) {
+				showForMobile();
+			}
+			// Desktop visibility is driven by the next observer callback.
+		}
+
+		if ( typeof desktopMq.addEventListener === 'function' ) {
+			desktopMq.addEventListener( 'change', onMqChange );
+		} else if ( typeof desktopMq.addListener === 'function' ) {
+			desktopMq.addListener( onMqChange );
 		}
 	}
 
@@ -1281,58 +1344,77 @@
 	} );
 
 	/* ---------- Save this design ---------- */
-	// Saved Designs needs an account — there's nothing to attach an
-	// anonymous save to. The button stays visible either way (rather
-	// than being omitted server-side, which templates/*.html can't do)
-	// and just relabels/redirects to login instead of no-op'ing.
+	// Logged-in customers POST /saved-designs immediately. Guests POST
+	// /saved-designs/pending (class-guest-saved-design.php), which stashes
+	// the batch in the WooCommerce session and returns a login URL — on
+	// login/register the pending payload is claimed into a real
+	// yp_saved_design. Buttons stay visible either way (templates/*.html
+	// can't conditionally omit them).
 
-	if ( saveDesignButton ) {
+	if ( saveDesignButtons.length ) {
 		if ( ! yeffoprintConfigurator.isLoggedIn ) {
-			saveDesignButton.textContent = 'Log in to save this design';
+			saveDesignButtons.forEach( function ( button ) {
+				button.textContent = button.closest( '[data-yp-sticky-bar]' ) ? 'Save' : 'Save this design';
+			} );
 		}
 
-		saveDesignButton.addEventListener( 'click', function () {
-			if ( ! yeffoprintConfigurator.isLoggedIn ) {
-				window.location.href = yeffoprintConfigurator.accountUrl;
-				return;
-			}
-
-			clearCartStatus();
-			saveDesignButton.disabled = true;
-
-			var payload = {
-				template_id: schema.id,
-				size_id: state.sizeId,
-				material_id: state.materialId,
-				variants: state.variants.map( function ( variant ) {
-					return { quantity: variant.quantity, values: variant.values };
-				} )
-			};
-
-			fetch( yeffoprintConfigurator.restUrl + 'saved-designs', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintConfigurator.nonce },
-				body: JSON.stringify( payload )
-			} )
-				.then( function ( response ) {
-					return response.json().then( function ( data ) {
-						return { ok: response.ok, data: data };
-					} );
-				} )
-				.then( function ( result ) {
-					saveDesignButton.disabled = false;
-
-					if ( ! result.ok ) {
-						showCartStatus( ( result.data && result.data.message ) || "Couldn't save this design.", true );
-						return;
-					}
-
-					showCartStatus( 'Design saved — find it under Saved Designs in My Account.', false );
-				} )
-				.catch( function () {
-					saveDesignButton.disabled = false;
-					showCartStatus( "Couldn't reach the server — please try again.", true );
+		saveDesignButtons.forEach( function ( saveDesignButton ) {
+			saveDesignButton.addEventListener( 'click', function () {
+				clearCartStatus();
+				saveDesignButtons.forEach( function ( button ) {
+					button.disabled = true;
 				} );
+
+				var payload = {
+					template_id: schema.id,
+					size_id: state.sizeId,
+					material_id: state.materialId,
+					variants: state.variants.map( function ( variant ) {
+						return { quantity: variant.quantity, values: variant.values };
+					} )
+				};
+
+				var endpoint = yeffoprintConfigurator.isLoggedIn
+					? 'saved-designs'
+					: 'saved-designs/pending';
+
+				fetch( yeffoprintConfigurator.restUrl + endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintConfigurator.nonce },
+					body: JSON.stringify( payload )
+				} )
+					.then( function ( response ) {
+						return response.json().then( function ( data ) {
+							return { ok: response.ok, data: data };
+						} );
+					} )
+					.then( function ( result ) {
+						saveDesignButtons.forEach( function ( button ) {
+							button.disabled = false;
+						} );
+
+						if ( ! result.ok ) {
+							showCartStatus( ( result.data && result.data.message ) || "Couldn't save this design.", true );
+							return;
+						}
+
+						if ( result.data && result.data.pending && result.data.login_url ) {
+							showCartStatus( result.data.message || 'Log in to keep this design — we\'ll save it for you.', false );
+							window.setTimeout( function () {
+								window.location.href = result.data.login_url;
+							}, 600 );
+							return;
+						}
+
+						showCartStatus( 'Design saved — find it under Saved Designs in My Account.', false );
+					} )
+					.catch( function () {
+						saveDesignButtons.forEach( function ( button ) {
+							button.disabled = false;
+						} );
+						showCartStatus( "Couldn't reach the server — please try again.", true );
+					} );
+			} );
 		} );
 	}
 

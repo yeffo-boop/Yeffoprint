@@ -810,7 +810,24 @@
 	/* ---------- Init ---------- */
 
 	function init() {
-		var reorderId = new URLSearchParams( window.location.search ).get( 'reorder' );
+		var params = new URLSearchParams( window.location.search );
+		var reorderId = params.get( 'reorder' );
+		var editCanvasId = params.get( 'edit_canvas' );
+
+		// Proofs → "Reopen in Label Designer" lands here with ?edit_canvas=
+		// — jump straight into the Designer (label-designer.js hydrates the
+		// canvas itself) instead of stranding the customer on the describe-
+		// it form with a blank choice.
+		if ( editCanvasId ) {
+			state.mode = 'new_design';
+			state.designMethod = 'designer';
+			modeRadios.forEach( function ( radio ) {
+				radio.checked = 'new_design' === radio.value;
+			} );
+			designMethodRadios.forEach( function ( radio ) {
+				radio.checked = 'designer' === radio.value;
+			} );
+		}
 
 		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders/options' )
 			.then( function ( response ) {
