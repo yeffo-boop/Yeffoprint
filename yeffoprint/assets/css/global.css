@@ -459,15 +459,48 @@ body:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-search-bar
 	gap: 0 !important;
 }
 
-.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content {
-	padding-top: calc(3rem + env(safe-area-inset-top, 0px));
-	padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
-	padding-inline: 1.25rem;
-	min-height: 100%;
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-close,
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-dialog {
+	position: relative !important;
+	width: 100% !important;
+	height: auto !important;
+	min-height: 100% !important;
 	box-sizing: border-box;
 }
 
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-close {
+	position: absolute !important;
+	top: max(0.75rem, env(safe-area-inset-top, 0px)) !important;
+	right: 0.75rem !important;
+	z-index: 3;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content {
+	position: relative !important;
+	inset: auto !important;
+	padding-top: calc(4rem + env(safe-area-inset-top, 0px)) !important;
+	padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)) !important;
+	padding-inline: 1.25rem !important;
+	min-height: 100%;
+	height: auto !important;
+	box-sizing: border-box;
+}
+
+/*
+ * Core Navigation absolutely positions the open overlay's <ul> at top:0,
+ * which ignores content padding and parks "Shop Labels" under the close
+ * control (and previously under the Away bar). Keep it in normal flow.
+ */
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__container {
+	position: static !important;
+	inset: auto !important;
+	top: auto !important;
+	left: auto !important;
+	right: auto !important;
+	bottom: auto !important;
+	width: 100% !important;
+	height: auto !important;
+	max-height: none !important;
 	flex-direction: column !important;
 	flex-wrap: nowrap !important;
 }
