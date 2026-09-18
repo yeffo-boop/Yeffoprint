@@ -358,22 +358,45 @@ main.wp-block-group {
 }
 
 /*
- * Mobile overlay menu — top-aligned list with clear scroll affordance.
- * Direct report: "I have to scroll but don’t know I have to scroll."
- * Core uses overflow:auto on the full-screen panel with invisible
- * iOS scrollbars; links felt cut off. Fix: start from the top (not
- * vertically centered), full-width tap rows, and a bottom fade that
- * hints more content sits below the fold.
+ * Mobile overlay menu — must be a true full-viewport layer.
+ *
+ * Direct report + screenshot: Away Mode bar clipped "Shop Labels", only
+ * one/two links showed, and the search bar / page stayed visible under
+ * the "menu." Root cause: the glass header's `backdrop-filter` creates
+ * a containing block, so the Navigation block's `position: fixed;
+ * inset: 0` overlay was trapped inside the sticky header strip instead
+ * of covering the viewport. Disable that while the menu is open, force
+ * full-viewport coverage, top-align links, and keep a bottom fade so
+ * any overflow still reads as scrollable.
  */
+html.has-modal-open .yp-header,
+.yp-header:has(.wp-block-navigation__responsive-container.is-menu-open) {
+	backdrop-filter: none !important;
+	-webkit-backdrop-filter: none !important;
+	background: transparent !important;
+	border-bottom-color: transparent !important;
+	box-shadow: none !important;
+}
+
+/* Away / announcement bars sit above the header in the DOM; hide them
+   while the modal is open so they can't paint over the first link. */
+html.has-modal-open .yp-away-bar,
+html.has-modal-open .yp-announcement-bar {
+	visibility: hidden;
+}
+
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open {
+	position: fixed !important;
+	inset: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	height: 100dvh !important;
+	max-height: none !important;
+	z-index: 100000 !important;
 	overflow-y: auto;
 	-webkit-overflow-scrolling: touch;
 	overscroll-behavior: contain;
-	/* Fade at the bottom edge while content can scroll underneath */
-	background:
-		linear-gradient(to top, var(--wp--preset--color--near-black) 0%, transparent 100%) bottom / 100% 4.5rem no-repeat,
-		var(--wp--preset--color--near-black);
-	background-attachment: local, local;
+	background: var(--wp--preset--color--near-black);
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content,
