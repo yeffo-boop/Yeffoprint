@@ -6,11 +6,12 @@
  *
  * Direct request: describe web design packages "from design to
  * execution." Confirmed with the site owner: packages are sold via a
- * quote conversation, not self-serve checkout — scope varies too much
- * per client for a fixed price — so every card's CTA goes to a quote
- * form, not a cart/checkout flow (originally /contact/, now the
- * dedicated /web-design-quote/ intake form — see the follow-up note
- * below).
+ * quote conversation by default (scope varies too much per client for
+ * a fixed price) — so every card's CTA goes to a quote form. When an
+ * admin sets a Checkout Price (and the linked WC product syncs), the
+ * card swaps to an Order Now button that creates a pending order via
+ * class-web-design-order-controller.php and sends the customer to
+ * WooCommerce's pay link — same path Manual Order Creator uses.
  *
  * Tiers are real, admin-editable yp_web_design_pkg records now
  * (direct follow-up: "I'd like to make it future proof and be able to
@@ -105,12 +106,20 @@ $addons = array_map( static function ( $post ) {
 $placeholder_price = '$X,XXX';
 
 $packages = array_map( static function ( $post ) {
+	$checkout_price = (float) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::CHECKOUT_PRICE, true );
+	$product_id     = (int) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Product::META_LINKED_PRODUCT, true );
+
 	return [
-		'name'     => get_the_title( $post ),
-		'price'    => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::PRICE, true ),
-		'tagline'  => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::TAGLINE, true ),
-		'features' => (array) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURES, true ),
-		'featured' => (bool) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURED, true ),
+		'id'             => $post->ID,
+		'name'           => get_the_title( $post ),
+		'price'          => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::PRICE, true ),
+		'tagline'        => (string) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::TAGLINE, true ),
+		'features'       => (array) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURES, true ),
+		'featured'       => (bool) get_post_meta( $post->ID, YeffoPrint_Web_Design_Package_Meta::FEATURED, true ),
+		// Self-serve pay when Checkout Price is set and the linked WC
+		// product exists (class-web-design-order-controller.php).
+		'orderable'      => $checkout_price > 0 && $product_id > 0,
+		'checkout_price' => $checkout_price,
 	];
 }, YeffoPrint_Web_Design_Package_Meta::get_published() );
 ?>
@@ -214,9 +223,56 @@ $packages = array_map( static function ( $post ) {
 							</li>
 						<?php endforeach; ?>
 					</ul>
-					<a class="wp-block-button__link wp-element-button yp-web-design-package__cta" href="/web-design-quote/">Get a Quote</a>
+					<?php if ( ! empty( $package['orderable'] ) ) : ?>
+						<button
+							type="button"
+							class="wp-block-button__link wp-element-button yp-web-design-package__cta"
+							data-yp-drawer-trigger="yp-wd-order-modal"
+							data-yp-wd-order
+							data-package-id="<?php echo esc_attr( (string) $package['id'] ); ?>"
+							data-package-name="<?php echo esc_attr( $package['name'] ); ?>"
+						><?php esc_html_e( 'Order Now', 'yeffoprint' ); ?></button>
+						<a class="yp-web-design-package__quote-link" href="<?php echo esc_url( home_url( '/web-design-quote/' ) ); ?>"><?php esc_html_e( 'Or get a custom quote', 'yeffoprint' ); ?></a>
+					<?php else : ?>
+						<a class="wp-block-button__link wp-element-button yp-web-design-package__cta" href="<?php echo esc_url( home_url( '/web-design-quote/' ) ); ?>"><?php esc_html_e( 'Get a Quote', 'yeffoprint' ); ?></a>
+					<?php endif; ?>
 				</div>
 			<?php endforeach; ?>
+		</div>
+
+		<div id="yp-wd-order-modal" class="yp-drawer yp-drawer--center" aria-hidden="true" data-yp-wd-order-modal>
+			<div class="yp-drawer__backdrop"></div>
+			<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="yp-wd-order-heading">
+				<div class="yp-drawer__header">
+					<span id="yp-wd-order-heading"><?php esc_html_e( 'Order this package', 'yeffoprint' ); ?></span>
+					<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="<?php esc_attr_e( 'Close', 'yeffoprint' ); ?>">
+						<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+							<line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+							<line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+						</svg>
+					</button>
+				</div>
+				<div class="yp-drawer__body">
+					<p data-yp-wd-order-package-label></p>
+					<form id="yp-wd-order-form" class="yp-wd-order-form">
+						<input type="hidden" name="package_id" value="" data-yp-wd-order-package-id />
+						<div class="yp-field yp-field--honeypot" aria-hidden="true">
+							<label for="yp-wd-order-website"><?php esc_html_e( 'Website', 'yeffoprint' ); ?></label>
+							<input type="text" id="yp-wd-order-website" name="website" value="" tabindex="-1" autocomplete="off" />
+						</div>
+						<div class="yp-field">
+							<label for="yp-wd-order-name"><?php esc_html_e( 'Your name', 'yeffoprint' ); ?></label>
+							<input type="text" id="yp-wd-order-name" name="name" required autocomplete="name" data-yp-wd-order-name />
+						</div>
+						<div class="yp-field">
+							<label for="yp-wd-order-email"><?php esc_html_e( 'Email', 'yeffoprint' ); ?></label>
+							<input type="email" id="yp-wd-order-email" name="email" required autocomplete="email" data-yp-wd-order-email />
+						</div>
+						<p class="yp-configurator__cart-status" data-yp-wd-order-status hidden></p>
+						<button type="submit" class="wp-block-button__link wp-element-button" data-yp-wd-order-submit><?php esc_html_e( 'Continue to payment', 'yeffoprint' ); ?></button>
+					</form>
+				</div>
+			</div>
 		</div>
 		<!-- /wp:html -->
 

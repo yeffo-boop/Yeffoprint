@@ -97,6 +97,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rewards/class-referrals.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-item-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-saved-design-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-guest-saved-design.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-payment-webhook-controller.php';
@@ -135,6 +136,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-contact-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-quote-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-app-shortcut.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-settings.php';
@@ -211,6 +213,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Referrals();
 		new YeffoPrint_Order_Item_Controller();
 		new YeffoPrint_Saved_Design_Controller();
+		new YeffoPrint_Guest_Saved_Design();
 		new YeffoPrint_Reorder();
 		new YeffoPrint_Payment_Webhook_Controller();
 		new YeffoPrint_Coinbase_Webhook_Controller();
@@ -231,6 +234,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Tracking_Controller();
 		new YeffoPrint_Contact_Controller();
 		new YeffoPrint_Web_Design_Quote_Controller();
+		new YeffoPrint_Web_Design_Order_Controller();
 		new YeffoPrint_Admin_App_Shortcut();
 		new YeffoPrint_Telegram_Webhook_Sync();
 		new YeffoPrint_Telegram_Webhook_Controller();

@@ -1620,22 +1620,114 @@
 		}
 	}
 
+	/**
+	 * Reopen a past Label Designer submission from My Account → Proofs
+	 * (?edit_canvas=<custom_order_id>). Ownership is checked server-side
+	 * (GET /custom-orders/{id}); we only hydrate the canvas + order fields
+	 * so the customer can tweak and submit a fresh request.
+	 */
+	function restoreFromPastCanvas( customOrderId ) {
+		return fetch( yeffoprintLabelDesigner.restUrl + 'custom-orders/' + encodeURIComponent( customOrderId ), {
+			headers: { 'X-WP-Nonce': yeffoprintLabelDesigner.nonce }
+		} )
+			.then( function ( response ) {
+				return response.json().then( function ( data ) {
+					return { ok: response.ok, data: data };
+				} );
+			} )
+			.then( function ( result ) {
+				if ( ! result.ok || ! result.data || ! result.data.canvas_design ) {
+					throw new Error( ( result.data && result.data.message ) || "Couldn't load that past design." );
+				}
+
+				var data = result.data;
+				var widthMm  = parseFloat( data.canvas_width_mm ) || 0;
+				var heightMm = parseFloat( data.canvas_height_mm ) || 0;
+
+				if ( widthMm > 0 && heightMm > 0 ) {
+					widthInput.value  = ( widthMm / MM_PER_INCH ).toFixed( 2 );
+					heightInput.value = ( heightMm / MM_PER_INCH ).toFixed( 2 );
+				}
+
+				var customPreset = sizePresetRadios.filter( function ( radio ) { return 'custom' === radio.value; } )[ 0 ];
+				if ( customPreset ) {
+					customPreset.checked = true;
+					sizePresetRadios.forEach( function ( radio ) {
+						if ( radio !== customPreset ) {
+							radio.checked = false;
+						}
+					} );
+					setSizeLock( false );
+					updateSizePresetHint( customPreset );
+				}
+
+				if ( data.brand_name ) {
+					brandInput.value = data.brand_name;
+				}
+				if ( data.instructions ) {
+					notesInput.value = data.instructions;
+				}
+
+				initCanvas();
+				updateProductPreviewSilhouette();
+
+				var canvasJson;
+				try {
+					canvasJson = typeof data.canvas_design === 'string'
+						? JSON.parse( data.canvas_design )
+						: data.canvas_design;
+				} catch ( err ) {
+					throw new Error( "That past design's canvas data couldn't be read." );
+				}
+
+				isRestoringHistory = true;
+				canvas.loadFromJSON( canvasJson, function () {
+					canvas.renderAll();
+					isRestoringHistory = false;
+					renderLayersPanel();
+					maybeShowLayoutsPicker();
+					pushHistory();
+					refreshPricing();
+				} );
+
+				if ( data.material_id ) {
+					materialSelect.value = String( data.material_id );
+				}
+				if ( data.quantity ) {
+					quantityInput.value = data.quantity;
+				}
+			} );
+	}
+
 	function init() {
 		populateFontFamilySelect();
 		startFontPreload();
 		renderIconPanel();
 
+		var editCanvasId = new URLSearchParams( window.location.search ).get( 'edit_canvas' );
+
 		loadOptions().then( function () {
-			if ( loadDraft() ) {
+			var boot;
+			if ( editCanvasId ) {
+				boot = restoreFromPastCanvas( editCanvasId ).catch( function ( error ) {
+					statusEl.hidden = false;
+					statusEl.textContent = ( error && error.message ) || "Couldn't load that past design. Starting a blank canvas instead.";
+					statusEl.setAttribute( 'data-state', 'error' );
+					initCanvas();
+				} );
+			} else if ( loadDraft() ) {
 				restoreDraftIfAny();
+				boot = Promise.resolve();
 			} else {
 				initCanvas();
+				boot = Promise.resolve();
 			}
 
-			refreshPricing();
-
-			statusEl.hidden = true;
-			form.hidden = false;
+			return boot.then( function () {
+				refreshPricing();
+				statusEl.hidden = true;
+				form.hidden = false;
+			} );
 		} ).catch( function () {
 			statusEl.textContent = "Couldn't load the designer. Please refresh and try again.";
 			statusEl.setAttribute( 'data-state', 'error' );

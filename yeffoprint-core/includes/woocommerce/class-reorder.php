@@ -56,23 +56,41 @@ class YeffoPrint_Reorder {
 			return;
 		}
 
-		// Custom Design line items reorder differently: there's no
-		// configurator to restore into (Architecture §2 — a CustomOrder
+		// Custom Design / Sticker line items reorder differently: there's
+		// no configurator to restore into (Architecture §2 — a CustomOrder
 		// is a one-off request, not a premade Template), so this pre-
-		// fills a fresh Custom Design form from the past request's own
-		// details instead (class-custom-order-controller.php's
-		// GET /custom-orders/{id}, ownership-checked there).
+		// fills a fresh form from the past request's own details instead
+		// (class-custom-order-controller.php's GET /custom-orders/{id},
+		// ownership-checked there). Stickers branch first so a sticker
+		// line (always has _yp_batch_quantity, never a fee item) is never
+		// mis-routed to /custom-design/ by the fee-free fallback.
 		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
 
-		if ( $custom_order_id && self::should_render_link_for_item( $item, $custom_order_id, $order ) ) {
-			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
+		if ( ! $custom_order_id || ! self::should_render_link_for_item( $item, $custom_order_id, $order ) ) {
+			return;
+		}
+
+		$is_sticker = $item->get_meta( '_yp_sticker_type' )
+			|| 'sticker' === YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id );
+
+		if ( $is_sticker ) {
+			$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-stickers/' ) );
 
 			printf(
 				'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
 				esc_url( $url ),
-				esc_html__( 'Reorder this custom design', 'yeffoprint-core' )
+				esc_html__( 'Reorder these stickers', 'yeffoprint-core' )
 			);
+			return;
 		}
+
+		$url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
+
+		printf(
+			'<p class="yp-reorder-link"><a href="%s">%s</a></p>',
+			esc_url( $url ),
+			esc_html__( 'Reorder this custom design', 'yeffoprint-core' )
+		);
 	}
 
 	/**
@@ -108,12 +126,21 @@ class YeffoPrint_Reorder {
 
 			$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
 
-			if ( $custom_order_id && self::should_render_link_for_item( $item, $custom_order_id, $order ) ) {
-				$links[] = [
-					'label' => $item->get_name(),
-					'url'   => add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) ),
-				];
+			if ( ! $custom_order_id || ! self::should_render_link_for_item( $item, $custom_order_id, $order ) ) {
+				continue;
 			}
+
+			$is_sticker = $item->get_meta( '_yp_sticker_type' )
+				|| 'sticker' === YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id );
+
+			$links[] = [
+				'label' => $item->get_name(),
+				'url'   => add_query_arg(
+					'reorder',
+					$custom_order_id,
+					home_url( $is_sticker ? '/custom-stickers/' : '/custom-design/' )
+				),
+			];
 		}
 
 		return $links;

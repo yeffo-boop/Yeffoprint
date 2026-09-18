@@ -487,7 +487,20 @@ class YeffoPrint_Account_Endpoints {
 		// the same "coming soon"-style placeholder treatment used for
 		// Customer Inspiration tiles) until real AI-generated preview
 		// images are wired up as a follow-up.
-		$reorder_url = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
+		$order_type  = YeffoPrint_Custom_Order_Meta::get_order_type( $custom_order_id );
+		$has_canvas  = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CANVAS_DESIGN_JSON, true ) !== '';
+		$is_sticker  = 'sticker' === $order_type;
+
+		if ( $is_sticker ) {
+			$reorder_url   = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-stickers/' ) );
+			$reorder_label = __( 'Reorder these stickers', 'yeffoprint-core' );
+		} elseif ( $has_canvas ) {
+			$reorder_url   = add_query_arg( 'edit_canvas', $custom_order_id, home_url( '/custom-design/' ) );
+			$reorder_label = __( 'Reopen in Label Designer', 'yeffoprint-core' );
+		} else {
+			$reorder_url   = add_query_arg( 'reorder', $custom_order_id, home_url( '/custom-design/' ) );
+			$reorder_label = __( 'Reorder this custom design', 'yeffoprint-core' );
+		}
 		?>
 		<div class="yp-proof-card">
 			<div class="yp-proof-card__thumb" aria-hidden="true">
@@ -521,7 +534,7 @@ class YeffoPrint_Account_Endpoints {
 				<?php if ( 'awaiting_approval' === $status ) : ?>
 					<p class="yp-reorder-link"><a href="<?php echo esc_url( add_query_arg( 'custom_order', $custom_order_id, home_url( '/proof-approval/' ) ) ); ?>"><?php esc_html_e( 'Review & approve this proof', 'yeffoprint-core' ); ?></a></p>
 				<?php endif; ?>
-				<p class="yp-reorder-link"><a href="<?php echo esc_url( $reorder_url ); ?>"><?php esc_html_e( 'Reorder this custom design', 'yeffoprint-core' ); ?></a></p>
+				<p class="yp-reorder-link"><a href="<?php echo esc_url( $reorder_url ); ?>"><?php echo esc_html( $reorder_label ); ?></a></p>
 			</div>
 		</div>
 		<?php
