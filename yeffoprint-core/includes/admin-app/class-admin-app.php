@@ -96,6 +96,20 @@ class YeffoPrint_Admin_App {
 			yeffoprint_core_asset_version( 'assets/admin-app/records.css' )
 		);
 
+		// The storefront's own order-status stepper (order-stepper.css) —
+		// class-web-design-project-meta.php's get_stepper_steps() feeds
+		// YeffoPrint_Order_Status_Stepper::render_html() the exact same
+		// {state,label,sublabel} shape the storefront's Track Order/My
+		// Account pages already render with this file, so the Web Design
+		// panel's own progress row (app.js's renderWebDesignPanel())
+		// needs it here too rather than a second copy of the same rules.
+		wp_enqueue_style(
+			'yeffoprint-admin-app-order-stepper',
+			get_theme_file_uri( 'assets/css/order-stepper.css' ),
+			[ 'yeffoprint-admin-app-records' ],
+			function_exists( 'yeffoprint_asset_version' ) ? yeffoprint_asset_version( 'assets/css/order-stepper.css' ) : YEFFOPRINT_CORE_VERSION
+		);
+
 		// Templates' compatible-sizes/materials checklists and the
 		// drag-to-position field-schema editor (Phase 5) — kept out of
 		// records.css since nothing else uses these components.

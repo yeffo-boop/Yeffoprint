@@ -463,6 +463,63 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
+	// The three public Web Design portal pages (agreement sign, staging
+	// review, go-live access) — same guest-via-token pattern as
+	// proof-approval above (class-web-design-portal-controller.php's
+	// check_access()), sharing one CSS file (web-design-portal.css)
+	// since all three are variations of the same "one card, a status
+	// line, an action" shape.
+	$web_design_portal_pages = [
+		'web-design-agreement'        => [ 'web-design-agreement.html', 'web-design-agreement.js', 'yeffoprint-wd-agreement' ],
+		'web-design-staging-review'   => [ 'web-design-staging-review.html', 'web-design-staging-review.js', 'yeffoprint-wd-staging-review' ],
+		'web-design-golive'           => [ 'web-design-golive.html', 'web-design-golive.js', 'yeffoprint-wd-golive' ],
+	];
+
+	foreach ( $web_design_portal_pages as $slug => $config ) {
+		list( $template_slug, $script_file, $script_handle ) = $config;
+
+		if ( ! is_page() || ! in_array( get_page_template_slug(), [ $slug, $template_slug ], true ) ) {
+			continue;
+		}
+
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-web-design-portal',
+			get_theme_file_uri( 'assets/css/web-design-portal.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/web-design-portal.css' )
+		);
+
+		wp_enqueue_script(
+			$script_handle,
+			get_theme_file_uri( 'assets/js/' . $script_file ),
+			[],
+			yeffoprint_asset_version( 'assets/js/' . $script_file ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		// Same stale-nonce-from-a-cached-page risk as proof-approval above.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		wp_localize_script( $script_handle, 'yeffoprintWebDesign', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			// Only meaningful for a logged-in customer/staff viewing
+			// their own order — a guest is authenticated by the `token`
+			// query param instead, which needs no nonce.
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+		] );
+
+		break;
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'track-order', 'track-order.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',

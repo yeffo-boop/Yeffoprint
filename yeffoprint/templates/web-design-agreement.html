@@ -1,0 +1,67 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-wd-agreement" class="yp-wd-portal yp-section">
+
+		<p class="yp-eyebrow">Web Design</p>
+		<h1>Your Service Agreement</h1>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<div data-yp-wd-content hidden>
+
+			<div class="yp-wd-summary">
+				<div><span class="k">Package</span><span class="v" data-yp-wd-package></span></div>
+				<div class="yp-wd-summary--right"><span class="k">Paid</span><span class="v" data-yp-wd-paid></span></div>
+			</div>
+
+			<div class="yp-wd-card">
+				<h2>Project timeline</h2>
+				<div class="yp-wd-dates">
+					<div><span class="k">Kickoff</span><span class="v" data-yp-wd-kickoff></span></div>
+					<div><span class="k">Staging delivered</span><span class="v" data-yp-wd-staging-due></span></div>
+					<div><span class="k">Go-live</span><span class="v" data-yp-wd-golive-due></span></div>
+				</div>
+
+				<h2>Milestones</h2>
+				<ul class="yp-wd-milestones" data-yp-wd-milestones></ul>
+
+				<h2>Add-ons included</h2>
+				<div class="yp-wd-addons" data-yp-wd-addons></div>
+
+				<h2>Scope, expectations &amp; revision policy</h2>
+				<p class="yp-wd-scope" data-yp-wd-scope></p>
+
+				<div data-yp-wd-signed hidden>
+					<div class="yp-wd-signed-notice">
+						Signed by <strong data-yp-wd-signed-name></strong> on <span data-yp-wd-signed-at></span>.
+					</div>
+				</div>
+
+				<div data-yp-wd-sign-form>
+					<label class="yp-wd-sign-row" for="yp-wd-agree-checkbox">
+						<input type="checkbox" id="yp-wd-agree-checkbox" data-yp-wd-agree>
+						<span>I have read and agree to the timeline, milestones, add-ons and revision policy above, and authorize work to begin on my staging site.</span>
+					</label>
+
+					<label for="yp-wd-sign-name">Type your full name to sign</label>
+					<input type="text" id="yp-wd-sign-name" data-yp-wd-sign-name placeholder="Your full name">
+
+					<p class="yp-configurator__cart-status" data-yp-wd-message hidden></p>
+
+					<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-sign-submit disabled>Sign &amp; Continue</button>
+				</div>
+			</div>
+
+		</div>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

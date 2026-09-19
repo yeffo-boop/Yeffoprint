@@ -1,0 +1,82 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"680px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-wd-golive" class="yp-wd-portal yp-section">
+
+		<p class="yp-eyebrow">Web Design</p>
+		<h1>Let's Take Your Site Live</h1>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<div data-yp-wd-content hidden>
+
+			<div class="yp-wd-card">
+
+				<div data-yp-wd-not-approved hidden>
+					<p>Approve your staging site before submitting go-live access — check your staging-review email for that link.</p>
+				</div>
+
+				<div data-yp-wd-already-live hidden>
+					<p>Your site is already live — thanks!</p>
+				</div>
+
+				<div data-yp-wd-already-submitted hidden>
+					<p class="yp-field__hint">We already received your go-live access on <span data-yp-wd-submitted-at></span>. If you need to update it, just reply to your staging email.</p>
+				</div>
+
+				<div data-yp-wd-form>
+					<p>We need secure access to your hosting so we can upload the final files. This form is encrypted and used only to complete your launch.</p>
+
+					<div class="yp-wd-tabs">
+						<button type="button" class="is-active" data-yp-wd-method="ftp">FTP / SFTP access</button>
+						<button type="button" data-yp-wd-method="wp_admin">WordPress admin access</button>
+					</div>
+
+					<div data-yp-wd-ftp-fields>
+						<label for="yp-wd-host">Server / FTP host</label>
+						<input type="text" id="yp-wd-host" data-yp-wd-host placeholder="ftp.example.com">
+
+						<label for="yp-wd-port">Port (optional)</label>
+						<input type="text" id="yp-wd-port" data-yp-wd-port placeholder="21">
+					</div>
+
+					<div data-yp-wd-wp-fields hidden>
+						<label for="yp-wd-wp-url">WordPress admin URL</label>
+						<input type="url" id="yp-wd-wp-url" data-yp-wd-wp-url placeholder="https://example.com/wp-admin">
+					</div>
+
+					<label for="yp-wd-username">Username</label>
+					<input type="text" id="yp-wd-username" data-yp-wd-username>
+
+					<label for="yp-wd-password">Password</label>
+					<div class="yp-wd-pw-field">
+						<input type="password" id="yp-wd-password" data-yp-wd-password>
+						<button type="button" data-yp-wd-toggle-password aria-label="Show password">Show</button>
+					</div>
+
+					<label for="yp-wd-notes">Anything else we should know? (optional)</label>
+					<textarea id="yp-wd-notes" data-yp-wd-notes rows="3" placeholder="e.g. best time to push live, maintenance mode, DNS notes&hellip;"></textarea>
+
+					<div class="yp-wd-security-note">
+						Encrypted in transit and at rest. Only your assigned developer can view these credentials, and access is deleted automatically 30 days after launch.
+					</div>
+
+					<p class="yp-configurator__cart-status" data-yp-wd-message hidden></p>
+
+					<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-submit>Submit Securely</button>
+				</div>
+
+			</div>
+
+		</div>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

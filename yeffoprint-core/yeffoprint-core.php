@@ -80,4 +80,9 @@ register_deactivation_hook( __FILE__, function () {
 	// event otherwise just keeps firing weekly with nothing listening.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-digest.php';
 	YeffoPrint_Telegram_Unanswered_Digest::unschedule();
+
+	// Same reasoning again — the go-live credential purge sweep otherwise
+	// just keeps firing hourly with nothing listening.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-credential-purge.php';
+	YeffoPrint_Web_Design_Credential_Purge::unschedule();
 } );
