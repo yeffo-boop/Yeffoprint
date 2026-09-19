@@ -64,6 +64,11 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			'pending_proofs'            => $this->custom_orders_by_status( 'design_in_progress' ),
 			'awaiting_approval'         => $this->custom_orders_by_status( 'awaiting_approval' ),
 			'maintenance_subscribers'   => $this->maintenance_subscribers(),
+			// Direct request: "add upcoming/overdue milestones onto my main
+			// dashboard so I can see those at a glance" — see
+			// YeffoPrint_Web_Design_Project_Meta::get_milestone_alerts()'s
+			// own docblock for how "upcoming" is defined.
+			'web_design_milestones'    => class_exists( 'YeffoPrint_Web_Design_Project_Meta' ) ? YeffoPrint_Web_Design_Project_Meta::get_milestone_alerts() : [],
 			// Site-wide (not per-row) — direct request: an In Production row's action
 			// column offers "Print Shipping Label" (opening straight into the same
 			// embedded WooCommerce Shipping form the drawer's own Shipping Label panel

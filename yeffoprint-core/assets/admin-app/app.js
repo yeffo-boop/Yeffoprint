@@ -278,6 +278,7 @@
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },
 			{ id: 'order-history', label: 'Order History' },
+			{ id: 'web-design-orders', label: 'Web Design Orders' },
 			{ id: 'customers', label: 'Customers' },
 			{ id: 'pricing', label: 'Pricing Rules' },
 			{ id: 'orders', label: 'Custom Orders' },
@@ -789,6 +790,42 @@
 			: '<p class="yp-field__hint">Nothing here right now.</p>';
 
 		/**
+		 * Direct request: "add upcoming/overdue milestones onto my main
+		 * dashboard so I can see those at a glance." One flat, soonest-
+		 * first list across every in-flight Web Design project (the
+		 * REST endpoint already did the filtering/sorting — see
+		 * YeffoPrint_Web_Design_Project_Meta::get_milestone_alerts()),
+		 * each row opening straight into the same order drawer via the
+		 * generic [data-yp-wc-order] handler bound below.
+		 */
+		function milestoneDueLabel( alert ) {
+			if ( alert.is_overdue ) {
+				var daysLate = Math.max( 1, Math.round( ( Date.now() - new Date( alert.due_date + 'T00:00:00' ).getTime() ) / 86400000 ) );
+				return { text: daysLate + ( 1 === daysLate ? ' day overdue' : ' days overdue' ), pill: 'crit' };
+			}
+			var today = new Date().toISOString().slice( 0, 10 );
+			if ( alert.due_date === today ) {
+				return { text: 'Due today', pill: 'warn' };
+			}
+			return { text: 'Due ' + new Date( alert.due_date + 'T00:00:00' ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } ), pill: 'warn' };
+		}
+
+		var milestonesBody = ( summary.web_design_milestones || [] ).length
+			? '<div class="yp-list-rows">' + summary.web_design_milestones.map( function ( alert ) {
+					var due = milestoneDueLabel( alert );
+					return (
+						'<div class="yp-list-row">' +
+							'<div class="yp-list-row__text">' +
+								'<span class="t"><button type="button" class="yp-row-action" style="padding:0;font-weight:700;" data-yp-wc-order="' + alert.order_id + '">' + YP.escapeHtml( alert.label ) + '</button></span>' +
+								'<span class="s">Order #' + YP.escapeHtml( String( alert.order_number ) ) + ' &middot; ' + YP.escapeHtml( alert.package_name ) + ' &middot; ' + YP.escapeHtml( alert.customer_name || '—' ) + '</span>' +
+							'</div>' +
+							'<div class="yp-list-row__meta"><span class="yp-pill yp-pill--' + due.pill + '">' + YP.escapeHtml( due.text ) + '</span></div>' +
+						'</div>'
+					);
+				} ).join( '' ) + '</div>'
+			: '<p class="yp-field__hint">Nothing due in the next week.</p>';
+
+		/**
 		 * Direct report: clicking "Send to Printer" moved an order to
 		 * "In Production" (class-order-production-status.php) but this
 		 * panel's REST query only ever asked for "processing" orders, so
@@ -830,6 +867,11 @@
 			'</div>' +
 			dashboardSectionHtml( 'Pending Proofs', 'Custom orders staff still owes a proof — brand new, or the customer just requested changes.', '#/orders', summary.pending_proofs, dueDateDays, true ) +
 			dashboardSectionHtml( 'Awaiting Customer Approval', 'A proof has been sent — waiting on the customer to approve it or request changes.', '#/orders', summary.awaiting_approval, dueDateDays, true ) +
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Web Design Milestones</h2><a href="#/web-design-orders">View all &rarr;</a></div>' +
+				'<p class="yp-panel__hint">Overdue, or due within the next 7 days, across every Web Design project not yet live.</p>' +
+				milestonesBody +
+			'</div>' +
 			'<div class="yp-panel">' +
 				'<div class="yp-panel__head"><h2>Active Maintenance Subscribers</h2><a href="#/maintenance">View all &rarr;</a></div>' +
 				'<p class="yp-panel__hint">Customers currently paying for ongoing site maintenance &amp; monitoring.</p>' +
