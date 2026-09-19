@@ -293,6 +293,11 @@ class YeffoPrint_Admin_Order_Controller {
 			// order emails already use, not a new convention introduced
 			// here.
 			'shipping_address'     => $order->get_formatted_shipping_address() ?: $order->get_formatted_billing_address(),
+			// Direct request: staff can flag a manual order "customer will
+			// provide it" instead of blocking on an address they don't have
+			// yet (class-order-pay-address.php) — true only while that's
+			// still outstanding, so the drawer can call it out.
+			'needs_customer_address' => YeffoPrint_Order_Pay_Address::needs_address( $order ),
 			'payment_method_title' => $order->get_payment_method_title(),
 			// The shipping method(s) the customer actually selected at checkout (comma-joined titles
 			// of every shipping line item — same accessor WooCommerce Shipping's own order presenter

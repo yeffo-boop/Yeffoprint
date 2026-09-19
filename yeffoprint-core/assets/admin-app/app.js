@@ -1062,7 +1062,12 @@
 			YP.escapeHtml( order.customer_name || '' ) + ( order.customer_email ? ' — <a href="mailto:' + YP.escapeAttr( order.customer_email ) + '">' + YP.escapeHtml( order.customer_email ) + '</a>' : '' ) +
 				( order.customer_phone ? ' — ' + YP.escapeHtml( order.customer_phone ) : '' )
 		);
-		fieldsHtml += wcOrderField( 'Shipping Address', order.shipping_address ? order.shipping_address.replace( /\n/g, '<br>' ) : '—' );
+		fieldsHtml += wcOrderField(
+			'Shipping Address',
+			order.needs_customer_address
+				? '<span class="yp-pill yp-pill--warn">Awaiting customer</span> — they’ll be asked for it on the payment page.'
+				: ( order.shipping_address ? order.shipping_address.replace( /\n/g, '<br>' ) : '—' )
+		);
 		fieldsHtml += wcOrderField( 'Payment Method', YP.escapeHtml( order.payment_method_title || '—' ) );
 		fieldsHtml += wcOrderField( 'Date', order.date ? new Date( order.date ).toLocaleString() : '—' );
 		if ( order.customer_note ) {

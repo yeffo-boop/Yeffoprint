@@ -1106,3 +1106,62 @@
 .wc-block-checkout__sidebar .wc-block-components-product-details__value {
 	color: rgba(255, 255, 255, 0.75) !important;
 }
+
+/* "Pay for order" page's customer-supplied shipping address
+   (class-order-pay-address.php) — only ever rendered when staff checked
+   "customer will provide it" on a manual order with no address yet.
+   Same card language as .yp-away-checkout-notice above, in the brand's
+   accent rather than amber since this is an action to take, not a
+   heads-up. */
+.yp-pay-address {
+	background: #FDF1F8;
+	border: 1px solid #F3C7E1;
+	border-radius: var(--wp--custom--radius--card);
+	padding: 1.25rem 1.5rem;
+	margin: 1.5rem 0;
+}
+
+.yp-pay-address__title {
+	display: block;
+	font-family: var(--wp--preset--font-family--heading);
+	font-weight: 700;
+	font-size: 1rem;
+	color: var(--wp--preset--color--near-black);
+	margin-bottom: 0.35rem;
+}
+
+.yp-pay-address__body {
+	font-size: 0.88rem;
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal);
+	margin: 0 0 1.1rem;
+}
+
+.yp-pay-address__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.85rem 1rem;
+}
+
+.yp-pay-address__field--address_1,
+.yp-pay-address__field--address_2 {
+	grid-column: 1 / -1;
+}
+
+.yp-pay-address__field label {
+	display: block;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+	margin-bottom: 0.35rem;
+}
+
+.yp-pay-address__field input {
+	width: 100%;
+	background: var(--wp--preset--color--white);
+}
+
+@media (max-width: 560px) {
+	.yp-pay-address__grid {
+		grid-template-columns: 1fr;
+	}
+}

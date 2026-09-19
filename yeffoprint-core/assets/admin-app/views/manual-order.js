@@ -151,6 +151,7 @@
 			// rebuilding the panel's HTML from scratch on every order-type click.
 			shipping: {
 				address: emptyAddress(),
+				customerProvidesAddress: false,
 				billingDiffers: false,
 				billingAddress: emptyAddress(),
 				verifying: false,
@@ -1010,9 +1011,20 @@
 				'<div class="yp-panel" data-yp-shipping-panel>' +
 					'<div class="yp-panel__head"><h2>Shipping &amp; billing address</h2></div>' +
 					'<p class="yp-panel__hint">Optional at this step — leave blank to add an address later from the order screen instead.</p>' +
-					addressFieldsHtml( 'ship', s.address ) +
-					'<button type="button" class="yp-row-action" data-yp-verify-address>Verify address</button>' +
-					'<div data-yp-verify-result></div>' +
+
+					'<div class="yp-field yp-field--checkbox">' +
+						'<input type="checkbox" id="yp-mo-customer-provides-address"' + ( s.customerProvidesAddress ? ' checked' : '' ) + ' />' +
+						'<label for="yp-mo-customer-provides-address">Customer will provide their address when they pay</label>' +
+					'</div>' +
+					( s.customerProvidesAddress
+						? '<p class="yp-panel__hint">They’ll be asked for it right on the payment page their emailed link takes them to — it saves straight onto this order once they submit it.</p>'
+						: '' ) +
+
+					'<div data-yp-ship-address-fields' + ( s.customerProvidesAddress ? ' style="display:none;"' : '' ) + '>' +
+						addressFieldsHtml( 'ship', s.address ) +
+						'<button type="button" class="yp-row-action" data-yp-verify-address>Verify address</button>' +
+						'<div data-yp-verify-result></div>' +
+					'</div>' +
 
 					'<div class="yp-field yp-field--checkbox">' +
 						'<input type="checkbox" id="yp-mo-billing-differs"' + ( s.billingDiffers ? ' checked' : '' ) + ' />' +
@@ -1111,6 +1123,12 @@
 				panel.querySelectorAll( '[id^="yp-mo-' + prefix + '-"]' ).forEach( function ( field ) {
 					field.addEventListener( 'input', function () { readAddressState( prefix ); } );
 				} );
+			} );
+
+			var customerProvidesToggle = panel.querySelector( '#yp-mo-customer-provides-address' );
+			customerProvidesToggle.addEventListener( 'change', function () {
+				state.shipping.customerProvidesAddress = customerProvidesToggle.checked;
+				panel.querySelector( '[data-yp-ship-address-fields]' ).style.display = customerProvidesToggle.checked ? 'none' : '';
 			} );
 
 			var billingDiffersToggle = panel.querySelector( '#yp-mo-billing-differs' );
@@ -1259,6 +1277,7 @@
 			// is active, so there's nothing here to read.
 			var hasPhysicalItem = state.activeTypes.custom_design || state.activeTypes.sticker || state.activeTypes.template;
 			if ( hasPhysicalItem ) {
+				body.customer_provides_address = state.shipping.customerProvidesAddress;
 				readAddressState( 'ship' );
 				body.shipping_address = shippingAddressPayload( state.shipping.address );
 				if ( state.shipping.billingDiffers ) {
