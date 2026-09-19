@@ -162,6 +162,12 @@ class YeffoPrint_Manual_Order_Creator {
 	 *                                     incomplete.
 	 *     @type array  $billing_address   Optional, same shape as $shipping_address — only needed when
 	 *                                     billing differs from shipping; mirrors $shipping_address otherwise.
+	 *     @type bool   $customer_provides_address  Direct request: staff don't always have the customer's
+	 *                                     address yet — checking this instead of filling in $shipping_address
+	 *                                     flags the order (class-order-pay-address.php's NEEDS_ADDRESS_META)
+	 *                                     so the customer supplies it themselves on the payment page their own
+	 *                                     link takes them to. Ignored if $shipping_address was also given —
+	 *                                     a staff-provided address always wins.
 	 *     @type array  $shipping         Optional — { carrier_label, amount }, the flat shipping-method
 	 *                                     preset staff picked (Settings → Shipping → "Manual order shipping
 	 *                                     options" — no live rate-shop). Added as a real shipping line item
@@ -317,6 +323,18 @@ class YeffoPrint_Manual_Order_Creator {
 			wp_get_current_user()->display_name
 		) );
 		$order->update_meta_data( '_yp_manually_created', 1 );
+
+		// Direct request: staff don't always have the customer's address
+		// in hand when placing a manual order over the phone/email —
+		// checking "customer will provide it" instead of blocking on it
+		// flags the order so class-order-pay-address.php collects it on
+		// the payment page the customer's own link takes them to. Only
+		// meaningful when no shipping address was actually given above —
+		// a staff-provided address always wins.
+		if ( ! empty( $payload['customer_provides_address'] ) && ! $shipping_address ) {
+			$order->update_meta_data( YeffoPrint_Order_Pay_Address::NEEDS_ADDRESS_META, 1 );
+		}
+
 		$order->save();
 
 		// Direct report: this used to force the order straight to
