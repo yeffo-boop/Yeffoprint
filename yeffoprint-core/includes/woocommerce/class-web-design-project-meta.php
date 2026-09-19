@@ -540,6 +540,75 @@ class YeffoPrint_Web_Design_Project_Meta {
 		return $steps;
 	}
 
+	/**
+	 * A compact, email-safe stand-in for get_stepper_steps() — direct
+	 * report, with a screenshot: the agreement-ready/staging-ready
+	 * emails' progress row rendered badly broken on mobile (the card
+	 * itself overflowing the screen). Root cause: those emails fed all
+	 * 7 Web Design steps through YeffoPrint_Order_Status_Stepper::
+	 * render_email_html(), a component whose own docblock already notes
+	 * it targets "an inbox at 600px wide across 4-5 columns" — the
+	 * print-order pipeline it was built for never has more than 5. 7
+	 * dot-plus-two-line-label columns simply don't fit in 600px, and
+	 * email clients (Gmail's app worst of all) don't reliably shrink an
+	 * overflowing table the way a browser would.
+	 *
+	 * This renders a slim, label-free, fixed-pixel-width segmented bar
+	 * (no per-step text to wrap) plus one line of plain text naming the
+	 * current step — the same information, laid out in a shape that
+	 * cannot overflow regardless of client. Used only by the two Web
+	 * Design emails; every other order email keeps the real stepper
+	 * unchanged (theirs never exceeds 5 steps).
+	 */
+	public static function get_email_progress_html( \WC_Order $order ): string {
+		$steps = self::get_stepper_steps( $order );
+		$total = count( $steps );
+
+		$current_index = 0;
+		$current_label = '';
+		foreach ( $steps as $i => $step ) {
+			if ( 'upcoming' === $step['state'] ) {
+				break;
+			}
+			$current_index = $i;
+			$current_label = $step['label'];
+		}
+
+		// 70px per segment, 6px gaps, 7 segments = 526px — comfortably
+		// inside the ~536px content width email-styles.php's own
+		// #body_content padding (32px each side of a 600px wrapper)
+		// leaves. A fixed pixel width="…" HTML attribute, not a
+		// percentage — same Outlook-safety reasoning as the real
+		// stepper's own connector cells (class-order-status-stepper.php).
+		$segment_width = 70;
+		$gap           = 6;
+
+		$cells = '';
+		foreach ( $steps as $i => $step ) {
+			$filled       = 'upcoming' !== $step['state'];
+			$padding_right = $i < $total - 1 ? $gap : 0;
+			$cells        .= sprintf(
+				'<td width="%1$d" style="width:%1$dpx;padding-right:%2$dpx;"><div style="height:6px;line-height:6px;font-size:0;mso-line-height-rule:exactly;border-radius:3px;background-color:%3$s;">&nbsp;</div></td>',
+				$segment_width,
+				$padding_right,
+				$filled ? '#C2007A' : '#E7E5E1'
+			);
+		}
+
+		return sprintf(
+			'<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>%1$s</tr></table>' .
+			'<p style="margin:10px 0 20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#C2007A;">%2$s</p>',
+			$cells, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built entirely from fixed values above, nothing user-supplied.
+			sprintf(
+				/* translators: 1: current step number, 2: total steps, 3: current step's label */
+				esc_html__( 'Step %1$d of %2$d — %3$s', 'yeffoprint-core' ),
+				$current_index + 1,
+				$total,
+				esc_html( $current_label )
+			)
+		);
+	}
+
 	// ---- Public-page links (guest access via ACCESS_TOKEN, same trust model as yeffoprint_core_proof_approval_url()) ----
 
 	public static function get_agreement_url( \WC_Order $order ): string {

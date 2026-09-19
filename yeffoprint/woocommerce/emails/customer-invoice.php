@@ -1,16 +1,19 @@
 <?php
 /**
- * Customer invoice / pending order (customer) email — theme override, copied unchanged from
+ * Customer invoice / pending order (customer) email — theme override of
  * woocommerce/templates/emails/customer-invoice.php.
  *
- * This file's actual content/copy is identical to WooCommerce's own
- * default — every visual change (colors, header/footer band, rounded
- * card) lives entirely in this same directory's email-header.php,
- * email-footer.php, and email-styles.php, which every email type
- * already shares via the woocommerce_email_header/_footer hooks below.
- * This copy exists so this specific email's wording is easy to find
- * and edit later without hunting through the WooCommerce plugin itself
- * — not because anything here needed to change today.
+ * Every visual change (colors, header/footer band, rounded card) lives
+ * entirely in this same directory's email-header.php, email-footer.php,
+ * and email-styles.php, which every email type already shares via the
+ * woocommerce_email_header/_footer hooks below.
+ *
+ * Direct report: a Web Design Package order got the exact same copy as
+ * a physical label/sticker order ("here's a summary of what's
+ * included... complete payment"), which reads fine as far as it goes
+ * but never actually says this is a website purchase — $is_web_design
+ * below swaps in copy that sets the right expectation (what happens
+ * once they pay) instead of leaving every order to read identically.
  *
  * @see https://woocommerce.com/document/template-structure/
  */
@@ -23,6 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $email_improvements_enabled = FeaturesUtil::feature_is_enabled( 'email_improvements' );
+$is_web_design               = class_exists( 'YeffoPrint_Web_Design_Project_Meta' ) && YeffoPrint_Web_Design_Project_Meta::is_web_design_order( $order );
 
 /**
  * Executes the e-mail header.
@@ -54,6 +58,12 @@ if ( ! empty( $order->get_billing_first_name() ) ) {
 		printf(
 			/* translators: %s: Site title */
 			esc_html__( 'Sorry, your order on %s was unsuccessful. Here’s a summary of what’s included — use the button below to try your payment again.', 'yeffoprint' ),
+			esc_html( get_bloginfo( 'name', 'display' ) )
+		);
+	} elseif ( $is_web_design ) {
+		printf(
+			/* translators: %s: Site title */
+			esc_html__( 'Your web design order has been created on %s. Once you complete payment below, we’ll be in touch to put together your project agreement — covering your timeline, milestones, and how revisions work — before we start building your staging site.', 'yeffoprint' ),
 			esc_html( get_bloginfo( 'name', 'display' ) )
 		);
 	} else {

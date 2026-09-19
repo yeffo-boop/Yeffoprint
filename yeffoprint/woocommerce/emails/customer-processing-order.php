@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $email_improvements_enabled = FeaturesUtil::feature_is_enabled( 'email_improvements' );
+$is_web_design = class_exists( 'YeffoPrint_Web_Design_Project_Meta' ) && YeffoPrint_Web_Design_Project_Meta::is_web_design_order( $order );
 
 /*
  * @hooked WC_Emails::email_header() Output the email header
@@ -39,7 +40,11 @@ if ( ! empty( $order->get_billing_first_name() ) ) {
 }
 ?>
 </p>
-<?php if ( $email_improvements_enabled ) : ?>
+<?php if ( $is_web_design ) : ?>
+	<p><?php esc_html_e( 'Thanks for your payment — we’ve received your web design order.', 'yeffoprint' ); ?></p>
+	<p><?php esc_html_e( 'Next up: we’ll put together your project agreement, covering your timeline, milestones, and how revisions work, and send it over for you to review and sign before we start building your staging site.', 'yeffoprint' ); ?></p>
+	<p><?php esc_html_e( 'Here’s what you ordered:', 'yeffoprint' ); ?></p>
+<?php elseif ( $email_improvements_enabled ) : ?>
 	<p><?php esc_html_e( 'Just to let you know &mdash; we’ve received your order, and it is now being processed.', 'woocommerce' ); ?></p>
 	<p><?php esc_html_e( 'Here’s a reminder of what you’ve ordered:', 'woocommerce' ); ?></p>
 <?php else : ?>
