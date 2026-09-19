@@ -1,0 +1,202 @@
+/*
+ * The three public Web Design pages reached via a one-time link
+ * (agreement sign, staging review, go-live portal) — same
+ * .yp-configurator__status/.yp-configurator__cart-status loading/message
+ * states as proof-approval.css, plus the card/summary/tabs shapes those
+ * pages share that don't exist anywhere else on the storefront yet.
+ */
+
+.yp-wd-portal {
+	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
+}
+
+.yp-wd-card {
+	position: relative;
+	background: var(--wp--preset--color--white);
+	border-radius: var(--wp--custom--radius--card);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	overflow: hidden;
+	padding: var(--wp--preset--spacing--md);
+	margin-bottom: var(--wp--preset--spacing--md);
+}
+
+.yp-wd-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: var(--wp--custom--gradient-brand);
+}
+
+.yp-wd-summary {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	background: var(--wp--preset--color--warm-white);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	padding: 1rem 1.25rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-wd-summary .k {
+	display: block;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-wd-summary .v {
+	display: block;
+	font-weight: 600;
+	margin-top: 0.2rem;
+}
+
+.yp-wd-summary--right {
+	text-align: right;
+}
+
+.yp-wd-dates {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.75rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-wd-dates div {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	padding: 0.75rem 0.9rem;
+}
+
+.yp-wd-milestones {
+	list-style: none;
+	margin: 0 0 1.5rem;
+	padding: 0;
+}
+
+.yp-wd-milestones li {
+	display: flex;
+	justify-content: space-between;
+	padding: 0.6rem 0;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-wd-milestones li span:last-child {
+	font-family: var(--wp--preset--font-family--mono);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-wd-addons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-wd-addons span {
+	font-family: var(--wp--preset--font-family--mono);
+	background: var(--wp--custom--gradient-brand-deep);
+	color: var(--wp--preset--color--white);
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 0.3rem 0.7rem;
+	border-radius: var(--wp--custom--radius--control);
+}
+
+.yp-wd-scope {
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.7;
+	color: var(--wp--preset--color--charcoal);
+	margin-bottom: 1.5rem;
+}
+
+.yp-wd-sign-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	margin-bottom: 1.25rem;
+}
+
+.yp-wd-sign-row input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	margin-top: 0.15rem;
+	accent-color: var(--wp--preset--color--magenta-deep);
+	flex-shrink: 0;
+}
+
+.yp-wd-signed-notice {
+	background: var(--wp--preset--color--warm-white);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	padding: 1rem 1.25rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-wd-tabs {
+	display: flex;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	padding: 0.25rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-wd-tabs button {
+	flex: 1;
+	text-align: center;
+	padding: 0.6rem;
+	border-radius: var(--wp--custom--radius--control);
+	font-size: 0.82rem;
+	font-weight: 700;
+	background: transparent;
+	border: none;
+	color: var(--wp--preset--color--charcoal);
+	cursor: pointer;
+}
+
+.yp-wd-tabs button.is-active {
+	background: var(--wp--custom--gradient-brand-deep);
+	color: var(--wp--preset--color--white);
+}
+
+.yp-wd-security-note {
+	display: flex;
+	gap: 0.6rem;
+	background: #E5F7FD;
+	border: 1px solid #B8E9F7;
+	border-radius: var(--wp--custom--radius--input);
+	padding: 0.9rem 1rem;
+	margin: 1.5rem 0;
+	font-size: 0.8rem;
+	color: #005872;
+	line-height: 1.6;
+}
+
+.yp-wd-pw-field {
+	position: relative;
+}
+
+.yp-wd-pw-field button {
+	position: absolute;
+	right: 0.5rem;
+	top: 50%;
+	transform: translateY(-50%);
+	border: none;
+	background: none;
+	cursor: pointer;
+	color: var(--wp--preset--color--charcoal);
+	padding: 0.25rem;
+}
+
+.yp-wd-staging-link {
+	text-align: center;
+	margin-bottom: 1.5rem;
+}

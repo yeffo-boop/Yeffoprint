@@ -369,6 +369,14 @@ class YeffoPrint_Admin_Order_Controller {
 			// drawer can add a note right here without a trip to the
 			// separate Customers screen.
 			'customer_notes'            => YeffoPrint_Customer_Notes::get_notes( $order->get_billing_email() ),
+			// Direct request: an Agreement/Staging Site/Go-Live workflow
+			// for Web Design Package orders, right in this same drawer.
+			// `null` for every other order — the frontend only renders
+			// the Web Design panel when this key is present at all, so
+			// no `if (isWebDesign)` guard is duplicated in two places.
+			'web_design'                => YeffoPrint_Web_Design_Project_Meta::is_web_design_order( $order )
+				? [ 'package_id' => YeffoPrint_Web_Design_Project_Meta::get_package_id( $order ) ]
+				: null,
 		];
 	}
 

@@ -102,6 +102,33 @@ class YeffoPrint_Pages_Setup_Command {
 			'',
 			'add-to-order.html'
 		);
+
+		// The three Web Design portal pages — reached via the customer's
+		// own one-time link (agreement/staging emails, or the
+		// staging-review page's own redirect to go-live), never linked
+		// from site nav — same no-account-required, token-in-the-URL
+		// pattern as proof-approval above (class-web-design-portal-
+		// controller.php's check_access()).
+		$this->create_page(
+			'web-design-agreement',
+			__( 'Your Web Design Agreement', 'yeffoprint-core' ),
+			'',
+			'web-design-agreement.html'
+		);
+
+		$this->create_page(
+			'web-design-staging-review',
+			__( 'Review Your Staging Site', 'yeffoprint-core' ),
+			'',
+			'web-design-staging-review.html'
+		);
+
+		$this->create_page(
+			'web-design-golive',
+			__( "Let's Take Your Site Live", 'yeffoprint-core' ),
+			'',
+			'web-design-golive.html'
+		);
 	}
 
 	private function create_page( string $slug, string $title, string $content, string $template = '' ): void {
