@@ -1198,10 +1198,12 @@
 			'</div>' +
 			project.stepper_html +
 			webDesignAgreementHtml( project ) +
+			webDesignMilestonesHtml( project ) +
 			webDesignStagingHtml( project ) +
 			webDesignGoLiveHtml( project );
 
 		bindWebDesignAgreement( project, panel, order );
+		bindWebDesignMilestones( project, panel, order );
 		bindWebDesignStaging( project, panel, order );
 		bindWebDesignGoLive( project, panel, order, bodyEl );
 	}
@@ -1209,9 +1211,10 @@
 	/* ---------- Agreement ---------- */
 
 	function milestoneRowHtml( row ) {
-		row = row || { label: '', due_date: '' };
+		row = row || { label: '', due_date: '', done: false };
 		return (
 			'<tr>' +
+				'<td><label class="yp-field--checkbox yp-field" style="margin:0;"><input type="checkbox" data-wd-milestone-done' + ( row.done ? ' checked' : '' ) + ' /></label></td>' +
 				'<td><input type="text" data-wd-milestone-label value="' + YP.escapeAttr( row.label ) + '" placeholder="Milestone" /></td>' +
 				'<td><input type="date" data-wd-milestone-date value="' + YP.escapeAttr( row.due_date ) + '" /></td>' +
 				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove milestone">&times;</button></td>' +
@@ -1242,7 +1245,6 @@
 
 	function webDesignAgreementHtml( project ) {
 		var a = project.agreement;
-		var milestones = a.milestones.length ? a.milestones : [ null ];
 		var addons = a.addons.length ? a.addons : [ null ];
 		var signed = !! a.signed_at;
 
@@ -1261,10 +1263,7 @@
 					'<div class="yp-field"><label>Staging due</label><input type="date" data-wd-staging-due value="' + YP.escapeAttr( a.staging_due ) + '"' + ( signed ? ' disabled' : '' ) + ' /></div>' +
 					'<div class="yp-field"><label>Go-live due</label><input type="date" data-wd-golive-due value="' + YP.escapeAttr( a.golive_due ) + '"' + ( signed ? ' disabled' : '' ) + ' /></div>' +
 				'</div>' +
-				'<p class="yp-field__hint">Milestones</p>' +
-				'<table class="yp-record-table"><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
-				( signed ? '' : '<button type="button" class="yp-row-action" data-yp-wd-add-milestone>+ Add milestone</button>' ) +
-				'<p class="yp-field__hint" style="margin-top:0.75rem;">Add-ons</p>' +
+				'<p class="yp-field__hint">Add-ons</p>' +
 				'<table class="yp-record-table"><tbody data-wd-addons>' + addons.map( addonRowHtml ).join( '' ) + '</tbody></table>' +
 				( signed ? '' : '<button type="button" class="yp-row-action" data-yp-wd-add-addon>+ Add add-on</button>' ) +
 				'<div class="yp-field" style="margin-top:0.75rem;"><label>Scope &amp; expectations</label><textarea rows="4" data-wd-scope' + ( signed ? ' disabled' : '' ) + '>' + YP.escapeHtml( a.scope_text ) + '</textarea></div>' +
@@ -1288,11 +1287,6 @@
 			kickoff_date: panel.querySelector( '[data-wd-kickoff]' ).value,
 			staging_due: panel.querySelector( '[data-wd-staging-due]' ).value,
 			golive_due: panel.querySelector( '[data-wd-golive-due]' ).value,
-			milestones: rows( '[data-wd-milestones]', function ( tr ) {
-				var label = tr.querySelector( '[data-wd-milestone-label]' ).value.trim();
-				var due = tr.querySelector( '[data-wd-milestone-date]' ).value;
-				return label ? { label: label, due_date: due } : null;
-			} ),
 			addons: rows( '[data-wd-addons]', function ( tr ) {
 				var label = tr.querySelector( '[data-wd-addon-label]' ).value.trim();
 				var price = tr.querySelector( '[data-wd-addon-price]' ).value;
@@ -1303,21 +1297,9 @@
 	}
 
 	function bindWebDesignAgreement( project, panel, order ) {
-		var milestonesBody = panel.querySelector( '[data-wd-milestones]' );
 		var addonsBody = panel.querySelector( '[data-wd-addons]' );
-		if ( milestonesBody ) {
-			wireRemoveRowButtons( milestonesBody, 1 );
-		}
 		if ( addonsBody ) {
 			wireRemoveRowButtons( addonsBody, 1 );
-		}
-
-		var addMilestoneButton = panel.querySelector( '[data-yp-wd-add-milestone]' );
-		if ( addMilestoneButton ) {
-			addMilestoneButton.addEventListener( 'click', function () {
-				milestonesBody.insertAdjacentHTML( 'beforeend', milestoneRowHtml( null ) );
-				wireRemoveRowButtons( milestonesBody, 1 );
-			} );
 		}
 
 		var addAddonButton = panel.querySelector( '[data-yp-wd-add-addon]' );
@@ -1370,6 +1352,84 @@
 					} );
 			} );
 		}
+	}
+
+	/* ---------- Milestones ---------- */
+
+	/**
+	 * Direct request: milestones need to stay addable/editable — label,
+	 * due date, and a done/not-done checkbox — as a project actually
+	 * progresses, whether or not the agreement has been signed yet. Its
+	 * own panel/save path (class-admin-web-design-controller.php's
+	 * save_milestones(), never gated by is_agreement_signed()) rather
+	 * than living inside webDesignAgreementHtml() above, which does lock
+	 * once signed — a due date slipping a week is a normal update, not a
+	 * change to the signed terms.
+	 */
+	function webDesignMilestonesHtml( project ) {
+		var milestones = project.agreement.milestones.length ? project.agreement.milestones : [ null ];
+
+		return (
+			'<div class="yp-panel yp-panel--compact" data-yp-wd-milestones-panel>' +
+				'<div class="yp-panel__head"><h3>Milestones</h3></div>' +
+				'<p class="yp-panel__hint">Visible to the customer on their agreement page as the project progresses.</p>' +
+				'<table class="yp-record-table"><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
+				'<button type="button" class="yp-row-action" data-yp-wd-add-milestone>+ Add milestone</button>' +
+				'<div class="yp-form__row">' +
+					'<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-save-milestones>Save Milestones</button>' +
+				'</div>' +
+				'<div data-yp-wd-milestones-error></div>' +
+			'</div>'
+		);
+	}
+
+	function readWebDesignMilestonesForm( panel ) {
+		var tbody = panel.querySelector( '[data-wd-milestones]' );
+		return Array.prototype.slice.call( tbody.querySelectorAll( 'tr' ) ).map( function ( tr ) {
+			var label = tr.querySelector( '[data-wd-milestone-label]' ).value.trim();
+			if ( ! label ) {
+				return null;
+			}
+			return {
+				label: label,
+				due_date: tr.querySelector( '[data-wd-milestone-date]' ).value,
+				done: tr.querySelector( '[data-wd-milestone-done]' ).checked
+			};
+		} ).filter( function ( row ) { return row; } );
+	}
+
+	function bindWebDesignMilestones( project, panel, order ) {
+		var milestonesBody = panel.querySelector( '[data-yp-wd-milestones-panel] [data-wd-milestones]' );
+		if ( ! milestonesBody ) {
+			return;
+		}
+
+		wireRemoveRowButtons( milestonesBody, 1 );
+
+		var milestonesPanel = panel.querySelector( '[data-yp-wd-milestones-panel]' );
+
+		milestonesPanel.querySelector( '[data-yp-wd-add-milestone]' ).addEventListener( 'click', function () {
+			milestonesBody.insertAdjacentHTML( 'beforeend', milestoneRowHtml( null ) );
+			wireRemoveRowButtons( milestonesBody, 1 );
+		} );
+
+		var errorEl = milestonesPanel.querySelector( '[data-yp-wd-milestones-error]' );
+		var saveButton = milestonesPanel.querySelector( '[data-yp-wd-save-milestones]' );
+
+		saveButton.addEventListener( 'click', function () {
+			saveButton.disabled = true;
+			errorEl.innerHTML = '';
+			YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/milestones', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { milestones: readWebDesignMilestonesForm( milestonesPanel ) } )
+			} )
+				.then( function ( refreshed ) { renderWebDesignPanel( refreshed, panel, order, panel.closest( '[data-yp-body]' ) ); } )
+				.catch( function ( error ) {
+					saveButton.disabled = false;
+					errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
+		} );
 	}
 
 	/* ---------- Staging ---------- */

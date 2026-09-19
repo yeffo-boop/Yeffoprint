@@ -81,6 +81,10 @@ class YeffoPrint_Web_Design_Project_Meta {
 	/** How long a submitted go-live credential is kept before the purge sweep deletes it. */
 	private const CREDENTIAL_TTL = 30 * DAY_IN_SECONDS;
 
+	/** Field => type map for encode_list() below — 'done' is the only boolean field either list carries. */
+	private const MILESTONE_FIELDS = [ 'label' => 'text', 'due_date' => 'text', 'done' => 'bool' ];
+	private const ADDON_FIELDS     = [ 'label' => 'text', 'price' => 'price' ];
+
 	/**
 	 * Whether this order contains a Web Design Package line item — the
 	 * one thing every endpoint/UI surface in this workflow gates on,
@@ -143,15 +147,32 @@ class YeffoPrint_Web_Design_Project_Meta {
 	}
 
 	/**
-	 * @param array $fields { kickoff_date, staging_due, golive_due, milestones: [{label,due_date}], addons: [{label,price}], scope_text }
+	 * @param array $fields { kickoff_date, staging_due, golive_due, milestones: [{label,due_date,done}], addons: [{label,price}], scope_text }
 	 */
 	public static function save_agreement( \WC_Order $order, array $fields ): void {
 		$order->update_meta_data( self::KICKOFF_DATE, sanitize_text_field( (string) ( $fields['kickoff_date'] ?? '' ) ) );
 		$order->update_meta_data( self::STAGING_DUE_DATE, sanitize_text_field( (string) ( $fields['staging_due'] ?? '' ) ) );
 		$order->update_meta_data( self::GOLIVE_DUE_DATE, sanitize_text_field( (string) ( $fields['golive_due'] ?? '' ) ) );
-		$order->update_meta_data( self::MILESTONES, self::encode_list( $fields['milestones'] ?? [], [ 'label', 'due_date' ] ) );
-		$order->update_meta_data( self::ADDONS, self::encode_list( $fields['addons'] ?? [], [ 'label', 'price' ] ) );
+		$order->update_meta_data( self::MILESTONES, self::encode_list( $fields['milestones'] ?? [], self::MILESTONE_FIELDS ) );
+		$order->update_meta_data( self::ADDONS, self::encode_list( $fields['addons'] ?? [], self::ADDON_FIELDS ) );
 		$order->update_meta_data( self::SCOPE_TEXT, sanitize_textarea_field( (string) ( $fields['scope_text'] ?? '' ) ) );
+		$order->save();
+	}
+
+	/**
+	 * Milestones live in the same meta field the rest of the agreement
+	 * does, but unlike the dates/add-ons/scope text — the actual terms
+	 * the customer signed — they're a living checklist: direct request,
+	 * staff need to add, edit, reschedule and check off milestones as
+	 * the project actually progresses, signed agreement or not. Its own
+	 * save path (rather than routing through save_agreement(), which the
+	 * admin app locks once is_agreement_signed()) so updating one due
+	 * date never has to resend the rest of a now-locked agreement.
+	 *
+	 * @param array $milestones [{label, due_date, done}]
+	 */
+	public static function save_milestones( \WC_Order $order, array $milestones ): void {
+		$order->update_meta_data( self::MILESTONES, self::encode_list( $milestones, self::MILESTONE_FIELDS ) );
 		$order->save();
 	}
 
@@ -447,24 +468,29 @@ class YeffoPrint_Web_Design_Project_Meta {
 
 	// ---- Small helpers ----
 
-	private static function encode_list( $raw, array $keys ): string {
+	/** @param array<string,string> $field_types Field name => 'text'|'price'|'bool' (see MILESTONE_FIELDS/ADDON_FIELDS above). A row with no 'label' is dropped — a bare "done" toggle with nothing else typed isn't a real entry yet. */
+	private static function encode_list( $raw, array $field_types ): string {
 		if ( ! is_array( $raw ) ) {
 			return '[]';
 		}
 
 		$clean = [];
 		foreach ( $raw as $row ) {
-			if ( ! is_array( $row ) ) {
+			if ( ! is_array( $row ) || '' === trim( (string) ( $row['label'] ?? '' ) ) ) {
 				continue;
 			}
 			$entry = [];
-			foreach ( $keys as $key ) {
-				$value = (string) ( $row[ $key ] ?? '' );
-				$entry[ $key ] = 'price' === $key ? (string) round( (float) $value, 2 ) : sanitize_text_field( $value );
+			foreach ( $field_types as $key => $type ) {
+				$value = $row[ $key ] ?? '';
+				if ( 'bool' === $type ) {
+					$entry[ $key ] = ! empty( $value );
+				} elseif ( 'price' === $type ) {
+					$entry[ $key ] = (string) round( (float) $value, 2 );
+				} else {
+					$entry[ $key ] = sanitize_text_field( (string) $value );
+				}
 			}
-			if ( '' !== implode( '', $entry ) ) {
-				$clean[] = $entry;
-			}
+			$clean[] = $entry;
 		}
 
 		return wp_json_encode( $clean );

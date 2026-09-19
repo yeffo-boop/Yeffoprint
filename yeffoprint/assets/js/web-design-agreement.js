@@ -75,7 +75,7 @@
 		var milestonesEl = root.querySelector( '[data-yp-wd-milestones]' );
 		milestonesEl.innerHTML = data.milestones.length
 			? data.milestones.map( function ( m ) {
-				return '<li><span>' + escapeHtml( m.label ) + '</span><span>' + escapeHtml( m.due_date ) + '</span></li>';
+				return '<li class="' + ( m.done ? 'is-done' : '' ) + '"><span><span class="yp-wd-milestone-dot" aria-hidden="true"></span>' + escapeHtml( m.label ) + '</span><span>' + ( m.done ? 'Done' : escapeHtml( m.due_date || 'TBD' ) ) + '</span></li>';
 			} ).join( '' )
 			: '<li><span>No milestones added yet.</span></li>';
 
