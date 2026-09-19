@@ -805,6 +805,33 @@ body:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-search-bar
 	transform: translateY(-1px);
 }
 
+/*
+ * Secondary text-link action (e.g. "Request changes instead" beside an
+ * accent-styled Approve button on proof-approval.html and
+ * web-design-staging-review.html). No stylesheet defined this class on
+ * the front end, so it fell through to the browser's own default
+ * <button> chrome — a gray pill that clashes with everything else on
+ * the page. This resets that chrome and styles it as a plain underlined
+ * link instead, in line with the rest of the site.
+ */
+.button-link {
+	display: inline;
+	border: 0;
+	border-radius: 0;
+	padding: 0;
+	background: transparent;
+	color: var(--wp--preset--color--charcoal);
+	font-family: var(--wp--preset--font-family--body);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.button-link:hover {
+	color: var(--wp--preset--color--magenta-deep);
+}
+
 /* ---------- Cards ---------- */
 
 .yp-card {
