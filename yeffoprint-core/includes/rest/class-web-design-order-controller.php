@@ -74,7 +74,12 @@ class YeffoPrint_Web_Design_Order_Controller {
 
 		$order->set_billing_first_name( $name );
 		$order->set_billing_email( $email );
-		$order->add_product( $product, 1 );
+		$item_id = $order->add_product( $product, 1 );
+		$item    = $item_id ? $order->get_item( $item_id ) : null;
+		if ( $item instanceof \WC_Order_Item_Product ) {
+			YeffoPrint_Web_Design_Package_Product::annotate_order_item( $item, $package_id );
+			$item->save();
+		}
 		$order->set_created_via( 'web-design-order-now' );
 		YeffoPrint_Web_Design_Project_Meta::mark_order( $order );
 		$order->add_order_note(

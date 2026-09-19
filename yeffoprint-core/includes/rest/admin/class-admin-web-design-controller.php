@@ -208,7 +208,7 @@ class YeffoPrint_Admin_Web_Design_Controller {
 					'name'          => $order->get_billing_first_name() ?: __( 'there', 'yeffoprint-core' ),
 					'package_name'  => $package_name,
 					'cta_url'       => YeffoPrint_Web_Design_Project_Meta::get_agreement_url( $order ),
-					'stepper_html'  => YeffoPrint_Order_Status_Stepper::render_email_html( YeffoPrint_Web_Design_Project_Meta::get_stepper_steps( $order ) ),
+					'stepper_html'  => YeffoPrint_Web_Design_Project_Meta::get_email_progress_html( $order ),
 				]
 			);
 		}
@@ -269,7 +269,7 @@ class YeffoPrint_Admin_Web_Design_Controller {
 					'note'             => $staging['note'],
 					'cta_review_url'   => YeffoPrint_Web_Design_Project_Meta::get_staging_review_url( $order ),
 					'revisions_due'    => $due_meta,
-					'stepper_html'     => YeffoPrint_Order_Status_Stepper::render_email_html( YeffoPrint_Web_Design_Project_Meta::get_stepper_steps( $order ) ),
+					'stepper_html'     => YeffoPrint_Web_Design_Project_Meta::get_email_progress_html( $order ),
 				]
 			);
 		}

@@ -911,6 +911,12 @@ class YeffoPrint_Manual_Order_Creator {
 			return new \WP_Error( 'yeffoprint_add_item_failed', __( "Couldn't add this package to the order.", 'yeffoprint-core' ), [ 'status' => 500 ] );
 		}
 
+		$item = $order->get_item( $item_id );
+		if ( $item instanceof \WC_Order_Item_Product ) {
+			YeffoPrint_Web_Design_Package_Product::annotate_order_item( $item, $web_design['package_id'] );
+			$item->save();
+		}
+
 		YeffoPrint_Web_Design_Project_Meta::mark_order( $order );
 
 		return true;

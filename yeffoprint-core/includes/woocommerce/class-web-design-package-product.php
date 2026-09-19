@@ -87,7 +87,19 @@ class YeffoPrint_Web_Design_Package_Product {
 
 		$is_chargeable = 'publish' === $package->post_status && $price > 0;
 
-		$product->set_name( $package->post_title );
+		// Direct report: the invoice/order emails just said "Basic" —
+		// the package's own bare tier name, nothing to say it was a web
+		// design purchase at all. This is the one line item name every
+		// order email and the admin order screen actually display, so
+		// it has to carry that context itself rather than relying on
+		// surrounding copy that varies per email.
+		$product->set_name(
+			sprintf(
+				/* translators: %s: package tier name, e.g. "Basic" */
+				__( 'Web Design — %s Package', 'yeffoprint-core' ),
+				$package->post_title
+			)
+		);
 		$product->set_status( $is_chargeable ? 'publish' : 'draft' );
 		$product->set_catalog_visibility( 'hidden' );
 		$product->set_manage_stock( false );
@@ -102,6 +114,30 @@ class YeffoPrint_Web_Design_Package_Product {
 
 		if ( $new_product_id && $new_product_id !== $product_id ) {
 			update_post_meta( $package_id, self::META_LINKED_PRODUCT, $new_product_id );
+		}
+	}
+
+	/**
+	 * Direct report: the invoice line item said "Basic" and nothing
+	 * else — the renamed product (sync() above) fixes the item's own
+	 * name, this adds the detail underneath it every order email and
+	 * the admin order screen already render for any other line item's
+	 * meta (get_formatted_meta_data()/wc_display_item_meta()). Called
+	 * by both order-creation paths (class-manual-order-creator.php,
+	 * class-web-design-order-controller.php) right after add_product().
+	 * One combined "Package includes" row rather than one row per
+	 * feature — several identically-labeled meta rows would just look
+	 * like a rendering bug, not a list.
+	 */
+	public static function annotate_order_item( \WC_Order_Item_Product $item, int $package_id ): void {
+		$tagline = (string) get_post_meta( $package_id, YeffoPrint_Web_Design_Package_Meta::TAGLINE, true );
+		if ( '' !== $tagline ) {
+			$item->add_meta_data( __( 'Package', 'yeffoprint-core' ), $tagline );
+		}
+
+		$features = array_filter( (array) get_post_meta( $package_id, YeffoPrint_Web_Design_Package_Meta::FEATURES, true ) );
+		if ( $features ) {
+			$item->add_meta_data( __( 'Package includes', 'yeffoprint-core' ), implode( ' • ', array_map( 'sanitize_text_field', $features ) ) );
 		}
 	}
 
