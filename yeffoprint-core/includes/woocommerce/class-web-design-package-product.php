@@ -37,7 +37,33 @@ class YeffoPrint_Web_Design_Package_Product {
 
 	public function __construct() {
 		add_action( 'save_post_yp_web_design_pkg', [ $this, 'sync' ], 30 );
+
+		// Direct report: a package showing a real, correct Checkout Price
+		// (visible right in the admin app's own picker) still failed to
+		// charge — "This package doesn't have a Checkout Price set yet."
+		// Root cause: the admin app edits Checkout Price (and every other
+		// field here) through WordPress's own generic REST post
+		// controller, which persists registered post meta — Checkout
+		// Price included, class-web-design-package-meta.php's own
+		// register_post_meta() call — only *after* wp_update_post() has
+		// already fired save_post_yp_web_design_pkg above. sync() was
+		// reading get_post_meta( CHECKOUT_PRICE ) before the very value
+		// this edit just set had actually been written, so the very
+		// first time a package's price went from unset/0 to a real
+		// number over the REST API, the linked product got synced
+		// against the stale price and never re-synced (no other
+		// save_post fires afterward). rest_after_insert_{$post_type}
+		// fires at the true end of that same REST request, once meta is
+		// fully persisted — sync() reads correctly from there regardless
+		// of which hook actually caught the edit; running on both hooks
+		// for the same REST save is harmless, just a redundant re-sync.
+		add_action( 'rest_after_insert_yp_web_design_pkg', [ $this, 'sync_from_rest' ] );
+
 		add_action( 'trashed_post', [ $this, 'draft_linked_product' ] );
+	}
+
+	public function sync_from_rest( \WP_Post $post ): void {
+		$this->sync( $post->ID );
 	}
 
 	public function sync( int $package_id ): void {
