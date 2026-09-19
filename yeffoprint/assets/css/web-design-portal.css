@@ -92,6 +92,36 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+.yp-wd-milestone-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	margin-right: 0.6rem;
+	vertical-align: middle;
+}
+
+.yp-wd-milestones li.is-done {
+	opacity: 0.75;
+}
+
+.yp-wd-milestones li.is-done span:first-child {
+	text-decoration: line-through;
+	text-decoration-color: var(--wp--preset--color--charcoal);
+}
+
+.yp-wd-milestones li.is-done .yp-wd-milestone-dot {
+	background: var(--wp--preset--color--magenta-deep);
+	border-color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-wd-milestones li.is-done span:last-child {
+	color: var(--wp--preset--color--magenta-deep);
+	font-weight: 600;
+	text-decoration: none;
+}
+
 .yp-wd-addons {
 	display: flex;
 	flex-wrap: wrap;

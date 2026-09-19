@@ -46,6 +46,17 @@ class YeffoPrint_Admin_Web_Design_Controller {
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
+		// Direct request: milestones (and their due dates) need to stay
+		// editable as a project actually progresses — signed agreement or
+		// not — so this is its own always-available route rather than
+		// going through /agreement above, which the admin app locks once
+		// the customer has signed.
+		register_rest_route( self::NAMESPACE, '/admin/web-design/(?P<id>\d+)/milestones', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'save_milestones' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/web-design/(?P<id>\d+)/staging', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'save_staging' ],
@@ -90,6 +101,25 @@ class YeffoPrint_Admin_Web_Design_Controller {
 
 		$fields = $request->get_json_params() ?: [];
 		YeffoPrint_Web_Design_Project_Meta::save_agreement( $order, $fields );
+
+		return rest_ensure_response( $this->project_payload( $order ) );
+	}
+
+	/**
+	 * Always available, signed or not — see the route registration above
+	 * and YeffoPrint_Web_Design_Project_Meta::save_milestones()'s own
+	 * docblock for why milestones don't go through save_agreement().
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function save_milestones( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$params = $request->get_json_params() ?: [];
+		YeffoPrint_Web_Design_Project_Meta::save_milestones( $order, is_array( $params['milestones'] ?? null ) ? $params['milestones'] : [] );
 
 		return rest_ensure_response( $this->project_payload( $order ) );
 	}
