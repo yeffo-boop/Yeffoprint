@@ -1303,7 +1303,19 @@
 					submitButton.disabled = false;
 					submitButton.textContent = 'Create Order';
 
-					var links = '<a href="' + YP.escapeAttr( result.order_edit_url ) + '">View order</a>';
+					// Opens this same app's own order drawer, not the classic
+					// WooCommerce edit screen (result.order_edit_url) — direct
+					// report: after creating a Web Design order there was
+					// "nowhere in the admin panel to add details," because
+					// the Agreement/Staging Site/Go-Live panel only exists in
+					// this drawer (app.js's renderWebDesignPanel()), and the
+					// classic screen this used to link to has no idea it
+					// exists. Same "never leave the app's own order view"
+					// reasoning YP.openWcOrderDrawer's own docblock already
+					// established elsewhere — this one spot just still linked
+					// out. The drawer's own footer still links to the classic
+					// screen for anyone who wants it.
+					var links = '<a href="#" data-yp-view-order="' + result.order_id + '">View order</a>';
 					// One "Add a proof" link per shell — an order can now
 					// carry more than one (see the class docblock in
 					// class-manual-order-creator.php).
@@ -1323,6 +1335,14 @@
 						: '';
 
 					statusEl.innerHTML = '<p class="yp-panel__hint">Order created. ' + links + '</p>' + paymentLinkHtml;
+
+					var viewOrderLink = statusEl.querySelector( '[data-yp-view-order]' );
+					if ( viewOrderLink && YP.openWcOrderDrawer ) {
+						viewOrderLink.addEventListener( 'click', function ( event ) {
+							event.preventDefault();
+							YP.openWcOrderDrawer( result.order_id );
+						} );
+					}
 				} )
 				.catch( function ( error ) {
 					submitButton.disabled = false;
