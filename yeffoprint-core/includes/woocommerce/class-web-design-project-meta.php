@@ -35,6 +35,20 @@ class YeffoPrint_Web_Design_Project_Meta {
 	// ---- Identity / access ----
 	public const ACCESS_TOKEN = '_yp_wd_access_token';
 
+	/**
+	 * Set unconditionally on every order a Web Design Package line item
+	 * is ever added to (both class-manual-order-creator.php and the
+	 * self-serve class-web-design-order-controller.php) — direct
+	 * request: a "Web Design Orders" list and a dashboard milestones
+	 * panel need to find every such order in ONE bulk query
+	 * (wc_get_orders() with a meta_query below), rather than scanning
+	 * every order's line items the way is_web_design_order() does for a
+	 * single already-known order. That per-order scan stays correct and
+	 * unchanged; this flag exists purely so a listing query doesn't have
+	 * to load every order in the store to find the handful that qualify.
+	 */
+	public const ORDER_FLAG = '_yp_web_design_order';
+
 	// ---- Agreement ----
 	public const KICKOFF_DATE       = '_yp_wd_kickoff_date';
 	public const STAGING_DUE_DATE   = '_yp_wd_staging_due_date';
@@ -114,6 +128,89 @@ class YeffoPrint_Web_Design_Project_Meta {
 			}
 		}
 		return 0;
+	}
+
+	/** Called once, right where each creation path adds the Web Design Package line item — see ORDER_FLAG's own docblock for why this needs to be a real, queryable flag rather than derived on demand. */
+	public static function mark_order( \WC_Order $order ): void {
+		$order->update_meta_data( self::ORDER_FLAG, 1 );
+	}
+
+	/**
+	 * Every order ORDER_FLAG was ever set on, newest first — the "Web
+	 * Design Orders" list screen's own data source (direct request: "a
+	 * new link... to show me all active web design orders... especially
+	 * if I have more than one web design project going at a time").
+	 * Bounded at 200 — this is a boutique service's own order list, not
+	 * a high-volume report; the screen has no pagination yet because
+	 * there's realistically never enough of these to need it, same
+	 * "glanceable, not a full report" reasoning as the dashboard's own
+	 * ROW_LIMIT elsewhere.
+	 *
+	 * @return \WC_Order[]
+	 */
+	public static function get_all_orders(): array {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return [];
+		}
+
+		return wc_get_orders( [
+			'limit'      => 200,
+			'orderby'    => 'date',
+			'order'      => 'DESC',
+			'meta_query' => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- bounded, infrequent (one admin screen load), no indexed alternative for "this order flag is set."
+				[ 'key' => self::ORDER_FLAG, 'value' => 1 ],
+			],
+		] );
+	}
+
+	/**
+	 * Every not-yet-done milestone, across every not-yet-live Web Design
+	 * order, due within $lookahead_days or already overdue — direct
+	 * request: "add upcoming/overdue milestones onto my main dashboard
+	 * so I can see those at a glance." One flat list (not grouped per
+	 * order) sorted soonest-due first, so the most urgent item across
+	 * every project in flight is always the top row regardless of which
+	 * order it belongs to.
+	 *
+	 * @return array<int, array{order_id:int, order_number:string, package_name:string,
+	 *   customer_name:string, label:string, due_date:string, is_overdue:bool}>
+	 */
+	public static function get_milestone_alerts( int $lookahead_days = 7 ): array {
+		$today   = current_time( 'Y-m-d' );
+		$horizon = gmdate( 'Y-m-d', strtotime( $today . " +{$lookahead_days} days" ) );
+		$alerts  = [];
+
+		foreach ( self::get_all_orders() as $order ) {
+			if ( self::is_live( $order ) ) {
+				continue;
+			}
+
+			$package_id   = self::get_package_id( $order );
+			$package      = $package_id ? get_post( $package_id ) : null;
+			$package_name = $package ? $package->post_title : __( 'Web Design', 'yeffoprint-core' );
+			$customer     = trim( $order->get_formatted_billing_full_name() ) ?: $order->get_billing_email();
+
+			foreach ( self::get_agreement( $order )['milestones'] as $milestone ) {
+				$due = (string) ( $milestone['due_date'] ?? '' );
+				if ( ! empty( $milestone['done'] ) || '' === $due || $due > $horizon ) {
+					continue;
+				}
+
+				$alerts[] = [
+					'order_id'      => $order->get_id(),
+					'order_number'  => $order->get_order_number(),
+					'package_name'  => $package_name,
+					'customer_name' => (string) $customer,
+					'label'         => (string) ( $milestone['label'] ?? '' ),
+					'due_date'      => $due,
+					'is_overdue'    => $due < $today,
+				];
+			}
+		}
+
+		usort( $alerts, static fn( array $a, array $b ) => $a['due_date'] <=> $b['due_date'] );
+
+		return $alerts;
 	}
 
 	/** Lazily mints (and persists) this order's access token the first time anything needs it — same "generate once, never rotate" trust model as YeffoPrint_Custom_Order_Meta::ACCESS_TOKEN. */

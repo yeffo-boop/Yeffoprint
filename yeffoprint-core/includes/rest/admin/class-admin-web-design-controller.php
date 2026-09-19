@@ -28,6 +28,18 @@ class YeffoPrint_Admin_Web_Design_Controller {
 	}
 
 	public function register_routes(): void {
+		// Direct request: "a new link on the admin panel to show me all
+		// active web design orders... especially if I have more than one
+		// web design project going at a time" — registered before the
+		// parameterized /admin/web-design/{id} route below so WordPress's
+		// route matching never mistakes the literal "orders" segment for
+		// an {id}.
+		register_rest_route( self::NAMESPACE, '/admin/web-design-orders', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'list_orders' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/web-design/(?P<id>\d+)', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'get_project' ],
@@ -80,6 +92,43 @@ class YeffoPrint_Admin_Web_Design_Controller {
 			'callback'            => [ $this, 'mark_live' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+	}
+
+	/**
+	 * Every Web Design Package order, newest first, each already carrying
+	 * enough to render a row without a second request per order — see
+	 * YeffoPrint_Web_Design_Project_Meta::get_all_orders()'s own docblock
+	 * for why this is one bounded query rather than the drawer's own
+	 * per-order line-item scan.
+	 */
+	public function list_orders(): \WP_REST_Response {
+		$rows = array_map( function ( \WC_Order $order ) {
+			$package_id = YeffoPrint_Web_Design_Project_Meta::get_package_id( $order );
+			$package    = $package_id ? get_post( $package_id ) : null;
+			$agreement  = YeffoPrint_Web_Design_Project_Meta::get_agreement( $order );
+
+			return [
+				'id'            => $order->get_id(),
+				'number'        => $order->get_order_number(),
+				'customer_name' => trim( $order->get_formatted_billing_full_name() ),
+				'customer_email' => $order->get_billing_email(),
+				'package_name'  => $package ? $package->post_title : __( 'Web Design', 'yeffoprint-core' ),
+				'stage'         => YeffoPrint_Web_Design_Project_Meta::get_stage( $order ),
+				'is_live'       => YeffoPrint_Web_Design_Project_Meta::is_live( $order ),
+				'kickoff_date'  => $agreement['kickoff_date'],
+				'staging_due'   => $agreement['staging_due'],
+				'golive_due'    => $agreement['golive_due'],
+				'total'         => (float) $order->get_total(),
+				'date'          => $order->get_date_created() ? $order->get_date_created()->date( 'c' ) : null,
+			];
+		}, YeffoPrint_Web_Design_Project_Meta::get_all_orders() );
+
+		// Active projects first (not-yet-live), most recently placed
+		// within each group — usort is stable in PHP 8, so ties keep the
+		// query's own newest-first order.
+		usort( $rows, static fn( array $a, array $b ) => $a['is_live'] <=> $b['is_live'] );
+
+		return rest_ensure_response( [ 'orders' => $rows ] );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */
