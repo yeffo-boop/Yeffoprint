@@ -73,6 +73,21 @@
 	padding: 0.75rem 0.9rem;
 }
 
+.yp-wd-dates .k {
+	display: block;
+	font-size: 0.7rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-wd-dates .v {
+	display: block;
+	font-weight: 600;
+	margin-top: 0.2rem;
+}
+
 .yp-wd-milestones {
 	list-style: none;
 	margin: 0 0 1.5rem;
