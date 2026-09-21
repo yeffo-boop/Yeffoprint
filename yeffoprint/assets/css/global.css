@@ -334,18 +334,30 @@ main.wp-block-group {
    inside the dark overlay it opens), so it needs the dark-header-era
    warm-white forced color flipped back to near-black; the X "close"
    control only exists inside the open (dark) overlay and keeps the
-   light-on-dark color the rule above already sets for that state. */
+   light-on-dark color the rule above already sets for that state.
+   Scoped to the same mobile breakpoint the rest of this file uses
+   (782px) — direct report: the "display: inline-flex !important" here
+   used to apply unconditionally, so the toggle rendered on desktop
+   right alongside the full inline nav it's meant to replace only
+   below that breakpoint; overlayMenu:"mobile" (parts/header.html)
+   already hides it above 782px on its own, this rule just needs to
+   stop fighting that. */
 .yp-header__nav .wp-block-navigation__responsive-container-open {
 	color: var(--wp--preset--color--near-black) !important;
-	/* Keep a real tap target — flex-nowrap on .yp-header__row was
-	   able to squeeze this to 0×24 on narrow phones, hiding the menu. */
-	display: inline-flex !important;
-	align-items: center;
-	justify-content: center;
-	min-width: 44px;
-	min-height: 44px;
-	padding: 0.5rem;
-	flex-shrink: 0;
+}
+
+@media (max-width: 781px) {
+	.yp-header__nav .wp-block-navigation__responsive-container-open {
+		/* Keep a real tap target — flex-nowrap on .yp-header__row was
+		   able to squeeze this to 0×24 on narrow phones, hiding the menu. */
+		display: inline-flex !important;
+		align-items: center;
+		justify-content: center;
+		min-width: 44px;
+		min-height: 44px;
+		padding: 0.5rem;
+		flex-shrink: 0;
+	}
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-close {

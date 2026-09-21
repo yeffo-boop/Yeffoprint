@@ -60,9 +60,14 @@ class YeffoPrint_Shippo_Settings {
 	private const DEFAULT_HEIGHT_IN = 1.0;
 
 	// Seeded from the site owner's own actual rates, direct request.
+	// UPS 2nd Day Air matches the $15 flat rate class-shipping-setup-
+	// command.php seeds on the real "United States" WC shipping zone —
+	// direct report: this fallback had drifted to $25, so staff saw the
+	// wrong amount here whenever this option had never been explicitly
+	// saved.
 	private const DEFAULT_MANUAL_ORDER_SHIPPING_OPTIONS = [
 		[ 'label' => 'USPS Ground Advantage', 'amount' => 6.00 ],
-		[ 'label' => 'UPS 2nd Day Air', 'amount' => 25.00 ],
+		[ 'label' => 'UPS 2nd Day Air', 'amount' => 15.00 ],
 		[ 'label' => 'USPS First Class International', 'amount' => 25.00 ],
 	];
 
