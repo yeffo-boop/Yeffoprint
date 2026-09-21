@@ -381,6 +381,22 @@
 			YP.request( endpoint(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( body ) } )
 				.then( function ( settings ) {
 					render( settings, activeTabId );
+
+					// Direct report: after editing "Manual order shipping
+					// options" here and saving, the Manual Order screen's
+					// shipping picker still showed the old amount. Root
+					// cause — yeffoprintAdminApp.shippo.manualOrderShippingOptions
+					// (views/manual-order.js's own only source for that
+					// picker) is wp_localize_script'd once per full
+					// wp-admin page load; this SPA never reloads the page
+					// between tabs, so that global just sat stale until a
+					// hard refresh. Syncing it here means the very next
+					// Manual Order screen in this same session already
+					// sees what was just saved.
+					if ( yeffoprintAdminApp.shippo ) {
+						yeffoprintAdminApp.shippo.manualOrderShippingOptions = settings.manual_order_shipping_options || [];
+					}
+
 					viewEl.querySelector( '[data-yp-save-status]' ).innerHTML = '<p class="yp-panel__hint">Saved — live on the storefront now.</p>';
 				} )
 				.catch( function ( error ) {
