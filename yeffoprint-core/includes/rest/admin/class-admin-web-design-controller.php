@@ -92,6 +92,18 @@ class YeffoPrint_Admin_Web_Design_Controller {
 			'callback'            => [ $this, 'mark_live' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/web-design/(?P<id>\d+)/progress-report', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'send_progress_report' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/web-design/(?P<id>\d+)/site-update-token/regenerate', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'regenerate_digest_token' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
 	}
 
 	/**
@@ -334,6 +346,74 @@ class YeffoPrint_Admin_Web_Design_Controller {
 		return rest_ensure_response( $this->project_payload( $order ) );
 	}
 
+	/**
+	 * Direct request: "provide progress reports to the customer by
+	 * email but also let them access all of the changes." Always stores
+	 * the report so it shows on the customer's Updates tab; the email
+	 * is opt-in per send (`notify_customer`) since staff may sometimes
+	 * just want it logged there without pinging the customer's inbox.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function send_progress_report( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$params   = $request->get_json_params() ?: [];
+		$headline = sanitize_text_field( (string) ( $params['headline'] ?? '' ) );
+
+		if ( '' === $headline ) {
+			return new \WP_Error( 'yeffoprint_missing_headline', __( 'Please add a short headline for this update.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		YeffoPrint_Web_Design_Project_Meta::add_progress_report( $order, $params );
+
+		$email = $order->get_billing_email();
+		if ( ! empty( $params['notify_customer'] ) && $email && is_email( $email ) ) {
+			$site_name = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+			WC()->mailer();
+			require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-email-web-design-progress-report.php';
+			( new YeffoPrint_Email_Web_Design_Progress_Report() )->send_notice(
+				$email,
+				sprintf(
+					/* translators: 1: package/project label, 2: site name */
+					__( 'Progress update on your %1$s project — %2$s', 'yeffoprint-core' ),
+					$this->package_name( $order ),
+					$site_name
+				),
+				[
+					'email_heading' => $headline,
+					'name'          => $order->get_billing_first_name() ?: __( 'there', 'yeffoprint-core' ),
+					'headline'      => $headline,
+					'message'       => sanitize_textarea_field( (string) ( $params['message'] ?? '' ) ),
+					'cta_url'       => YeffoPrint_Web_Design_Project_Meta::get_updates_url( $order ),
+					'stepper_html'  => YeffoPrint_Web_Design_Project_Meta::get_email_progress_html( $order ),
+				]
+			);
+			$order->add_order_note( __( 'Progress report emailed to the customer.', 'yeffoprint-core' ) );
+			$order->save();
+		}
+
+		return rest_ensure_response( $this->project_payload( $order ) );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function regenerate_digest_token( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		YeffoPrint_Web_Design_Project_Meta::regenerate_site_update_token( $order );
+		$order->add_order_note( __( 'Site update webhook token regenerated.', 'yeffoprint-core' ) );
+		$order->save();
+
+		return rest_ensure_response( $this->project_payload( $order ) );
+	}
+
 	/** @return \WC_Order|\WP_Error */
 	private function validate_order( int $order_id ) {
 		if ( ! function_exists( 'wc_get_order' ) ) {
@@ -374,6 +454,7 @@ class YeffoPrint_Admin_Web_Design_Controller {
 				'agreement'      => YeffoPrint_Web_Design_Project_Meta::get_agreement_url( $order ),
 				'staging_review' => YeffoPrint_Web_Design_Project_Meta::get_staging_review_url( $order ),
 				'golive'         => YeffoPrint_Web_Design_Project_Meta::get_golive_url( $order ),
+				'updates'        => YeffoPrint_Web_Design_Project_Meta::get_updates_url( $order ),
 			],
 			'agreement'      => YeffoPrint_Web_Design_Project_Meta::get_agreement( $order ),
 			'staging'        => YeffoPrint_Web_Design_Project_Meta::get_staging( $order ),
@@ -384,6 +465,17 @@ class YeffoPrint_Admin_Web_Design_Controller {
 			],
 			'golive'         => YeffoPrint_Web_Design_Project_Meta::get_golive( $order ),
 			'is_live'        => YeffoPrint_Web_Design_Project_Meta::is_live( $order ),
+			// The digest token is a write credential for the project's own
+			// automation (never the customer), so it's fine to include in
+			// full here — this payload only ever reaches an authenticated
+			// staff request (admin_write), same trust boundary as every
+			// other field on this response.
+			'digest'           => [
+				'url'   => rest_url( 'yeffoprint-core/v1/web-design/' . $order->get_id() . '/digest' ),
+				'token' => YeffoPrint_Web_Design_Project_Meta::ensure_site_update_token( $order ),
+			],
+			'site_updates'     => YeffoPrint_Web_Design_Project_Meta::get_site_updates( $order ),
+			'progress_reports' => YeffoPrint_Web_Design_Project_Meta::get_progress_reports( $order ),
 		];
 	}
 }

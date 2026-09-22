@@ -64,6 +64,12 @@ class YeffoPrint_Web_Design_Portal_Controller {
 			'callback'            => [ $this, 'submit_golive' ],
 			'permission_callback' => [ $this, 'check_access' ],
 		] );
+
+		register_rest_route( self::NAMESPACE, '/web-design/(?P<id>\d+)/updates', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'get_updates' ],
+			'permission_callback' => [ $this, 'check_access' ],
+		] );
 	}
 
 	/** @return true|\WP_Error */
@@ -247,6 +253,21 @@ class YeffoPrint_Web_Design_Portal_Controller {
 		);
 
 		return rest_ensure_response( [ 'success' => true ] );
+	}
+
+	/**
+	 * Progress Reports & Site Activity tab — direct request: "let them
+	 * access all of the changes that have been made on the site."
+	 * Read-only, same guest-token access as every other page here.
+	 */
+	public function get_updates( \WP_REST_Request $request ) {
+		$order = $this->order( $request );
+
+		return rest_ensure_response( [
+			'package_name'     => $this->package_name( $order ),
+			'progress_reports' => YeffoPrint_Web_Design_Project_Meta::get_progress_reports( $order ),
+			'site_updates'     => YeffoPrint_Web_Design_Project_Meta::get_site_updates( $order ),
+		] );
 	}
 
 	private function staging_awaiting_response( \WC_Order $order ): bool {

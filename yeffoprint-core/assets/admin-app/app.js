@@ -1247,12 +1247,14 @@
 			webDesignAgreementHtml( project ) +
 			webDesignMilestonesHtml( project ) +
 			webDesignStagingHtml( project ) +
-			webDesignGoLiveHtml( project );
+			webDesignGoLiveHtml( project ) +
+			webDesignUpdatesHtml( project );
 
 		bindWebDesignAgreement( project, panel, order );
 		bindWebDesignMilestones( project, panel, order );
 		bindWebDesignStaging( project, panel, order );
 		bindWebDesignGoLive( project, panel, order, bodyEl );
+		bindWebDesignUpdates( project, panel, order );
 	}
 
 	/* ---------- Agreement ---------- */
@@ -1675,6 +1677,124 @@
 				}
 			} );
 		} );
+	}
+
+	/* ---------- Progress reports & site activity ---------- */
+
+	/**
+	 * Direct request: "provide progress reports to the customer by
+	 * email but also let them access all of the changes that have been
+	 * made on the site." Two things live here: a compose form for
+	 * staff-written progress reports (project.progress_reports), and
+	 * the digest webhook staff hand to the project's own nightly
+	 * site-update job (project.digest) — the source of
+	 * project.site_updates, which this panel only ever displays, never
+	 * edits, since that list is machine-ingested.
+	 */
+	function webDesignUpdatesHtml( project ) {
+		var reports = project.progress_reports || [];
+		var updates = project.site_updates || [];
+		var digest = project.digest || { url: '', token: '' };
+
+		var reportsList = reports.length
+			? '<div class="yp-list-rows">' + reports.map( function ( r ) {
+				return (
+					'<div class="yp-list-row"><div>' +
+						'<strong>' + YP.escapeHtml( r.headline ) + '</strong>' +
+						'<p class="yp-field__hint">' + YP.escapeHtml( new Date( r.created_at.replace( ' ', 'T' ) ).toLocaleString() ) + ' &middot; ' + YP.escapeHtml( r.staff_name ) + '</p>' +
+					'</div></div>'
+				);
+			} ).join( '' ) + '</div>'
+			: '<p class="yp-field__hint">No progress reports sent yet.</p>';
+
+		var updatesList = updates.length
+			? '<div class="yp-list-rows">' + updates.map( function ( u ) {
+				var count = ( u.items || [] ).length;
+				return (
+					'<div class="yp-list-row"><div>' +
+						'<strong>' + YP.escapeHtml( u.date ) + '</strong>' +
+						'<p class="yp-field__hint">' + count + ' change' + ( 1 === count ? '' : 's' ) + ' ingested</p>' +
+					'</div></div>'
+				);
+			} ).join( '' ) + '</div>'
+			: '<p class="yp-field__hint">No site-activity digests received yet.</p>';
+
+		return (
+			'<div class="yp-panel yp-panel--compact" data-yp-wd-updates>' +
+				'<div class="yp-panel__head"><h3>Progress Reports &amp; Site Activity</h3></div>' +
+				'<p class="yp-panel__hint">Customer dashboard: <code>' + YP.escapeHtml( project.links.updates ) + '</code></p>' +
+
+				'<div class="yp-field"><label>Digest webhook URL (this project’s own nightly site-update job POSTs here)</label>' +
+					'<input type="text" readonly value="' + YP.escapeAttr( digest.url ) + '" onclick="this.select()" />' +
+				'</div>' +
+				'<div class="yp-field"><label>Digest token (send as header <code>Authorization: Bearer &lt;token&gt;</code>)</label>' +
+					'<input type="text" readonly value="' + YP.escapeAttr( digest.token ) + '" onclick="this.select()" />' +
+				'</div>' +
+				'<button type="button" class="yp-row-action" data-yp-wd-regen-token>Regenerate token</button>' +
+
+				'<h4 style="margin-top:1.25rem;">Send a progress report</h4>' +
+				'<div class="yp-field"><label>Headline</label><input type="text" data-wd-report-headline placeholder="e.g. Product catalog polish is underway" /></div>' +
+				'<div class="yp-field"><label>Message</label><textarea rows="3" data-wd-report-message placeholder="What you want the customer to know"></textarea></div>' +
+				'<label class="yp-field--checkbox yp-field"><input type="checkbox" data-wd-report-notify checked /> Email this to the customer</label>' +
+				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-send-report>Send Progress Report</button>' +
+				'<div data-yp-wd-report-error></div>' +
+
+				'<h4 style="margin-top:1.25rem;">Recent progress reports</h4>' + reportsList +
+				'<h4 style="margin-top:1.25rem;">Recent site activity</h4>' + updatesList +
+			'</div>'
+		);
+	}
+
+	function bindWebDesignUpdates( project, panel, order ) {
+		var errorEl = panel.querySelector( '[data-yp-wd-report-error]' );
+
+		var regenButton = panel.querySelector( '[data-yp-wd-regen-token]' );
+		if ( regenButton ) {
+			regenButton.addEventListener( 'click', function () {
+				YP.confirmModal( {
+					title: 'Regenerate the digest token?',
+					message: 'The current token stops working immediately — update this project’s nightly site-update job with the new one, or it will stop reaching this dashboard.',
+					confirmLabel: 'Regenerate',
+					onConfirm: function () {
+						regenButton.disabled = true;
+						YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/site-update-token/regenerate', { method: 'POST' } )
+							.then( function ( refreshed ) { renderWebDesignPanel( refreshed, panel, order, panel.closest( '[data-yp-body]' ) ); } )
+							.catch( function ( error ) {
+								regenButton.disabled = false;
+								errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+							} );
+					}
+				} );
+			} );
+		}
+
+		var sendButton = panel.querySelector( '[data-yp-wd-send-report]' );
+		if ( sendButton ) {
+			sendButton.addEventListener( 'click', function () {
+				var headline = panel.querySelector( '[data-wd-report-headline]' ).value.trim();
+				if ( ! headline ) {
+					errorEl.innerHTML = '<p class="yp-form__error">Add a headline first.</p>';
+					return;
+				}
+
+				sendButton.disabled = true;
+				errorEl.innerHTML = '';
+				YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/progress-report', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( {
+						headline: headline,
+						message: panel.querySelector( '[data-wd-report-message]' ).value,
+						notify_customer: panel.querySelector( '[data-wd-report-notify]' ).checked
+					} )
+				} )
+					.then( function ( refreshed ) { renderWebDesignPanel( refreshed, panel, order, panel.closest( '[data-yp-body]' ) ); } )
+					.catch( function ( error ) {
+						sendButton.disabled = false;
+						errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+					} );
+			} );
+		}
 	}
 
 	/**
