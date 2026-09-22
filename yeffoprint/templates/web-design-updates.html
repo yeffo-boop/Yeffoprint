@@ -1,0 +1,42 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-wd-updates" class="yp-wd-portal yp-section">
+
+		<p class="yp-eyebrow">Web Design</p>
+		<h1>Your Project Updates</h1>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<div data-yp-wd-content hidden>
+
+			<p data-yp-wd-package class="yp-field__hint"></p>
+
+			<div class="yp-wd-tabs" role="tablist">
+				<button type="button" class="is-active" data-yp-wd-tab="progress">Progress Reports</button>
+				<button type="button" data-yp-wd-tab="activity">Site Activity</button>
+			</div>
+
+			<div data-yp-wd-panel="progress">
+				<div data-yp-wd-reports></div>
+			</div>
+
+			<div data-yp-wd-panel="activity" hidden>
+				<div data-yp-wd-updates-list></div>
+				<div class="yp-wd-activity-note">
+					This list updates automatically as we ship changes to your site — nothing to check for, it's just here when you want it.
+				</div>
+			</div>
+
+		</div>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

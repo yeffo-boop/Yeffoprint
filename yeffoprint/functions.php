@@ -473,6 +473,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		'web-design-agreement'        => [ 'web-design-agreement.html', 'web-design-agreement.js', 'yeffoprint-wd-agreement' ],
 		'web-design-staging-review'   => [ 'web-design-staging-review.html', 'web-design-staging-review.js', 'yeffoprint-wd-staging-review' ],
 		'web-design-golive'           => [ 'web-design-golive.html', 'web-design-golive.js', 'yeffoprint-wd-golive' ],
+		'web-design-updates'          => [ 'web-design-updates.html', 'web-design-updates.js', 'yeffoprint-wd-updates' ],
 	];
 
 	foreach ( $web_design_portal_pages as $slug => $config ) {

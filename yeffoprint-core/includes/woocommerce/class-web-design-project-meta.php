@@ -92,6 +92,34 @@ class YeffoPrint_Web_Design_Project_Meta {
 	// ---- Live ----
 	public const MARKED_LIVE_AT = '_yp_wd_marked_live_at';
 
+	/**
+	 * ---- Progress reports & site activity ----
+	 * Direct request: "provide progress reports to the customer by
+	 * email but also let them access all of the changes that have been
+	 * made on the site." Two separate lists, deliberately: PROGRESS_REPORTS
+	 * is staff-composed (a headline + message, optionally emailed) the
+	 * same way the agreement/staging notices are; SITE_UPDATES is
+	 * machine-ingested — each web design client's own site already
+	 * generates a nightly "Daily Site Update" digest (plain-English
+	 * change list + PR numbers), and rather than staff continuing to be
+	 * the only recipient of that email, the client's own automation
+	 * POSTs it here directly (class-web-design-digest-controller.php)
+	 * and the customer portal's Updates tab reads it back out.
+	 *
+	 * SITE_UPDATE_TOKEN is a separate secret from ACCESS_TOKEN on
+	 * purpose: ACCESS_TOKEN is a read-mostly guest link already shared
+	 * with the customer by email; this one is a write credential handed
+	 * only to the project's own CI/automation, so a leaked customer link
+	 * can never be used to inject fake site-activity entries.
+	 */
+	public const SITE_UPDATE_TOKEN = '_yp_wd_site_update_token';
+	public const SITE_UPDATES      = '_yp_wd_site_updates';     // JSON: [ { date, site_url, items: [{headline, description, prs:[{number,title}]}] } ]
+	public const PROGRESS_REPORTS  = '_yp_wd_progress_reports'; // JSON: [ { id, created_at, headline, message, staff_name } ]
+
+	/** Roughly 3 months of nightly digests, and a generous cap on staff-composed reports — bounded so this meta can never grow unbounded on a long-running project. */
+	private const SITE_UPDATE_LIMIT     = 90;
+	private const PROGRESS_REPORT_LIMIT = 200;
+
 	/** How long a submitted go-live credential is kept before the purge sweep deletes it. */
 	private const CREDENTIAL_TTL = 30 * DAY_IN_SECONDS;
 
@@ -609,6 +637,118 @@ class YeffoPrint_Web_Design_Project_Meta {
 		);
 	}
 
+	// ---- Progress reports & site activity ----
+
+	public static function get_progress_reports( \WC_Order $order ): array {
+		return self::decode_list( $order->get_meta( self::PROGRESS_REPORTS ) );
+	}
+
+	/**
+	 * @param array $fields { headline, message }
+	 * @return array The newly stored report (front of the list) — the caller uses this to decide whether/what to email.
+	 */
+	public static function add_progress_report( \WC_Order $order, array $fields ): array {
+		$reports = self::get_progress_reports( $order );
+
+		$new_report = [
+			'id'         => wp_generate_password( 12, false ),
+			'created_at' => current_time( 'mysql' ),
+			'headline'   => sanitize_text_field( (string) ( $fields['headline'] ?? '' ) ),
+			'message'    => sanitize_textarea_field( (string) ( $fields['message'] ?? '' ) ),
+			'staff_name' => wp_get_current_user()->display_name,
+		];
+
+		array_unshift( $reports, $new_report );
+		$reports = array_slice( $reports, 0, self::PROGRESS_REPORT_LIMIT );
+
+		$order->update_meta_data( self::PROGRESS_REPORTS, wp_json_encode( $reports ) );
+		$order->add_order_note(
+			sprintf( /* translators: %s: report headline */ __( 'Progress report added: "%s".', 'yeffoprint-core' ), $new_report['headline'] )
+		);
+		$order->save();
+
+		return $new_report;
+	}
+
+	public static function get_site_updates( \WC_Order $order ): array {
+		return self::decode_list( $order->get_meta( self::SITE_UPDATES ) );
+	}
+
+	/**
+	 * The digest webhook's one write — see class-web-design-digest-
+	 * controller.php. Re-posting the same date (a re-run of a nightly
+	 * job) replaces that day's entry instead of duplicating it, so the
+	 * ingest is safely idempotent.
+	 *
+	 * @param array $entry { date: 'YYYY-MM-DD', site_url, items: [{headline, description, prs:[{number,title}]}] }
+	 * @return int How many change items were actually stored, for the webhook's own response.
+	 */
+	public static function append_site_update( \WC_Order $order, array $entry ): int {
+		$items = [];
+		foreach ( (array) ( $entry['items'] ?? [] ) as $item ) {
+			if ( ! is_array( $item ) || '' === trim( (string) ( $item['headline'] ?? '' ) ) ) {
+				continue;
+			}
+
+			$prs = [];
+			foreach ( (array) ( $item['prs'] ?? [] ) as $pr ) {
+				if ( ! is_array( $pr ) || ! isset( $pr['number'] ) ) {
+					continue;
+				}
+				$prs[] = [ 'number' => absint( $pr['number'] ), 'title' => sanitize_text_field( (string) ( $pr['title'] ?? '' ) ) ];
+			}
+
+			$items[] = [
+				'headline'    => sanitize_text_field( (string) $item['headline'] ),
+				'description' => sanitize_textarea_field( (string) ( $item['description'] ?? '' ) ),
+				'prs'         => $prs,
+			];
+		}
+
+		$clean = [
+			'date'     => sanitize_text_field( (string) ( $entry['date'] ?? '' ) ),
+			'site_url' => esc_url_raw( (string) ( $entry['site_url'] ?? '' ) ),
+			'items'    => $items,
+		];
+
+		$updates = self::get_site_updates( $order );
+		$updates = array_values( array_filter( $updates, static fn( array $u ) => ( $u['date'] ?? '' ) !== $clean['date'] ) );
+		array_unshift( $updates, $clean );
+		$updates = array_slice( $updates, 0, self::SITE_UPDATE_LIMIT );
+
+		$order->update_meta_data( self::SITE_UPDATES, wp_json_encode( $updates ) );
+		$order->add_order_note(
+			sprintf(
+				/* translators: 1: number of changes, 2: date the digest covers */
+				__( '%1$d site changes ingested for %2$s.', 'yeffoprint-core' ),
+				count( $items ),
+				$clean['date']
+			)
+		);
+		$order->save();
+
+		return count( $items );
+	}
+
+	/** Lazily mints (and persists) this order's digest webhook token the first time anything needs it — same trust model as ensure_access_token(), but this one is a write credential for the project's own automation, never shared with the customer. */
+	public static function ensure_site_update_token( \WC_Order $order ): string {
+		$token = (string) $order->get_meta( self::SITE_UPDATE_TOKEN );
+		if ( $token ) {
+			return $token;
+		}
+
+		return self::regenerate_site_update_token( $order );
+	}
+
+	/** Staff-triggered rotation — the order drawer's "Regenerate token" button, for when a token needs to be revoked (e.g. a client's automation config leaked). */
+	public static function regenerate_site_update_token( \WC_Order $order ): string {
+		$token = wp_generate_password( 40, false );
+		$order->update_meta_data( self::SITE_UPDATE_TOKEN, $token );
+		$order->save();
+
+		return $token;
+	}
+
 	// ---- Public-page links (guest access via ACCESS_TOKEN, same trust model as yeffoprint_core_proof_approval_url()) ----
 
 	public static function get_agreement_url( \WC_Order $order ): string {
@@ -629,6 +769,13 @@ class YeffoPrint_Web_Design_Project_Meta {
 		return add_query_arg(
 			[ 'order' => $order->get_id(), 'token' => self::ensure_access_token( $order ) ],
 			home_url( '/web-design-golive/' )
+		);
+	}
+
+	public static function get_updates_url( \WC_Order $order ): string {
+		return add_query_arg(
+			[ 'order' => $order->get_id(), 'token' => self::ensure_access_token( $order ) ],
+			home_url( '/web-design-updates/' )
 		);
 	}
 
