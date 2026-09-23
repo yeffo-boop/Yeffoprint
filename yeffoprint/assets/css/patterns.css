@@ -2059,13 +2059,19 @@
 
 .yp-product-type-browse {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	/* One tile per category, all on one row: columns follow however
+	   many categories exist rather than a fixed 4, so a new one (Pen
+	   Labels made 5) shrinks the tiles instead of wrapping to a row of
+	   its own. */
+	grid-auto-flow: column;
+	grid-auto-columns: minmax(0, 1fr);
 	gap: var(--wp--preset--spacing--md);
 	margin-top: var(--wp--preset--spacing--md);
 }
 
 @media (max-width: 900px) {
 	.yp-product-type-browse {
+		grid-auto-flow: row;
 		grid-template-columns: repeat(2, 1fr);
 	}
 }

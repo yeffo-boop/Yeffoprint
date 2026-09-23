@@ -365,8 +365,8 @@
 	/*
 	 * Direct request: recommend customers print their reconstitution
 	 * volume and dose on the label, "especially on the pen labels". Shown
-	 * on peptide templates (Product Type "Peptide & Vial Labels", or any
-	 * template offering the Pen size); the Pen size itself gets a louder
+	 * on peptide templates (Product Type "Peptide & Vial Labels" or "Pen
+	 * Labels", or any template offering the Pen size); the Pen size itself gets a louder
 	 * version, since a pen is dialed by units every time it's used.
 	 * Points at the template's own notes-style field when it has one —
 	 * that's the free-text field that prints on the label.
@@ -378,7 +378,9 @@
 	}
 
 	function showsDoseTip() {
-		return ( schema.product_types || [] ).indexOf( 'peptide-vial-labels' ) !== -1
+		var types = schema.product_types || [];
+		return types.indexOf( 'peptide-vial-labels' ) !== -1
+			|| types.indexOf( 'pen-labels' ) !== -1
 			|| ( schema.sizes || [] ).some( isPenSize );
 	}
 
