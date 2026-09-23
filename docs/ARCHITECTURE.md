@@ -2351,3 +2351,9 @@ Sharing yeffodesign.com on Facebook showed a blown-up slice of the CMY bars: `cl
 To replace the image, overwrite that PNG at 1200×630 and bump `YEFFOPRINT_CORE_VERSION` (it's the `?ver=` on the URL, which is what makes Facebook fetch the new file), then re-scrape in Facebook's Sharing Debugger.
 
 Verify: `curl -s https://yeffodesign.com/ | grep 'og:image'` → the `og-default.png` URL plus width 1200 / height 630; paste the homepage into https://developers.facebook.com/tools/debug/ → **Scrape Again** → the preview shows the full card, not the bars.
+
+## Category tile images on "What are you labeling?"
+
+The homepage/Shop Labels "Browse by product" tiles (`yeffoprint/patterns/product-type-browse.php`) each took the newest template in their Product Type. Templates usually carry several Product Types, so every tile showed the same bottle. Each `yp_product_type` term now has its own image (term meta `yp_product_type_image`, an attachment id, registered with `show_in_rest` in `class-product-type-image.php`), set from the admin app's Templates screen → **Category images**, which writes it through core's `/wp/v2/yp_product_type/{id}` route. The classic wp-admin Product Type add/edit screens get the same picker as a fallback. A tile with no image set now uses the newest template in its category whose image isn't already on another tile (set images are claimed first), and only repeats one when the category has nothing else.
+
+Verify: admin app → Templates → Category images → pick an image for one category, save → the homepage tile shows it. Clear all four → the tiles show different templates wherever each category has more than one.

@@ -62,6 +62,12 @@
 	// second, admin-only category field that could drift out of sync.
 	var CATEGORY_TAXONOMY = 'yp_product_type';
 
+	// Term meta holding each category's tile image on the homepage "What
+	// are you labeling?" section (class-product-type-image.php). Direct
+	// request: every tile showed the same newest-template bottle, "give
+	// me the ability to set the category image".
+	var CATEGORY_IMAGE_META = 'yp_product_type_image';
+
 	var SORTS = {
 		'title-asc': 'Name A–Z',
 		'title-desc': 'Name Z–A',
@@ -128,6 +134,7 @@
 						} ).join( '' ) +
 					'</select>' +
 				'</div>' +
+				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-category-images>Category images</button>' +
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-add>+ Add Template</button>' +
 			'</div>' +
 			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
@@ -328,6 +335,120 @@
 				.catch( function ( error ) {
 					window.alert( 'Couldn’t delete: ' + error.message );
 				} );
+		}
+
+		/* ---------- Category images drawer ---------- */
+
+		function categoryImageId( term ) {
+			return term.meta ? parseInt( term.meta[ CATEGORY_IMAGE_META ], 10 ) || 0 : 0;
+		}
+
+		function openCategoryImages() {
+			var drawer = document.createElement( 'div' );
+			drawer.className = 'yp-drawer';
+			drawer.setAttribute( 'aria-hidden', 'true' );
+			drawer.innerHTML =
+				'<div class="yp-drawer__backdrop"></div>' +
+				'<div class="yp-drawer__panel" role="dialog" aria-modal="true" aria-label="Category images">' +
+					'<div class="yp-drawer__header"><span>Category images</span>' +
+						'<button type="button" class="yp-icon-button" data-yp-drawer-close aria-label="Close">&times;</button>' +
+					'</div>' +
+					'<div class="yp-drawer__body">' +
+						'<form class="yp-form" data-yp-form>' +
+							'<div data-yp-form-error></div>' +
+							'<p class="yp-field__hint">The picture on each category’s tile in the homepage “What are you labeling?” section. Leave one empty and it uses a template from that category that isn’t already on another tile.</p>' +
+							( categoryTerms.length
+								? categoryTerms.map( function ( term ) {
+									var imageId = categoryImageId( term );
+									return (
+										'<div class="yp-field"><label>' + YP.escapeHtml( term.name ) + '</label>' +
+											'<div class="yp-media-field">' +
+												'<div class="yp-media-field__preview" data-yp-cat-preview="' + term.id + '"></div>' +
+												'<div class="yp-media-field__buttons">' +
+													'<input type="hidden" data-yp-cat-id="' + term.id + '" value="' + ( imageId || '' ) + '" />' +
+													'<button type="button" class="wp-block-button__link is-style-outline" data-yp-cat-select="' + term.id + '">Select image</button>' +
+													'<button type="button" class="yp-row-action" data-yp-cat-remove="' + term.id + '"' + ( imageId ? '' : ' hidden' ) + '>Remove</button>' +
+												'</div>' +
+											'</div>' +
+										'</div>'
+									);
+								} ).join( '' )
+								: '<p class="yp-field__hint">No categories yet — tag a template with a Product Type first.</p>' ) +
+							'<div class="yp-form__actions">' +
+								'<button type="submit" class="wp-block-button__link is-style-accent" data-yp-save' + ( categoryTerms.length ? '' : ' disabled' ) + '>Save images</button>' +
+								'<button type="button" class="wp-block-button__link is-style-outline" data-yp-drawer-close>Cancel</button>' +
+							'</div>' +
+						'</form>' +
+					'</div>' +
+				'</div>';
+
+			document.body.appendChild( drawer );
+			YP.initDrawer( drawer );
+			YP.openDrawer( drawer );
+
+			categoryTerms.forEach( function ( term ) {
+				YP.bindMediaPicker( {
+					title: 'Select image for ' + term.name,
+					selectButton: drawer.querySelector( '[data-yp-cat-select="' + term.id + '"]' ),
+					removeButton: drawer.querySelector( '[data-yp-cat-remove="' + term.id + '"]' ),
+					idInput: drawer.querySelector( '[data-yp-cat-id="' + term.id + '"]' ),
+					preview: drawer.querySelector( '[data-yp-cat-preview="' + term.id + '"]' )
+				} );
+			} );
+
+			var setIds = categoryTerms.map( categoryImageId ).filter( Boolean );
+			if ( setIds.length ) {
+				YP.request( yeffoprintAdminApp.wpApiUrl + 'media?include=' + setIds.join( ',' ) + '&per_page=100' )
+					.then( function ( attachments ) {
+						( attachments || [] ).forEach( function ( attachment ) {
+							categoryTerms.forEach( function ( term ) {
+								var preview = drawer.querySelector( '[data-yp-cat-preview="' + term.id + '"]' );
+								var input = drawer.querySelector( '[data-yp-cat-id="' + term.id + '"]' );
+								// Skip one the admin already re-picked or removed while this was loading.
+								if ( preview && input && parseInt( input.value, 10 ) === attachment.id && categoryImageId( term ) === attachment.id ) {
+									preview.innerHTML = '<img src="' + YP.escapeAttr( attachment.source_url ) + '" alt="" />';
+								}
+							} );
+						} );
+					} )
+					.catch( function () {} );
+			}
+
+			drawer.querySelector( '[data-yp-form]' ).addEventListener( 'submit', function ( event ) {
+				event.preventDefault();
+
+				var errorEl = drawer.querySelector( '[data-yp-form-error]' );
+				var saveButton = drawer.querySelector( '[data-yp-save]' );
+
+				var changed = categoryTerms.filter( function ( term ) {
+					var value = parseInt( drawer.querySelector( '[data-yp-cat-id="' + term.id + '"]' ).value, 10 ) || 0;
+					return value !== categoryImageId( term );
+				} );
+
+				if ( ! changed.length ) {
+					YP.closeDrawer( drawer );
+					return;
+				}
+
+				errorEl.innerHTML = '';
+				saveButton.disabled = true;
+				saveButton.textContent = 'Saving…';
+
+				Promise.all( changed.map( function ( term ) {
+					var body = { meta: {} };
+					body.meta[ CATEGORY_IMAGE_META ] = parseInt( drawer.querySelector( '[data-yp-cat-id="' + term.id + '"]' ).value, 10 ) || 0;
+					return YP.request( yeffoprintAdminApp.wpApiUrl + CATEGORY_TAXONOMY + '/' + term.id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( body ) } );
+				} ) )
+					.then( function () {
+						YP.closeDrawer( drawer );
+						load();
+					} )
+					.catch( function ( error ) {
+						saveButton.disabled = false;
+						saveButton.textContent = 'Save images';
+						errorEl.innerHTML = '<p class="yp-form__error">Couldn’t save: ' + YP.escapeHtml( error.message ) + '</p>';
+					} );
+			} );
 		}
 
 		/* ---------- Add/Edit drawer ---------- */
@@ -644,6 +765,7 @@
 		}
 
 		viewEl.querySelector( '[data-yp-add]' ).addEventListener( 'click', function () { openForm( null ); } );
+		viewEl.querySelector( '[data-yp-category-images]' ).addEventListener( 'click', openCategoryImages );
 		searchEl.addEventListener( 'input', function () { renderRows( allTemplates ); } );
 		categoryEl.addEventListener( 'change', function () { renderRows( allTemplates ); } );
 		sortEl.addEventListener( 'change', function () { renderRows( allTemplates ); } );
