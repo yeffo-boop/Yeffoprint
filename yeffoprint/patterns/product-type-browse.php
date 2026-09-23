@@ -124,7 +124,7 @@ foreach ( $terms as $term ) {
 	<!-- /wp:heading -->
 
 	<!-- wp:paragraph {"align":"center"} -->
-	<p class="has-text-align-center"><?php esc_html_e( 'Jump straight into Cosmetics, Peptides, Skincare, or Supplements — same gallery, already filtered.', 'yeffoprint' ); ?></p>
+	<p class="has-text-align-center"><?php esc_html_e( 'Jump straight into Cosmetics, Peptides, Pens, Skincare, or Supplements — same gallery, already filtered.', 'yeffoprint' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:html -->
