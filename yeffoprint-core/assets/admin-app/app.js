@@ -2159,15 +2159,23 @@
 	 * event, `iframe.contentWindow.print()` still works and brings up the
 	 * print dialog automatically, no manual click needed once the tab
 	 * opens.
+	 *
+	 * No 'noopener' feature on that first window.open(): with it, the
+	 * browser opens the tab but window.open() returns null by spec, so
+	 * this code took the "popup blocked" branch below and opened the
+	 * label a second time — a blank tab plus a label popup on every
+	 * purchase. Clearing .opener by hand right after gives the same
+	 * protection while keeping the handle we need to write into the tab.
 	 */
 	function printLabelUrl( url ) {
-		var printWindow = window.open( '', '_blank', 'noopener' );
+		var printWindow = window.open( '', '_blank' );
 		if ( ! printWindow ) {
 			// Popup blocked — fall back to the old direct-open behavior
 			// rather than silently doing nothing.
 			window.open( url, '_blank', 'noopener' );
 			return;
 		}
+		printWindow.opener = null;
 
 		printWindow.document.write(
 			'<!doctype html><html><head><title>Print Shipping Label</title>' +
