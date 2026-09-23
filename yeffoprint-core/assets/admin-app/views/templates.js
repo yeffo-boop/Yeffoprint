@@ -52,6 +52,29 @@
 		yp_material_tag: 'Compatible Material'
 	};
 
+	// The category the Templates list filters and sorts by. Direct
+	// request: "Can i get the ability to filter/sort templates on my
+	// admin panel? Im starting to get a lot and it would be great to
+	// sort by (Peptide, Cosmetic, Skincare, etc)." — those are exactly
+	// this taxonomy's terms, already assigned per Template in the Tags
+	// panel below and already driving the Shop Labels gallery's own
+	// primary "Show:" row, so the list reuses them rather than adding a
+	// second, admin-only category field that could drift out of sync.
+	var CATEGORY_TAXONOMY = 'yp_product_type';
+
+	var SORTS = {
+		'title-asc': 'Name A–Z',
+		'title-desc': 'Name Z–A',
+		'date-desc': 'Newest first',
+		'date-asc': 'Oldest first',
+		'popularity-desc': 'Most popular',
+		category: 'Category'
+	};
+
+	// Sentinel filter value for Templates with no category term at all —
+	// can't collide with a real term id, which is always a positive int.
+	var UNCATEGORIZED = 'none';
+
 	function endpoint( path ) {
 		return yeffoprintAdminApp.wpApiUrl + 'yp_template' + ( path || '' );
 	}
@@ -81,6 +104,8 @@
 
 	YP.views.templates = function ( viewEl ) {
 		var allTemplates = [];
+		var categoryTerms = [];
+		var categoryNames = {};
 		// Direct request: "I want to use the default template preset I
 		// made as the template for all current and future labels. IF I
 		// add a field there, it adds to all templates." Non-null means a
@@ -94,36 +119,155 @@
 		viewEl.innerHTML =
 			'<p class="yp-app__intro">Every label design customers can pick from — artwork, customization fields, and which Sizes/Materials each one supports.</p>' +
 			'<div class="yp-list-toolbar">' +
-				'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search templates&hellip;" />' +
+				'<div class="yp-list-toolbar__filters">' +
+					'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search templates&hellip;" aria-label="Search templates" />' +
+					'<select class="yp-list-toolbar__select" data-yp-category-filter aria-label="Filter by category"><option value="">All categories</option></select>' +
+					'<select class="yp-list-toolbar__select" data-yp-sort aria-label="Sort templates">' +
+						Object.keys( SORTS ).map( function ( key ) {
+							return '<option value="' + key + '">Sort: ' + YP.escapeHtml( SORTS[ key ] ) + '</option>';
+						} ).join( '' ) +
+					'</select>' +
+				'</div>' +
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-add>+ Add Template</button>' +
 			'</div>' +
 			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
-				'<th>Template</th><th>Badge</th><th>Featured</th><th>Popularity</th><th>Status</th><th></th>' +
-			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="6">Loading&hellip;</td></tr></tbody></table></div>';
+				'<th>Template</th><th>Category</th><th>Badge</th><th>Featured</th><th>Popularity</th><th>Status</th><th></th>' +
+			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="7">Loading&hellip;</td></tr></tbody></table></div>';
 
 		var rowsEl = viewEl.querySelector( '[data-yp-rows]' );
 		var searchEl = viewEl.querySelector( '[data-yp-search]' );
+		var categoryEl = viewEl.querySelector( '[data-yp-category-filter]' );
+		var sortEl = viewEl.querySelector( '[data-yp-sort]' );
+
+		/**
+		 * Every Template, not just the first 100 — the list is growing
+		 * past what one REST page holds, and filtering/sorting happens
+		 * client-side over the whole set. Keeps asking for the next page
+		 * until one comes back short.
+		 */
+		function fetchAllTemplates( page, collected ) {
+			return YP.request( endpoint( '?context=edit&status=publish,draft&per_page=100&page=' + page + '&orderby=title&order=asc&_embed=1' ) )
+				.then( function ( templates ) {
+					templates = templates || [];
+					collected = collected.concat( templates );
+					return templates.length === 100 ? fetchAllTemplates( page + 1, collected ) : collected;
+				} )
+				.catch( function ( error ) {
+					// Asking one page past the end (exactly a multiple of 100
+					// Templates) is a 400 from core, not an empty array.
+					if ( page > 1 && error.body && 'rest_post_invalid_page_number' === error.body.code ) {
+						return collected;
+					}
+					throw error;
+				} );
+		}
 
 		function load() {
-			rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">Loading&hellip;</td></tr>';
-			YP.request( endpoint( '?context=edit&status=publish,draft&per_page=100&orderby=title&order=asc&_embed=1' ) )
-				.then( function ( templates ) {
-					allTemplates = templates || [];
+			rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="7">Loading&hellip;</td></tr>';
+			Promise.all( [
+				fetchAllTemplates( 1, [] ),
+				YP.request( yeffoprintAdminApp.wpApiUrl + CATEGORY_TAXONOMY + '?per_page=100&orderby=name&order=asc' )
+			] )
+				.then( function ( results ) {
+					allTemplates = results[ 0 ];
+					categoryTerms = results[ 1 ] || [];
+					categoryNames = {};
+					categoryTerms.forEach( function ( term ) { categoryNames[ term.id ] = term.name; } );
+					renderCategoryOptions();
 					renderRows( allTemplates );
 				} )
 				.catch( function ( error ) {
-					rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">Couldn’t load templates: ' + YP.escapeHtml( error.message ) + '</td></tr>';
+					rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="7">Couldn’t load templates: ' + YP.escapeHtml( error.message ) + '</td></tr>';
 				} );
+		}
+
+		function templateCategoryIds( template ) {
+			return Array.isArray( template[ CATEGORY_TAXONOMY ] ) ? template[ CATEGORY_TAXONOMY ] : [];
+		}
+
+		/** Category names for one Template, alphabetical — the same order the filter dropdown lists them in. */
+		function templateCategoryNames( template ) {
+			return templateCategoryIds( template )
+				.map( function ( id ) { return categoryNames[ id ]; } )
+				.filter( Boolean )
+				.sort( function ( a, b ) { return a.localeCompare( b ); } );
+		}
+
+		/** Rebuilt after every load() so counts stay right after an add/edit/delete, keeping whatever was already selected. */
+		function renderCategoryOptions() {
+			var current = categoryEl.value;
+			var counts = {};
+			var uncategorized = 0;
+			allTemplates.forEach( function ( template ) {
+				var ids = templateCategoryIds( template ).filter( function ( id ) { return categoryNames[ id ]; } );
+				if ( ! ids.length ) {
+					uncategorized++;
+				}
+				ids.forEach( function ( id ) { counts[ id ] = ( counts[ id ] || 0 ) + 1; } );
+			} );
+
+			categoryEl.innerHTML =
+				'<option value="">All categories (' + allTemplates.length + ')</option>' +
+				categoryTerms.map( function ( term ) {
+					return '<option value="' + term.id + '">' + YP.escapeHtml( term.name ) + ' (' + ( counts[ term.id ] || 0 ) + ')</option>';
+				} ).join( '' ) +
+				( uncategorized ? '<option value="' + UNCATEGORIZED + '">Uncategorized (' + uncategorized + ')</option>' : '' );
+
+			categoryEl.value = current;
+			if ( categoryEl.value !== current ) {
+				categoryEl.value = '';
+			}
+		}
+
+		function compareTemplates( sort ) {
+			function byTitle( a, b ) { return a.title.raw.localeCompare( b.title.raw, undefined, { sensitivity: 'base', numeric: true } ); }
+			function popularity( t ) { return t.meta ? parseInt( t.meta[ META.popularity ], 10 ) || 0 : 0; }
+
+			switch ( sort ) {
+				case 'title-desc':
+					return function ( a, b ) { return byTitle( b, a ); };
+				case 'date-desc':
+					return function ( a, b ) { return b.date.localeCompare( a.date ) || byTitle( a, b ); };
+				case 'date-asc':
+					return function ( a, b ) { return a.date.localeCompare( b.date ) || byTitle( a, b ); };
+				case 'popularity-desc':
+					return function ( a, b ) { return popularity( b ) - popularity( a ) || byTitle( a, b ); };
+				case 'category':
+					// Grouped by (first) category name, uncategorized last,
+					// then by name within each group.
+					return function ( a, b ) {
+						var ca = templateCategoryNames( a )[ 0 ];
+						var cb = templateCategoryNames( b )[ 0 ];
+						if ( ca !== cb ) {
+							if ( ! ca ) { return 1; }
+							if ( ! cb ) { return -1; }
+							return ca.localeCompare( cb );
+						}
+						return byTitle( a, b );
+					};
+				default:
+					return byTitle;
+			}
 		}
 
 		function renderRows( templates ) {
 			var query = ( searchEl.value || '' ).trim().toLowerCase();
-			var filtered = query
-				? templates.filter( function ( t ) { return t.title.raw.toLowerCase().indexOf( query ) !== -1; } )
-				: templates;
+			var category = categoryEl.value;
+			var filtered = templates.filter( function ( t ) {
+				if ( query && t.title.raw.toLowerCase().indexOf( query ) === -1 ) {
+					return false;
+				}
+				if ( UNCATEGORIZED === category ) {
+					return ! templateCategoryNames( t ).length;
+				}
+				if ( category ) {
+					return templateCategoryIds( t ).indexOf( parseInt( category, 10 ) ) !== -1;
+				}
+				return true;
+			} ).sort( compareTemplates( sortEl.value ) );
 
 			if ( ! filtered.length ) {
-				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">' + ( templates.length ? 'No templates match your search.' : 'No templates yet — add the first one above.' ) + '</td></tr>';
+				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="7">' + ( templates.length ? 'No templates match your search or category.' : 'No templates yet — add the first one above.' ) + '</td></tr>';
 				return;
 			}
 
@@ -136,6 +280,7 @@
 				var popularity = template.meta ? parseInt( template.meta[ META.popularity ], 10 ) || 0 : 0;
 				var isPublished = 'publish' === template.status;
 				var badgeLabel = badge && yeffoprintAdminApp.badges ? yeffoprintAdminApp.badges[ badge ] : '';
+				var categories = templateCategoryNames( template );
 
 				return (
 					'<tr data-id="' + template.id + '">' +
@@ -143,6 +288,7 @@
 							( thumb ? '<img class="yp-swatch" src="' + YP.escapeAttr( thumb ) + '" alt="" style="border-radius: var(--wp--custom--radius--control);" />' : '<span class="yp-swatch" style="border-radius: var(--wp--custom--radius--control);"></span>' ) +
 							YP.escapeHtml( template.title.raw ) +
 						'</div></td>' +
+						'<td>' + ( categories.length ? categories.map( function ( name ) { return '<span class="yp-chip">' + YP.escapeHtml( name ) + '</span>'; } ).join( ' ' ) : '&mdash;' ) + '</td>' +
 						'<td>' + ( badgeLabel ? '<span class="yp-chip">' + YP.escapeHtml( badgeLabel ) + '</span>' : '&mdash;' ) + '</td>' +
 						'<td>' + ( isFeatured ? '<span class="yp-pill yp-pill--good">Featured</span>' : '&mdash;' ) + '</td>' +
 						'<td><span class="yp-chip">' + popularity + '</span></td>' +
@@ -499,6 +645,8 @@
 
 		viewEl.querySelector( '[data-yp-add]' ).addEventListener( 'click', function () { openForm( null ); } );
 		searchEl.addEventListener( 'input', function () { renderRows( allTemplates ); } );
+		categoryEl.addEventListener( 'change', function () { renderRows( allTemplates ); } );
+		sortEl.addEventListener( 'change', function () { renderRows( allTemplates ); } );
 
 		load();
 	};
