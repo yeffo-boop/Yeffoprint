@@ -62,7 +62,7 @@ function yeffoprint_asset_version( string $relative_path ) {
  * rather than pointing at a 404 if this ships first.
  */
 function yeffoprint_reconstitution_calculator_url(): string {
-	$page = get_page_by_path( 'reconstitution-calculator' );
+	$page = get_page_by_path( 'peptide-calculator' );
 
 	return ( $page && 'publish' === $page->post_status ) ? esc_url_raw( get_permalink( $page ) ) : '';
 }

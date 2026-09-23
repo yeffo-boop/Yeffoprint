@@ -2364,6 +2364,6 @@ Direct request: recommend customers print their reconstitution volume and dose o
 
 The Label Designer shows the same notice under the size presets (hidden on Oil Labels), with a "+ Add a dose line" button that drops that example text onto the canvas.
 
-Both link to the Reconstitution Calculator page through `yeffoprint_reconstitution_calculator_url()` (`functions.php`), which returns '' until a published page with slug `reconstitution-calculator` exists. Until then the link is left out rather than pointing at a 404.
+Both link to the Reconstitution Calculator page through `yeffoprint_reconstitution_calculator_url()` (`functions.php`), which returns '' until a published page with slug `peptide-calculator` exists. Until then the link is left out rather than pointing at a 404.
 
 Verify: open the Bio-Pen template → the magenta "Pen labels" notice sits above Customize and Design Notes shows the placeholder. Open a vial template such as Scientific → the grey tip. A Cosmetics-only template → no tip. Custom Design → Use our online Designer → the tip shows under Label size, disappears on Oil Labels, and "+ Add a dose line" adds the text.
