@@ -72,6 +72,8 @@
 	var sizePresetGroupEl = root.querySelector( '[data-yp-ld-size-presets]' );
 	var sizePresetRadios = sizePresetGroupEl ? Array.prototype.slice.call( sizePresetGroupEl.querySelectorAll( 'input[name="ld_size_preset"]' ) ) : [];
 	var sizePresetHintEl = root.querySelector( '[data-yp-ld-size-preset-hint]' );
+	var doseTipEl = root.querySelector( '[data-yp-ld-dose-tip]' );
+	var addDoseLineButton = root.querySelector( '[data-yp-ld-add-dose-line]' );
 	var materialSelect  = document.getElementById( 'yp-ld-material' );
 	var quantityInput   = document.getElementById( 'yp-ld-quantity' );
 	var quantityPresetsEl = root.querySelector( '[data-yp-ld-quantity-presets]' );
@@ -290,7 +292,18 @@
 		heightInput.disabled = isLocked;
 	}
 
+	/*
+	 * Reconstitution/dose tip (render.php) — for peptide labels, so it's
+	 * hidden on the Oil Labels preset and shown on Peptide Vials/Custom.
+	 */
+	function updateDoseTip( radio ) {
+		if ( doseTipEl ) {
+			doseTipEl.hidden = !! radio && 'oil-labels' === radio.value;
+		}
+	}
+
 	function updateSizePresetHint( radio ) {
+		updateDoseTip( radio );
 		if ( ! sizePresetHintEl ) {
 			return;
 		}
@@ -1121,6 +1134,24 @@
 			fontFamily: 'Inter', fontSize: Math.round( canvas.getWidth() / 10 ), fill: '#000000',
 			width: canvas.getWidth() * 0.7
 		} ) );
+	}
+
+	function addDoseLine() {
+		var center = centerOf();
+		addAndSelect( new fabric.Textbox( '2 mL BAC \u00b7 250 mcg = 10 units', {
+			left: center.left, top: canvas.getHeight() * 0.82, originX: 'center', originY: 'center',
+			fontFamily: 'Inter', fontSize: Math.round( canvas.getWidth() / 18 ), fill: '#000000',
+			width: canvas.getWidth() * 0.8, textAlign: 'center'
+		} ) );
+		hideLayoutsPicker();
+	}
+
+	if ( addDoseLineButton ) {
+		addDoseLineButton.addEventListener( 'click', function () {
+			if ( canvas ) {
+				addDoseLine();
+			}
+		} );
 	}
 
 	function addShape( kind ) {

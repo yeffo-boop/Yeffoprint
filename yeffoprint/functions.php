@@ -55,6 +55,18 @@ function yeffoprint_asset_version( string $relative_path ) {
 	return $hash ? substr( $hash, 0, 12 ) : (string) filemtime( $path );
 }
 
+/**
+ * The Reconstitution Calculator page's URL, or '' while that page
+ * doesn't exist yet — the configurator's and Label Designer's
+ * reconstitution/dose tip links to it, and simply drops the link
+ * rather than pointing at a 404 if this ships first.
+ */
+function yeffoprint_reconstitution_calculator_url(): string {
+	$page = get_page_by_path( 'reconstitution-calculator' );
+
+	return ( $page && 'publish' === $page->post_status ) ? esc_url_raw( get_permalink( $page ) ) : '';
+}
+
 add_filter( 'wp_resource_hints', function ( $urls, $relation_type ) {
 	if ( 'preconnect' === $relation_type ) {
 		$urls[] = [ 'href' => 'https://fonts.gstatic.com', 'crossorigin' ];
@@ -263,6 +275,8 @@ add_action( 'wp_enqueue_scripts', function () {
 			// branches on this in configurator.js.
 			'isLoggedIn'  => is_user_logged_in(),
 			'accountUrl'  => function_exists( 'wc_get_page_permalink' ) ? esc_url_raw( wc_get_page_permalink( 'myaccount' ) ) : esc_url_raw( home_url( '/my-account/' ) ),
+			// Linked from the reconstitution/dose tip on peptide templates.
+			'calculatorUrl' => yeffoprint_reconstitution_calculator_url(),
 		] );
 	}
 
