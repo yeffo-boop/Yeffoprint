@@ -84,7 +84,7 @@ class YeffoPrint_Pages_Setup_Command {
 
 		$this->create_page(
 			'peptide-calculator',
-			__( 'Peptide Reconstitution Calculator', 'yeffoprint-core' ),
+			__( 'Peptide & Hormone Calculator', 'yeffoprint-core' ),
 			'',
 			'peptide-calculator.html'
 		);

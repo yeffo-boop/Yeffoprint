@@ -613,7 +613,7 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
-	// Peptide Reconstitution Calculator — pure client-side math, so no
+	// Peptide & Hormone Calculator — pure client-side math, so no
 	// REST URL/nonce to localize and nothing user-specific to keep out
 	// of a page cache.
 	if ( is_page() && in_array( get_page_template_slug(), [ 'peptide-calculator', 'peptide-calculator.html' ], true ) ) {

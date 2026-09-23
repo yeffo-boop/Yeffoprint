@@ -1,5 +1,5 @@
 /*
- * Peptide Reconstitution Calculator page (templates/peptide-calculator.html,
+ * Peptide & Hormone Calculator page (templates/peptide-calculator.html,
  * assets/js/peptide-calculator.js). Page-scoped, loaded only on that
  * template — see functions.php.
  */
@@ -44,6 +44,121 @@
 	max-width: 58ch;
 	color: var(--wp--preset--color--charcoal);
 	font-size: 1.05rem;
+}
+
+/* ---------- Calculator selector ---------- */
+
+.yp-pcalc__modes-wrap {
+	margin-top: 1.75rem;
+}
+
+.yp-pcalc__modes-label {
+	display: block;
+	margin-bottom: 0.6rem;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.72rem;
+	font-weight: 600;
+	line-height: 1;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--wp--preset--color--charcoal);
+	opacity: 0.8;
+}
+
+.yp-pcalc__modes {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 6px;
+	max-width: 760px;
+	padding: 6px;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 16px;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-pcalc__mode {
+	display: grid;
+	gap: 0.2rem;
+	padding: 0.75rem 0.9rem;
+	text-align: left;
+	font: inherit;
+	color: var(--wp--preset--color--near-black);
+	background: transparent;
+	border: 0;
+	border-radius: 11px;
+	cursor: pointer;
+	transition: background-color 150ms ease, color 150ms ease;
+}
+
+.yp-pcalc__mode:hover {
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-pcalc__mode b {
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+}
+
+.yp-pcalc__mode small {
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.72rem;
+	font-weight: 500;
+	line-height: 1.3;
+	color: var(--wp--preset--color--charcoal);
+	opacity: 0.8;
+}
+
+.yp-pcalc__mode[aria-selected="true"] {
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
+}
+
+.yp-pcalc__mode[aria-selected="true"] small {
+	color: inherit;
+	opacity: 0.75;
+}
+
+.yp-pcalc__mode:focus-visible {
+	outline: 2px solid var(--wp--custom--focus-ring);
+	outline-offset: 2px;
+}
+
+@media (max-width: 460px) {
+	.yp-pcalc__mode {
+		padding: 0.65rem 0.6rem;
+	}
+
+	.yp-pcalc__mode b {
+		font-size: 0.92rem;
+	}
+
+	.yp-pcalc__mode small {
+		font-size: 0.66rem;
+	}
+}
+
+/* min-height keeps the calculator from jumping as the description
+   changes length between modes. */
+.yp-pcalc .yp-pcalc__mode-desc {
+	min-height: 2.9em;
+	max-width: 62ch;
+	margin-top: 0.75rem;
+	font-size: 0.92rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+/* Each mode's inputs sit in one group, laid out as direct items of
+   .yp-pcalc__fields' grid; only the active mode's group is shown. */
+.yp-pcalc__group {
+	display: contents;
+}
+
+.yp-pcalc__group[hidden] {
+	display: none;
 }
 
 /* ---------- Calculator grid ---------- */
@@ -793,7 +908,8 @@
 	.yp-pcalc-s__liquid,
 	.yp-pcalc-s__moves,
 	.yp-pcalc__chip,
-	.yp-pcalc__seg span {
+	.yp-pcalc__seg span,
+	.yp-pcalc__mode {
 		transition: none;
 	}
 }

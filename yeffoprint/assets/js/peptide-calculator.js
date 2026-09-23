@@ -1,10 +1,15 @@
 /**
- * Peptide Reconstitution Calculator page (templates/peptide-calculator.html).
- * Pure client-side math, no REST calls:
+ * Peptide & Hormone Calculator page (templates/peptide-calculator.html).
+ * Pure client-side math, no REST calls. Three calculators share one
+ * results panel, switched by the tabs at the top (and deep-linkable as
+ * #peptide / #iu / #hormone):
  *
- *   concentration (mg/mL) = peptide in vial (mg) ÷ bacteriostatic water (mL)
- *   volume per dose (mL)  = dose (mg) ÷ concentration
- *   units to draw         = volume × 100   (U-100 insulin syringe)
+ *   Peptides (mg):   concentration = vial mg ÷ water mL;  volume = dose ÷ concentration
+ *   HGH / HCG (IU):  concentration = vial IU ÷ water mL;  volume = dose IU ÷ concentration
+ *   Hormones:        per injection = weekly mg ÷ injections per week;
+ *                    volume = per injection ÷ vial mg/mL
+ *
+ *   units to draw = volume (mL) × 100   (U-100 insulin syringe)
  *
  * Also draws the syringe (inline SVG, rebuilt only when the syringe size
  * changes) and keeps the vial-label preview in the tie-in section in
@@ -19,13 +24,16 @@
 	}
 
 	var form = root.querySelector( '[data-yp-pcalc-form]' );
-	var vialInput = document.getElementById( 'yp-pcalc-vial' );
-	var waterInput = document.getElementById( 'yp-pcalc-water' );
-	var doseInput = document.getElementById( 'yp-pcalc-dose' );
 	var nameInput = document.getElementById( 'yp-pcalc-name' );
+	var tabs = [].slice.call( root.querySelectorAll( '.yp-pcalc__mode' ) );
+	var mode = 'peptide';
 
 	function out( key ) {
 		return root.querySelector( '[data-yp-pcalc="' + key + '"]' );
+	}
+
+	function num( id ) {
+		return parseFloat( document.getElementById( id ).value );
 	}
 
 	var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -163,18 +171,118 @@
 		out( 'cap-right' ).textContent = step + ( step === 1 ? ' unit' : ' units' ) + ' per mark';
 	}
 
-	function read() {
-		var unit = form.querySelector( 'input[name="doseUnit"]:checked' ).value;
-		var dose = parseFloat( doseInput.value );
-		return {
-			vialMg: parseFloat( vialInput.value ),
-			waterMl: parseFloat( waterInput.value ),
-			dose: dose,
-			unit: unit,
-			doseMg: unit === 'mcg' ? dose / 1000 : dose,
-			cap: parseInt( form.querySelector( 'input[name="syringe"]:checked' ).value, 10 ),
-		};
-	}
+	/*
+	 * Each mode's calc() returns null until its inputs are filled, else
+	 * everything the shared results panel shows: the volume to draw, the
+	 * three stats and three "how it's calculated" rows as
+	 * [label, value, unit, sub] / [label, formula, worked example], an
+	 * optional hard warning, the advice for an over-capacity dose, and
+	 * the label preview's [amount, tag, detail line, second write-in].
+	 */
+	var MODES = {
+		peptide: {
+			desc: 'For peptides measured in mg. Enter the mg in the vial, the bacteriostatic water you’re adding, and your dose in mcg or mg.',
+			title: 'Your vial',
+			syringe: 50,
+			calc: function () {
+				var unit = form.querySelector( 'input[name="doseUnit"]:checked' ).value;
+				var vial = num( 'yp-pcalc-vial' );
+				var water = num( 'yp-pcalc-water' );
+				var dose = num( 'yp-pcalc-dose' );
+				var doseMg = unit === 'mcg' ? dose / 1000 : dose;
+				if ( ! ( vial > 0 && water > 0 && doseMg > 0 ) ) {
+					return null;
+				}
+				var conc = vial / water;
+				var vol = doseMg / conc;
+				return {
+					vol: vol,
+					stats: [
+						[ 'Concentration', fmt( conc, 3 ), 'mg/mL', fmt( conc * 10, 2 ) + ' mcg per unit' ],
+						[ 'Volume per dose', fmt( vol, 3 ), 'mL', 'of ' + fmt( water, 2 ) + ' mL in the vial' ],
+						// Epsilon so 5 mg ÷ 0.25 mg lands on 20, not 19.999….
+						[ 'Doses per vial', fmt( Math.floor( vial / doseMg + 1e-9 ), 0 ), '', 'at ' + fmt( dose, 3 ) + ' ' + unit + ' each' ],
+					],
+					steps: [
+						[ 'Concentration', 'peptide (mg) ÷ water (mL)', fmt( vial, 3 ) + ' mg ÷ ' + fmt( water, 3 ) + ' mL = ' + fmt( conc, 3 ) + ' mg/mL' ],
+						[ 'Volume per dose', 'dose ÷ concentration', fmt( doseMg, 4 ) + ' mg ÷ ' + fmt( conc, 3 ) + ' mg/mL = ' + fmt( vol, 3 ) + ' mL' ],
+						[ 'Units to draw', 'volume (mL) × 100', fmt( vol, 3 ) + ' mL × 100 = ' + fmt( vol * 100, 1 ) + ' units' ],
+					],
+					tooMuch: doseMg > vial ? 'This dose is more than the whole vial holds (' + fmt( vial, 3 ) + ' mg). Double-check the dose unit.' : '',
+					fix: 'add less water to concentrate the vial',
+					label: [ fmt( vial, 2 ) + ' mg', 'Lyophilized', '+ ' + fmt( water, 2 ) + ' mL bac water → ' + fmt( conc, 3 ) + ' mg/mL', 'Mixed' ],
+				};
+			},
+		},
+		iu: {
+			desc: 'For HGH, HCG and other vials measured in IU. Enter the IU in the vial, the bacteriostatic water you’re adding, and your dose in IU.',
+			title: 'Your vial',
+			syringe: 30,
+			calc: function () {
+				var vial = num( 'yp-pcalc-iu-vial' );
+				var water = num( 'yp-pcalc-iu-water' );
+				var dose = num( 'yp-pcalc-iu-dose' );
+				if ( ! ( vial > 0 && water > 0 && dose > 0 ) ) {
+					return null;
+				}
+				var conc = vial / water;
+				var vol = dose / conc;
+				return {
+					vol: vol,
+					stats: [
+						[ 'Concentration', fmt( conc, 2 ), 'IU/mL', fmt( conc / 100, 3 ) + ' IU per unit' ],
+						[ 'Volume per dose', fmt( vol, 3 ), 'mL', 'of ' + fmt( water, 2 ) + ' mL in the vial' ],
+						[ 'Doses per vial', fmt( Math.floor( vial / dose + 1e-9 ), 0 ), '', 'at ' + fmt( dose, 2 ) + ' IU each' ],
+					],
+					steps: [
+						[ 'Concentration', 'IU in vial ÷ water (mL)', fmt( vial, 2 ) + ' IU ÷ ' + fmt( water, 3 ) + ' mL = ' + fmt( conc, 2 ) + ' IU/mL' ],
+						[ 'Volume per dose', 'dose (IU) ÷ concentration', fmt( dose, 2 ) + ' IU ÷ ' + fmt( conc, 2 ) + ' IU/mL = ' + fmt( vol, 3 ) + ' mL' ],
+						[ 'Units to draw', 'volume (mL) × 100', fmt( vol, 3 ) + ' mL × 100 = ' + fmt( vol * 100, 1 ) + ' units' ],
+					],
+					tooMuch: dose > vial ? 'This dose is more than the whole vial holds (' + fmt( vial, 0 ) + ' IU).' : '',
+					fix: 'add less water to concentrate the vial',
+					label: [ fmt( vial, 0 ) + ' IU', 'Lyophilized', '+ ' + fmt( water, 2 ) + ' mL bac water → ' + fmt( conc, 2 ) + ' IU/mL', 'Mixed' ],
+				};
+			},
+		},
+		hormone: {
+			desc: 'For ready-to-use vials like 250 mg/mL. Enter the vial’s concentration, your weekly dose, and how many injections you split it into. We’ll show each injection in mg, mL and syringe units.',
+			title: 'Your vial & schedule',
+			syringe: 100,
+			calc: function () {
+				var conc = num( 'yp-pcalc-h-conc' );
+				var size = num( 'yp-pcalc-h-size' );
+				var weekly = num( 'yp-pcalc-h-weekly' );
+				var perWeek = Math.round( num( 'yp-pcalc-h-per-week' ) );
+				if ( ! ( conc > 0 && weekly > 0 && perWeek > 0 ) ) {
+					return null;
+				}
+				var perInj = weekly / perWeek;
+				var vol = perInj / conc;
+				// Vial size is only needed for "vial lasts" — the rest still
+				// works without it.
+				var total = size > 0 ? conc * size : NaN;
+				return {
+					vol: vol,
+					stats: [
+						[ 'Per injection', fmt( perInj, 2 ), 'mg', fmt( weekly, 2 ) + ' mg ÷ ' + perWeek + ' per week' ],
+						[ 'Volume per injection', fmt( vol, 3 ), 'mL', fmt( vol * perWeek, 3 ) + ' mL per week' ],
+						size > 0
+							? [ 'Vial lasts', fmt( total / weekly, 1 ), 'weeks', fmt( Math.floor( total / perInj + 1e-9 ), 0 ) + ' injections · ' + fmt( total, 0 ) + ' mg total' ]
+							: [ 'Vial lasts', '–', '', 'add the vial size' ],
+					],
+					steps: [
+						[ 'Per injection', 'weekly dose ÷ injections per week', fmt( weekly, 2 ) + ' mg ÷ ' + perWeek + ' = ' + fmt( perInj, 2 ) + ' mg' ],
+						[ 'Volume per injection', 'mg per injection ÷ concentration', fmt( perInj, 2 ) + ' mg ÷ ' + fmt( conc, 2 ) + ' mg/mL = ' + fmt( vol, 3 ) + ' mL' ],
+						[ 'Units to draw', 'volume (mL) × 100', fmt( vol, 3 ) + ' mL × 100 = ' + fmt( vol * 100, 1 ) + ' units' ],
+					],
+					tooMuch: '',
+					fix: 'use a 3 mL syringe and draw to the ' + fmt( vol, 2 ) + ' mL line, or split the dose into more injections per week',
+					label: [ fmt( conc, 0 ) + ' mg/mL', size > 0 ? fmt( size, 2 ) + ' mL vial' : 'Multi-dose vial', size > 0 ? fmt( total, 0 ) + ' mg total · ' + fmt( size, 2 ) + ' mL' : '', 'Exp' ],
+				};
+			},
+		},
+	};
 
 	function syncChips() {
 		root.querySelectorAll( '[data-yp-pcalc-chips]' ).forEach( function ( group ) {
@@ -191,82 +299,112 @@
 		out( 'warn-text' ).textContent = text || '';
 	}
 
-	function updateLabel( s, conc ) {
-		out( 'label-mg' ).textContent = s.vialMg > 0 ? fmt( s.vialMg, 2 ) + ' mg' : '– mg';
-		out( 'label-recon' ).textContent = isFinite( conc )
-			? '+ ' + fmt( s.waterMl, 2 ) + ' mL bac water → ' + fmt( conc, 3 ) + ' mg/mL'
-			: '+ – mL bac water';
-	}
-
 	function update() {
-		var s = read();
 		syncChips();
 
-		var valid = s.vialMg > 0 && s.waterMl > 0 && s.doseMg > 0;
-		var conc = s.vialMg / s.waterMl;
-		var vol = s.doseMg / conc;
-		var units = vol * 100;
-		// Epsilon so 5 mg ÷ 0.25 mg lands on 20, not 19.999….
-		var doses = Math.floor( s.vialMg / s.doseMg + 1e-9 );
-		var overCap = valid && units > s.cap + 1e-9;
-		var step = s.cap === 100 ? 2 : 1;
+		var cap = parseInt( form.querySelector( 'input[name="syringe"]:checked' ).value, 10 );
+		var r = MODES[ mode ].calc();
+		var stats = out( 'stats' ).children;
+		var steps = out( 'steps' ).children;
+		var i;
 
-		if ( ! valid ) {
+		if ( ! r ) {
 			out( 'units' ).textContent = '–';
-			setHint( [ 'Fill in all three amounts to see where to draw.' ] );
-			[ 'conc', 'vol', 'doses' ].forEach( function ( k ) {
-				setValue( out( k ), '–' );
-			} );
-			[ 'per-unit', 'vol-sub', 'doses-sub', 'm-conc', 'm-vol', 'm-units' ].forEach( function ( k ) {
-				out( k ).textContent = '';
-			} );
+			setHint( [ 'Fill in the amounts to see where to draw.' ] );
+			for ( i = 0; i < 3; i++ ) {
+				setValue( stats[ i ].querySelector( 'dd' ), '–' );
+				stats[ i ].querySelector( '.yp-pcalc__sub' ).textContent = '';
+				steps[ i ].querySelector( 'span' ).textContent = '';
+			}
 			showWarning( '' );
-			drawSyringe( NaN, s.cap, false );
-			updateLabel( s, NaN );
+			drawSyringe( NaN, cap, false );
 			return;
 		}
 
+		var units = r.vol * 100;
+		var overCap = units > cap + 1e-9;
+		var step = cap === 100 ? 2 : 1;
+		var mlNote = ' (' + fmt( r.vol, 3 ) + '\u00a0mL)';
+
 		out( 'units' ).textContent = fmt( units, 1 );
 
-		var onMark = Math.abs( units / step - Math.round( units / step ) ) < 0.05;
 		if ( overCap ) {
-			setHint( [ 'More than this syringe holds.' ] );
-		} else if ( onMark ) {
-			setHint( [ 'Pull the plunger to the ', fmt( Math.round( units / step ) * step, 0 ), ' mark.' ] );
+			setHint( [ 'More than this syringe holds' + mlNote + '.' ] );
+		} else if ( Math.abs( units / step - Math.round( units / step ) ) < 0.05 ) {
+			setHint( [ 'Pull the plunger to the ', fmt( Math.round( units / step ) * step, 0 ), ' mark' + mlNote + '.' ] );
 		} else {
 			var lo = Math.floor( units / step ) * step;
-			setHint( [ 'Between the ', String( lo ), ' and ', String( lo + step ), ' marks. A little more or less water gives a cleaner line.' ] );
+			setHint( [ 'Between the ', String( lo ), ' and ', String( lo + step ), ' marks' + mlNote + '.' ] );
 		}
 
-		setValue( out( 'conc' ), fmt( conc, 3 ), 'mg/mL' );
-		out( 'per-unit' ).textContent = fmt( conc * 10, 2 ) + ' mcg per unit';
-		setValue( out( 'vol' ), fmt( vol, 3 ), 'mL' );
-		out( 'vol-sub' ).textContent = 'of ' + fmt( s.waterMl, 2 ) + ' mL in the vial';
-		setValue( out( 'doses' ), fmt( doses, 0 ) );
-		out( 'doses-sub' ).textContent = 'at ' + fmt( s.dose, 3 ) + ' ' + s.unit + ' each';
+		for ( i = 0; i < 3; i++ ) {
+			stats[ i ].querySelector( 'dt' ).textContent = r.stats[ i ][ 0 ];
+			setValue( stats[ i ].querySelector( 'dd' ), r.stats[ i ][ 1 ], r.stats[ i ][ 2 ] );
+			stats[ i ].querySelector( '.yp-pcalc__sub' ).textContent = r.stats[ i ][ 3 ];
+			steps[ i ].querySelector( 'b' ).textContent = r.steps[ i ][ 0 ];
+			steps[ i ].querySelector( 'code' ).textContent = r.steps[ i ][ 1 ];
+			steps[ i ].querySelector( 'span' ).textContent = r.steps[ i ][ 2 ];
+		}
 
-		out( 'm-conc' ).textContent = fmt( s.vialMg, 3 ) + ' mg ÷ ' + fmt( s.waterMl, 3 ) + ' mL = ' + fmt( conc, 3 ) + ' mg/mL';
-		out( 'm-vol' ).textContent = fmt( s.doseMg, 4 ) + ' mg ÷ ' + fmt( conc, 3 ) + ' mg/mL = ' + fmt( vol, 3 ) + ' mL';
-		out( 'm-units' ).textContent = fmt( vol, 3 ) + ' mL × 100 = ' + fmt( units, 1 ) + ' units';
-
-		if ( s.doseMg > s.vialMg ) {
-			showWarning( 'This dose is more than the whole vial holds (' + fmt( s.vialMg, 3 ) + ' mg). Double-check the dose unit.' );
+		if ( r.tooMuch ) {
+			showWarning( r.tooMuch );
 		} else if ( overCap ) {
 			var fits = [ 30, 50, 100 ].filter( function ( c ) {
 				return c >= units;
 			} )[ 0 ];
 			showWarning( fits
-				? 'This dose needs ' + fmt( units, 1 ) + ' units, which won’t fit a ' + SYRINGE_ML[ s.cap ] + ' syringe. Switch to the ' + SYRINGE_ML[ fits ] + ' syringe or add less water.'
-				: 'This dose needs ' + fmt( units, 1 ) + ' units, more than a 1 mL syringe holds. Add less water to concentrate the vial.' );
+				? 'This needs ' + fmt( units, 1 ) + ' units, which won’t fit a ' + SYRINGE_ML[ cap ] + ' syringe. Switch to the ' + SYRINGE_ML[ fits ] + ' syringe.'
+				: 'This needs ' + fmt( r.vol, 2 ) + ' mL, more than a 1 mL insulin syringe holds. To fix it, ' + r.fix + '.' );
 		} else if ( units < 2 ) {
-			showWarning( 'Under 2 units is hard to measure accurately. Adding more water spreads the dose over more marks.' );
+			showWarning( 'Under 2 units is hard to measure accurately.' + ( mode === 'hormone' ? '' : ' Adding more water spreads the dose over more marks.' ) );
 		} else {
 			showWarning( '' );
 		}
 
-		drawSyringe( units, s.cap, overCap );
-		updateLabel( s, conc );
+		drawSyringe( units, cap, overCap );
+
+		out( 'label-amt' ).textContent = r.label[ 0 ];
+		out( 'label-tag' ).textContent = r.label[ 1 ];
+		out( 'label-recon' ).textContent = r.label[ 2 ];
+		out( 'label-line2' ).textContent = r.label[ 3 ];
 	}
+
+	function setMode( next, focusTab ) {
+		mode = next;
+		tabs.forEach( function ( tab ) {
+			var on = tab.getAttribute( 'data-mode' ) === next;
+			tab.setAttribute( 'aria-selected', String( on ) );
+			tab.tabIndex = on ? 0 : -1;
+			if ( on && focusTab ) {
+				tab.focus();
+			}
+		} );
+		root.querySelectorAll( '[data-yp-pcalc-group]' ).forEach( function ( group ) {
+			group.hidden = group.getAttribute( 'data-yp-pcalc-group' ) !== next;
+		} );
+		out( 'mode-desc' ).textContent = MODES[ next ].desc;
+		out( 'form-title' ).textContent = MODES[ next ].title;
+		document.getElementById( 'yp-pcalc-syr-' + MODES[ next ].syringe ).checked = true;
+		if ( window.history && history.replaceState ) {
+			history.replaceState( null, '', '#' + next );
+		}
+		update();
+	}
+
+	tabs.forEach( function ( tab, i ) {
+		tab.addEventListener( 'click', function () {
+			setMode( tab.getAttribute( 'data-mode' ) );
+		} );
+		// Arrow keys move between tabs, per the ARIA tabs pattern.
+		tab.addEventListener( 'keydown', function ( e ) {
+			var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+			if ( ! d ) {
+				return;
+			}
+			e.preventDefault();
+			setMode( tabs[ ( i + d + tabs.length ) % tabs.length ].getAttribute( 'data-mode' ), true );
+		} );
+	} );
 
 	root.querySelectorAll( '[data-yp-pcalc-chips]' ).forEach( function ( group ) {
 		group.addEventListener( 'click', function ( e ) {
@@ -282,9 +420,10 @@
 	// Switching mcg ↔ mg converts the number so the dose itself stays put.
 	form.querySelectorAll( 'input[name="doseUnit"]' ).forEach( function ( radio ) {
 		radio.addEventListener( 'change', function () {
-			var d = parseFloat( doseInput.value );
+			var dose = document.getElementById( 'yp-pcalc-dose' );
+			var d = parseFloat( dose.value );
 			if ( d > 0 ) {
-				doseInput.value = String( Number( ( radio.value === 'mg' ? d / 1000 : d * 1000 ).toFixed( 4 ) ) );
+				dose.value = String( Number( ( radio.value === 'mg' ? d / 1000 : d * 1000 ).toFixed( 4 ) ) );
 			}
 		} );
 	} );
@@ -301,5 +440,10 @@
 		} );
 	}
 
-	update();
+	var start = ( window.location.hash || '' ).slice( 1 );
+	if ( MODES[ start ] ) {
+		setMode( start );
+	} else {
+		update();
+	}
 } )();
