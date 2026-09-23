@@ -288,6 +288,34 @@
 	text-decoration: underline;
 }
 
+/* Reconstitution/dose tip above the Customize fields (configurator.js
+   renderDoseTip()) and in the Label Designer — the same notice, just
+   tighter spacing. The Pen size gets the louder magenta version. */
+.yp-dose-tip {
+	margin-bottom: 1rem;
+}
+
+.yp-dose-tip.is-pen {
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--magenta);
+	border-left-width: 4px;
+}
+
+.yp-dose-tip.is-pen .yp-form-redirect-notice__icon {
+	background: var(--wp--preset--color--magenta);
+}
+
+.yp-dose-tip.is-pen .yp-form-redirect-notice__cta {
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-dose-tip__action {
+	margin-top: 0.6rem;
+	margin-right: 1rem;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+}
+
 .yp-configurator__title {
 	margin-top: 0;
 }

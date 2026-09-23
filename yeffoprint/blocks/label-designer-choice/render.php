@@ -101,6 +101,23 @@ defined( 'ABSPATH' ) || exit;
 			<p class="yp-ld__size-preset-hint" data-yp-ld-size-preset-hint>Locked to Peptide Vials — choose Custom to enter your own width/height.</p>
 		</div>
 
+		<?php
+		// Reconstitution/dose tip — same notice the Template configurator
+		// shows on peptide templates. label-designer.js hides it for the
+		// Oil Labels preset and wires the "Add a dose line" button.
+		$yp_calculator_url = function_exists( 'yeffoprint_reconstitution_calculator_url' ) ? yeffoprint_reconstitution_calculator_url() : '';
+		?>
+		<div class="yp-form-redirect-notice yp-dose-tip" role="note" data-yp-ld-dose-tip>
+			<span class="yp-form-redirect-notice__icon" aria-hidden="true">i</span>
+			<div class="yp-form-redirect-notice__body">
+				<p><strong>Tip: add your reconstitution volume and dose.</strong> Printing how the vial was mixed and what a dose measures saves guesswork later, like <em>2 mL BAC &middot; 250 mcg = 10 units</em>.</p>
+				<button type="button" class="button-link yp-dose-tip__action" data-yp-ld-add-dose-line>+ Add a dose line</button>
+				<?php if ( $yp_calculator_url ) : ?>
+					<a class="yp-form-redirect-notice__cta" href="<?php echo esc_url( $yp_calculator_url ); ?>" target="_blank" rel="noopener">Work it out with our Reconstitution Calculator &rarr;</a>
+				<?php endif; ?>
+			</div>
+		</div>
+
 		<div class="yp-ld__setup" data-yp-ld-setup>
 			<div class="yp-field yp-ld__dimension">
 				<label for="yp-ld-width">Width <span class="description">(inches)</span></label>

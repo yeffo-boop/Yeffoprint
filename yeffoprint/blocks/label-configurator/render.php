@@ -121,6 +121,7 @@ if ( $seo ) {
 			</div>
 			<div class="yp-configurator__section" data-yp-section="fields">
 				<h2><?php esc_html_e( 'Customize', 'yeffoprint' ); ?></h2>
+				<div data-yp-dose-tip hidden></div>
 				<div class="yp-field-inputs" data-yp-field-inputs></div>
 			</div>
 			<div class="yp-configurator__section" data-yp-section="quantity">

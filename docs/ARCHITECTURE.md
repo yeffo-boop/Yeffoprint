@@ -2357,3 +2357,13 @@ Verify: `curl -s https://yeffodesign.com/ | grep 'og:image'` → the `og-default
 The homepage/Shop Labels "Browse by product" tiles (`yeffoprint/patterns/product-type-browse.php`) each took the newest template in their Product Type. Templates usually carry several Product Types, so every tile showed the same bottle. Each `yp_product_type` term now has its own image (term meta `yp_product_type_image`, an attachment id, registered with `show_in_rest` in `class-product-type-image.php`), set from the admin app's Templates screen → **Category images**, which writes it through core's `/wp/v2/yp_product_type/{id}` route. The classic wp-admin Product Type add/edit screens get the same picker as a fallback. A tile with no image set now uses the newest template in its category whose image isn't already on another tile (set images are claimed first), and only repeats one when the category has nothing else.
 
 Verify: admin app → Templates → Category images → pick an image for one category, save → the homepage tile shows it. Clear all four → the tiles show different templates wherever each category has more than one.
+
+## Reconstitution/dose tip on peptide labels
+
+Direct request: recommend customers print their reconstitution volume and dose on the label, "especially on the pen labels." The Template configurator shows a notice above the Customize fields (`renderDoseTip()` in `configurator.js`, slot `[data-yp-dose-tip]` in `blocks/label-configurator/render.php`) on any template tagged Product Type "Peptide & Vial Labels" or offering the Pen size. When the Pen size is selected it switches to a louder magenta version. It names the template's notes-style text field (Design Notes today, found by label), which also gets an example placeholder, "e.g. 2 mL BAC · 250 mcg = 10 units". To drive this, `/templates/{id}/configurator` now also returns `product_types` (term slugs) and each size's `slug`.
+
+The Label Designer shows the same notice under the size presets (hidden on Oil Labels), with a "+ Add a dose line" button that drops that example text onto the canvas.
+
+Both link to the Reconstitution Calculator page through `yeffoprint_reconstitution_calculator_url()` (`functions.php`), which returns '' until a published page with slug `peptide-calculator` exists. Until then the link is left out rather than pointing at a 404.
+
+Verify: open the Bio-Pen template → the magenta "Pen labels" notice sits above Customize and Design Notes shows the placeholder. Open a vial template such as Scientific → the grey tip. A Cosmetics-only template → no tip. Custom Design → Use our online Designer → the tip shows under Label size, disappears on Oil Labels, and "+ Add a dose line" adds the text.

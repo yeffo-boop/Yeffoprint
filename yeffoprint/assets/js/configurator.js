@@ -71,6 +71,7 @@
 	var sizeOptionsEl = root.querySelector( '[data-yp-size-options]' );
 	var materialOptionsEl = root.querySelector( '[data-yp-material-options]' );
 	var fieldInputsEl = root.querySelector( '[data-yp-field-inputs]' );
+	var doseTipEl = root.querySelector( '[data-yp-dose-tip]' );
 	var quantityEl = root.querySelector( '[data-yp-quantity]' );
 	var variantCardsEl = root.querySelector( '[data-yp-variant-cards]' );
 	var addVariantButton = root.querySelector( '[data-yp-add-variant]' );
@@ -263,6 +264,7 @@
 	function finishInit() {
 		renderSizeOptions();
 		renderMaterialOptions();
+		renderDoseTip();
 		renderFieldInputStructure();
 		renderQuantityControl();
 		renderVariantCards();
@@ -358,6 +360,71 @@
 		return state.variants[ state.activeVariantIndex ];
 	}
 
+	/* ---------- Reconstitution / dose tip ---------- */
+
+	/*
+	 * Direct request: recommend customers print their reconstitution
+	 * volume and dose on the label, "especially on the pen labels". Shown
+	 * on peptide templates (Product Type "Peptide & Vial Labels", or any
+	 * template offering the Pen size); the Pen size itself gets a louder
+	 * version, since a pen is dialed by units every time it's used.
+	 * Points at the template's own notes-style field when it has one —
+	 * that's the free-text field that prints on the label.
+	 */
+	var DOSE_TIP_EXAMPLE = '2 mL BAC \u00b7 250 mcg = 10 units';
+
+	function isPenSize( size ) {
+		return !! size && 'pen' === size.slug;
+	}
+
+	function showsDoseTip() {
+		return ( schema.product_types || [] ).indexOf( 'peptide-vial-labels' ) !== -1
+			|| ( schema.sizes || [] ).some( isPenSize );
+	}
+
+	function doseNotesField() {
+		return schema.field_schema.filter( function ( field ) {
+			return ( 'text' === field.type || 'textarea' === field.type ) && /note/i.test( field.label );
+		} )[ 0 ] || null;
+	}
+
+	function renderDoseTip() {
+		if ( ! doseTipEl ) {
+			return;
+		}
+		if ( ! showsDoseTip() ) {
+			doseTipEl.hidden = true;
+			return;
+		}
+
+		var size = ( schema.sizes || [] ).filter( function ( s ) { return s.id === state.sizeId; } )[ 0 ];
+		var isPen = isPenSize( size );
+		var notesField = doseNotesField();
+
+		var heading = isPen
+			? 'Pen labels: print your mixing and dose info.'
+			: 'Tip: add your reconstitution volume and dose.';
+		var body = isPen
+			? ' A pen gets dialed by units every time, so put how much BAC water went in and what a dose measures right on the label.'
+			: ' Printing how the vial was mixed and what a dose measures saves guesswork later.';
+		var where = notesField
+			? ' Add it in the <strong>' + escapeHtml( notesField.label ) + '</strong> field, like <em>' + escapeHtml( DOSE_TIP_EXAMPLE ) + '</em>.'
+			: ' For example: <em>' + escapeHtml( DOSE_TIP_EXAMPLE ) + '</em>.';
+		var calculatorLink = yeffoprintConfigurator.calculatorUrl
+			? '<a class="yp-form-redirect-notice__cta" href="' + escapeHtml( yeffoprintConfigurator.calculatorUrl ) + '" target="_blank" rel="noopener">Work it out with our Reconstitution Calculator &rarr;</a>'
+			: '';
+
+		doseTipEl.className = 'yp-form-redirect-notice yp-dose-tip' + ( isPen ? ' is-pen' : '' );
+		doseTipEl.setAttribute( 'role', 'note' );
+		doseTipEl.innerHTML =
+			'<span class="yp-form-redirect-notice__icon" aria-hidden="true">' + ( isPen ? '!' : 'i' ) + '</span>' +
+			'<div class="yp-form-redirect-notice__body">' +
+				'<p><strong>' + heading + '</strong>' + body + where + '</p>' +
+				calculatorLink +
+			'</div>';
+		doseTipEl.hidden = false;
+	}
+
 	/* ---------- Size / Material selectors ---------- */
 
 	function renderSizeOptions() {
@@ -370,6 +437,7 @@
 			button.addEventListener( 'click', function () {
 				state.sizeId = parseInt( button.getAttribute( 'data-option-id' ), 10 );
 				updateSelectedPill( sizeOptionsEl, state.sizeId );
+				renderDoseTip();
 				renderSummary();
 			} );
 		} );
@@ -475,7 +543,10 @@
 			} else if ( 'corner_style' === field.type ) {
 				control = cornerStyleOptionsHtml( field, value );
 			} else {
-				control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
+				var placeholder = showsDoseTip() && field === doseNotesField()
+					? ' placeholder="e.g. ' + escapeHtml( DOSE_TIP_EXAMPLE ) + '"'
+					: '';
+				control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat"' + placeholder + ' />';
 			}
 
 			// corner_style's tooltip always exists (the diagram is

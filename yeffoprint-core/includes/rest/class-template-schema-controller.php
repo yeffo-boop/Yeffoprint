@@ -90,9 +90,19 @@ class YeffoPrint_Template_Schema_Controller {
 			'tiers'                 => YeffoPrint_Pricing_Rule::get_tiers(),
 			'quantity_presets'      => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
 			'field_schema'          => YeffoPrint_Field_Schema::get( $template->ID ),
+			// Product Type slugs (e.g. "peptide-vial-labels") —
+			// configurator.js shows its reconstitution/dose tip only on
+			// peptide templates, not on the cosmetics/skincare ones.
+			'product_types'         => $this->product_type_slugs( $template->ID ),
 			'sizes'                 => $this->records( YeffoPrint_Template_Meta::COMPATIBLE_SIZES, $template->ID, [ $this, 'format_size' ] ),
 			'materials'             => $this->records( YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS, $template->ID, [ $this, 'format_material' ] ),
 		] );
+	}
+
+	private function product_type_slugs( int $template_id ): array {
+		$slugs = wp_get_post_terms( $template_id, 'yp_product_type', [ 'fields' => 'slugs' ] );
+
+		return is_wp_error( $slugs ) ? [] : array_values( $slugs );
 	}
 
 	private function vial_mockup_url( int $template_id ): ?string {
@@ -129,6 +139,9 @@ class YeffoPrint_Template_Schema_Controller {
 			// entity text instead of "×". Same reasoning in
 			// format_material() below.
 			'name'             => $size->post_title,
+			// configurator.js keys the stronger pen-label dose tip off
+			// this ("pen"), rather than the admin-editable title.
+			'slug'             => $size->post_name,
 			'print_width_mm'   => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRINT_WIDTH_MM, true ),
 			'print_height_mm'  => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRINT_HEIGHT_MM, true ),
 			'price_adjustment' => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
