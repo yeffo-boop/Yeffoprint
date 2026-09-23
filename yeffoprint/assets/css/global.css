@@ -314,6 +314,20 @@ main.wp-block-group {
 	color: var(--wp--preset--color--near-black) !important;
 }
 
+/* Seven links plus the logo and icon buttons only fit on one row at
+   the default spacing from ~1220px up; below that the nav wrapped onto
+   a second line. Tighter link padding keeps it to one row down to
+   ~1060px, where the old six-link nav was already wrapping anyway. */
+@media (max-width: 1279px) {
+	.yp-header__nav ul.wp-block-navigation__container {
+		gap: 0.25rem;
+	}
+
+	.yp-header__nav a.wp-block-navigation-item__content {
+		padding-inline: 0.55rem;
+	}
+}
+
 /* Mobile hamburger overlay stays dark regardless of the (now light)
    header bar — deliberate contrast, not left over from the old dark
    header. The real, authoritative styling is the Navigation block's
