@@ -170,7 +170,7 @@
 		},
 		{
 			"name": "peptide-calculator",
-			"title": "Peptide Reconstitution Calculator",
+			"title": "Peptide & Hormone Calculator",
 			"postTypes": [ "page" ]
 		}
 	]
