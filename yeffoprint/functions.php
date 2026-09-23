@@ -599,6 +599,26 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
+	// Peptide Reconstitution Calculator — pure client-side math, so no
+	// REST URL/nonce to localize and nothing user-specific to keep out
+	// of a page cache.
+	if ( is_page() && in_array( get_page_template_slug(), [ 'peptide-calculator', 'peptide-calculator.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-peptide-calculator',
+			get_theme_file_uri( 'assets/css/peptide-calculator.css' ),
+			[ 'yeffoprint-patterns' ],
+			yeffoprint_asset_version( 'assets/css/peptide-calculator.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-peptide-calculator',
+			get_theme_file_uri( 'assets/js/peptide-calculator.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/peptide-calculator.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'contact-form', 'contact-form.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',

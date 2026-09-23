@@ -1,0 +1,151 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"1120px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div class="yp-pcalc">
+
+		<section class="yp-pcalc__intro">
+			<p class="yp-eyebrow-label">Free tool</p>
+			<h1>Peptide Reconstitution Calculator</h1>
+			<p class="yp-pcalc__lede">Enter what's in the vial, how much bacteriostatic water you're adding, and your dose. We'll show the concentration and exactly where to draw on a U-100 insulin syringe.</p>
+		</section>
+
+		<section class="yp-pcalc__grid" aria-label="Calculator">
+			<form class="yp-pcalc__card" data-yp-pcalc-form autocomplete="off" novalidate>
+				<div class="yp-pcalc__card-head">
+					<h2>Your vial</h2>
+					<p>Example values filled in. Change any field.</p>
+				</div>
+				<div class="yp-pcalc__fields">
+					<div class="yp-pcalc__field">
+						<div class="yp-pcalc__field-label"><label for="yp-pcalc-vial">Peptide in the vial</label><small>printed on the vial</small></div>
+						<div class="yp-pcalc__num"><input class="yp-pcalc__input" id="yp-pcalc-vial" name="vial" type="number" inputmode="decimal" min="0" step="any" value="5"><span class="yp-pcalc__unit">mg</span></div>
+						<div class="yp-pcalc__chips" data-yp-pcalc-chips="yp-pcalc-vial">
+							<button type="button" class="yp-pcalc__chip" data-v="2">2 mg</button>
+							<button type="button" class="yp-pcalc__chip" data-v="5">5 mg</button>
+							<button type="button" class="yp-pcalc__chip" data-v="10">10 mg</button>
+							<button type="button" class="yp-pcalc__chip" data-v="15">15 mg</button>
+						</div>
+					</div>
+
+					<div class="yp-pcalc__field">
+						<div class="yp-pcalc__field-label"><label for="yp-pcalc-water">Bacteriostatic water added</label><small>total volume</small></div>
+						<div class="yp-pcalc__num"><input class="yp-pcalc__input" id="yp-pcalc-water" name="water" type="number" inputmode="decimal" min="0" step="any" value="2"><span class="yp-pcalc__unit">mL</span></div>
+						<div class="yp-pcalc__chips" data-yp-pcalc-chips="yp-pcalc-water">
+							<button type="button" class="yp-pcalc__chip" data-v="1">1 mL</button>
+							<button type="button" class="yp-pcalc__chip" data-v="2">2 mL</button>
+							<button type="button" class="yp-pcalc__chip" data-v="3">3 mL</button>
+						</div>
+					</div>
+
+					<div class="yp-pcalc__field">
+						<div class="yp-pcalc__field-label"><label for="yp-pcalc-dose">Desired dose</label><small>per injection</small></div>
+						<div class="yp-pcalc__row">
+							<div class="yp-pcalc__num"><input class="yp-pcalc__input" id="yp-pcalc-dose" name="dose" type="number" inputmode="decimal" min="0" step="any" value="250"></div>
+							<div class="yp-pcalc__seg" role="radiogroup" aria-label="Dose unit">
+								<label><input type="radio" name="doseUnit" value="mcg" checked><span>mcg</span></label>
+								<label><input type="radio" name="doseUnit" value="mg"><span>mg</span></label>
+							</div>
+						</div>
+					</div>
+
+					<div class="yp-pcalc__field">
+						<div class="yp-pcalc__field-label"><span id="yp-pcalc-syringe-label">Syringe size</span><small>U-100 insulin syringe</small></div>
+						<div class="yp-pcalc__seg yp-pcalc__seg--full" role="radiogroup" aria-labelledby="yp-pcalc-syringe-label">
+							<label><input type="radio" name="syringe" value="30"><span>0.3 mL<small>30 units</small></span></label>
+							<label><input type="radio" name="syringe" value="50" checked><span>0.5 mL<small>50 units</small></span></label>
+							<label><input type="radio" name="syringe" value="100"><span>1 mL<small>100 units</small></span></label>
+						</div>
+					</div>
+				</div>
+			</form>
+
+			<section class="yp-pcalc__card yp-pcalc__card--brand" aria-label="Results">
+				<div class="yp-pcalc__results">
+					<div class="yp-pcalc__draw" aria-live="polite">
+						<div>
+							<span class="yp-pcalc__draw-eyebrow">Draw to</span>
+							<div class="yp-pcalc__draw-value"><span data-yp-pcalc="units">10</span><small>units</small></div>
+						</div>
+						<p class="yp-pcalc__draw-hint" data-yp-pcalc="hint">Pull the plunger to the <b>10</b> mark.</p>
+					</div>
+
+					<div class="yp-pcalc__syringe">
+						<svg data-yp-pcalc="syringe" viewBox="0 0 680 112" role="img" aria-label="Syringe filled to the dose"></svg>
+						<div class="yp-pcalc__syringe-cap"><span data-yp-pcalc="cap-left">U-100 · 0.5 mL</span><span data-yp-pcalc="cap-right">1 unit per mark</span></div>
+					</div>
+
+					<div class="yp-pcalc__warn" data-yp-pcalc="warn" hidden>
+						<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2 1 21h22L12 2Zm0 5.5 7.5 12h-15L12 7.5ZM11 11v4h2v-4h-2Zm0 5v2h2v-2h-2Z"/></svg>
+						<span data-yp-pcalc="warn-text"></span>
+					</div>
+
+					<dl class="yp-pcalc__stats">
+						<div class="yp-pcalc__stat"><dt>Concentration</dt><dd data-yp-pcalc="conc">2.5<span>mg/mL</span></dd><span class="yp-pcalc__sub" data-yp-pcalc="per-unit">25 mcg per unit</span></div>
+						<div class="yp-pcalc__stat"><dt>Volume per dose</dt><dd data-yp-pcalc="vol">0.1<span>mL</span></dd><span class="yp-pcalc__sub" data-yp-pcalc="vol-sub">of 2 mL in the vial</span></div>
+						<div class="yp-pcalc__stat"><dt>Doses per vial</dt><dd data-yp-pcalc="doses">20</dd><span class="yp-pcalc__sub" data-yp-pcalc="doses-sub">at 250 mcg each</span></div>
+					</dl>
+
+					<p class="yp-pcalc__note">
+						<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
+						<span>For informational purposes only. This tool does the math; it isn't medical advice. Confirm your dose and mixing with your healthcare provider.</span>
+					</p>
+				</div>
+			</section>
+		</section>
+
+		<section class="yp-pcalc__method" aria-labelledby="yp-pcalc-method-heading">
+			<div>
+				<p class="yp-eyebrow">The math</p>
+				<h2 id="yp-pcalc-method-heading">How it's calculated</h2>
+				<p>Three steps, shown with your numbers. A U-100 syringe holds 100 units per mL, so every unit is 0.01 mL.</p>
+			</div>
+			<ol class="yp-pcalc__steps">
+				<li><b>Concentration</b><div><code>peptide (mg) ÷ water (mL)</code><span data-yp-pcalc="m-conc">5 mg ÷ 2 mL = 2.5 mg/mL</span></div></li>
+				<li><b>Volume per dose</b><div><code>dose ÷ concentration</code><span data-yp-pcalc="m-vol">0.25 mg ÷ 2.5 mg/mL = 0.1 mL</span></div></li>
+				<li><b>Units to draw</b><div><code>volume (mL) × 100</code><span data-yp-pcalc="m-units">0.1 mL × 100 = 10 units</span></div></li>
+			</ol>
+		</section>
+
+		<section class="yp-pcalc__labels" aria-labelledby="yp-pcalc-labels-heading">
+			<div>
+				<p class="yp-eyebrow">Peptide &amp; Vial Labels</p>
+				<h2 id="yp-pcalc-labels-heading">Put the numbers on the vial, not on a sticky note.</h2>
+				<p>Print-ready vial labels with room for strength, reconstitution volume, lot and date. Start from a template or have us design one, then add your own mixing info.</p>
+				<div class="yp-pcalc__name">
+					<label for="yp-pcalc-name">Try your product name</label>
+					<input class="yp-pcalc__input" id="yp-pcalc-name" type="text" value="Your Product" maxlength="28">
+				</div>
+				<div class="yp-pcalc__actions">
+					<a class="wp-block-button__link" href="/shop-labels/?yp_product_type=peptide-vial-labels">Browse vial label templates</a>
+					<a class="wp-block-button__link is-style-outline" href="/custom-design/">Get a custom design</a>
+				</div>
+			</div>
+			<div class="yp-pcalc__vial-stage" aria-hidden="true">
+				<div class="yp-pcalc__vial">
+					<div class="yp-pcalc__vial-cap"></div>
+					<div class="yp-pcalc__vial-neck"></div>
+					<div class="yp-pcalc__vial-body">
+						<div class="yp-pcalc__label">
+							<div class="yp-pcalc__label-strip"></div>
+							<div class="yp-pcalc__label-main">
+								<div class="yp-pcalc__label-name" data-yp-pcalc="label-name">Your Product</div>
+								<div class="yp-pcalc__label-amt"><b data-yp-pcalc="label-mg">5 mg</b><span>Lyophilized</span></div>
+								<div class="yp-pcalc__label-recon" data-yp-pcalc="label-recon">+ 2 mL bac water → 2.5 mg/mL</div>
+								<div class="yp-pcalc__label-lines"><span>Lot</span><span>Mixed</span></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->
