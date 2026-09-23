@@ -28,6 +28,7 @@ final class YeffoPrint_Core {
 	private function includes(): void {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-post-type-registry.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-taxonomies.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-product-type-image.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-template-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-commerce-record-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-web-design-package-meta.php';
@@ -172,6 +173,7 @@ final class YeffoPrint_Core {
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
+		new YeffoPrint_Product_Type_Image();
 		new YeffoPrint_Template_Meta();
 		new YeffoPrint_Commerce_Record_Meta();
 		new YeffoPrint_Web_Design_Package_Meta();
