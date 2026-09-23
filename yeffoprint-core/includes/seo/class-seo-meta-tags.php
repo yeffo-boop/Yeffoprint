@@ -35,6 +35,17 @@ class YeffoPrint_Seo_Meta_Tags {
 	/** Conventional meta-description length before search engines truncate it anyway. */
 	private const DESCRIPTION_MAX_CHARS = 155;
 
+	/**
+	 * Branded 1200×630 share image (Facebook/LinkedIn/X's own
+	 * recommended 1.91:1 size) used wherever a page has no featured
+	 * image of its own. This used to be the 512×512 site icon, which
+	 * Facebook center-crops to 1.91:1 — a link to the homepage showed
+	 * nothing but a blown-up slice of the CMY bars.
+	 */
+	private const DEFAULT_SHARE_IMAGE        = 'assets/images/og-default.png';
+	private const DEFAULT_SHARE_IMAGE_WIDTH  = 1200;
+	private const DEFAULT_SHARE_IMAGE_HEIGHT = 630;
+
 	public function __construct() {
 		remove_action( 'wp_head', 'rel_canonical' );
 		add_action( 'wp_head', [ $this, 'render' ], 1 );
@@ -62,27 +73,33 @@ class YeffoPrint_Seo_Meta_Tags {
 			echo '<meta property="og:description" content="' . esc_attr( self::truncate( $data['description'] ) ) . '" />' . "\n";
 		}
 
-		if ( $data['image'] ) {
-			echo '<meta property="og:image" content="' . esc_url( $data['image'] ) . '" />' . "\n";
+		$image = $data['image'];
+
+		echo '<meta property="og:image" content="' . esc_url( $image['url'] ) . '" />' . "\n";
+
+		if ( $image['width'] && $image['height'] ) {
+			echo '<meta property="og:image:width" content="' . (int) $image['width'] . '" />' . "\n";
+			echo '<meta property="og:image:height" content="' . (int) $image['height'] . '" />' . "\n";
 		}
 
-		echo '<meta name="twitter:card" content="' . esc_attr( $data['image'] ? 'summary_large_image' : 'summary' ) . '" />' . "\n";
+		echo '<meta property="og:image:alt" content="' . esc_attr( $image['alt'] ) . '" />' . "\n";
+
+		echo '<meta name="twitter:card" content="summary_large_image" />' . "\n";
 		echo '<meta name="twitter:title" content="' . esc_attr( $data['title'] ) . '" />' . "\n";
 
 		if ( $data['description'] ) {
 			echo '<meta name="twitter:description" content="' . esc_attr( self::truncate( $data['description'] ) ) . '" />' . "\n";
 		}
 
-		if ( $data['image'] ) {
-			echo '<meta name="twitter:image" content="' . esc_url( $data['image'] ) . '" />' . "\n";
-		}
+		echo '<meta name="twitter:image" content="' . esc_url( $image['url'] ) . '" />' . "\n";
+		echo '<meta name="twitter:image:alt" content="' . esc_attr( $image['alt'] ) . '" />' . "\n";
 
 		if ( is_singular( 'yp_template' ) ) {
 			$this->render_product_schema( (int) get_the_ID() );
 		}
 	}
 
-	/** @return array{title:string,description:string,url:string,image:?string,og_type:string}|null */
+	/** @return array{title:string,description:string,url:string,image:array{url:string,width:int,height:int,alt:string},og_type:string}|null */
 	private function resolve(): ?array {
 		if ( is_singular( 'yp_template' ) ) {
 			return $this->resolve_template( (int) get_the_ID() );
@@ -90,10 +107,10 @@ class YeffoPrint_Seo_Meta_Tags {
 
 		if ( is_front_page() ) {
 			return [
-				'title'       => wp_get_document_title(),
+				'title'       => self::front_page_share_title(),
 				'description' => self::site_meta_description(),
 				'url'         => home_url( '/' ),
-				'image'       => self::site_icon_fallback(),
+				'image'       => self::default_share_image(),
 				'og_type'     => 'website',
 			];
 		}
@@ -107,7 +124,7 @@ class YeffoPrint_Seo_Meta_Tags {
 				'title'       => wp_get_document_title(),
 				'description' => self::site_meta_description(),
 				'url'         => $url,
-				'image'       => self::site_icon_fallback(),
+				'image'       => self::default_share_image(),
 				'og_type'     => 'website',
 			] : null;
 		}
@@ -140,7 +157,7 @@ class YeffoPrint_Seo_Meta_Tags {
 			'title'       => wp_get_document_title(),
 			'description' => $seo['description'] ?: self::site_meta_description(),
 			'url'         => (string) get_permalink( $post_id ),
-			'image'       => get_the_post_thumbnail_url( $post_id, 'large' ) ?: self::site_icon_fallback(),
+			'image'       => self::featured_image( $post_id ) ?: self::default_share_image(),
 			'og_type'     => 'product',
 		];
 	}
@@ -161,7 +178,7 @@ class YeffoPrint_Seo_Meta_Tags {
 			'title'       => wp_get_document_title(),
 			'description' => $excerpt ?: self::site_meta_description(),
 			'url'         => (string) $url,
-			'image'       => get_the_post_thumbnail_url( $post_id, 'large' ) ?: self::site_icon_fallback(),
+			'image'       => self::featured_image( $post_id ) ?: self::default_share_image(),
 			'og_type'     => 'article',
 		];
 	}
@@ -229,9 +246,52 @@ class YeffoPrint_Seo_Meta_Tags {
 		);
 	}
 
-	private static function site_icon_fallback(): ?string {
-		$url = get_site_icon_url( 512 );
-		return $url ?: null;
+	/**
+	 * The page's own featured image at `large` size, with the real
+	 * rendered dimensions so Facebook can lay out the card on the first
+	 * share instead of waiting for its crawler to download the file.
+	 *
+	 * @return array{url:string,width:int,height:int,alt:string}|null
+	 */
+	private static function featured_image( int $post_id ): ?array {
+		$attachment_id = (int) get_post_thumbnail_id( $post_id );
+		$src           = $attachment_id ? wp_get_attachment_image_src( $attachment_id, 'large' ) : false;
+
+		if ( ! $src ) {
+			return null;
+		}
+
+		$alt = trim( (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
+
+		return [
+			'url'    => (string) $src[0],
+			'width'  => (int) $src[1],
+			'height' => (int) $src[2],
+			'alt'    => $alt ?: get_the_title( $post_id ),
+		];
+	}
+
+	/** @return array{url:string,width:int,height:int,alt:string} */
+	private static function default_share_image(): array {
+		return [
+			'url'    => YEFFOPRINT_CORE_URL . self::DEFAULT_SHARE_IMAGE . '?ver=' . YEFFOPRINT_CORE_VERSION,
+			'width'  => self::DEFAULT_SHARE_IMAGE_WIDTH,
+			'height' => self::DEFAULT_SHARE_IMAGE_HEIGHT,
+			'alt'    => get_bloginfo( 'name' ) . ' — custom labels for peptide vials',
+		];
+	}
+
+	/**
+	 * `wp_get_document_title()` on the front page is just the site name
+	 * when no tagline is set (the live site has none), which made every
+	 * shared homepage link read as a bare "YeffoDesign". Uses the real
+	 * tagline if one is ever set in Settings → General.
+	 */
+	private static function front_page_share_title(): string {
+		$name    = get_bloginfo( 'name' );
+		$tagline = trim( (string) get_bloginfo( 'description' ) );
+
+		return $name . ' — ' . ( $tagline ?: 'Custom Labels for Peptide Vials' );
 	}
 
 	private static function truncate( string $text ): string {
