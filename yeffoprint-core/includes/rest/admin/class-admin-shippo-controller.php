@@ -249,6 +249,11 @@ class YeffoPrint_Admin_Shippo_Controller {
 			'state'   => $has_shipping ? $order->get_shipping_state() : $order->get_billing_state(),
 			'zip'     => $has_shipping ? $order->get_shipping_postcode() : $order->get_billing_postcode(),
 			'country' => $has_shipping ? $order->get_shipping_country() : $order->get_billing_country(),
+			// Direct report: UPS wasn't offered for an international
+			// customer. Carriers like UPS need the recipient's phone (and
+			// often email) for international shipments, and neither was sent.
+			'phone'   => $order->get_shipping_phone() ?: $order->get_billing_phone(),
+			'email'   => $order->get_billing_email(),
 		];
 	}
 

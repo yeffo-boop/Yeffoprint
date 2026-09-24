@@ -31,7 +31,7 @@ class YeffoPrint_Shippo_Client {
 	}
 
 	/**
-	 * @param array $address_to {street1, street2, city, state, zip, country, name}
+	 * @param array $address_to {street1, street2, city, state, zip, country, name, phone?, email?}
 	 * @param array $parcel {weight_oz, length_in, width_in, height_in}
 	 * @return array{rates:array}|\WP_Error
 	 */
@@ -346,10 +346,10 @@ class YeffoPrint_Shippo_Client {
 	}
 
 	private function format_address( array $address ): array {
-		// email/phone are optional for address_to (the recipient) but
-		// required by Shippo/USPS for address_from (the sender) — see
-		// YeffoPrint_Shippo_Settings::get_ship_from_address()'s own
-		// docblock. Only included when present so an address_to with
+		// email/phone are required by Shippo/USPS for address_from (the
+		// sender) — see YeffoPrint_Shippo_Settings::get_ship_from_address()'s
+		// own docblock — and by carriers like UPS for an international
+		// address_to. Only included when present so an address_to with
 		// neither doesn't send empty strings Shippo could just as easily
 		// flag as "must not be empty" the way street1/zip already were.
 		return array_filter( [
