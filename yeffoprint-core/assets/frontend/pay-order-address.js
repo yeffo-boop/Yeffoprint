@@ -3,7 +3,8 @@
  * (class-order-pay-address.php): shows/hides the billing fields, only
  * offers shipping methods that fit the shipping country (domestic ones
  * for the store's own country, international ones everywhere else), and
- * refreshes the totals table when one is picked. The card-surcharge
+ * refreshes the totals table when one is picked or the Express box is
+ * ticked. The card-surcharge
  * script (pay-order-surcharge.js) is then re-run by re-firing the checked
  * payment radio's change event, so its fee is sized from the new total.
  * No build step, matching the rest of this codebase's JS.
@@ -28,11 +29,12 @@
 	}
 
 	var shippingBlock = root.querySelector( '[data-yp-pay-shipping]' );
-	if ( ! shippingBlock ) {
+	var expressBox    = root.querySelector( 'input[name="yp_pay_express"]' );
+	if ( ! shippingBlock && ! expressBox ) {
 		return;
 	}
 
-	var emptyNote = shippingBlock.querySelector( '[data-yp-shipping-empty]' );
+	var emptyNote = shippingBlock ? shippingBlock.querySelector( '[data-yp-shipping-empty]' ) : null;
 	var tfoot     = document.querySelector( 'table.shop_table tfoot' );
 	var orderKey  = new URLSearchParams( window.location.search ).get( 'key' ) || '';
 
@@ -52,22 +54,30 @@
 	var sending = false;
 	var pending = null;
 
-	function sync( option ) {
+	// Always sends the page's current shipping pick and Express choice,
+	// so a queued call never replays a stale one.
+	function sync() {
 		if ( sending ) {
-			pending = option;
+			pending = true;
 			return;
 		}
 		sending = true;
 		pending = null;
 
-		var body = new URLSearchParams( {
+		var fields = {
 			action: 'yeffoprint_pay_order_shipping',
 			nonce: settings.nonce,
 			order_id: settings.orderId,
 			order_key: orderKey,
-			country: country(),
-			option: option
-		} );
+			country: country()
+		};
+		if ( shippingBlock ) {
+			fields.option = checkedOption();
+		}
+		if ( expressBox ) {
+			fields.express = expressBox.checked ? '1' : '0';
+		}
+		var body = new URLSearchParams( fields );
 
 		window.fetch( settings.ajaxUrl, {
 			method: 'POST',
@@ -93,19 +103,24 @@
 			.finally( function () {
 				sending = false;
 				if ( null !== pending ) {
-					var next = pending;
 					pending = null;
-					sync( next );
+					sync();
 				}
 			} );
 	}
 
 	function checkedOption() {
+		if ( ! shippingBlock ) {
+			return '';
+		}
 		var checked = shippingBlock.querySelector( 'input[name="yp_pay_shipping"]:checked' );
 		return checked ? checked.value : '';
 	}
 
 	function filterOptions( sendChange ) {
+		if ( ! shippingBlock ) {
+			return;
+		}
 		var visible     = 0;
 		var lostChecked = false;
 
@@ -133,15 +148,19 @@
 		}
 
 		if ( sendChange && lostChecked ) {
-			sync( checkedOption() );
+			sync();
 		}
 	}
 
-	shippingBlock.querySelectorAll( 'input[name="yp_pay_shipping"]' ).forEach( function ( radio ) {
-		radio.addEventListener( 'change', function () {
-			sync( radio.value );
+	if ( shippingBlock ) {
+		shippingBlock.querySelectorAll( 'input[name="yp_pay_shipping"]' ).forEach( function ( radio ) {
+			radio.addEventListener( 'change', sync );
 		} );
-	} );
+	}
+
+	if ( expressBox ) {
+		expressBox.addEventListener( 'change', sync );
+	}
 
 	// WooCommerce's country dropdown is a selectWoo widget, which fires
 	// jQuery change events rather than native ones.

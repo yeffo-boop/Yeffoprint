@@ -180,6 +180,8 @@ class YeffoPrint_Order_Pay_Address {
 			</div>
 
 			<?php $this->render_shipping_options( $order ); ?>
+
+			<?php $this->render_express( $order ); ?>
 		</div>
 		<?php
 	}
@@ -245,6 +247,33 @@ class YeffoPrint_Order_Pay_Address {
 				<?php endforeach; ?>
 			</ul>
 			<p class="yp-pay-shipping__empty" data-yp-shipping-empty hidden><?php esc_html_e( "We don't have a shipping option for this country yet. Please contact us and we'll sort it out.", 'yeffoprint' ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Direct request: "Can we add the ability for a customer to 'express'
+	 * their order during this stage?" Same checkbox, fee and label as the
+	 * regular checkout (class-express-order.php). Hidden while Express is
+	 * off or paused for Away Mode, unless the order already carries the
+	 * fee, so it can still be unticked.
+	 */
+	private function render_express( \WC_Order $order ): void {
+		$on_order = YeffoPrint_Express_Order::is_express( $order );
+		if ( ! $on_order && ! YeffoPrint_Express_Order::is_enabled() ) {
+			return;
+		}
+
+		$checked = $on_order;
+		if ( isset( $_POST['woocommerce_pay'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- display only, re-shows a failed submission.
+			$checked = ! empty( $_POST['yp_pay_express'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		}
+
+		?>
+		<div class="yp-pay-express" data-yp-pay-express>
+			<?php
+			echo YeffoPrint_Express_Order::option_html( 'name="yp_pay_express" value="1"' . ( $checked ? ' checked' : '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- option_html() escapes every substitution.
+			?>
 		</div>
 		<?php
 	}
@@ -352,6 +381,14 @@ class YeffoPrint_Order_Pay_Address {
 			$order->add_order_note( __( 'Customer updated their address on the payment page.', 'yeffoprint' ) );
 		}
 
+		$express = ! empty( $_POST['yp_pay_express'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- covered by pay_action()'s own woocommerce-pay nonce.
+		if ( $express !== YeffoPrint_Express_Order::is_express( $order ) ) {
+			YeffoPrint_Express_Order::set_on_order( $order, $express );
+			if ( YeffoPrint_Express_Order::is_express( $order ) ) {
+				$order->add_order_note( __( 'Customer added Express production on the payment page.', 'yeffoprint' ) );
+			}
+		}
+
 		if ( $picked ) {
 			$order->add_order_note( sprintf(
 				/* translators: %s: shipping method name */
@@ -372,7 +409,8 @@ class YeffoPrint_Order_Pay_Address {
 	}
 
 	/**
-	 * Live totals as the customer picks a shipping method, before they
+	 * Live totals as the customer picks a shipping method or ticks
+	 * Express, before they
 	 * submit — same order-key ownership check as class-card-surcharge.php's
 	 * own AJAX handler, which pay-order-address.js re-runs right after this
 	 * so the card fee is sized from the new total.
@@ -388,19 +426,27 @@ class YeffoPrint_Order_Pay_Address {
 			wp_send_json_error( [ 'message' => __( 'Order not found.', 'yeffoprint-core' ) ], 404 );
 		}
 
-		if ( ! self::is_editable( $order ) || ! self::customer_picks_shipping( $order ) ) {
+		if ( ! self::is_editable( $order ) ) {
 			wp_send_json_error( [ 'message' => __( 'This order no longer needs payment.', 'yeffoprint-core' ) ], 400 );
 		}
 
-		$country = isset( $_POST['country'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_POST['country'] ) ) ) : '';
-		$index   = isset( $_POST['option'] ) && '' !== $_POST['option'] ? absint( $_POST['option'] ) : null;
-		$options = YeffoPrint_Shippo_Settings::get_manual_order_shipping_options();
-		$option  = null !== $index ? ( $options[ $index ] ?? null ) : null;
+		// Shipping pick — only sent (and only honored) on a "customer picks" order.
+		if ( isset( $_POST['option'] ) && self::customer_picks_shipping( $order ) ) {
+			$country = isset( $_POST['country'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_POST['country'] ) ) ) : '';
+			$index   = '' !== $_POST['option'] ? absint( $_POST['option'] ) : null;
+			$options = YeffoPrint_Shippo_Settings::get_manual_order_shipping_options();
+			$option  = null !== $index ? ( $options[ $index ] ?? null ) : null;
 
-		if ( $option && YeffoPrint_Shippo_Settings::option_ships_to( $option, $country ) ) {
-			self::set_chosen_shipping( $order, $option );
-		} else {
-			self::remove_chosen_shipping( $order );
+			if ( $option && YeffoPrint_Shippo_Settings::option_ships_to( $option, $country ) ) {
+				self::set_chosen_shipping( $order, $option );
+			} else {
+				self::remove_chosen_shipping( $order );
+			}
+		}
+
+		// Express checkbox — only sent when the page shows it.
+		if ( isset( $_POST['express'] ) ) {
+			YeffoPrint_Express_Order::set_on_order( $order, '1' === $_POST['express'] );
 		}
 
 		$order->calculate_totals();
