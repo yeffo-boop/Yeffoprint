@@ -38,6 +38,13 @@ class YeffoPrint_Shippo_Settings {
 	public const DEFAULT_HEIGHT_IN_OPTION = 'yeffoprint_shippo_default_height_in';
 	public const SHIP_FROM_PHONE_OPTION   = 'yeffoprint_shippo_ship_from_phone';
 
+	// Customs defaults for international labels — direct request: "we
+	// need customs info also for international orders". Staff can still
+	// change the description and value per order in the Shippo panel.
+	public const CUSTOMS_DESCRIPTION_OPTION = 'yeffoprint_shippo_customs_description';
+	public const CUSTOMS_TARIFF_OPTION      = 'yeffoprint_shippo_customs_tariff';
+	public const CUSTOMS_SIGNER_OPTION      = 'yeffoprint_shippo_customs_signer';
+
 	/**
 	 * Manual order creation's preset shipping methods — direct request:
 	 * "I don't need to rate shop to add shipping, just use my default
@@ -79,6 +86,25 @@ class YeffoPrint_Shippo_Settings {
 	 * (WooCommerce Settings → General), the US here.
 	 */
 	public const REGIONS = [ 'domestic', 'international', 'any' ];
+
+	// Printed self-adhesive paper labels. HS 4821.10 is "paper or
+	// paperboard labels, printed" — a sensible default for this store's
+	// products, editable in Settings for anything else.
+	private const DEFAULT_CUSTOMS_DESCRIPTION = 'Printed adhesive labels';
+	private const DEFAULT_CUSTOMS_TARIFF      = '4821.10';
+
+	/** @return array{description:string,tariff_number:string,signer:string} */
+	public static function get_customs_defaults(): array {
+		$description = trim( (string) get_option( self::CUSTOMS_DESCRIPTION_OPTION, '' ) );
+		$signer      = trim( (string) get_option( self::CUSTOMS_SIGNER_OPTION, '' ) );
+
+		return [
+			'description'   => '' !== $description ? $description : self::DEFAULT_CUSTOMS_DESCRIPTION,
+			'tariff_number' => trim( (string) get_option( self::CUSTOMS_TARIFF_OPTION, self::DEFAULT_CUSTOMS_TARIFF ) ),
+			// Whoever certifies the customs form. Falls back to the store name.
+			'signer'        => '' !== $signer ? $signer : get_bloginfo( 'name' ),
+		];
+	}
 
 	public static function get_api_key(): string {
 		$key = get_option( self::API_KEY_OPTION, '' );

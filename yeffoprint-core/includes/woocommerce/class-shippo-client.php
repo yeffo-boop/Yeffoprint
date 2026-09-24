@@ -31,13 +31,17 @@ class YeffoPrint_Shippo_Client {
 	}
 
 	/**
-	 * @param array $address_to {street1, street2, city, state, zip, country, name}
+	 * @param array $address_to {street1, street2, city, state, zip, country, name, phone?, email?}
 	 * @param array $parcel {weight_oz, length_in, width_in, height_in}
+	 * @param array|null $customs {description, value, currency, tariff_number, signer} — required
+	 *                            by every carrier for an international shipment; a label bought
+	 *                            from one of these rates carries the customs form automatically.
 	 * @return array{rates:array}|\WP_Error
 	 */
-	public function get_rates( array $address_to, array $parcel ) {
-		$response = $this->call( 'POST', '/shipments/', [
-			'address_from' => $this->format_address( YeffoPrint_Shippo_Settings::get_ship_from_address() ),
+	public function get_rates( array $address_to, array $parcel, ?array $customs = null ) {
+		$from = YeffoPrint_Shippo_Settings::get_ship_from_address();
+		$body = [
+			'address_from' => $this->format_address( $from ),
 			'address_to'   => $this->format_address( $address_to ),
 			'parcels'      => [ [
 				'weight'        => (string) $parcel['weight_oz'],
@@ -48,7 +52,13 @@ class YeffoPrint_Shippo_Client {
 				'distance_unit' => 'in',
 			] ],
 			'async'        => false,
-		] );
+		];
+
+		if ( $customs ) {
+			$body['customs_declaration'] = $this->customs_declaration( $customs, $parcel, $from['country'] );
+		}
+
+		$response = $this->call( 'POST', '/shipments/', $body );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -345,11 +355,42 @@ class YeffoPrint_Shippo_Client {
 		];
 	}
 
+	/**
+	 * One-line customs form: everything in the box as a single item, sold
+	 * merchandise, returned to sender if undeliverable, duties paid by the
+	 * recipient (DDU). NOEEI 30.37(a) is the US export exemption for
+	 * shipments valued at $2,500 or less, which the controller enforces.
+	 */
+	private function customs_declaration( array $customs, array $parcel, string $origin_country ): array {
+		$item = [
+			'description'    => $customs['description'],
+			'quantity'       => 1,
+			'net_weight'     => (string) $parcel['weight_oz'],
+			'mass_unit'      => 'oz',
+			'value_amount'   => number_format( (float) $customs['value'], 2, '.', '' ),
+			'value_currency' => $customs['currency'],
+			'origin_country' => $origin_country,
+		];
+		if ( '' !== $customs['tariff_number'] ) {
+			$item['tariff_number'] = $customs['tariff_number'];
+		}
+
+		return [
+			'contents_type'       => 'MERCHANDISE',
+			'non_delivery_option' => 'RETURN',
+			'incoterm'            => 'DDU',
+			'eel_pfc'             => 'NOEEI_30_37_a',
+			'certify'             => true,
+			'certify_signer'      => $customs['signer'],
+			'items'               => [ $item ],
+		];
+	}
+
 	private function format_address( array $address ): array {
-		// email/phone are optional for address_to (the recipient) but
-		// required by Shippo/USPS for address_from (the sender) — see
-		// YeffoPrint_Shippo_Settings::get_ship_from_address()'s own
-		// docblock. Only included when present so an address_to with
+		// email/phone are required by Shippo/USPS for address_from (the
+		// sender) — see YeffoPrint_Shippo_Settings::get_ship_from_address()'s
+		// own docblock — and by carriers like UPS for an international
+		// address_to. Only included when present so an address_to with
 		// neither doesn't send empty strings Shippo could just as easily
 		// flag as "must not be empty" the way street1/zip already were.
 		return array_filter( [

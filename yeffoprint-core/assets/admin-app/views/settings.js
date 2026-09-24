@@ -201,6 +201,12 @@
 					// registered automatically on save when possible; this URL is
 					// shown either way so it can be pasted into the Shippo dashboard
 					// by hand (Settings → API → Webhooks) if that didn't take.
+					'<p class="yp-panel__hint">Customs for international labels — filled in on every international order\'s Shippo panel, where the description and value can still be changed. The value defaults to what the customer paid for the items.</p>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-customs-description">Contents description</label><input type="text" id="yp-set-customs-description" value="' + YP.escapeAttr( settings.shippo_customs.description ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-customs-tariff">HS tariff code</label><input type="text" id="yp-set-customs-tariff" value="' + YP.escapeAttr( settings.shippo_customs.tariff_number ) + '" placeholder="4821.10" /></div>' +
+						'<div class="yp-field"><label for="yp-set-customs-signer">Signed by</label><input type="text" id="yp-set-customs-signer" value="' + YP.escapeAttr( settings.shippo_customs.signer_saved ) + '" placeholder="' + YP.escapeAttr( settings.shippo_customs.signer ) + '" /></div>' +
+					'</div>' +
 					'<p class="yp-panel__hint">Tracking webhook endpoint (auto-registers with Shippo when you save an API token above; event type <code>track_updated</code>): <code>' + YP.escapeHtml( settings.shippo_webhook_url ) + '</code></p>' +
 					( settings.shippo_webhook_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.shippo_webhook_status ) + '</p>' : '' ) +
 				'</div>' +
@@ -352,6 +358,9 @@
 				shippo_default_length_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-length' ).value ) || 8,
 				shippo_default_width_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-width' ).value ) || 6,
 				shippo_default_height_in: parseFloat( viewEl.querySelector( '#yp-set-shippo-height' ).value ) || 1,
+				shippo_customs_description: viewEl.querySelector( '#yp-set-customs-description' ).value,
+				shippo_customs_tariff: viewEl.querySelector( '#yp-set-customs-tariff' ).value,
+				shippo_customs_signer: viewEl.querySelector( '#yp-set-customs-signer' ).value,
 				manual_order_shipping_options: readShippingOptionRows( viewEl.querySelector( '[data-yp-shipping-option-rows]' ) ),
 				contact_recipient_email: viewEl.querySelector( '#yp-set-contact-email' ).value,
 				splash_enabled: viewEl.querySelector( '#yp-set-splash-enabled' ).checked,
