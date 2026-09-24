@@ -33,15 +33,6 @@
 	padding-top: var(--wp--preset--spacing--md);
 }
 
-.yp-configurator__intro-description {
-	color: var(--wp--preset--color--charcoal);
-	max-width: 65ch;
-}
-
-.yp-configurator__intro-specs {
-	color: var(--wp--preset--color--charcoal);
-	font-size: var(--wp--preset--font-size--small);
-}
 
 .yp-configurator__layout {
 	display: grid;
@@ -203,8 +194,36 @@
 	opacity: 0.6;
 }
 
+.yp-configurator__spec-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin: 0.9rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.yp-spec-chip {
+	padding: 0.35rem 0.75rem;
+	border: 1px solid rgba(0, 0, 0, 0.14);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.yp-spec-chip.is-price {
+	border-color: #111;
+	background: #111;
+	color: #fff;
+	font-weight: 600;
+}
+
 .yp-configurator__description {
 	margin-top: 0.9rem;
+	max-width: 65ch;
 	color: var(--wp--preset--color--charcoal);
 	font-size: var(--wp--preset--font-size--small);
 }
