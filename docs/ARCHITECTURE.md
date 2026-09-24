@@ -2367,3 +2367,15 @@ The Label Designer shows the same notice under the size presets (hidden on Oil L
 Both link to the Reconstitution Calculator page through `yeffoprint_reconstitution_calculator_url()` (`functions.php`), which returns '' until a published page with slug `peptide-calculator` exists. Until then the link is left out rather than pointing at a 404.
 
 Verify: open the Bio-Pen template → the magenta "Pen labels" notice sits above Customize and Design Notes shows the placeholder. Open a vial template such as Scientific → the grey tip. A Cosmetics-only template → no tip. Custom Design → Use our online Designer → the tip shows under Label size, disappears on Oil Labels, and "+ Add a dose line" adds the text.
+
+## Label designer pickers and global label fields
+
+Direct request: show label sizes as cards drawn to scale, pick the material from a picture of the material itself (no vial photos) with a moving shimmer on the foil finishes, add an "Other" quantity, and keep one set of customization fields for every template, editable in one place.
+
+`yeffoprint/assets/js/label-pickers.js` (+ `assets/css/label-pickers.css`) builds the Size cards, Material swatches and Quantity picker for both the Template page (`configurator.js`) and the custom label form (`custom-order-form.js`). Size drawings come from each Size's print width/height, all cards in one picker share a single scale (`groupScale()`), so a new Size needs no code. Two new optional admin fields feed it: a Size's "Fits" note (`_yp_fit_note`) and a Material's "Swatch finish" (`_yp_swatch_finish`, `auto` guesses from the name — see `YeffoPrint_Commerce_Record_Meta::swatch_finish()`). Holographic and Prism shimmer; Prism's cracked-ice texture is drawn on a canvas, so there's nothing to upload.
+
+Fields: every Template already read its fields from one designated `yp_field_preset` (`YeffoPrint_Field_Schema::resolve_effective_id()`). The admin app's Field Presets list and the Settings dropdown are replaced by one **Label Fields** screen (`views/label-fields.js`, `GET/POST /admin/label-fields`) that edits that preset directly; `ensure_global_preset()` creates and designates one if a site has none, seeded from a Template's own fields so field ids (which carts, saved designs and orders key on) don't change. The configurator lays the fields out as "On the label" (required) and "Optional details", with preset color dots and picture cards for Corner Finish.
+
+Also on the Template page: the sticky Save/Add to Cart bar is mobile-only (it showed as a duplicate row on desktop), and "Recently viewed" was removed in favor of "Designs like this".
+
+Verify: open any Template → size cards with dimensions, material swatches (Holographic/Prism shimmer), pick Rounded → the drawings round; Quantity → Other → type 75 → total updates. Custom Design → each label row has the size strip and round swatches. Admin app → Catalog → Label Fields → add a field, save → it appears on every Template. On desktop, no Save/Add to Cart bar at the bottom of a Template page.

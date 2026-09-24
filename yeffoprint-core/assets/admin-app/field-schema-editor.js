@@ -2,7 +2,7 @@
  * Shared "Customization Fields" repeater widget (docs/ARCHITECTURE.md,
  * Phase 5) — the drag-to-position field editor, factored out of the
  * classic assets/admin/field-schema.js so both views/templates.js and
- * views/field-presets.js can reuse the exact same UI/behavior instead
+ * views/label-fields.js can reuse the exact same UI/behavior instead
  * of each screen reimplementing it.
  *
  * Unlike the classic version (state synced to a hidden form input that

@@ -1,0 +1,658 @@
+/*
+ * Label designer pickers — to-scale Size cards, drawn Material swatches
+ * and the Quantity "Other" option (assets/js/label-pickers.js). Shared by
+ * the Template page (configurator.js) and the custom label form
+ * (custom-order-form.js).
+ */
+
+/* ---------- Size cards (product page) ---------- */
+
+.yp-size-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+	gap: 0.65rem;
+}
+
+.yp-size-card,
+.yp-material-card,
+.yp-size-tile {
+	position: relative;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+	cursor: pointer;
+	font: inherit;
+	transition: border-color 150ms ease, box-shadow 150ms ease, transform 120ms ease;
+}
+
+.yp-size-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.1rem;
+	padding: 0.9rem 0.5rem 0.75rem;
+	border-radius: 14px;
+	text-align: center;
+}
+
+.yp-size-card:hover,
+.yp-material-card:hover:not(:disabled),
+.yp-size-tile:hover {
+	border-color: #9a978f;
+}
+
+.yp-size-card:active,
+.yp-material-card:active:not(:disabled),
+.yp-size-tile:active {
+	transform: scale(0.98);
+}
+
+.yp-size-card.is-selected,
+.yp-material-card.is-selected,
+.yp-size-tile.is-selected {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-size-card:focus-visible,
+.yp-material-card:focus-visible,
+.yp-size-tile:focus-visible,
+.yp-material-dot:focus-visible {
+	outline: 2px solid var(--wp--preset--color--cyan);
+	outline-offset: 2px;
+}
+
+.yp-pick-check {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	opacity: 0;
+	transform: scale(0.6);
+	transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.is-selected > .yp-pick-check {
+	opacity: 1;
+	transform: none;
+}
+
+.yp-pick-check svg {
+	width: 10px;
+	height: 10px;
+}
+
+.yp-size-drawing {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin-bottom: 0.35rem;
+	overflow: visible;
+}
+
+.yp-size-drawing__label {
+	fill: var(--wp--preset--color--white);
+	stroke: var(--wp--preset--color--charcoal);
+	stroke-width: 1.2;
+}
+
+.yp-size-drawing__label.is-custom {
+	stroke-dasharray: 4 3;
+}
+
+.yp-size-drawing__ink {
+	fill: var(--wp--preset--color--charcoal);
+}
+
+.yp-size-drawing__line {
+	fill: var(--wp--preset--color--light-gray);
+}
+
+.yp-size-drawing__guide {
+	fill: none;
+	stroke: #9a978f;
+}
+
+.yp-size-drawing__dim {
+	fill: #66645e;
+	font: 500 9.5px var(--wp--preset--font-family--mono, monospace);
+}
+
+.yp-size-card__name {
+	font-family: var(--wp--preset--font-family--heading);
+	font-weight: 600;
+	font-size: 0.92rem;
+	line-height: 1.25;
+}
+
+.yp-size-card__mm {
+	font: 500 0.72rem var(--wp--preset--font-family--mono, monospace);
+	color: var(--wp--preset--color--charcoal);
+	font-variant-numeric: tabular-nums;
+}
+
+.yp-size-card__fits {
+	font-size: 0.72rem;
+	line-height: 1.3;
+	color: #66645e;
+}
+
+.yp-size-card__adj,
+.yp-material-card__adj {
+	font: 500 0.68rem var(--wp--preset--font-family--mono, monospace);
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-size-card__adj {
+	margin-top: 0.2rem;
+}
+
+.yp-size-card__adj.is-zero,
+.yp-material-card__adj.is-zero {
+	color: #8a877f;
+}
+
+.yp-size-caption {
+	margin: 0.6rem 0 0;
+	font-size: 0.8rem;
+	color: #66645e;
+}
+
+.yp-size-caption strong {
+	color: var(--wp--preset--color--near-black);
+	font-weight: 600;
+}
+
+/* ---------- Material cards (product page) ---------- */
+
+.yp-material-cards {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.65rem;
+}
+
+.yp-material-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.55rem;
+	padding: 0.5rem 0.5rem 0.7rem;
+	border-radius: 14px;
+	text-align: left;
+}
+
+.yp-material-card__swatch {
+	height: 58px;
+	border-radius: 9px;
+}
+
+.yp-material-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	padding: 0 0.25rem;
+}
+
+.yp-material-card__name {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-family: var(--wp--preset--font-family--heading);
+	font-weight: 600;
+	font-size: 0.92rem;
+}
+
+.yp-material-card__tag {
+	padding: 0.1rem 0.4rem;
+	border-radius: 999px;
+	background: linear-gradient(90deg, #e3d4f0, #d3e9f2, #efeccf);
+	font: 600 0.56rem var(--wp--preset--font-family--mono, monospace);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-material-card__desc {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	font-size: 0.75rem;
+	line-height: 1.35;
+	color: #66645e;
+}
+
+.yp-material-card__meta {
+	font-size: 0.75rem;
+	color: #66645e;
+}
+
+.yp-material-card__meta b {
+	font: 500 0.68rem var(--wp--preset--font-family--mono, monospace);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-material-card__oos {
+	font: 600 0.6rem var(--wp--preset--font-family--mono, monospace);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-material-card:disabled {
+	cursor: not-allowed;
+}
+
+.yp-material-card:disabled .yp-swatch {
+	filter: grayscale(1) opacity(0.5);
+	animation: none;
+}
+
+.yp-material-card:disabled .yp-material-card__body {
+	opacity: 0.6;
+}
+
+/* ---------- Swatch textures ---------- */
+
+.yp-swatch {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	isolation: isolate;
+	box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.08);
+}
+
+.yp-swatch--glossy {
+	background: linear-gradient(160deg, #fff 0%, #fbfbfc 45%, #eceef1 52%, #fff 60%, #f6f7f8 100%);
+}
+
+/* Direct request: "white matte needs to look a little more white, just
+   not shiny" — near-white with a faint paper grain and no highlight. */
+.yp-swatch--matte {
+	background: #fbfbf9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .4  0 0 0 0 .4  0 0 0 0 .38  0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.yp-swatch--clear {
+	background:
+		linear-gradient(120deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.75) 42%, rgba(255, 255, 255, 0) 54%),
+		repeating-conic-gradient(#e9e7e2 0 25%, #faf9f6 0 50%) 0 0 / 14px 14px;
+}
+
+.yp-swatch--metallic {
+	background:
+		repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px),
+		linear-gradient(100deg, #8e959c, #e9ecef 28%, #a8aeb4 48%, #f5f6f7 68%, #959ba1);
+}
+
+/* Direct request: "a bit more silver, like the original materials" —
+   a brushed-silver base with a translucent rainbow drifting over it. */
+.yp-swatch--holographic {
+	background:
+		linear-gradient(100deg, rgba(150, 220, 255, 0.55), rgba(255, 170, 225, 0.5) 14%, rgba(255, 240, 160, 0.5) 28%, rgba(165, 255, 210, 0.5) 42%, rgba(190, 175, 255, 0.55) 56%, rgba(255, 170, 225, 0.5) 70%, rgba(255, 240, 160, 0.5) 84%, rgba(150, 220, 255, 0.55)) 0 0 / 300% 100%,
+		linear-gradient(100deg, #aab0b6, #eef0f2 30%, #b9bec3 50%, #f6f7f8 70%, #a9afb5);
+	animation: yp-swatch-drift 5s linear infinite;
+}
+
+.yp-swatch--prism {
+	background-color: #d9dde2;
+	background-size: cover;
+	background-position: center;
+	animation: yp-swatch-hue 6s linear infinite;
+}
+
+/* The shimmer: a soft band of light sweeping across the foil finishes. */
+.yp-swatch--holographic::after,
+.yp-swatch--prism::after,
+.yp-swatch--glossy::after {
+	content: "";
+	position: absolute;
+	top: -30%;
+	bottom: -30%;
+	left: -50%;
+	width: 38%;
+	background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.95) 50%, transparent);
+	transform: skewX(-20deg);
+	filter: blur(2px);
+	pointer-events: none;
+}
+
+.yp-swatch--holographic::after,
+.yp-swatch--prism::after {
+	mix-blend-mode: screen;
+	animation: yp-swatch-sweep 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Glossy only glints once on hover — shiny, but not foil. */
+.yp-swatch--glossy::after {
+	opacity: 0;
+}
+
+.yp-material-card:hover .yp-swatch--glossy::after,
+.yp-material-dot:hover .yp-swatch--glossy::after {
+	opacity: 1;
+	animation: yp-swatch-sweep 1.4s cubic-bezier(0.4, 0, 0.2, 1) 1;
+}
+
+.yp-material-card:hover .yp-swatch::after,
+.yp-material-card.is-selected .yp-swatch::after {
+	animation-duration: 1.7s;
+}
+
+@keyframes yp-swatch-drift {
+	to {
+		background-position: 300% 0, 0 0;
+	}
+}
+
+@keyframes yp-swatch-hue {
+	to {
+		filter: hue-rotate(360deg);
+	}
+}
+
+@keyframes yp-swatch-sweep {
+	0% {
+		left: -50%;
+	}
+	65%,
+	100% {
+		left: 125%;
+	}
+}
+
+/* ---------- Compact pickers (custom label form rows) ---------- */
+
+.yp-size-strip {
+	display: flex;
+	gap: 0.5rem;
+	overflow-x: auto;
+	padding: 2px 2px 6px;
+	scroll-snap-type: x proximity;
+}
+
+.yp-size-tile {
+	flex: 0 0 auto;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.2rem;
+	min-width: 92px;
+	min-height: 118px;
+	padding: 0.6rem 0.5rem 0.5rem;
+	border-radius: 12px;
+	scroll-snap-align: start;
+}
+
+.yp-size-tile .yp-size-drawing {
+	flex: 1;
+	margin: 0;
+}
+
+.yp-size-tile__name {
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: center;
+}
+
+.yp-size-tile__mm {
+	font: 500 0.66rem var(--wp--preset--font-family--mono, monospace);
+	color: #66645e;
+}
+
+.yp-material-dots {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+}
+
+.yp-material-dot {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.3rem;
+	width: 74px;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.yp-material-dot__swatch {
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	transition: box-shadow 150ms ease;
+}
+
+.yp-material-dot.is-selected .yp-material-dot__swatch {
+	box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.08), 0 0 0 2px var(--wp--preset--color--white), 0 0 0 4px var(--wp--preset--color--near-black);
+}
+
+.yp-material-dot__name {
+	font-size: 0.72rem;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: center;
+}
+
+.yp-material-dot__meta {
+	margin-top: -0.2rem;
+	font: 500 0.62rem var(--wp--preset--font-family--mono, monospace);
+	color: #66645e;
+}
+
+.yp-material-dot:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.yp-material-dot:disabled .yp-swatch {
+	filter: grayscale(1);
+	animation: none;
+}
+
+/* ---------- Quantity: presets + Other ---------- */
+
+.yp-qty-picker {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.yp-qty-other[hidden] {
+	display: none;
+}
+
+.yp-qty-other {
+	flex-basis: 100%;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin-top: 0.6rem;
+}
+
+.yp-qty-other label {
+	margin: 0;
+	font-size: 0.85rem;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+/* !important: global.css's generic text-input rule (several chained
+   :not() selectors) outranks a class here and stretches it full width —
+   same reason configurator.css's .yp-field__color-input uses it. */
+.yp-qty-other .yp-quantity-input {
+	width: 8rem !important;
+}
+
+/* ---------- Customize section layout ---------- */
+
+.yp-field-group__title {
+	margin: 1.4rem 0 0.2rem;
+	font: 600 0.72rem var(--wp--preset--font-family--mono, monospace);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #66645e;
+}
+
+.yp-field-group__title:first-child {
+	margin-top: 0;
+}
+
+.yp-field-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0 0.75rem;
+}
+
+.yp-field-grid > .yp-field--wide {
+	grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+	.yp-field-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.yp-color-options {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.yp-color-dot {
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.15);
+	cursor: pointer;
+}
+
+.yp-color-dot.is-selected {
+	box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.15), 0 0 0 2px var(--wp--preset--color--white), 0 0 0 4px var(--wp--preset--color--near-black);
+}
+
+.yp-color-dot:focus-visible,
+.yp-color-any:focus-within {
+	outline: 2px solid var(--wp--preset--color--cyan);
+	outline-offset: 2px;
+}
+
+.yp-color-any {
+	position: relative;
+	width: 34px;
+	height: 34px;
+	overflow: hidden;
+	border-radius: 50%;
+	background: conic-gradient(#ff4d4d, #ffd84d, #4dff88, #4dd2ff, #8a4dff, #ff4dd2, #ff4d4d);
+	box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.15);
+	cursor: pointer;
+}
+
+.yp-color-any.is-selected {
+	box-shadow: inset 0 0 0 1px rgba(20, 20, 20, 0.15), 0 0 0 2px var(--wp--preset--color--white), 0 0 0 4px var(--wp--preset--color--near-black);
+}
+
+.yp-color-any input,
+.yp-color-any .yp-field__color-input {
+	position: absolute;
+	inset: 0;
+	width: 100% !important;
+	height: 100% !important;
+	padding: 0 !important;
+	border: 0 !important;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.yp-color-hex {
+	margin-left: 0.25rem;
+	font: 500 0.75rem var(--wp--preset--font-family--mono, monospace);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-corner-cards {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.6rem;
+}
+
+.yp-corner-card {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.7rem 0.85rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: 12px;
+	background: var(--wp--preset--color--white);
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.yp-corner-card.is-selected {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-corner-card:focus-visible {
+	outline: 2px solid var(--wp--preset--color--cyan);
+	outline-offset: 2px;
+}
+
+.yp-corner-card svg {
+	flex: 0 0 auto;
+}
+
+.yp-corner-card rect {
+	fill: var(--wp--preset--color--white);
+	stroke: var(--wp--preset--color--charcoal);
+	stroke-width: 1.4;
+}
+
+.yp-corner-card strong {
+	display: block;
+	font-size: 0.88rem;
+	font-weight: 600;
+}
+
+.yp-corner-card small {
+	font-size: 0.75rem;
+	color: #66645e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yp-swatch,
+	.yp-swatch::after {
+		animation: none !important;
+	}
+}
+
+/* Label text for button-group fields (Color, Corner Finish), which
+   can't use a <label for> — matches global.css's own label style. */
+.yp-field__label {
+	display: inline-block;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+}
+
+.yp-size-strip__caption {
+	font-size: 0.78rem;
+	color: #66645e;
+	text-align: right;
+}

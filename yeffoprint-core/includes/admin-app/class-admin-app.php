@@ -162,6 +162,8 @@ class YeffoPrint_Admin_App {
 				'qrMaxChars'           => YeffoPrint_Field_Schema::QR_MAX_CHARS,
 				'cornerStyleOptions'   => YeffoPrint_Field_Schema::CORNER_STYLE_OPTIONS,
 			],
+			// Materials screen's "Swatch finish" select.
+			'swatchFinishes'          => YeffoPrint_Commerce_Record_Meta::SWATCH_FINISHES,
 			'badges'                  => $badges,
 			'previewFontSuggestions' => YeffoPrint_Template_Meta::PREVIEW_FONT_SUGGESTIONS,
 			// Direct request: "I want to use the default template preset I
@@ -169,7 +171,10 @@ class YeffoPrint_Admin_App {
 			// null when no default is configured (Settings → Label
 			// Configurator) — views/templates.js falls back to today's
 			// per-Template interactive editor in that case, unchanged.
-			'defaultFieldPreset'     => YeffoPrint_Field_Schema::default_preset(),
+			// Every Template shares one field set now (Label Fields screen) —
+			// ensure_global_preset() makes sure it exists before the
+			// Templates screen reads it.
+			'defaultFieldPreset'     => YeffoPrint_Field_Schema::ensure_global_preset() ? YeffoPrint_Field_Schema::default_preset() : null,
 			// Custom Orders' status filter dropdown (Phase 6) needs this
 			// before any order has loaded — same "list screen needs it
 			// before the first detail response could carry it" reasoning
@@ -209,7 +214,7 @@ class YeffoPrint_Admin_App {
 		] );
 
 		// Shared repeater widget (Phase 5) — depended on by both
-		// views/templates.js and views/field-presets.js, so it must load
+		// views/templates.js and views/label-fields.js, so it must load
 		// (and be ready) before either. See its own docblock.
 		wp_enqueue_script(
 			'yeffoprint-admin-app-field-schema-editor',
@@ -224,11 +229,11 @@ class YeffoPrint_Admin_App {
 		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
 		// always finish loading (and registering) before app.js's own
 		// DOMContentLoaded-triggered first route() call needs them.
-		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'field-presets', 'web-design-packages', 'web-design-addons', 'maintenance', 'pricing', 'orders', 'order-history', 'web-design-orders', 'customers', 'coupons', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order' ] as $view ) {
+		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'label-fields', 'web-design-packages', 'web-design-addons', 'maintenance', 'pricing', 'orders', 'order-history', 'web-design-orders', 'customers', 'coupons', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order' ] as $view ) {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',
-				in_array( $view, [ 'templates', 'field-presets' ], true )
+				in_array( $view, [ 'templates', 'label-fields' ], true )
 					? [ 'yeffoprint-admin-app', 'yeffoprint-admin-app-field-schema-editor' ]
 					: [ 'yeffoprint-admin-app' ],
 				yeffoprint_core_asset_version( 'assets/admin-app/views/' . $view . '.js' ),

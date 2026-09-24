@@ -17,7 +17,8 @@
 	var META = {
 		priceAdjustment: '_yp_price_adjustment',
 		widthMm: '_yp_print_width_mm',
-		heightMm: '_yp_print_height_mm'
+		heightMm: '_yp_print_height_mm',
+		fitNote: '_yp_fit_note'
 	};
 
 	function endpoint( path ) {
@@ -184,6 +185,8 @@
 								'<div class="yp-field"><label for="yp-size-width">Print width (mm)</label><input type="number" step="0.1" min="0" id="yp-size-width" name="width" value="' + ( meta[ META.widthMm ] || '' ) + '" /></div>' +
 								'<div class="yp-field"><label for="yp-size-height">Print height (mm)</label><input type="number" step="0.1" min="0" id="yp-size-height" name="height" value="' + ( meta[ META.heightMm ] || '' ) + '" /></div>' +
 							'</div>' +
+							'<div class="yp-field"><label for="yp-size-fit">Fits</label><input type="text" id="yp-size-fit" name="fit_note" maxlength="60" value="' + YP.escapeAttr( meta[ META.fitNote ] || '' ) + '" placeholder="e.g. Fits 10 mL vials" /></div>' +
+							'<p class="yp-field__hint">Shown under this size’s card on the product page and custom label form (optional).</p>' +
 							'<div class="yp-field"><label for="yp-size-price">Price adjustment ($, per label)</label><input type="number" step="0.01" id="yp-size-price" name="price_adjustment" value="' + ( meta[ META.priceAdjustment ] || '0' ) + '" /></div>' +
 							'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-size-active" name="active"' + ( ! isEdit || 'publish' === size.status ? ' checked' : '' ) + ' /><label for="yp-size-active">Active (visible to customers)</label></div>' +
 							'<div class="yp-form__actions">' +
@@ -227,6 +230,7 @@
 			body.meta[ META.widthMm ] = parseFloat( form.width.value ) || 0;
 			body.meta[ META.heightMm ] = parseFloat( form.height.value ) || 0;
 			body.meta[ META.priceAdjustment ] = parseFloat( form.price_adjustment.value ) || 0;
+			body.meta[ META.fitNote ] = form.fit_note.value.trim();
 			if ( ! existing ) {
 				body.menu_order = allSizes.length; // New sizes land at the end of the list, not menu_order 0 (see move()'s docblock above).
 			}

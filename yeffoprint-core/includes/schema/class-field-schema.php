@@ -351,6 +351,67 @@ class YeffoPrint_Field_Schema {
 	}
 
 	/**
+	 * Direct request: "I would like the ability to add/edit/remove form
+	 * fields somewhere in the admin dashboard, but that just needs to be
+	 * in one place since we're using global fields." Every Template
+	 * reads its fields from the one designated preset (resolve_effective_id()
+	 * above), and the admin app's Label Fields screen edits that preset
+	 * directly — this makes sure one always exists, so that screen never
+	 * has to ask anyone to pick or create one first.
+	 *
+	 * Reuses an existing preset when there is one (the live site's own
+	 * "Default Template" preset), otherwise creates "Label Fields" seeded
+	 * from the most recently edited published Template's own fields, so
+	 * turning this on never changes what customers already see — and
+	 * keeps every field id, which saved designs, carts and past orders
+	 * are keyed by.
+	 */
+	public static function ensure_global_preset(): int {
+		$current = self::default_preset();
+		if ( $current ) {
+			return $current['id'];
+		}
+
+		$existing = get_posts( [
+			'post_type'      => 'yp_field_preset',
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'orderby'        => 'modified',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+		] );
+
+		if ( $existing ) {
+			$preset_id = (int) $existing[0];
+		} else {
+			$preset_id = wp_insert_post( [
+				'post_type'   => 'yp_field_preset',
+				'post_status' => 'publish',
+				'post_title'  => __( 'Label Fields', 'yeffoprint-core' ),
+			] );
+			if ( ! $preset_id || is_wp_error( $preset_id ) ) {
+				return 0;
+			}
+
+			$source = get_posts( [
+				'post_type'      => 'yp_template',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+				'orderby'        => 'modified',
+				'order'          => 'DESC',
+				'fields'         => 'ids',
+			] );
+			if ( $source ) {
+				update_post_meta( $preset_id, self::META_KEY, wp_json_encode( self::get( (int) $source[0] ) ) );
+			}
+		}
+
+		update_option( YeffoPrint_Admin_Menu::DEFAULT_FIELD_PRESET_ID_OPTION, $preset_id );
+
+		return $preset_id;
+	}
+
+	/**
 	 * Every published yp_field_preset, each with its own saved
 	 * field_schema (same meta key/shape as a Template's) — for the
 	 * Template editor's "Insert from preset" control (assets/admin/

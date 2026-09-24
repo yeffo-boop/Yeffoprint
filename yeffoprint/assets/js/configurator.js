@@ -82,7 +82,6 @@
 	// Includes the sticky bar's Save button (outside root) as well as the
 	// desktop CTA pair inside the configurator.
 	var saveDesignButtons = document.querySelectorAll( '[data-yp-save-design]' );
-	var desktopCtaEl = root.querySelector( '.yp-configurator__desktop-cta' );
 
 	var schema = null;
 	var state = {
@@ -281,10 +280,11 @@
 	}
 
 	/**
-	 * Mobile: always pin the sticky ATC/save bar once the configurator
-	 * is ready. Desktop: only show it when the in-panel CTA scrolls out
-	 * of view (IntersectionObserver), so the bar isn't a permanent
-	 * footer duplicate of buttons the customer can already see.
+	 * Mobile only: pin the sticky Save/Add to Cart bar once the
+	 * configurator is ready, since the in-panel buttons are hidden there
+	 * (configurator.css). Desktop never shows it — direct report: it
+	 * showed up as a second Save/Add to Cart row at the bottom of the
+	 * page, duplicating the buttons already in the form.
 	 */
 	function setupStickyBar() {
 		if ( ! stickyBar ) {
@@ -293,52 +293,16 @@
 
 		var desktopMq = window.matchMedia( '(min-width: 961px)' );
 
-		function showForMobile() {
-			stickyBar.hidden = false;
+		function sync() {
+			stickyBar.hidden = desktopMq.matches;
 		}
 
-		function setPinned( pinned ) {
-			stickyBar.hidden = ! pinned;
-		}
-
-		if ( ! desktopMq.matches ) {
-			showForMobile();
-		} else {
-			// Start hidden on desktop until the observer reports the CTA
-			// is off-screen (or if there's no CTA / no IO support).
-			setPinned( false );
-		}
-
-		if ( ! desktopCtaEl || typeof IntersectionObserver === 'undefined' ) {
-			if ( ! desktopMq.matches ) {
-				showForMobile();
-			} else {
-				setPinned( true );
-			}
-			return;
-		}
-
-		var observer = new IntersectionObserver( function ( entries ) {
-			if ( ! desktopMq.matches ) {
-				return;
-			}
-			var entry = entries[ 0 ];
-			setPinned( ! entry.isIntersecting );
-		}, { threshold: 0, rootMargin: '0px' } );
-
-		observer.observe( desktopCtaEl );
-
-		function onMqChange() {
-			if ( ! desktopMq.matches ) {
-				showForMobile();
-			}
-			// Desktop visibility is driven by the next observer callback.
-		}
+		sync();
 
 		if ( typeof desktopMq.addEventListener === 'function' ) {
-			desktopMq.addEventListener( 'change', onMqChange );
+			desktopMq.addEventListener( 'change', sync );
 		} else if ( typeof desktopMq.addListener === 'function' ) {
-			desktopMq.addListener( onMqChange );
+			desktopMq.addListener( sync );
 		}
 	}
 
@@ -429,30 +393,77 @@
 
 	/* ---------- Size / Material selectors ---------- */
 
+	/**
+	 * Direct request: size cards "in an image" — each label drawn to
+	 * scale with its dimensions, all on one shared scale so the sizes
+	 * compare honestly — and materials shown as the material itself
+	 * with a shimmer on the foil finishes. Markup lives in
+	 * label-pickers.js, shared with the custom label form.
+	 */
+	var SIZE_BOX_W = 96;
+	var SIZE_BOX_H = 54;
+	var sizeCaptionEl = null;
+
+	function cornerIsRounded() {
+		var cornerField = schema.field_schema.filter( function ( field ) { return 'corner_style' === field.type; } )[ 0 ];
+		return !! cornerField && state.variants.length > 0 && 'rounded' === activeVariant().values[ cornerField.id ];
+	}
+
 	function renderSizeOptions() {
+		var pickers = window.YPLabelPickers;
+		var scale = pickers.groupScale( schema.sizes, SIZE_BOX_W, SIZE_BOX_H );
+		var rounded = cornerIsRounded();
+
+		sizeOptionsEl.classList.remove( 'yp-option-group' );
+		sizeOptionsEl.classList.add( 'yp-size-cards' );
 		sizeOptionsEl.innerHTML = schema.sizes.map( function ( size ) {
-			var meta = size.price_adjustment ? ( size.price_adjustment > 0 ? '+' : '' ) + formatCurrency( size.price_adjustment ) : 'No adjustment';
-			return optionPillHtml( 'size', size.id, size.name, meta, size.id === state.sizeId );
+			return pickers.sizeCardHtml( size, { scale: scale, boxW: SIZE_BOX_W, boxH: SIZE_BOX_H, selected: size.id === state.sizeId, rounded: rounded } );
 		} ).join( '' ) || '<p class="description">No compatible sizes configured yet.</p>';
 
 		sizeOptionsEl.querySelectorAll( '[data-option-id]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
 				state.sizeId = parseInt( button.getAttribute( 'data-option-id' ), 10 );
 				updateSelectedPill( sizeOptionsEl, state.sizeId );
+				renderSizeCaption();
 				renderDoseTip();
 				renderSummary();
 			} );
 		} );
+
+		renderSizeCaption();
+	}
+
+	/** "Label size: 1.77″ × 0.83″ · 45 × 21 mm · rounded corners" under the cards. */
+	function renderSizeCaption() {
+		if ( ! sizeCaptionEl ) {
+			sizeCaptionEl = document.createElement( 'p' );
+			sizeCaptionEl.className = 'yp-size-caption';
+			sizeOptionsEl.parentNode.insertBefore( sizeCaptionEl, sizeOptionsEl.nextSibling );
+		}
+
+		var pickers = window.YPLabelPickers;
+		var size = ( schema.sizes || [] ).filter( function ( s ) { return s.id === state.sizeId; } )[ 0 ];
+		if ( ! size || ! pickers.hasDimensions( size ) ) {
+			sizeCaptionEl.hidden = true;
+			return;
+		}
+
+		var hasCornerField = schema.field_schema.some( function ( field ) { return 'corner_style' === field.type; } );
+		sizeCaptionEl.hidden = false;
+		sizeCaptionEl.innerHTML =
+			'Label size: <strong>' + pickers.inches( size.print_width_mm ) + ' × ' + pickers.inches( size.print_height_mm ) + '</strong>' +
+			' · ' + Math.round( size.print_width_mm * 10 ) / 10 + ' × ' + Math.round( size.print_height_mm * 10 ) / 10 + ' mm' +
+			( hasCornerField ? ' · ' + ( cornerIsRounded() ? 'rounded' : 'squared' ) + ' corners' : '' ) +
+			' · shown to scale';
 	}
 
 	function renderMaterialOptions() {
+		var pickers = window.YPLabelPickers;
+
+		materialOptionsEl.classList.remove( 'yp-option-group' );
+		materialOptionsEl.classList.add( 'yp-material-cards' );
 		materialOptionsEl.innerHTML = schema.materials.map( function ( material ) {
-			var outOfStock = false === material.in_stock;
-			var meta = outOfStock
-				? 'Out of Stock'
-				: ( material.price_adjustment ? ( material.price_adjustment > 0 ? '+' : '' ) + formatCurrency( material.price_adjustment ) : 'No adjustment' );
-			var swatch = '<span class="yp-swatch-chip" style="' + ( material.swatch_url ? 'background-image:url(' + escapeHtml( material.swatch_url ) + ')' : '' ) + '"></span>';
-			return optionPillHtml( 'material', material.id, material.name, meta, material.id === state.materialId, swatch, outOfStock );
+			return pickers.materialCardHtml( material, { selected: material.id === state.materialId } );
 		} ).join( '' ) || '<p class="description">No compatible materials configured yet.</p>';
 
 		materialOptionsEl.querySelectorAll( '[data-option-id]' ).forEach( function ( button ) {
@@ -462,17 +473,6 @@
 				renderSummary();
 			} );
 		} );
-	}
-
-	/** `isDisabled` (out-of-stock materials only, so far) renders a real `disabled` button — nothing else needs to guard against it being clicked, since a disabled button never fires its own click event. */
-	function optionPillHtml( group, id, name, meta, isSelected, leadingHtml, isDisabled ) {
-		return (
-			'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + ( isDisabled ? ' yp-option-pill--out-of-stock' : '' ) + '" data-option-group="' + group + '" data-option-id="' + id + '"' + ( isDisabled ? ' disabled' : '' ) + '>' +
-				( leadingHtml || '' ) +
-				'<span class="yp-option-pill__name">' + escapeHtml( name ) + '</span>' +
-				'<span class="yp-option-pill__meta">' + escapeHtml( meta ) + '</span>' +
-			'</button>'
-		);
 	}
 
 	function updateSelectedPill( container, selectedId ) {
@@ -486,45 +486,21 @@
 	/* ---------- Customization fields ---------- */
 
 	/**
-	 * corner_style's own "?" — direct request: "have a modal pop up with
-	 * a graphic example of what squared corners and rounded corners
-	 * actually look like." Reuses the existing per-field tooltip
-	 * mechanism (below) rather than the section-level drawer modal
-	 * (site.js's data-yp-drawer-trigger/initDrawers()) — that scans the
-	 * DOM once at page load, so a trigger created here, after the async
-	 * schema fetch resolves, would never get wired up. This tooltip is
-	 * bound at render time instead, same as every other field's, so it
-	 * always works regardless of when the field itself was added. Two
-	 * small SVG rectangles, corners drawn to the same size, one with a
-	 * corner radius and one without — same "draw it to scale/shape
-	 * rather than describe it in words" approach as size-info-modal.php.
+	 * Corner Finish as two picture cards (squared / rounded outline)
+	 * instead of text pills plus a "?" diagram — the drawing *is* the
+	 * explanation, so no tooltip is needed for this type any more.
 	 */
-	function cornerStyleDiagramHtml() {
-		var examples = [ { label: 'Squared', rx: 0 }, { label: 'Rounded', rx: 10 } ];
-		return (
-			'<div class="yp-corner-style-diagram">' +
-				examples.map( function ( example ) {
-					return (
-						'<span class="yp-corner-style-diagram__example">' +
-							'<svg width="64" height="44" viewBox="0 0 64 44" aria-hidden="true" focusable="false">' +
-								'<rect x="2" y="2" width="60" height="40" rx="' + example.rx + '" class="yp-corner-style-diagram__rect" />' +
-							'</svg>' +
-							'<span>' + example.label + '</span>' +
-						'</span>'
-					);
-				} ).join( '' ) +
-			'</div>'
-		);
-	}
+	var CORNER_STYLE_HINTS = { squared: 'Sharp 90° corners', rounded: 'Soft, peel-friendly' };
 
 	function cornerStyleOptionsHtml( field, value ) {
 		return (
-			'<div class="yp-option-group yp-corner-style-options" role="radiogroup" data-field-id="' + field.id + '">' +
+			'<div class="yp-corner-cards yp-corner-style-options" role="radiogroup" aria-labelledby="yp-field-label-' + field.id + '" data-field-id="' + field.id + '">' +
 				Object.keys( CORNER_STYLE_OPTIONS ).map( function ( key ) {
 					var isSelected = key === value;
 					return (
-						'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-option-pill' + ( isSelected ? ' is-selected' : '' ) + '" data-corner-value="' + key + '">' +
-							'<span class="yp-option-pill__name">' + CORNER_STYLE_OPTIONS[ key ] + '</span>' +
+						'<button type="button" role="radio" aria-checked="' + ( isSelected ? 'true' : 'false' ) + '" class="yp-corner-card' + ( isSelected ? ' is-selected' : '' ) + '" data-corner-value="' + key + '">' +
+							'<svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true" focusable="false"><rect x="1" y="1" width="38" height="26" rx="' + ( 'rounded' === key ? 6 : 0 ) + '"/></svg>' +
+							'<span><strong>' + CORNER_STYLE_OPTIONS[ key ] + '</strong><small>' + ( CORNER_STYLE_HINTS[ key ] || '' ) + '</small></span>' +
 						'</button>'
 					);
 				} ).join( '' ) +
@@ -532,49 +508,114 @@
 		);
 	}
 
-	function renderFieldInputStructure() {
-		fieldInputsEl.innerHTML = schema.field_schema.map( function ( field ) {
-			var control;
-			var value = ( activeVariant().values[ field.id ] ) || '';
-			if ( 'color' === field.type ) {
-				control = '<input type="color" data-field-id="' + field.id + '" class="yp-field__color-input" />';
-			} else if ( 'qr_code' === field.type ) {
-				control = '<input type="url" placeholder="https://" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
-			} else if ( 'textarea' === field.type ) {
-				control = '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>';
-			} else if ( 'corner_style' === field.type ) {
-				control = cornerStyleOptionsHtml( field, value );
-			} else {
-				var placeholder = showsDoseTip() && field === doseNotesField()
-					? ' placeholder="e.g. ' + escapeHtml( DOSE_TIP_EXAMPLE ) + '"'
-					: '';
-				control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat"' + placeholder + ' />';
-			}
+	/**
+	 * Color as a row of preset dots plus a "pick any color" wheel. The
+	 * real value still lives on the native color input (inside the
+	 * wheel), so every existing read/sync path is unchanged — a dot just
+	 * sets that input and fires its `input` event.
+	 */
+	var COLOR_PRESETS = [ '#141414', '#FFFFFF', '#0D1B4C', '#00AEEF', '#EC008C', '#1F7A4D', '#B8862B', '#7A1F2B' ];
 
-			// corner_style's tooltip always exists (the diagram is
-			// intrinsic to the type, not admin-authored content) even
-			// when the admin never typed a tooltip/help text for this field.
-			var hasTooltip = !! field.admin_description || 'corner_style' === field.type;
-			var tooltip = hasTooltip
-				? ' <button type="button" class="yp-field__tooltip-trigger" data-tooltip-trigger="' + field.id + '" aria-expanded="false" aria-controls="yp-field-tooltip-' + field.id + '" aria-label="More info about ' + escapeHtml( field.label ) + '">?</button>'
+	function colorOptionsHtml( field ) {
+		return (
+			'<div class="yp-color-options" data-color-group="' + field.id + '">' +
+				COLOR_PRESETS.map( function ( hex ) {
+					return '<button type="button" class="yp-color-dot" style="background:' + hex + '" data-color-value="' + hex + '" aria-label="' + hex + '" aria-pressed="false"></button>';
+				} ).join( '' ) +
+				'<label class="yp-color-any" title="Pick any color"><span class="screen-reader-text">Pick any color</span>' +
+					'<input type="color" data-field-id="' + field.id + '" class="yp-field__color-input" />' +
+				'</label>' +
+				'<span class="yp-color-hex" data-color-hex="' + field.id + '"></span>' +
+			'</div>'
+		);
+	}
+
+	function syncColorGroup( fieldId ) {
+		var group = fieldInputsEl.querySelector( '[data-color-group="' + fieldId + '"]' );
+		if ( ! group ) {
+			return;
+		}
+		var value = ( activeVariant().values[ fieldId ] || '' ).toUpperCase();
+		var matchedPreset = false;
+		group.querySelectorAll( '[data-color-value]' ).forEach( function ( dot ) {
+			var on = dot.getAttribute( 'data-color-value' ) === value;
+			matchedPreset = matchedPreset || on;
+			dot.classList.toggle( 'is-selected', on );
+			dot.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
+		} );
+		group.querySelector( '.yp-color-any' ).classList.toggle( 'is-selected', !! value && ! matchedPreset );
+		group.querySelector( '[data-color-hex]' ).textContent = value;
+	}
+
+	/** One field's markup (label row, optional tooltip, control). */
+	function fieldHtml( field ) {
+		var control;
+		var value = ( activeVariant().values[ field.id ] ) || '';
+		var isWide = true;
+		if ( 'color' === field.type ) {
+			control = colorOptionsHtml( field );
+		} else if ( 'qr_code' === field.type ) {
+			control = '<input type="url" placeholder="https://" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat" />';
+		} else if ( 'textarea' === field.type ) {
+			control = '<textarea data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" rows="2" class="widefat"></textarea>';
+		} else if ( 'corner_style' === field.type ) {
+			control = cornerStyleOptionsHtml( field, value );
+		} else {
+			var placeholder = showsDoseTip() && field === doseNotesField()
+				? ' placeholder="e.g. ' + escapeHtml( DOSE_TIP_EXAMPLE ) + '"'
 				: '';
+			control = '<input type="text" data-field-id="' + field.id + '" maxlength="' + field.max_chars + '" class="widefat"' + placeholder + ' />';
+			// Short single-line text sits two to a row; a long one (a
+			// notes-style field) keeps the full width.
+			isWide = field.max_chars > 60;
+		}
 
-			return (
-				'<div class="yp-field">' +
-					'<div class="yp-field__label-row">' +
-						'<label for="yp-field-' + field.id + '">' + escapeHtml( field.label ) + ( field.required ? ' *' : '' ) + tooltip + '</label>' +
-						( 'color' === field.type || 'corner_style' === field.type ? '' : '<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' ) +
-					'</div>' +
-					( hasTooltip
-						? '<div class="yp-field__tooltip" id="yp-field-tooltip-' + field.id + '" hidden>' +
-							( 'corner_style' === field.type ? cornerStyleDiagramHtml() : '' ) +
-							( field.admin_description ? '<p>' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
-						'</div>'
-						: '' ) +
-					control.replace( '<textarea', '<textarea id="yp-field-' + field.id + '"' ).replace( '<input', '<input id="yp-field-' + field.id + '"' ) +
-				'</div>'
-			);
-		} ).join( '' ) || '<p class="description">This design has no customization fields.</p>';
+		var hasTooltip = !! field.admin_description;
+		var tooltip = hasTooltip
+			? ' <button type="button" class="yp-field__tooltip-trigger" data-tooltip-trigger="' + field.id + '" aria-expanded="false" aria-controls="yp-field-tooltip-' + field.id + '" aria-label="More info about ' + escapeHtml( field.label ) + '">?</button>'
+			: '';
+		// Groups of buttons aren't labelable by <label for>, so they get a
+		// plain labelled heading (radiogroup aria-labelledby) instead.
+		var isGroup = 'color' === field.type || 'corner_style' === field.type;
+		var labelText = escapeHtml( field.label ) + ( field.required ? ' *' : '' );
+
+		return (
+			'<div class="yp-field' + ( isWide ? ' yp-field--wide' : '' ) + '">' +
+				'<div class="yp-field__label-row">' +
+					( isGroup
+						? '<span class="yp-field__label" id="yp-field-label-' + field.id + '">' + labelText + tooltip + '</span>'
+						: '<label for="yp-field-' + field.id + '">' + labelText + tooltip + '</label>' ) +
+					( isGroup ? '' : '<span class="yp-field__counter" data-counter-for="' + field.id + '"></span>' ) +
+				'</div>' +
+				( hasTooltip
+					? '<div class="yp-field__tooltip" id="yp-field-tooltip-' + field.id + '" hidden><p>' + escapeHtml( field.admin_description ) + '</p></div>'
+					: '' ) +
+				control.replace( '<textarea', '<textarea id="yp-field-' + field.id + '"' ).replace( '<input', '<input id="yp-field-' + field.id + '"' ) +
+			'</div>'
+		);
+	}
+
+	/**
+	 * Every Template shares one global field set now (admin → Label
+	 * Fields), so the section is laid out once for all of them:
+	 * required fields first under "On the label", the rest under
+	 * "Optional details", each keeping the admin's own order.
+	 */
+	function renderFieldInputStructure() {
+		var required = schema.field_schema.filter( function ( field ) { return field.required; } );
+		var optional = schema.field_schema.filter( function ( field ) { return ! field.required; } );
+		var showTitles = required.length > 0 && optional.length > 0;
+
+		function groupHtml( title, fields ) {
+			if ( ! fields.length ) {
+				return '';
+			}
+			return ( showTitles ? '<p class="yp-field-group__title">' + title + '</p>' : '' ) +
+				'<div class="yp-field-grid">' + fields.map( fieldHtml ).join( '' ) + '</div>';
+		}
+
+		fieldInputsEl.innerHTML = ( groupHtml( 'On the label', required ) + groupHtml( 'Optional details', optional ) ) ||
+			'<p class="description">This design has no customization fields.</p>';
 
 		fieldInputsEl.querySelectorAll( '[data-tooltip-trigger]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
@@ -593,8 +634,17 @@
 				var fieldId = input.getAttribute( 'data-field-id' );
 				activeVariant().values[ fieldId ] = input.value;
 				updateCounter( fieldId );
+				syncColorGroup( fieldId );
 				updateStageField( fieldId );
 				updateActiveVariantCardSummary();
+			} );
+		} );
+
+		fieldInputsEl.querySelectorAll( '[data-color-value]' ).forEach( function ( dot ) {
+			dot.addEventListener( 'click', function () {
+				var input = dot.closest( '[data-color-group]' ).querySelector( 'input[type="color"]' );
+				input.value = dot.getAttribute( 'data-color-value' ).toLowerCase();
+				input.dispatchEvent( new Event( 'input', { bubbles: true } ) );
 			} );
 		} );
 
@@ -604,6 +654,7 @@
 				button.addEventListener( 'click', function () {
 					activeVariant().values[ fieldId ] = button.getAttribute( 'data-corner-value' );
 					syncCornerStyleGroup( group, fieldId );
+					renderSizeOptions();
 					updateActiveVariantCardSummary();
 				} );
 			} );
@@ -648,44 +699,33 @@
 				input.value = activeVariant().values[ field.id ] || '';
 			}
 			updateCounter( field.id );
+			if ( 'color' === field.type ) {
+				syncColorGroup( field.id );
+			}
 		} );
+
+		// Switching to a batch label with a different Corner Finish
+		// redraws the size cards' corners to match.
+		if ( sizeOptionsEl.childElementCount ) {
+			renderSizeOptions();
+		}
 	}
 
 	/* ---------- Quantity ---------- */
 
+	/**
+	 * Presets plus an "Other" option that reveals a number box (direct
+	 * request: "there needs to be an 'other' option where users can
+	 * type in a quantity"). Markup/wiring in label-pickers.js.
+	 */
 	function renderQuantityControl() {
-		var variant = activeVariant();
 		var presets = schema.quantity_presets || [];
-
-		quantityEl.innerHTML = presets.map( function ( amount ) {
-			return '<button type="button" class="yp-quantity-preset' + ( amount === variant.quantity ? ' is-active' : '' ) + '" data-preset="' + amount + '">' + amount + '</button>';
-		} ).join( '' ) +
-			'<label class="screen-reader-text" for="yp-quantity-input">Custom quantity</label>' +
-			'<input type="number" min="1" id="yp-quantity-input" class="yp-quantity-input" value="' + variant.quantity + '" />';
-
-		quantityEl.querySelectorAll( '[data-preset]' ).forEach( function ( button ) {
-			button.addEventListener( 'click', function () {
-				setActiveVariantQuantity( parseInt( button.getAttribute( 'data-preset' ), 10 ) );
-			} );
-		} );
-
-		quantityEl.querySelector( '#yp-quantity-input' ).addEventListener( 'input', function ( event ) {
-			var value = Math.max( 1, parseInt( event.target.value, 10 ) || 1 );
-			setActiveVariantQuantity( value, /* skipInputRebuild */ true );
-		} );
+		quantityEl.innerHTML = window.YPLabelPickers.quantityHtml( presets, activeVariant().quantity, 'yp-quantity-input' );
+		window.YPLabelPickers.bindQuantity( quantityEl, presets, setActiveVariantQuantity );
 	}
 
-	function setActiveVariantQuantity( quantity, skipInputRebuild ) {
+	function setActiveVariantQuantity( quantity ) {
 		activeVariant().quantity = quantity;
-
-		quantityEl.querySelectorAll( '[data-preset]' ).forEach( function ( button ) {
-			button.classList.toggle( 'is-active', parseInt( button.getAttribute( 'data-preset' ), 10 ) === quantity );
-		} );
-
-		if ( ! skipInputRebuild ) {
-			quantityEl.querySelector( '#yp-quantity-input' ).value = quantity;
-		}
-
 		renderVariantCards();
 		renderSummary();
 	}

@@ -97,14 +97,6 @@
 		return div.innerHTML;
 	}
 
-	/** `record.in_stock` is only ever present on materials (direct request: out-of-stock materials stay visible but can't be picked) — a Size record has no such field, so this is a no-op there. */
-	function optionsHtml( records, selectedId ) {
-		return records.map( function ( record ) {
-			var outOfStock = false === record.in_stock;
-			return '<option value="' + record.id + '"' + ( record.id === selectedId ? ' selected' : '' ) + ( outOfStock ? ' disabled' : '' ) + '>' + escapeHtml( record.name ) + ( outOfStock ? ' (Out of Stock)' : '' ) + '</option>';
-		} ).join( '' );
-	}
-
 	/** First in-stock material, so a new/duplicated row never defaults to an unselectable option — falls back to the first material regardless of stock only if every single one is out. */
 	function firstAvailableMaterialId() {
 		if ( ! materialsData.length ) {
@@ -146,6 +138,28 @@
 		} );
 	}
 
+	/**
+	 * Direct request: the same to-scale size drawings and material
+	 * swatches as the product page, in place of this form's two
+	 * dropdowns (label-pickers.js). Every size in the strip shares one
+	 * scale, computed once per render.
+	 */
+	var pickers = window.YPLabelPickers;
+	var stripScale = 0;
+
+	function sizeCaption( row ) {
+		var size = sizesData.filter( function ( s ) { return s.id === row.size_id; } )[ 0 ];
+		if ( ! size ) {
+			return '';
+		}
+		if ( ! pickers.hasDimensions( size ) ) {
+			return escapeHtml( size.fit_note || '' );
+		}
+		return Math.round( size.print_width_mm * 10 ) / 10 + ' × ' + Math.round( size.print_height_mm * 10 ) / 10 + ' mm · ' +
+			pickers.inches( size.print_width_mm ) + ' × ' + pickers.inches( size.print_height_mm ) +
+			( size.fit_note ? ' · ' + escapeHtml( size.fit_note ) : '' );
+	}
+
 	function rowMarkup( row, index ) {
 		return (
 			'<div class="yp-batch-row" data-row-id="' + row.id + '">' +
@@ -157,15 +171,23 @@
 					'</span>' +
 				'</div>' +
 				'<div class="yp-field">' +
-					'<label for="yp-co-row-' + row.id + '-size">Size</label>' +
-					'<select id="yp-co-row-' + row.id + '-size" data-row-field="size_id" required>' + optionsHtml( sizesData, row.size_id ) + '</select>' +
+					'<div class="yp-field__label-row"><span class="yp-field__label" id="yp-co-row-' + row.id + '-size-label">Size</span><span class="yp-size-strip__caption" data-row-size-caption>' + sizeCaption( row ) + '</span></div>' +
+					'<div class="yp-size-strip" role="radiogroup" aria-labelledby="yp-co-row-' + row.id + '-size-label">' +
+						sizesData.map( function ( size ) {
+							return pickers.sizeTileHtml( size, { scale: stripScale, selected: size.id === row.size_id, attrs: ' data-row-size="' + size.id + '"' } );
+						} ).join( '' ) +
+					'</div>' +
 				'</div>' +
 				'<div class="yp-field">' +
-					'<label for="yp-co-row-' + row.id + '-material">Material</label>' +
-					'<select id="yp-co-row-' + row.id + '-material" data-row-field="material_id" required>' + optionsHtml( materialsData, row.material_id ) + '</select>' +
+					'<div class="yp-field__label-row"><span class="yp-field__label" id="yp-co-row-' + row.id + '-material-label">Material</span></div>' +
+					'<div class="yp-material-dots" role="radiogroup" aria-labelledby="yp-co-row-' + row.id + '-material-label">' +
+						materialsData.map( function ( material ) {
+							return pickers.materialDotHtml( material, { selected: material.id === row.material_id, attrs: ' data-row-material="' + material.id + '"' } );
+						} ).join( '' ) +
+					'</div>' +
 				'</div>' +
 				'<div class="yp-field">' +
-					'<label for="yp-co-row-' + row.id + '-qty-input">Quantity</label>' +
+					'<span class="yp-field__label">Quantity</span>' +
 					'<div class="yp-quantity-control" data-row-quantity></div>' +
 				'</div>' +
 				'<div class="yp-field">' +
@@ -177,36 +199,23 @@
 	}
 
 	function renderRowQuantity( row, container ) {
-		container.innerHTML = quantityPresets.map( function ( amount ) {
-			return '<button type="button" class="yp-quantity-preset' + ( amount === row.quantity ? ' is-active' : '' ) + '" data-preset="' + amount + '">' + amount + '</button>';
-		} ).join( '' ) +
-			'<input type="number" min="1" id="yp-co-row-' + row.id + '-qty-input" class="yp-quantity-input" value="' + row.quantity + '" />';
-
-		var input = container.querySelector( 'input' );
-
-		function syncPresetHighlight() {
-			container.querySelectorAll( '[data-preset]' ).forEach( function ( button ) {
-				button.classList.toggle( 'is-active', parseInt( button.getAttribute( 'data-preset' ), 10 ) === row.quantity );
-			} );
-		}
-
-		container.querySelectorAll( '[data-preset]' ).forEach( function ( button ) {
-			button.addEventListener( 'click', function () {
-				row.quantity = parseInt( button.getAttribute( 'data-preset' ), 10 );
-				input.value = row.quantity;
-				syncPresetHighlight();
-				updatePricePreview();
-			} );
-		} );
-
-		input.addEventListener( 'input', function ( event ) {
-			row.quantity = Math.max( 1, parseInt( event.target.value, 10 ) || 1 );
-			syncPresetHighlight();
+		container.innerHTML = pickers.quantityHtml( quantityPresets, row.quantity, 'yp-co-row-' + row.id + '-qty-input' );
+		pickers.bindQuantity( container, quantityPresets, function ( quantity ) {
+			row.quantity = quantity;
 			updatePricePreview();
 		} );
 	}
 
+	function syncRowChoice( rowEl, selector, attr, selectedId ) {
+		rowEl.querySelectorAll( selector ).forEach( function ( button ) {
+			var on = parseInt( button.getAttribute( attr ), 10 ) === selectedId;
+			button.classList.toggle( 'is-selected', on );
+			button.setAttribute( 'aria-checked', on ? 'true' : 'false' );
+		} );
+	}
+
 	function renderBatch() {
+		stripScale = pickers.groupScale( sizesData, 62, 48 );
 		batchContainerEl.innerHTML = batchRows.map( rowMarkup ).join( '' );
 
 		batchContainerEl.querySelectorAll( '.yp-batch-row' ).forEach( function ( rowEl ) {
@@ -216,16 +225,21 @@
 				return;
 			}
 
-			var sizeSelect = rowEl.querySelector( '[data-row-field="size_id"]' );
-			sizeSelect.addEventListener( 'change', function () {
-				row.size_id = parseInt( sizeSelect.value, 10 );
-				updatePricePreview();
+			rowEl.querySelectorAll( '[data-row-size]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					row.size_id = parseInt( button.getAttribute( 'data-row-size' ), 10 );
+					syncRowChoice( rowEl, '[data-row-size]', 'data-row-size', row.size_id );
+					rowEl.querySelector( '[data-row-size-caption]' ).innerHTML = sizeCaption( row );
+					updatePricePreview();
+				} );
 			} );
 
-			var materialSelect = rowEl.querySelector( '[data-row-field="material_id"]' );
-			materialSelect.addEventListener( 'change', function () {
-				row.material_id = parseInt( materialSelect.value, 10 );
-				updatePricePreview();
+			rowEl.querySelectorAll( '[data-row-material]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					row.material_id = parseInt( button.getAttribute( 'data-row-material' ), 10 );
+					syncRowChoice( rowEl, '[data-row-material]', 'data-row-material', row.material_id );
+					updatePricePreview();
+				} );
 			} );
 
 			// Property assignment, not an HTML `value="…"` attribute — this
