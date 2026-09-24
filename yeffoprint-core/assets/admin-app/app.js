@@ -2129,6 +2129,11 @@
 								// below needs a real click handler to open the tab itself
 								// (see that function's own docblock for why).
 								'<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-print="' + YP.escapeAttr( label.label_url ) + '">Print</button>' +
+								// International labels: the commercial invoice Shippo built
+								// from the customs form, to print and attach to the package.
+								( label.invoice_url
+									? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-print="' + YP.escapeAttr( label.invoice_url ) + '">Customs Invoice</button>'
+									: '' ) +
 								( label.voided
 									? '<span class="yp-pill yp-pill--crit">Voided</span>'
 									: '<button type="button" class="wp-block-button__link yp-button--danger" data-yp-shippo-void="' + YP.escapeAttr( label.tracking_number ) + '" data-yp-shippo-void-carrier="' + YP.escapeAttr( label.carrier_label ) + '">Void</button>' ) +
@@ -2582,7 +2587,8 @@
 			.then( function ( response ) {
 				resultEl.innerHTML =
 					'<p class="yp-panel__hint"><strong>Label purchased.</strong> Tracking: ' + YP.escapeHtml( response.label.tracking_number ) + ' (' + YP.escapeHtml( response.label.carrier_label ) + ')</p>' +
-					( response.label.label_url ? '<button type="button" class="wp-block-button__link is-style-outline" style="margin-top:0.5rem;" data-yp-shippo-print="' + YP.escapeAttr( response.label.label_url ) + '">Print Label</button>' : '' );
+					( response.label.label_url ? '<button type="button" class="wp-block-button__link is-style-outline" style="margin-top:0.5rem;" data-yp-shippo-print="' + YP.escapeAttr( response.label.label_url ) + '">Print Label</button>' : '' ) +
+					( response.label.invoice_url ? ' <button type="button" class="wp-block-button__link is-style-outline" style="margin-top:0.5rem;" data-yp-shippo-print="' + YP.escapeAttr( response.label.invoice_url ) + '">Print Customs Invoice</button>' : '' );
 				panel.querySelector( '[data-yp-shippo-rates]' ).innerHTML = '';
 				order.status = response.status;
 
@@ -2608,6 +2614,7 @@
 					carrier_label:    response.label.carrier_label,
 					tracking_number:  response.label.tracking_number,
 					label_url:        response.label.label_url,
+					invoice_url:      response.label.invoice_url || '',
 					transaction_id:   response.label.transaction_id,
 					voided:           false
 				} ] );

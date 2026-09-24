@@ -228,7 +228,11 @@ class YeffoPrint_Order_Tracking {
 	 * the auto-delivery sweep, the shipped-order count) is the one place
 	 * a voided label genuinely shouldn't count anymore.
 	 *
-	 * @return array{carrier_label:string,tracking_number:string,label_url:string,transaction_id:string,voided:bool}[]
+	 * `invoice_url` is the customs commercial invoice for an international
+	 * label — direct request: "there's nowhere for me to print out the
+	 * customs invoices it should have generated".
+	 *
+	 * @return array{carrier_label:string,tracking_number:string,label_url:string,invoice_url:string,transaction_id:string,voided:bool}[]
 	 */
 	public static function get_shippo_labels( \WC_Order $order ): array {
 		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
@@ -253,6 +257,7 @@ class YeffoPrint_Order_Tracking {
 				'carrier_label'   => self::carrier_label( $carrier_id ),
 				'tracking_number' => $tracking_number,
 				'label_url'       => $label_url,
+				'invoice_url'     => (string) ( $label['invoice_url'] ?? '' ),
 				'transaction_id'  => (string) ( $label['transaction_id'] ?? '' ),
 				'voided'          => ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'],
 			];
@@ -331,18 +336,61 @@ class YeffoPrint_Order_Tracking {
 	 * single save() also carries the order-status auto-advance and any
 	 * other meta changes made in the same request.
 	 */
-	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '' ): void {
-		$labels   = $order->get_meta( self::SHIPPO_LABELS_META, true );
-		$labels   = is_array( $labels ) ? $labels : [];
-		$labels[] = [
+	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '', string $invoice_url = '' ): void {
+		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
+		$labels = is_array( $labels ) ? $labels : [];
+		$label  = [
 			'tracking'       => $tracking_number,
 			'carrier_id'     => $carrier_id,
 			'label_url'      => $label_url,
 			'transaction_id' => $transaction_id,
 			'refund'         => [],
 		];
+		// Left unset (not '') when Shippo returned none yet, so
+		// fill_shippo_invoice_urls() still looks it up once later.
+		if ( '' !== $invoice_url ) {
+			$label['invoice_url'] = $invoice_url;
+		}
+		$labels[] = $label;
 
 		$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );
+	}
+
+	/**
+	 * Looks up the commercial invoice once for each label that has never
+	 * been checked (bought before invoices were stored, or Shippo hadn't
+	 * produced one at purchase time), and remembers the answer — '' for a
+	 * domestic label — so it's never asked again. Saves the order only
+	 * when something was looked up. A failed lookup is retried next time.
+	 */
+	public static function fill_shippo_invoice_urls( \WC_Order $order ): void {
+		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
+		if ( ! is_array( $labels ) || ! YeffoPrint_Shippo_Settings::is_configured() ) {
+			return;
+		}
+
+		$client  = null;
+		$changed = false;
+		foreach ( $labels as $index => $label ) {
+			$transaction_id = (string) ( $label['transaction_id'] ?? '' );
+			if ( array_key_exists( 'invoice_url', $label ) || '' === $transaction_id ) {
+				continue;
+			}
+
+			$client = $client ?? new YeffoPrint_Shippo_Client( YeffoPrint_Shippo_Settings::get_api_key() );
+			$url    = $client->get_invoice_url( $transaction_id );
+			if ( is_wp_error( $url ) ) {
+				continue;
+			}
+
+			$labels[ $index ]['invoice_url'] = $url;
+			$changed                         = true;
+		}
+
+		if ( $changed ) {
+			$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );
+			$order->save();
+		}
 	}
 
 	/**

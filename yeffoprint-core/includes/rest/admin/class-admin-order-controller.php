@@ -287,6 +287,9 @@ class YeffoPrint_Admin_Order_Controller {
 	}
 
 	private function detail_payload( \WC_Order $order ): array {
+		// Customs invoices for Shippo labels that predate storing them.
+		YeffoPrint_Order_Tracking::fill_shippo_invoice_urls( $order );
+
 		return [
 			'id'                   => $order->get_id(),
 			'number'               => $order->get_order_number(),

@@ -269,7 +269,10 @@ class YeffoPrint_Shippo_Client {
 	 * pick from — so it's passed in here instead of re-derived from a
 	 * response that never reliably had it.
 	 *
-	 * @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string,transaction_id:string}|\WP_Error
+	 * `invoice_url` is the commercial invoice Shippo generates for an
+	 * international label from its customs declaration ('' otherwise).
+	 *
+	 * @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string,transaction_id:string,invoice_url:string}|\WP_Error
 	 */
 	public function purchase_label( string $rate_id, string $carrier_id = '', string $carrier_label = '' ) {
 		$response = $this->call( 'POST', '/transactions/', [
@@ -299,7 +302,24 @@ class YeffoPrint_Shippo_Client {
 			'carrier_label'   => '' !== $carrier_label ? $carrier_label : YeffoPrint_Order_Tracking::carrier_label( $carrier_id ),
 			'label_url'       => (string) ( $response['label_url'] ?? '' ),
 			'transaction_id'  => (string) ( $response['object_id'] ?? '' ),
+			'invoice_url'     => (string) ( $response['commercial_invoice_url'] ?? '' ),
 		];
+	}
+
+	/**
+	 * The commercial invoice for an already-purchased label — for labels
+	 * bought before the invoice was stored with them, or when Shippo hadn't
+	 * finished generating it at purchase time. '' when there is none.
+	 *
+	 * @return string|\WP_Error
+	 */
+	public function get_invoice_url( string $transaction_id ) {
+		$response = $this->call( 'GET', '/transactions/' . rawurlencode( $transaction_id ) );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return (string) ( $response['commercial_invoice_url'] ?? '' );
 	}
 
 	/**

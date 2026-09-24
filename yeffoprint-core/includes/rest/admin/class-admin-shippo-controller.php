@@ -143,7 +143,7 @@ class YeffoPrint_Admin_Shippo_Controller {
 		// on an already-shipped order always gets its own notification.
 		$was_already_shipped = $order->has_status( YeffoPrint_Order_Shipment_Status::STATUS );
 
-		YeffoPrint_Order_Tracking::record_shippo_label( $order, $label['tracking_number'], $label['carrier_id'], $label['label_url'], $label['transaction_id'] );
+		YeffoPrint_Order_Tracking::record_shippo_label( $order, $label['tracking_number'], $label['carrier_id'], $label['label_url'], $label['transaction_id'], $label['invoice_url'] );
 		$order->save();
 
 		if ( $was_already_shipped ) {
