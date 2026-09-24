@@ -228,7 +228,16 @@ class YeffoPrint_Order_Item_Meta {
 
 		// Human-readable rows for the admin order screen / customer
 		// emails, alongside the machine-readable snapshots above.
-		$item->add_meta_data( __( 'Size', 'yeffoprint-core' ), $size_id ? get_the_title( $size_id ) : '—', true );
+		$has_custom_size = ! empty( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] );
+		if ( $has_custom_size ) {
+			$item->add_meta_data( '_yp_custom_width_in', (float) $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ], true );
+			$item->add_meta_data( '_yp_custom_height_in', (float) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? 0 ), true );
+		}
+		$item->add_meta_data(
+			__( 'Size', 'yeffoprint-core' ),
+			$has_custom_size ? YeffoPrint_Cart_Pricing::custom_inches_label( $values ) : ( $size_id ? get_the_title( $size_id ) : '—' ),
+			true
+		);
 		$item->add_meta_data( __( 'Material', 'yeffoprint-core' ), $material_id ? get_the_title( $material_id ) : '—', true );
 		$item->add_meta_data( __( 'Labels in this batch', 'yeffoprint-core' ), count( $variants ), true );
 

@@ -91,6 +91,21 @@ class YeffoPrint_Cart_Controller {
 			return new \WP_Error( 'yeffoprint_invalid_size', __( 'Please choose a valid size.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
+		// A Size with no print dimensions (e.g. "Custom") means the
+		// customer types their own label size (configurator.js). Kept in
+		// inches on the same keys Custom Stickers use; for a Template
+		// item they're display-only (pricing still uses the Size's flat
+		// adjustment — the inch keys only feed sticker pricing).
+		$custom_width_in  = 0.0;
+		$custom_height_in = 0.0;
+		if ( $size_id && ! YeffoPrint_Commerce_Record_Meta::size_has_dimensions( $size_id ) ) {
+			$custom_width_in  = round( (float) $request->get_param( 'custom_width_in' ), 2 );
+			$custom_height_in = round( (float) $request->get_param( 'custom_height_in' ), 2 );
+			if ( $custom_width_in < 0.25 || $custom_width_in > 24 || $custom_height_in < 0.25 || $custom_height_in > 24 ) {
+				return new \WP_Error( 'yeffoprint_custom_size_required', __( 'Enter your label’s width and height in inches (between 0.25 and 24).', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+		}
+
 		$material_id = absint( $request->get_param( 'material_id' ) );
 		if ( $compatible_materials && ! in_array( $material_id, $compatible_materials, true ) ) {
 			return new \WP_Error( 'yeffoprint_invalid_material', __( 'Please choose a valid material.', 'yeffoprint-core' ), [ 'status' => 400 ] );
@@ -139,6 +154,11 @@ class YeffoPrint_Cart_Controller {
 			YeffoPrint_Cart_Item_Keys::TOTAL_QTY   => $total_quantity,
 			'yp_unique_add'                        => uniqid( '', true ),
 		];
+
+		if ( $custom_width_in > 0 ) {
+			$cart_item_data[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ]  = $custom_width_in;
+			$cart_item_data[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] = $custom_height_in;
+		}
 
 		// Direct report: submitting 3 batch rows (30 total) landed in the
 		// cart as a single 10-label line item — every step of this
@@ -211,6 +231,8 @@ class YeffoPrint_Cart_Controller {
 			'size_id'     => $item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ],
 			'material_id' => $item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ],
 			'variants'    => $item[ YeffoPrint_Cart_Item_Keys::VARIANTS ],
+			'custom_width_in'  => (float) ( $item[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] ?? 0 ),
+			'custom_height_in' => (float) ( $item[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? 0 ),
 		] );
 	}
 

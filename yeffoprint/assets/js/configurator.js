@@ -90,7 +90,11 @@
 		materialId: null,
 		activeVariantIndex: 0,
 		variants: [],
-		editKey: null
+		editKey: null,
+		// Only used on a Size with no print dimensions ("Custom"): the
+		// label size the customer types in, in inches.
+		customWidthIn: '',
+		customHeightIn: ''
 	};
 	var nextVariantId = 1;
 
@@ -231,6 +235,8 @@
 
 	function hydrateFromBatch( item ) {
 		state.sizeId = item.size_id ? parseInt( item.size_id, 10 ) : null;
+		state.customWidthIn = item.custom_width_in ? String( item.custom_width_in ) : '';
+		state.customHeightIn = item.custom_height_in ? String( item.custom_height_in ) : '';
 		state.materialId = item.material_id ? parseInt( item.material_id, 10 ) : null;
 		state.variants = item.variants.map( function ( variant ) {
 			return {
@@ -434,6 +440,61 @@
 		renderSizeCaption();
 	}
 
+	function selectedSize() {
+		return ( schema.sizes || [] ).filter( function ( s ) { return s.id === state.sizeId; } )[ 0 ];
+	}
+
+	/** True when the picked Size has no print dimensions ("Custom"), so the customer types their own. */
+	function needsCustomSize() {
+		var size = selectedSize();
+		return !! size && ! window.YPLabelPickers.hasDimensions( size );
+	}
+
+	function customSizeValid() {
+		var w = parseFloat( state.customWidthIn );
+		var h = parseFloat( state.customHeightIn );
+		return w >= 0.25 && w <= 24 && h >= 0.25 && h <= 24;
+	}
+
+	var customSizeEl = null;
+
+	/**
+	 * Width/height boxes under the size cards when a no-dimensions Size
+	 * ("Custom") is picked. Direct report: "there's a custom size option
+	 * for the templates, but nowhere for them to enter the size they
+	 * need." Sent with Add to Cart (cart/add validates and stores it).
+	 */
+	function renderCustomSize() {
+		if ( ! customSizeEl ) {
+			customSizeEl = document.createElement( 'div' );
+			customSizeEl.className = 'yp-custom-size';
+			customSizeEl.innerHTML =
+				'<p class="yp-custom-size__title">Enter your label size</p>' +
+				'<div class="yp-custom-size__row">' +
+					'<label class="yp-custom-size__field"><span>Width</span><span class="yp-custom-size__input"><input type="number" inputmode="decimal" min="0.25" max="24" step="0.05" placeholder="2.00" data-yp-custom-width /><em>in</em></span></label>' +
+					'<span class="yp-custom-size__x" aria-hidden="true">×</span>' +
+					'<label class="yp-custom-size__field"><span>Height</span><span class="yp-custom-size__input"><input type="number" inputmode="decimal" min="0.25" max="24" step="0.05" placeholder="1.00" data-yp-custom-height /><em>in</em></span></label>' +
+				'</div>' +
+				'<p class="yp-custom-size__hint">Measure the area you want the label to cover. We’ll confirm the fit before printing.</p>';
+			( sizeCaptionEl || sizeOptionsEl ).insertAdjacentElement( 'afterend', customSizeEl );
+
+			var widthInput = customSizeEl.querySelector( '[data-yp-custom-width]' );
+			var heightInput = customSizeEl.querySelector( '[data-yp-custom-height]' );
+			widthInput.addEventListener( 'input', function () {
+				state.customWidthIn = widthInput.value;
+				customSizeEl.classList.remove( 'is-invalid' );
+			} );
+			heightInput.addEventListener( 'input', function () {
+				state.customHeightIn = heightInput.value;
+				customSizeEl.classList.remove( 'is-invalid' );
+			} );
+		}
+
+		customSizeEl.hidden = ! needsCustomSize();
+		customSizeEl.querySelector( '[data-yp-custom-width]' ).value = state.customWidthIn;
+		customSizeEl.querySelector( '[data-yp-custom-height]' ).value = state.customHeightIn;
+	}
+
 	/** "Label size: 1.77″ × 0.83″ · 45 × 21 mm · rounded corners" under the cards. */
 	function renderSizeCaption() {
 		if ( ! sizeCaptionEl ) {
@@ -442,8 +503,10 @@
 			sizeOptionsEl.parentNode.insertBefore( sizeCaptionEl, sizeOptionsEl.nextSibling );
 		}
 
+		renderCustomSize();
+
 		var pickers = window.YPLabelPickers;
-		var size = ( schema.sizes || [] ).filter( function ( s ) { return s.id === state.sizeId; } )[ 0 ];
+		var size = selectedSize();
 		if ( ! size || ! pickers.hasDimensions( size ) ) {
 			sizeCaptionEl.hidden = true;
 			return;
@@ -1387,6 +1450,17 @@
 
 	function submitAddToCart( isRetry ) {
 		clearCartStatus();
+
+		if ( needsCustomSize() && ! customSizeValid() ) {
+			showCartStatus( 'Enter your label’s width and height (0.25 to 24 inches) under Size.', true );
+			if ( customSizeEl ) {
+				customSizeEl.classList.add( 'is-invalid' );
+				customSizeEl.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+				customSizeEl.querySelector( parseFloat( state.customWidthIn ) >= 0.25 ? '[data-yp-custom-height]' : '[data-yp-custom-width]' ).focus( { preventScroll: true } );
+			}
+			return;
+		}
+
 		addToCartButtons.forEach( function ( button ) {
 			button.disabled = true;
 		} );
@@ -1399,6 +1473,11 @@
 				return { quantity: variant.quantity, values: variant.values };
 			} )
 		};
+
+		if ( needsCustomSize() ) {
+			payload.custom_width_in = parseFloat( state.customWidthIn );
+			payload.custom_height_in = parseFloat( state.customHeightIn );
+		}
 
 		if ( state.editKey ) {
 			payload.edit_key = state.editKey;

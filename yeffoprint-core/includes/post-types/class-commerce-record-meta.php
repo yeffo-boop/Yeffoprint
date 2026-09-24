@@ -216,6 +216,16 @@ class YeffoPrint_Commerce_Record_Meta {
 	}
 
 	/**
+	 * Whether a Size has its print width and height set. A Size left at
+	 * 0 × 0 (the live "Custom" size) is one where the customer enters
+	 * their own dimensions instead (configurator.js, cart/add).
+	 */
+	public static function size_has_dimensions( int $size_id ): bool {
+		return (float) get_post_meta( $size_id, self::PRINT_WIDTH_MM, true ) > 0
+			&& (float) get_post_meta( $size_id, self::PRINT_HEIGHT_MM, true ) > 0;
+	}
+
+	/**
 	 * The swatch texture a Material actually renders with: its own
 	 * SWATCH_FINISH when an admin picked one, otherwise a guess from its
 	 * name so the live catalog (White Glossy, White Matte, Clear,

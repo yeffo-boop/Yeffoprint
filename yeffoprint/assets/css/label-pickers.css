@@ -170,6 +170,92 @@
 	font-weight: 600;
 }
 
+/* Custom size entry (a Size with no print dimensions, e.g. "Custom") */
+.yp-custom-size {
+	margin-top: 0.85rem;
+	padding: 0.9rem 1rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+}
+
+.yp-custom-size.is-invalid {
+	border-color: #c0392b;
+	box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+}
+
+.yp-custom-size__title {
+	margin: 0 0 0.6rem;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.yp-custom-size__row {
+	display: flex;
+	align-items: flex-end;
+	gap: 0.6rem;
+}
+
+.yp-custom-size__field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	flex: 1 1 0;
+	min-width: 0;
+	font-size: 0.78rem;
+	color: #66645e;
+}
+
+.yp-custom-size__input {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0 0.7rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-custom-size__input input {
+	flex: 1 1 auto;
+	min-width: 0;
+	width: 100%;
+	padding: 0.6rem 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	font: inherit;
+	font-size: 1rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-custom-size__input input:focus {
+	outline: none;
+}
+
+.yp-custom-size__input:focus-within {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.yp-custom-size__input em {
+	font-style: normal;
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.78rem;
+	color: #8a877f;
+}
+
+.yp-custom-size__x {
+	padding-bottom: 0.65rem;
+	color: #8a877f;
+}
+
+.yp-custom-size__hint {
+	margin: 0.6rem 0 0;
+	font-size: 0.75rem;
+	color: #8a877f;
+}
+
 /* ---------- Material cards (product page) ---------- */
 
 .yp-material-cards {
