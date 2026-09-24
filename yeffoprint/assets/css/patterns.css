@@ -2395,6 +2395,18 @@
 	color: rgba(255, 255, 255, 0.8);
 }
 
+/* Selected category tile on Shop Labels (the tiles are its only filter). */
+.yp-product-type-browse__card.is-active {
+	outline: 3px solid var(--wp--preset--color--near-black);
+	outline-offset: 3px;
+}
+
+.yp-product-type-browse__clear {
+	margin-top: 1rem;
+	text-align: center;
+	font-weight: 600;
+}
+
 /* How it works: numbered sequence with connectors */
 .yp-steps--sequence {
 	display: grid;
