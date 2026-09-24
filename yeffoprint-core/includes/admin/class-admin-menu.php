@@ -201,6 +201,16 @@ class YeffoPrint_Admin_Menu {
 	const DASHBOARD_DUE_DATE_DAYS_DEFAULT = 7;
 
 	/**
+	 * Express orders (class-express-order.php) — direct request: a flat
+	 * per-order fee to skip the production line, starting at $15 and
+	 * editable on the admin app's Settings screen. On by default, since
+	 * the request was to start offering it.
+	 */
+	const EXPRESS_ENABLED_OPTION = 'yeffoprint_express_enabled';
+	const EXPRESS_FEE_OPTION     = 'yeffoprint_express_fee';
+	const EXPRESS_FEE_DEFAULT    = 15;
+
+	/**
 	 * Also read by includes/telegram/* — same reasoning as the options
 	 * above. The bot token can also be set via a
 	 * YEFFOPRINT_TELEGRAM_BOT_TOKEN wp-config.php constant instead

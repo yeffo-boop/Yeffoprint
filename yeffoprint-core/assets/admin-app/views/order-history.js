@@ -127,7 +127,7 @@
 						'<td>' + ( order.date ? YP.escapeHtml( new Date( order.date ).toLocaleDateString() ) : '—' ) + '</td>' +
 						'<td>' + order.item_count + '</td>' +
 						'<td>$' + order.total.toFixed( 2 ) + '</td>' +
-						'<td><span class="yp-pill yp-pill--' + pillClass + '">' + YP.escapeHtml( order.status_label ) + '</span></td>' +
+						'<td><span class="yp-pill yp-pill--' + pillClass + '">' + YP.escapeHtml( order.status_label ) + '</span>' + ( order.express ? ' <span class="yp-pill yp-pill--crit">Express</span>' : '' ) + '</td>' +
 					'</tr>'
 				);
 			} ).join( '' );

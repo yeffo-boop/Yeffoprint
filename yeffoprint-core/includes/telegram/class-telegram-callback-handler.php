@@ -46,6 +46,15 @@ class YeffoPrint_Telegram_Callback_Handler {
 		$client = new YeffoPrint_Telegram_Client( $bot_token );
 		$parts  = explode( ':', $data, 2 );
 		$action = $parts[0] ?? '';
+
+		// The owner's "✅ Got it" on an Express order alert
+		// (class-telegram-express-alerts.php) — gated to the owner's own
+		// chat, not to a linked customer account like the proof buttons.
+		if ( 'express_ack' === $action ) {
+			$this->handle_express_ack( $client, $callback_query_id, $chat_id, absint( $parts[1] ?? '' ) );
+			return;
+		}
+
 		$custom_order_id = absint( $parts[1] ?? '' );
 
 		if ( ! $custom_order_id || ! in_array( $action, [ 'proof_approve', 'proof_reject' ], true ) ) {
@@ -64,6 +73,26 @@ class YeffoPrint_Telegram_Callback_Handler {
 		}
 
 		$this->handle_reject_tap( $client, $callback_query_id, $chat_id, $custom_order_id );
+	}
+
+	private function handle_express_ack( YeffoPrint_Telegram_Client $client, string $callback_query_id, int $chat_id, int $order_id ): void {
+		if ( ! $order_id || ! YeffoPrint_Telegram_Admin_Commands::is_admin_chat( $chat_id ) ) {
+			$client->answer_callback_query( $callback_query_id, __( "You don't have access to that.", 'yeffoprint-core' ) );
+			return;
+		}
+
+		$ok    = YeffoPrint_Telegram_Express_Alerts::acknowledge( $order_id );
+		$order = wc_get_order( $order_id );
+		$label = $order ? $order->get_order_number() : (string) $order_id;
+
+		$client->answer_callback_query( $callback_query_id, $ok ? __( 'Acknowledged!', 'yeffoprint-core' ) : __( 'Already handled.', 'yeffoprint-core' ) );
+		if ( $ok ) {
+			$client->send_message( $chat_id, sprintf(
+				/* translators: %s: order number */
+				__( '✅ Acknowledged express order %s. No more alerts for it.', 'yeffoprint-core' ),
+				$label
+			) );
+		}
 	}
 
 	private function handle_approve( YeffoPrint_Telegram_Client $client, string $callback_query_id, int $chat_id, int $custom_order_id ): void {

@@ -85,4 +85,8 @@ register_deactivation_hook( __FILE__, function () {
 	// just keeps firing hourly with nothing listening.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-credential-purge.php';
 	YeffoPrint_Web_Design_Credential_Purge::unschedule();
+
+	// Same reasoning again — the express-order Telegram alert sweep.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-express-alerts.php';
+	YeffoPrint_Telegram_Express_Alerts::unschedule();
 } );
