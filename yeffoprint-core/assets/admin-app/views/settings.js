@@ -39,11 +39,17 @@
 	// array to keep in sync" repeater shape as views/pricing.js's own
 	// bulk-discount tier table.
 	function manualOrderShippingOptionRowHtml( option ) {
-		option = option || { label: '', amount: '' };
+		option = option || { label: '', amount: '', region: 'domestic' };
+		var regions = [ [ 'domestic', 'US only' ], [ 'international', 'International only' ], [ 'any', 'Everywhere' ] ];
 		return (
 			'<tr>' +
 				'<td><input type="text" data-shipping-option-label placeholder="e.g. USPS Ground Advantage" value="' + YP.escapeAttr( option.label ) + '" /></td>' +
 				'<td><input type="number" min="0" step="0.01" data-shipping-option-amount value="' + YP.escapeAttr( option.amount ) + '" /></td>' +
+				'<td><select data-shipping-option-region>' +
+					regions.map( function ( region ) {
+						return '<option value="' + region[ 0 ] + '"' + ( region[ 0 ] === option.region ? ' selected' : '' ) + '>' + region[ 1 ] + '</option>';
+					} ).join( '' ) +
+				'</select></td>' +
 				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove shipping option">&times;</button></td>' +
 			'</tr>'
 		);
@@ -65,7 +71,8 @@
 		return Array.prototype.map.call( tbody.querySelectorAll( 'tr' ), function ( row ) {
 			return {
 				label: row.querySelector( '[data-shipping-option-label]' ).value,
-				amount: parseFloat( row.querySelector( '[data-shipping-option-amount]' ).value ) || 0
+				amount: parseFloat( row.querySelector( '[data-shipping-option-amount]' ).value ) || 0,
+				region: row.querySelector( '[data-shipping-option-region]' ).value
 			};
 		} ).filter( function ( option ) { return '' !== option.label.trim(); } );
 	}
@@ -200,8 +207,8 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Manual order shipping options</h2></div>' +
-					'<p class="yp-panel__hint">Direct request: "I don’t need to rate shop to add shipping, just use my default shipping options." Staff pick one of these flat rates on the Manual Order screen instead of live rate-shopping — works whether or not Shippo above is configured.</p>' +
-					'<table class="yp-tier-table"><thead><tr><th>Label</th><th>Price</th><th></th></tr></thead>' +
+					'<p class="yp-panel__hint">Direct request: "I don’t need to rate shop to add shipping, just use my default shipping options." Staff pick one of these flat rates on the Manual Order screen instead of live rate-shopping — works whether or not Shippo above is configured. Customers also pick from these on their payment link when the order’s shipping is left on “Customer picks”. “Ships to” limits each one to US addresses or international ones.</p>' +
+					'<table class="yp-tier-table"><thead><tr><th>Label</th><th>Price</th><th>Ships to</th><th></th></tr></thead>' +
 						'<tbody data-yp-shipping-option-rows>' +
 							( settings.manual_order_shipping_options || [] ).map( manualOrderShippingOptionRowHtml ).join( '' ) +
 						'</tbody>' +

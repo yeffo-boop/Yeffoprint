@@ -132,12 +132,12 @@ class YeffoPrint_Card_Surcharge {
 		$this->sync_pay_order_surcharge( $order );
 
 		wp_send_json_success( [
-			'totalsHtml' => $this->render_order_totals_rows( $order ),
+			'totalsHtml' => self::order_totals_rows_html( $order ),
 		] );
 	}
 
-	/** Same <tr> markup checkout/form-pay.php's own <tfoot> builds from this exact method — kept identical so the live-updated rows match what a full page load would have rendered. */
-	private function render_order_totals_rows( \WC_Order $order ): string {
+	/** Same <tr> markup checkout/form-pay.php's own <tfoot> builds from this exact method — kept identical so the live-updated rows match what a full page load would have rendered. Also used by class-order-pay-address.php's live shipping pick. */
+	public static function order_totals_rows_html( \WC_Order $order ): string {
 		ob_start();
 		foreach ( $order->get_order_item_totals() as $total ) {
 			?>

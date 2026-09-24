@@ -210,6 +210,7 @@ class YeffoPrint_Admin_App {
 				// token configured (unlike defaultPackage/configured above,
 				// which gate the order-detail Shippo panel's own rate-shop).
 				'manualOrderShippingOptions' => YeffoPrint_Shippo_Settings::get_manual_order_shipping_options(),
+				'domesticCountry'            => YeffoPrint_Shippo_Settings::domestic_country(),
 			],
 		] );
 

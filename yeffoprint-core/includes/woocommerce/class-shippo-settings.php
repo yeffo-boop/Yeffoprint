@@ -66,10 +66,19 @@ class YeffoPrint_Shippo_Settings {
 	// wrong amount here whenever this option had never been explicitly
 	// saved.
 	private const DEFAULT_MANUAL_ORDER_SHIPPING_OPTIONS = [
-		[ 'label' => 'USPS Ground Advantage', 'amount' => 6.00 ],
-		[ 'label' => 'UPS 2nd Day Air', 'amount' => 15.00 ],
-		[ 'label' => 'USPS First Class International', 'amount' => 25.00 ],
+		[ 'label' => 'USPS Ground Advantage', 'amount' => 6.00, 'region' => 'domestic' ],
+		[ 'label' => 'UPS 2nd Day Air', 'amount' => 15.00, 'region' => 'domestic' ],
+		[ 'label' => 'USPS First Class International', 'amount' => 25.00, 'region' => 'international' ],
 	];
+
+	/**
+	 * Direct request: "restrict international shipping to just
+	 * international customers and the other 2 to domestic customers."
+	 * Each manual order shipping option carries one of these; 'any' is
+	 * offered to every address. Domestic means the store's own country
+	 * (WooCommerce Settings → General), the US here.
+	 */
+	public const REGIONS = [ 'domestic', 'international', 'any' ];
 
 	public static function get_api_key(): string {
 		$key = get_option( self::API_KEY_OPTION, '' );
@@ -91,7 +100,7 @@ class YeffoPrint_Shippo_Settings {
 		];
 	}
 
-	/** @return array<int, array{label:string, amount:float}> */
+	/** @return array<int, array{label:string, amount:float, region:string}> */
 	public static function get_manual_order_shipping_options(): array {
 		$stored = get_option( self::MANUAL_ORDER_SHIPPING_OPTIONS_OPTION, null );
 		if ( ! is_array( $stored ) ) {
@@ -101,7 +110,7 @@ class YeffoPrint_Shippo_Settings {
 		return self::sanitize_manual_order_shipping_options( $stored );
 	}
 
-	/** Shared by get_manual_order_shipping_options() (reading whatever's already stored) and class-admin-settings-controller.php's own save handler (sanitizing a fresh submission before it's stored) — one validation rule, not two. @return array<int, array{label:string, amount:float}> */
+	/** Shared by get_manual_order_shipping_options() (reading whatever's already stored) and class-admin-settings-controller.php's own save handler (sanitizing a fresh submission before it's stored) — one validation rule, not two. @return array<int, array{label:string, amount:float, region:string}> */
 	public static function sanitize_manual_order_shipping_options( array $raw ): array {
 		$options = [];
 
@@ -115,10 +124,52 @@ class YeffoPrint_Shippo_Settings {
 				continue;
 			}
 
-			$options[] = [ 'label' => $label, 'amount' => max( 0.0, (float) ( $option['amount'] ?? 0 ) ) ];
+			$region = (string) ( $option['region'] ?? '' );
+			if ( ! in_array( $region, self::REGIONS, true ) ) {
+				// Options saved before regions existed: anything named
+				// "International" is for international addresses, the
+				// rest domestic — matches the three seeded defaults.
+				$region = false !== stripos( $label, 'international' ) ? 'international' : 'domestic';
+			}
+
+			$options[] = [ 'label' => $label, 'amount' => max( 0.0, (float) ( $option['amount'] ?? 0 ) ), 'region' => $region ];
 		}
 
 		return $options;
+	}
+
+	public static function domestic_country(): string {
+		$base = function_exists( 'WC' ) && WC()->countries ? (string) WC()->countries->get_base_country() : '';
+
+		return '' !== $base ? $base : 'US';
+	}
+
+	/** 'domestic' or 'international' for a shipping address's country — '' when no country is known yet. */
+	public static function region_for_country( string $country ): string {
+		$country = strtoupper( trim( $country ) );
+		if ( '' === $country ) {
+			return '';
+		}
+
+		return self::domestic_country() === $country ? 'domestic' : 'international';
+	}
+
+	/** Whether one manual order shipping option may ship to $country. Always true while the country is still unknown. */
+	public static function option_ships_to( array $option, string $country ): bool {
+		$region = self::region_for_country( $country );
+
+		return '' === $region || 'any' === ( $option['region'] ?? 'any' ) || $region === $option['region'];
+	}
+
+	/** The saved option whose label matches a shipping line's method title, or null when it isn't one of them (a custom one-off amount). */
+	public static function find_manual_order_shipping_option( string $label ): ?array {
+		foreach ( self::get_manual_order_shipping_options() as $option ) {
+			if ( 0 === strcasecmp( trim( $option['label'] ), trim( $label ) ) ) {
+				return $option;
+			}
+		}
+
+		return null;
 	}
 
 	/**

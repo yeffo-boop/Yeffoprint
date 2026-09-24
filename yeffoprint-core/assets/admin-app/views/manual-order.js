@@ -156,7 +156,7 @@
 				billingAddress: emptyAddress(),
 				verifying: false,
 				verifyResult: null, // { is_valid, messages } from the last /verify-address call.
-				selectedOptionIndex: '' // Index into yeffoprintAdminApp.shippo.manualOrderShippingOptions, as a string (matches a <select>'s own value type) — '' means "no shipping charge."
+				selectedOptionIndex: '' // Index into yeffoprintAdminApp.shippo.manualOrderShippingOptions, as a string (matches a <select>'s own value type) — '' means the customer picks on their payment page, 'none' means no shipping charge.
 			}
 		};
 
@@ -1037,15 +1037,59 @@
 					'<div class="yp-panel__head"><h2>Shipping method</h2></div>' +
 					( options.length ?
 						'<div class="yp-field"><label for="yp-mo-shipping-method">Method</label><select id="yp-mo-shipping-method">' +
-							'<option value="">No shipping charge</option>' +
-							options.map( function ( option, index ) {
-								return '<option value="' + index + '"' + ( String( index ) === s.selectedOptionIndex ? ' selected' : '' ) + '>' + YP.escapeHtml( option.label ) + ' — $' + option.amount.toFixed( 2 ) + '</option>';
-							} ).join( '' ) +
+							shippingMethodOptionsHtml() +
 						'</select></div>' +
-						'<p class="yp-panel__hint">Adds the chosen amount to the invoice as a shipping line — edit these options under Settings &rarr; Shipping.</p>'
+						'<p class="yp-panel__hint">“Customer picks” lets them choose on their payment link, from the options that ship to their address. Picking one here adds it to the invoice as a shipping line. Edit these options under Settings &rarr; Shipping.</p>'
 						: '<p class="yp-panel__hint">No shipping options set up yet — add some under Settings &rarr; Shipping.</p>' ) +
 				'</div>'
 			);
+		}
+
+		/**
+		 * Direct request: "restrict international shipping to just
+		 * international customers and the other 2 to domestic customers."
+		 * Only options whose "Ships to" (Settings → Shipping) fits the
+		 * typed-in country are listed; all of them while the customer is
+		 * providing the address themselves, since it isn't known yet (the
+		 * payment page checks it then).
+		 */
+		function shippingOptionFits( option ) {
+			var s       = state.shipping;
+			var country = s.customerProvidesAddress ? '' : String( s.address.country || '' ).trim().toUpperCase();
+			var home    = ( yeffoprintAdminApp.shippo && yeffoprintAdminApp.shippo.domesticCountry ) || 'US';
+
+			if ( ! country || ! option.region || 'any' === option.region ) {
+				return true;
+			}
+			return ( country === home ) === ( 'domestic' === option.region );
+		}
+
+		function shippingMethodOptionsHtml() {
+			var s       = state.shipping;
+			var options = ( yeffoprintAdminApp.shippo && yeffoprintAdminApp.shippo.manualOrderShippingOptions ) || [];
+
+			var picked = options[ parseInt( s.selectedOptionIndex, 10 ) ];
+			if ( picked && ! shippingOptionFits( picked ) ) {
+				s.selectedOptionIndex = '';
+			}
+
+			return (
+				'<option value=""' + ( '' === s.selectedOptionIndex ? ' selected' : '' ) + '>Customer picks when they pay</option>' +
+				'<option value="none"' + ( 'none' === s.selectedOptionIndex ? ' selected' : '' ) + '>No shipping charge</option>' +
+				options.map( function ( option, index ) {
+					if ( ! shippingOptionFits( option ) ) {
+						return '';
+					}
+					return '<option value="' + index + '"' + ( String( index ) === s.selectedOptionIndex ? ' selected' : '' ) + '>' + YP.escapeHtml( option.label ) + ' — $' + option.amount.toFixed( 2 ) + '</option>';
+				} ).join( '' )
+			);
+		}
+
+		function refreshShippingMethodSelect() {
+			var methodSelect = viewEl.querySelector( '#yp-mo-shipping-method' );
+			if ( methodSelect ) {
+				methodSelect.innerHTML = shippingMethodOptionsHtml();
+			}
 		}
 
 		function readAddressState( prefix ) {
@@ -1121,7 +1165,12 @@
 
 			[ 'ship', 'bill' ].forEach( function ( prefix ) {
 				panel.querySelectorAll( '[id^="yp-mo-' + prefix + '-"]' ).forEach( function ( field ) {
-					field.addEventListener( 'input', function () { readAddressState( prefix ); } );
+					field.addEventListener( 'input', function () {
+						readAddressState( prefix );
+						if ( 'ship' === prefix && 'country' === field.getAttribute( 'data-yp-address-field' ) ) {
+							refreshShippingMethodSelect();
+						}
+					} );
 				} );
 			} );
 
@@ -1129,6 +1178,7 @@
 			customerProvidesToggle.addEventListener( 'change', function () {
 				state.shipping.customerProvidesAddress = customerProvidesToggle.checked;
 				panel.querySelector( '[data-yp-ship-address-fields]' ).style.display = customerProvidesToggle.checked ? 'none' : '';
+				refreshShippingMethodSelect();
 			} );
 
 			var billingDiffersToggle = panel.querySelector( '#yp-mo-billing-differs' );
@@ -1288,6 +1338,7 @@
 				if ( selectedShipping ) {
 					body.shipping = selectedShipping;
 				}
+				body.customer_picks_shipping = '' === state.shipping.selectedOptionIndex;
 			}
 
 			submitButton.disabled = true;

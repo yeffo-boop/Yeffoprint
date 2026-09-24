@@ -1212,6 +1212,84 @@
 	background: var(--wp--preset--color--white);
 }
 
+/* WooCommerce's own form rows (woocommerce_form_field()) inside the grid. */
+.yp-pay-address__grid .form-row {
+	margin: 0;
+	padding: 0;
+	width: auto;
+	float: none;
+}
+
+.yp-pay-address__grid .form-row-wide,
+.yp-pay-address__grid #shipping_address_1_field,
+.yp-pay-address__grid #shipping_address_2_field,
+.yp-pay-address__grid #billing_address_1_field,
+.yp-pay-address__grid #billing_address_2_field {
+	grid-column: 1 / -1;
+}
+
+.yp-pay-address__grid .form-row label {
+	display: block;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+	margin-bottom: 0.35rem;
+}
+
+.yp-pay-address__grid .form-row input,
+.yp-pay-address__grid .form-row select {
+	width: 100%;
+	background: var(--wp--preset--color--white);
+}
+
+.yp-pay-address__toggle {
+	margin: 1rem 0 0;
+	font-size: 0.9rem;
+}
+
+.yp-pay-address__toggle label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+}
+
+.yp-pay-address [data-yp-billing-fields],
+.yp-pay-shipping {
+	margin-top: 1.25rem;
+}
+
+.yp-pay-shipping__list {
+	list-style: none;
+	margin: 0.5rem 0 0;
+	padding: 0;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.yp-pay-shipping__list label {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.7rem 0.9rem;
+	background: var(--wp--preset--color--white);
+	border: 1px solid #F3C7E1;
+	border-radius: var(--wp--custom--radius--card);
+	cursor: pointer;
+}
+
+.yp-pay-shipping__label {
+	flex: 1;
+}
+
+.yp-pay-shipping__price {
+	font-weight: 600;
+}
+
+.yp-pay-shipping__empty {
+	font-size: 0.88rem;
+	margin: 0.5rem 0 0;
+}
+
 @media (max-width: 560px) {
 	.yp-pay-address__grid {
 		grid-template-columns: 1fr;
