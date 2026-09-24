@@ -62,6 +62,11 @@ class YeffoPrint_Telegram_Message_Handler {
 			if ( '/today' === $command ) {
 				return YeffoPrint_Telegram_Admin_Commands::today_reply();
 			}
+			// Express order alerts (class-telegram-express-alerts.php):
+			// `/ack` or a bare "ack" stops all of them, `/ack 1234` one.
+			if ( in_array( $command, [ '/ack', 'ack' ], true ) ) {
+				return YeffoPrint_Telegram_Express_Alerts::ack_reply( substr( $text, strlen( $command ) ) );
+			}
 		}
 
 		// `/start link_CODE` — the deep-link button on My Account's

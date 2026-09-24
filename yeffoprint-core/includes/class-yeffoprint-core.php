@@ -78,6 +78,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-card-surcharge-blocks-integration.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-pay-address.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-checkout-notice.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-express-order.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-email-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-item-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-cart-controller.php';
@@ -165,6 +166,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/seo/class-seo-meta-tags.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/seo/class-llms-txt.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-admin-commands.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-express-alerts.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-address-update.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-log.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-digest.php';
@@ -191,6 +193,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Card_Surcharge_Blocks_Integration();
 		new YeffoPrint_Order_Pay_Address();
 		new YeffoPrint_Away_Mode_Checkout_Notice();
+		new YeffoPrint_Express_Order();
 		new YeffoPrint_Away_Mode_Email_Notice();
 		new YeffoPrint_Order_Item_Meta();
 		new YeffoPrint_Cart_Controller();
@@ -264,6 +267,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Unanswered_Log();
 		new YeffoPrint_Telegram_Unanswered_Digest();
 		new YeffoPrint_Proof_Reminder_Scheduler();
+		new YeffoPrint_Telegram_Express_Alerts();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)

@@ -143,6 +143,13 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Express Orders</h2></div>' +
+					'<p class="yp-panel__hint">Customers can tick "Express: skip the line" at checkout for a flat fee per order. Once an express order is paid, your Telegram alerts chat (Telegram Bot below) gets pinged right away and every 30 minutes until you tap "Got it" or reply /ack, or the order moves to In Production or Shipped.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-express-enabled"' + ( settings.express_enabled ? ' checked' : '' ) + ' /><label for="yp-set-express-enabled">Offer Express at checkout</label></div>' +
+					'<div class="yp-field"><label for="yp-set-express-fee">Express fee ($ per order)</label><input type="number" min="0" step="0.01" id="yp-set-express-fee" value="' + YP.escapeAttr( String( settings.express_fee ) ) + '" /></div>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Label Configurator</h2></div>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-live-preview"' + ( settings.live_preview_enabled ? ' checked' : '' ) + ' /><label for="yp-set-live-preview">Show customers the live, per-keystroke text preview on Label View</label></div>' +
 					'<p class="yp-panel__hint">Turn off while adjusting field alignment on a Template so customers don’t see not-yet-correct positioning. Everything else keeps working either way.</p>' +
@@ -344,6 +351,8 @@
 				splash_image_id: parseInt( viewEl.querySelector( '[data-yp-splash-id]' ).value, 10 ) || 0,
 				away_mode_enabled: viewEl.querySelector( '#yp-set-away-enabled' ).checked,
 				away_mode_return_date: viewEl.querySelector( '#yp-set-away-return' ).value,
+				express_enabled: viewEl.querySelector( '#yp-set-express-enabled' ).checked,
+				express_fee: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-express-fee' ).value ) || 0 ),
 				dashboard_due_date_days: parseInt( viewEl.querySelector( '#yp-set-due-date' ).value, 10 ) || 7,
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,

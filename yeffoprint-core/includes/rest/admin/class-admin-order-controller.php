@@ -146,6 +146,7 @@ class YeffoPrint_Admin_Order_Controller {
 			'customer_email' => $order->get_billing_email(),
 			'total'          => (float) $order->get_total(),
 			'item_count'     => $order->get_item_count(),
+			'express'        => YeffoPrint_Express_Order::is_express( $order ),
 		];
 	}
 
@@ -288,6 +289,7 @@ class YeffoPrint_Admin_Order_Controller {
 			'customer_email'       => $order->get_billing_email(),
 			'customer_phone'       => $order->get_billing_phone(),
 			'customer_note'        => $order->get_customer_note(),
+			'express'              => YeffoPrint_Express_Order::is_express( $order ),
 			// Falls back to billing when there's no separate shipping
 			// address — same behavior WooCommerce's own order screen and
 			// order emails already use, not a new convention introduced

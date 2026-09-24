@@ -523,7 +523,7 @@
 		return (
 			'<div class="yp-list-row">' +
 				'<div class="yp-list-row__text">' +
-					'<span class="t">' + label + '</span>' +
+					'<span class="t">' + label + ( row.express ? ' <span class="yp-pill yp-pill--crit">Express</span>' : '' ) + '</span>' +
 					'<span class="s">' + YP.escapeHtml( row.customer || '—' ) + '</span>' +
 				'</div>' +
 				'<div class="yp-list-row__meta">' + ( age.overdue ? '<span class="yp-pill yp-pill--crit">' + age.text + '</span>' : '<span class="yp-list-row__age">' + age.text + '</span>' ) + '</div>' +
@@ -1096,7 +1096,8 @@
 		if ( titleEl ) {
 			titleEl.innerHTML =
 				'Order #' + YP.escapeHtml( String( order.number ) ) +
-				'<span class="yp-pill yp-pill--' + ( WC_ORDER_STATUS_PILLS[ order.status ] || 'neutral' ) + '">' + YP.escapeHtml( order.status_label ) + '</span>';
+				'<span class="yp-pill yp-pill--' + ( WC_ORDER_STATUS_PILLS[ order.status ] || 'neutral' ) + '">' + YP.escapeHtml( order.status_label ) + '</span>' +
+				( order.express ? '<span class="yp-pill yp-pill--crit">Express</span>' : '' );
 		}
 
 		var fieldsHtml = wcOrderField(

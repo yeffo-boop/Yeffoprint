@@ -129,6 +129,16 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			'order'   => 'ASC',
 		] );
 
+		// Express orders (class-express-order.php) paid to skip the line,
+		// so they go to the top — still oldest first within each group.
+		$express = [];
+		foreach ( $orders as $order ) {
+			$express[ $order->get_id() ] = YeffoPrint_Express_Order::is_express( $order );
+		}
+		usort( $orders, static function ( \WC_Order $a, \WC_Order $b ) use ( $express ) {
+			return (int) $express[ $b->get_id() ] <=> (int) $express[ $a->get_id() ];
+		} );
+
 		$root_ids      = [];
 		$numbers_by_id = [];
 		foreach ( $orders as $order ) {
@@ -143,7 +153,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			$groups[ $root_id ][] = $order_id;
 		}
 
-		return array_map( function ( \WC_Order $order ) use ( $root_ids, $groups, $numbers_by_id ) {
+		return array_map( function ( \WC_Order $order ) use ( $root_ids, $groups, $numbers_by_id, $express ) {
 			$date     = $order->get_date_created();
 			$order_id = $order->get_id();
 			$group    = $groups[ $root_ids[ $order_id ] ] ?? [ $order_id ];
@@ -159,6 +169,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 				'date'               => $date ? $date->date( 'c' ) : null,
 				'status'             => $order->get_status(),
 				'status_label'       => wc_get_order_status_name( $order->get_status() ),
+				'express'            => $express[ $order_id ],
 				'ship_group_key'     => $ship_group_key,
 				'ship_group_numbers' => $ship_group_key
 					? array_values( array_map( function ( $id ) use ( $numbers_by_id ) {

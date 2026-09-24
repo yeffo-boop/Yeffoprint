@@ -532,6 +532,58 @@
 	margin: 0;
 }
 
+/* The "Express: skip the line" checkbox — express-checkout.js inserts it
+   right above Place Order. Same card shape as the away notice above, in
+   the brand accent since it's an option to pick, not a warning. */
+.yp-express-option {
+	display: flex;
+	gap: 0.65rem;
+	align-items: center;
+	background: #FDF1F8;
+	border: 1px solid #F3C7E1;
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.85rem 1rem;
+	margin: 1rem 0;
+	cursor: pointer;
+}
+
+.yp-express-option:has( .yp-express-option__input:checked ) {
+	border-color: var(--wp--preset--color--magenta-deep);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--magenta-deep);
+}
+
+.yp-express-option__input {
+	flex-shrink: 0;
+	width: 1.1rem;
+	height: 1.1rem;
+	margin: 0;
+}
+
+.yp-express-option__text {
+	flex: 1;
+	min-width: 0;
+}
+
+.yp-express-option__title {
+	display: block;
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 0.92rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-express-option__body {
+	display: block;
+	font-size: 0.85rem;
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-express-option__price {
+	flex-shrink: 0;
+	font-weight: 700;
+	color: var(--wp--preset--color--near-black);
+}
+
 /* The Venmo/Zelle "send payment to" account — venmo-payment-method.js /
    zelle-payment-method.js. Its own line (not folded into the plain
    description text above) so it reads as the one actionable detail in
