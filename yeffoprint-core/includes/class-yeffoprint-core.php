@@ -81,6 +81,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-checkout-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-express-order.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-draft-order-retention.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-email-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-item-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-cart-controller.php';
@@ -196,6 +197,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Pay_Address();
 		new YeffoPrint_Away_Mode_Checkout_Notice();
 		new YeffoPrint_Express_Order();
+		new YeffoPrint_Draft_Order_Retention();
 		new YeffoPrint_Away_Mode_Email_Notice();
 		new YeffoPrint_Order_Item_Meta();
 		new YeffoPrint_Cart_Controller();

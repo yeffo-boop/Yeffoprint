@@ -45,10 +45,25 @@
 		'in-production': 'neutral',
 		'on-hold':       'warn',
 		pending:         'warn',
+		'checkout-draft': 'warn',
 		cancelled:       'crit',
 		refunded:        'crit',
 		failed:          'crit'
 	};
+
+	// Quick tabs over the same status filter (direct request: "the
+	// ability to see draft orders"). Drafts are hidden from "All
+	// statuses" by WooCommerce itself, so they need a way in that's
+	// easier to spot than one entry in a long dropdown. Awaiting payment
+	// sits beside it for manual orders sent out as pay links.
+	var QUICK_TABS = [
+		{ status: '',               label: 'All orders' },
+		{ status: 'pending',        label: 'Awaiting payment' },
+		{ status: 'checkout-draft', label: 'Drafts' }
+	];
+
+	// Mirrors YeffoPrint_Draft_Order_Retention::RETENTION_DAYS.
+	var DRAFT_RETENTION_DAYS = 30;
 
 	function endpoint( query ) {
 		return yeffoprintAdminApp.restUrl + 'admin/orders' + ( query ? '?' + query : '' );
@@ -61,6 +76,12 @@
 
 		viewEl.innerHTML =
 			'<p class="yp-app__intro">Every order that has ever come through the store — search by customer, email, phone, or order number, or browse the full history.</p>' +
+			'<div class="yp-settings-tabs" role="tablist">' +
+				QUICK_TABS.map( function ( tab ) {
+					return '<button type="button" class="yp-settings-tabs__tab' + ( '' === tab.status ? ' is-active' : '' ) + '" data-yp-quick-tab="' + YP.escapeAttr( tab.status ) + '" role="tab" aria-selected="' + ( '' === tab.status ? 'true' : 'false' ) + '">' + YP.escapeHtml( tab.label ) + '<span data-yp-quick-count></span></button>';
+				} ).join( '' ) +
+			'</div>' +
+			'<p class="yp-field__hint" data-yp-draft-hint hidden>Drafts are checkouts where the customer pressed Place order but never finished paying (card declined, payment window closed, or they left). They are kept for ' + DRAFT_RETENTION_DAYS + ' days, then removed automatically.</p>' +
 			'<div class="yp-list-toolbar">' +
 				'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search by customer, email, phone, or order #&hellip;" />' +
 				'<select data-yp-status-filter>' +
@@ -79,6 +100,25 @@
 		var searchEl     = viewEl.querySelector( '[data-yp-search]' );
 		var statusEl     = viewEl.querySelector( '[data-yp-status-filter]' );
 		var paginationEl = viewEl.querySelector( '[data-yp-pagination]' );
+		var draftHintEl  = viewEl.querySelector( '[data-yp-draft-hint]' );
+		var tabEls       = viewEl.querySelectorAll( '[data-yp-quick-tab]' );
+
+		function syncTabs() {
+			tabEls.forEach( function ( tabEl ) {
+				var isActive = tabEl.getAttribute( 'data-yp-quick-tab' ) === statusEl.value;
+				tabEl.classList.toggle( 'is-active', isActive );
+				tabEl.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
+			} );
+			draftHintEl.hidden = 'checkout-draft' !== statusEl.value;
+		}
+
+		function renderCounts( counts ) {
+			tabEls.forEach( function ( tabEl ) {
+				var status  = tabEl.getAttribute( 'data-yp-quick-tab' );
+				var countEl = tabEl.querySelector( '[data-yp-quick-count]' );
+				countEl.textContent = status && counts && counts[ status ] ? ' (' + counts[ status ] + ')' : '';
+			} );
+		}
 
 		function load() {
 			var token = ++requestToken;
@@ -98,6 +138,7 @@
 					if ( token !== requestToken ) {
 						return; // A newer request already landed — this one's now stale.
 					}
+					renderCounts( response.counts );
 					renderRows( response.orders || [] );
 					renderPagination( response.total || 0, response.max_num_pages || 0 );
 				} )
@@ -168,7 +209,17 @@
 
 		statusEl.addEventListener( 'change', function () {
 			page = 1;
+			syncTabs();
 			load();
+		} );
+
+		tabEls.forEach( function ( tabEl ) {
+			tabEl.addEventListener( 'click', function () {
+				statusEl.value = tabEl.getAttribute( 'data-yp-quick-tab' );
+				page = 1;
+				syncTabs();
+				load();
+			} );
 		} );
 
 		load();
