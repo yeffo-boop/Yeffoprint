@@ -131,6 +131,15 @@ class YeffoPrint_Admin_Order_Controller {
 			'total'         => $result->total,
 			'max_num_pages' => $result->max_num_pages,
 			'page'          => $page,
+			// Counts for Order History's quick tabs (direct request: "the
+			// ability to see draft orders"). Drafts never show under "All
+			// statuses" — WooCommerce registers checkout-draft as
+			// exclude_from_search, same as its own Orders screen — so the
+			// tab count is how they get noticed.
+			'counts'        => [
+				'pending'        => wc_orders_count( 'pending' ),
+				'checkout-draft' => wc_orders_count( 'checkout-draft' ),
+			],
 		] );
 	}
 
