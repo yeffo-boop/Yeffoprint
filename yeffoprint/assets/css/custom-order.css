@@ -358,3 +358,330 @@
 	height: 1px;
 	overflow: hidden;
 }
+
+/* ---------- AI artwork panel (own-design mode) ---------- */
+
+.yp-ai-tag {
+	display: inline-block;
+	margin-left: 0.35rem;
+	padding: 0.15rem 0.5rem;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--wp--preset--color--cyan), var(--wp--preset--color--magenta));
+	color: var(--wp--preset--color--white);
+	font-size: 0.65rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	vertical-align: 0.1em;
+}
+
+.yp-ai {
+	position: relative;
+	overflow: hidden;
+	margin: 0 0 1.5rem;
+	padding: 1.4rem 1.4rem 1.15rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-ai::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: linear-gradient(90deg, var(--wp--preset--color--cyan), var(--wp--preset--color--magenta), var(--wp--preset--color--yellow));
+}
+
+.yp-ai[hidden] {
+	display: none;
+}
+
+.yp-ai__head {
+	display: flex;
+	gap: 0.75rem;
+	align-items: flex-start;
+	margin-bottom: 0.9rem;
+}
+
+.yp-ai__spark {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 2.4rem;
+	height: 2.4rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	font-size: 1.2rem;
+}
+
+.yp-ai__pill {
+	display: inline-block;
+	margin-bottom: 0.3rem;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	background: #fde6f3;
+	color: var(--wp--preset--color--magenta-deep);
+	font-size: 0.66rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.yp-ai__title {
+	margin: 0 0 0.2rem;
+	font-size: 1.2rem;
+	line-height: 1.25;
+}
+
+.yp-ai__sub {
+	margin: 0;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.9rem;
+	line-height: 1.45;
+}
+
+.yp-ai__row-note {
+	margin: 0 0 0.5rem;
+	color: var(--wp--preset--color--cyan-deep);
+	font-size: 0.8rem;
+	font-weight: 600;
+}
+
+.yp-ai__specs {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 0.5rem;
+	margin: 0.9rem 0 1rem;
+}
+
+.yp-ai__spec {
+	padding: 0.65rem 0.7rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--warm-white);
+}
+
+.yp-ai__spec small {
+	display: block;
+	margin-bottom: 0.3rem;
+	color: #6b6b6e;
+	font-size: 0.63rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.yp-ai__spec b {
+	display: block;
+	font-size: 0.97rem;
+	line-height: 1.2;
+}
+
+.yp-ai__spec span {
+	display: block;
+	margin-top: 0.2rem;
+	color: var(--wp--preset--color--cyan-deep);
+	font-size: 0.72rem;
+	line-height: 1.3;
+}
+
+.yp-ai__label {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.4rem;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.yp-ai__copy {
+	padding: 0.45rem 0.75rem;
+	border: 0;
+	border-radius: 8px;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	font: inherit;
+	font-size: 0.8rem;
+	font-weight: 600;
+	letter-spacing: 0;
+	text-transform: none;
+	cursor: pointer;
+}
+
+.yp-ai__prompt {
+	margin: 0 0 0.4rem;
+	padding: 0.9rem 1rem;
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--near-black);
+	color: #f1efe9;
+	font-family: var(--wp--preset--font-family--mono), ui-monospace, Menlo, Consolas, monospace;
+	font-size: 0.84rem;
+	line-height: 1.6;
+	overflow-wrap: anywhere;
+}
+
+.yp-ai__prompt mark {
+	padding: 0 0.2rem;
+	border-radius: 4px;
+	background: rgba(0, 174, 239, 0.22);
+	color: #7fd8ff;
+}
+
+.yp-ai__prompt em {
+	border-bottom: 1px dashed #ff8fcf;
+	color: #ff8fcf;
+	font-style: normal;
+}
+
+.yp-ai__hint {
+	margin: 0 0 1rem;
+	color: #6b6b6e;
+	font-size: 0.75rem;
+}
+
+.yp-ai__hint mark {
+	padding: 0 0.2rem;
+	border-radius: 3px;
+	background: rgba(0, 174, 239, 0.18);
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-ai__hint em {
+	color: var(--wp--preset--color--magenta-deep);
+	font-style: normal;
+}
+
+.yp-ai__tips {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.6rem;
+	margin-bottom: 0.9rem;
+}
+
+.yp-ai__tips > div {
+	padding: 0.75rem 0.9rem;
+	border-radius: var(--wp--custom--radius--control);
+	font-size: 0.85rem;
+	line-height: 1.45;
+}
+
+.yp-ai__do {
+	background: #eaf7fd;
+}
+
+.yp-ai__dont {
+	background: #fdecf5;
+}
+
+.yp-ai__tips h4 {
+	margin: 0 0 0.35rem;
+	font-size: 0.82rem;
+}
+
+.yp-ai__tips ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.yp-ai__tips li {
+	position: relative;
+	margin: 0.2rem 0;
+	padding-left: 1.25rem;
+}
+
+.yp-ai__tips li::before {
+	position: absolute;
+	left: 0;
+	font-weight: 700;
+}
+
+.yp-ai__do li::before {
+	content: "✓";
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-ai__dont li::before {
+	content: "✕";
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-ai__warn {
+	display: flex;
+	gap: 0.6rem;
+	padding: 0.7rem 0.8rem;
+	border: 1px solid #f2e67a;
+	border-radius: var(--wp--custom--radius--control);
+	background: #fffbd6;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.85rem;
+	line-height: 1.45;
+}
+
+.yp-ai__warn p {
+	margin: 0;
+}
+
+.yp-ai__warn strong {
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-ai__warn-icon {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 1.4rem;
+	height: 1.4rem;
+	border-radius: 50%;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--yellow);
+	font-size: 0.8rem;
+	font-weight: 800;
+}
+
+.yp-file-check {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	margin-top: 0.35rem;
+}
+
+.yp-file-check__chip {
+	padding: 0.1rem 0.5rem;
+	border-radius: 999px;
+	background: #e6f6ec;
+	color: #11703a;
+	font-size: 0.72rem;
+	font-weight: 600;
+}
+
+.yp-file-check__chip.is-warn {
+	background: #fff4d1;
+	color: #8a5a00;
+}
+
+@media (max-width: 600px) {
+	.yp-ai {
+		padding: 1.15rem 0.95rem 0.95rem;
+	}
+
+	.yp-ai__specs {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.yp-ai__tips {
+		grid-template-columns: 1fr;
+	}
+
+	.yp-ai__title {
+		font-size: 1.05rem;
+	}
+}

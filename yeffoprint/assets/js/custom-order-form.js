@@ -64,6 +64,7 @@
 	var feeEl = root.querySelector( '[data-yp-co-fee]' );
 	var labelsTotalEl = root.querySelector( '[data-yp-co-labels-total]' );
 	var totalEl = root.querySelector( '[data-yp-co-total]' );
+	var aiPanelEl = root.querySelector( '[data-yp-ai-panel]' );
 
 	// Present only for an admin viewer — blocks/label-designer-choice
 	// renders nothing at all for everyone else, so these are simply null
@@ -575,6 +576,7 @@
 	 * whatever's already in the cart.
 	 */
 	function updatePricePreview() {
+		updateAiPanel();
 		var batch = currentBatchPayload();
 		if ( ! batch.length || batch.some( function ( row ) { return ! row.size_id || ! row.material_id || ! row.quantity; } ) ) {
 			return;
@@ -607,6 +609,265 @@
 				totalEl.textContent = formatCurrency( data.total );
 			} )
 			.catch( function () {} );
+	}
+
+	/**
+	 * ---------- AI artwork panel ----------
+	 *
+	 * Direct request: "Now accepting AI work" on the own-design path, with
+	 * prompt tips built from the size the customer picked. Shows the specs
+	 * for whichever label row the customer last touched (the first row
+	 * until then), and a copyable starter prompt that also pulls in the
+	 * brand name, product details and style notes already on the form.
+	 * Purely advisory: nothing here changes what's submitted.
+	 */
+	var AI_BEST_DPI = 600;
+	var AI_MIN_DPI = 300;
+	var aiRowId = null;
+
+	function aiRow() {
+		var index = null === aiRowId ? -1 : findRowIndex( aiRowId );
+		return batchRows[ index === -1 ? 0 : index ] || null;
+	}
+
+	/** The target row's print size in mm, or null while a Custom size is still blank. */
+	function aiTarget() {
+		var row = aiRow();
+		if ( ! row ) {
+			return null;
+		}
+		var size = sizesData.filter( function ( s ) { return s.id === row.size_id; } )[ 0 ];
+		if ( ! size ) {
+			return null;
+		}
+		if ( pickers.hasDimensions( size ) ) {
+			return { widthMm: size.print_width_mm, heightMm: size.print_height_mm, name: size.name || '', row: row };
+		}
+		if ( ! rowCustomSizeValid( row ) ) {
+			return null;
+		}
+		return {
+			widthMm: parseFloat( row.custom_width_in ) * 25.4,
+			heightMm: parseFloat( row.custom_height_in ) * 25.4,
+			name: 'Custom',
+			row: row
+		};
+	}
+
+	function aiPixels( mm, dpi ) {
+		return Math.ceil( mm / 25.4 * dpi );
+	}
+
+	function aiRatioText( ratio ) {
+		return ( Math.round( ratio * 100 ) / 100 ) + ' : 1';
+	}
+
+	function aiShapeWords( ratio ) {
+		if ( ratio > 1.08 ) {
+			return 'wide landscape';
+		}
+		if ( ratio < 0.93 ) {
+			return 'tall portrait';
+		}
+		return 'square';
+	}
+
+	function aiField( value, placeholder ) {
+		value = ( value || '' ).trim();
+		return '<em>' + escapeHtml( value || placeholder ) + '</em>';
+	}
+
+	function updateAiPanel() {
+		if ( ! aiPanelEl ) {
+			return;
+		}
+		aiPanelEl.hidden = ! formLoaded || 'own_design' !== state.mode;
+		// File checks compare against the same target size, and only show in own-design mode.
+		renderFileList();
+		if ( aiPanelEl.hidden ) {
+			return;
+		}
+
+		var target = aiTarget();
+		var set = function ( selector, html ) {
+			aiPanelEl.querySelector( selector ).innerHTML = html;
+		};
+
+		var rowNoteEl = aiPanelEl.querySelector( '[data-yp-ai-row-note]' );
+		var row = aiRow();
+		rowNoteEl.hidden = batchRows.length < 2 || ! row;
+		if ( ! rowNoteEl.hidden ) {
+			rowNoteEl.textContent = 'Showing specs for Label ' + ( batchRows.indexOf( row ) + 1 ) + '. Click another label above to switch.';
+		}
+
+		var sizeMark, ratioMark, pxMark, shape;
+		if ( target ) {
+			var ratio = target.widthMm / target.heightMm;
+			var w = Math.round( target.widthMm * 10 ) / 10;
+			var h = Math.round( target.heightMm * 10 ) / 10;
+			var bestPx = aiPixels( target.widthMm, AI_BEST_DPI ) + ' × ' + aiPixels( target.heightMm, AI_BEST_DPI ) + ' px';
+			shape = aiShapeWords( ratio );
+			set( '[data-yp-ai-size]', escapeHtml( w + ' × ' + h + ' mm' ) );
+			set( '[data-yp-ai-size-sub]', escapeHtml( pickers.inches( target.widthMm ) + ' × ' + pickers.inches( target.heightMm ) + ( target.name ? ' · ' + target.name : '' ) ) );
+			set( '[data-yp-ai-ratio]', escapeHtml( aiRatioText( ratio ) ) );
+			set( '[data-yp-ai-ratio-sub]', escapeHtml( shape ) );
+			set( '[data-yp-ai-px]', escapeHtml( bestPx ) );
+			set( '[data-yp-ai-px-sub]', escapeHtml( 'sharpest (600 DPI) · at least ' + aiPixels( target.widthMm, AI_MIN_DPI ) + ' × ' + aiPixels( target.heightMm, AI_MIN_DPI ) ) );
+			sizeMark = '<mark>' + escapeHtml( w + ' × ' + h + ' mm' ) + '</mark>';
+			ratioMark = '<mark>' + escapeHtml( ( Math.round( ratio * 100 ) / 100 ) + ':1' ) + '</mark>';
+			pxMark = '<mark>high resolution, at least ' + escapeHtml( bestPx ) + '</mark>';
+		} else {
+			set( '[data-yp-ai-size]', 'Enter your size' );
+			set( '[data-yp-ai-size-sub]', 'width &amp; height above' );
+			set( '[data-yp-ai-ratio]', '&mdash;' );
+			set( '[data-yp-ai-ratio-sub]', '' );
+			set( '[data-yp-ai-px]', '&mdash;' );
+			set( '[data-yp-ai-px-sub]', '' );
+			shape = '';
+			sizeMark = '<mark>[your label size]</mark>';
+			ratioMark = '<mark>[width:height]</mark>';
+			pxMark = '<mark>high resolution</mark>';
+		}
+
+		var brand = document.getElementById( 'yp-co-brand' ).value;
+		var style = document.getElementById( 'yp-co-style' ).value;
+		var details = row ? row.compound_strength : '';
+
+		set( '[data-yp-ai-prompt]',
+			'Design a flat, print-ready product label for ' + aiField( brand, '[your brand name]' ) + '. ' +
+			( shape ? shape.charAt( 0 ).toUpperCase() + shape.slice( 1 ) + ' layout, exact' : 'Exact' ) + ' aspect ratio ' + ratioMark + ' (' + sizeMark + '). ' +
+			'<mark>Transparent background</mark>, PNG, ' + pxMark + '. ' +
+			'Flat front-facing artwork only: no vial, bottle, mockup, shadow or 3D perspective. ' +
+			'Keep all text at least 2 mm from every edge. ' +
+			'Large, crisp, correctly spelled text: ' + aiField( details, '[product name and strength]' ) + '. ' +
+			'Style: ' + aiField( style, '[your colors and style]' ) + '.'
+		);
+	}
+
+	if ( aiPanelEl ) {
+		// Whichever label row the customer last interacted with drives the specs.
+		batchContainerEl.addEventListener( 'click', function ( event ) {
+			var rowEl = event.target.closest( '.yp-batch-row' );
+			if ( rowEl ) {
+				aiRowId = parseInt( rowEl.getAttribute( 'data-row-id' ), 10 );
+				updateAiPanel();
+			}
+		} );
+		form.addEventListener( 'input', function ( event ) {
+			var rowEl = event.target.closest( '.yp-batch-row' );
+			if ( rowEl ) {
+				aiRowId = parseInt( rowEl.getAttribute( 'data-row-id' ), 10 );
+			}
+			updateAiPanel();
+		} );
+
+		var copyButton = aiPanelEl.querySelector( '[data-yp-ai-copy]' );
+		copyButton.addEventListener( 'click', function () {
+			var text = aiPanelEl.querySelector( '[data-yp-ai-prompt]' ).textContent;
+			var done = function () {
+				copyButton.textContent = 'Copied!';
+				setTimeout( function () {
+					copyButton.textContent = 'Copy prompt';
+				}, 2000 );
+			};
+			if ( navigator.clipboard && navigator.clipboard.writeText ) {
+				navigator.clipboard.writeText( text ).then( done, function () {} );
+			} else {
+				var area = document.createElement( 'textarea' );
+				area.value = text;
+				document.body.appendChild( area );
+				area.select();
+				try {
+					document.execCommand( 'copy' );
+					done();
+				} catch ( e ) {}
+				document.body.removeChild( area );
+			}
+		} );
+	}
+
+	/**
+	 * Reads a picked image's pixel size (and, for PNGs, whether any pixel
+	 * is see-through) in the browser, so the file list can flag a file
+	 * that's too small or the wrong shape before checkout. Advisory only.
+	 */
+	function inspectImage( file, entry ) {
+		if ( ! /^image\/(png|jpeg)$/.test( file.type ) || ! window.URL || ! URL.createObjectURL ) {
+			if ( 'image/svg+xml' === file.type ) {
+				entry.check = { vector: true };
+			}
+			return;
+		}
+		var url = URL.createObjectURL( file );
+		var img = new Image();
+		img.onload = function () {
+			var check = { width: img.naturalWidth, height: img.naturalHeight, transparent: false, png: 'image/png' === file.type };
+			if ( check.png ) {
+				try {
+					var scale = Math.min( 1, 256 / Math.max( check.width, check.height ) );
+					var canvas = document.createElement( 'canvas' );
+					canvas.width = Math.max( 1, Math.round( check.width * scale ) );
+					canvas.height = Math.max( 1, Math.round( check.height * scale ) );
+					var ctx = canvas.getContext( '2d' );
+					ctx.drawImage( img, 0, 0, canvas.width, canvas.height );
+					var data = ctx.getImageData( 0, 0, canvas.width, canvas.height ).data;
+					for ( var i = 3; i < data.length; i += 4 ) {
+						if ( data[ i ] < 250 ) {
+							check.transparent = true;
+							break;
+						}
+					}
+				} catch ( e ) {}
+			}
+			URL.revokeObjectURL( url );
+			entry.check = check;
+			renderFileList();
+		};
+		img.onerror = function () {
+			URL.revokeObjectURL( url );
+		};
+		img.src = url;
+	}
+
+	function fileCheckChips( check ) {
+		if ( ! check || 'own_design' !== state.mode ) {
+			return '';
+		}
+		var chips = [];
+		var chip = function ( ok, text ) {
+			chips.push( '<span class="yp-file-check__chip' + ( ok ? '' : ' is-warn' ) + '">' + ( ok ? '✓ ' : '⚠ ' ) + escapeHtml( text ) + '</span>' );
+		};
+		if ( check.vector ) {
+			chip( true, 'Vector file, prints sharp at any size' );
+			return '<span class="yp-file-check">' + chips.join( '' ) + '</span>';
+		}
+		var target = aiTarget();
+		var px = check.width + ' × ' + check.height + ' px';
+		if ( target ) {
+			var minW = aiPixels( target.widthMm, AI_MIN_DPI );
+			var minH = aiPixels( target.heightMm, AI_MIN_DPI );
+			var fileRatio = check.width / check.height;
+			var labelRatio = target.widthMm / target.heightMm;
+			var fits = Math.abs( fileRatio / labelRatio - 1 ) <= 0.06;
+			if ( check.width >= minW * 0.98 && check.height >= minH * 0.98 ) {
+				chip( true, px );
+			} else if ( check.width >= minW / 2 && check.height >= minH / 2 ) {
+				chip( false, px + ', may print slightly soft' );
+			} else {
+				chip( false, px + ', too small to print sharp' );
+			}
+			if ( fits ) {
+				chip( true, 'Fits your label shape (' + aiRatioText( labelRatio ).replace( ' : ', ':' ) + ')' );
+			} else {
+				chip( false, 'Different shape (' + aiRatioText( fileRatio ).replace( ' : ', ':' ) + '), will be cropped to ' + aiRatioText( labelRatio ).replace( ' : ', ':' ) );
+			}
+		} else {
+			chip( true, px );
+		}
+		if ( check.png ) {
+			chip( check.transparent, check.transparent ? 'Transparent background' : 'No transparent background' );
+		}
+		return '<span class="yp-file-check">' + chips.join( '' ) + '</span>';
 	}
 
 	/* ---------- Mode switching ---------- */
@@ -768,6 +1029,7 @@
 		}
 
 		updateDesignMethodUi();
+		updateAiPanel();
 	}
 
 	function setMode( mode ) {
@@ -1031,7 +1293,8 @@
 				: ( file.id ? '<span>Uploaded</span>' : '<span>Uploading&hellip;</span>' );
 
 			return '<li>' + escapeHtml( file.name ) + ' — ' + status +
-				' <button type="button" class="button-link" data-remove-file="' + index + '">Remove</button></li>';
+				' <button type="button" class="button-link" data-remove-file="' + index + '">Remove</button>' +
+				fileCheckChips( file.check ) + '</li>';
 		} ).join( '' );
 
 		fileListEl.querySelectorAll( '[data-remove-file]' ).forEach( function ( button ) {
@@ -1056,7 +1319,9 @@
 		} );
 
 		var placeholders = selected.map( function ( file ) {
-			return { name: file.name, id: null, error: null };
+			var entry = { name: file.name, id: null, error: null, check: null };
+			inspectImage( file, entry );
+			return entry;
 		} );
 		uploadedFiles = uploadedFiles.concat( placeholders );
 		renderFileList();
