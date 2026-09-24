@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/gallery-heading",
+	"title": "Gallery Heading",
+	"category": "theme",
+	"description": "Shop Labels heading above the template grid: \"All designs\" or the picked category, with a design count.",
+	"render": "file:./render.php",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"textdomain": "yeffoprint"
+}

@@ -123,8 +123,8 @@ foreach ( $terms as $term ) {
 	<h2 class="wp-block-heading has-text-align-center"><?php esc_html_e( 'What are you labeling?', 'yeffoprint' ); ?></h2>
 	<!-- /wp:heading -->
 
-	<!-- wp:paragraph {"align":"center"} -->
-	<p class="has-text-align-center"><?php esc_html_e( 'Jump straight into Cosmetics, Peptides, Pens, Skincare, or Supplements — same gallery, already filtered.', 'yeffoprint' ); ?></p>
+	<!-- wp:paragraph {"align":"center","className":"yp-product-type-browse__intro"} -->
+	<p class="has-text-align-center yp-product-type-browse__intro"><?php esc_html_e( 'Jump straight into Cosmetics, Peptides, Pens, Skincare, or Supplements — same gallery, already filtered.', 'yeffoprint' ); ?></p>
 	<!-- /wp:paragraph -->
 
 	<!-- wp:html -->
