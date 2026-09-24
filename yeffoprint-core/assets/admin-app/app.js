@@ -278,6 +278,7 @@
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },
 			{ id: 'order-history', label: 'Order History' },
+			{ id: 'abandoned-carts', label: 'Abandoned Carts' },
 			{ id: 'web-design-orders', label: 'Web Design Orders' },
 			{ id: 'customers', label: 'Customers' },
 			{ id: 'pricing', label: 'Pricing Rules' },

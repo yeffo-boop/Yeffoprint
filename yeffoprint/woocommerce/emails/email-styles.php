@@ -523,6 +523,104 @@ a.yp-proof-cta-button {
 	margin: 12px 0 0;
 }
 
+/* Abandoned-cart reminders (customer-abandoned-cart.php) — the cart's
+   own lines, an optional single-use code, then the same CTA box as the
+   proof emails. */
+table.yp-cart-items {
+	margin: 4px 0 20px;
+	border: 1px solid #ECE8DF;
+	border-radius: 10px;
+}
+
+table.yp-cart-items td {
+	padding: 12px;
+	border-bottom: 1px solid #F1EEE7;
+	vertical-align: middle;
+}
+
+td.yp-cart-thumb img {
+	display: block;
+	width: 72px;
+	height: auto;
+	border-radius: 8px;
+	background-color: #0B0B2E;
+}
+
+.yp-cart-line-name {
+	display: block;
+	font-weight: 700;
+	font-size: 15px;
+	color: <?php echo esc_attr( $text ); ?>;
+}
+
+.yp-cart-line-meta {
+	display: block;
+	font-size: 13px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+}
+
+td.yp-cart-price {
+	text-align: right;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+td.yp-cart-total-label {
+	text-align: right;
+	font-size: 13px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	border-bottom: 0 !important;
+}
+
+td.yp-cart-total {
+	font-size: 16px;
+	border-bottom: 0 !important;
+}
+
+table.yp-cart-cta td {
+	text-align: center;
+}
+
+table.yp-cart-code {
+	margin: 2px 0 18px;
+}
+
+table.yp-cart-code td {
+	border: 2px dashed <?php echo esc_attr( $link_color ); ?>;
+	border-radius: 10px;
+	padding: 14px;
+	text-align: center;
+}
+
+.yp-cart-code-label {
+	display: block;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+}
+
+.yp-cart-code-value {
+	display: block;
+	font-family: "Courier New", Courier, monospace;
+	font-size: 22px;
+	font-weight: 700;
+	color: <?php echo esc_attr( $link_color ); ?>;
+	margin: 4px 0;
+}
+
+.yp-cart-code-note {
+	display: block;
+	font-size: 12px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+}
+
+p.yp-cart-optout {
+	font-size: 12px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+}
+
 /* Away Mode's confirmation-email reminder (class-away-mode-email-notice.php)
    — direct request: "Maybe even include a reminder on the confirmation
    email?" Same warm/amber tone as the storefront's away-bar/away-card

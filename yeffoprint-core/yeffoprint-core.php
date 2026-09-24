@@ -89,4 +89,8 @@ register_deactivation_hook( __FILE__, function () {
 	// Same reasoning again — the express-order Telegram alert sweep.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-express-alerts.php';
 	YeffoPrint_Telegram_Express_Alerts::unschedule();
+
+	// Same reasoning again — the abandoned cart reminder sweep.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
+	YeffoPrint_Abandoned_Carts::unschedule();
 } );
