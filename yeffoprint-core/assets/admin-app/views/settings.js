@@ -144,7 +144,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Express Orders</h2></div>' +
-					'<p class="yp-panel__hint">Customers can tick "Express: skip the line" at checkout for a flat fee per order. Once an express order is paid, your Telegram alerts chat (Telegram Bot below) gets pinged right away and every 30 minutes until you tap "Got it" or reply /ack, or the order moves to In Production or Shipped.</p>' +
+					'<p class="yp-panel__hint">Customers can tick "Express: skip the line" at checkout for a flat fee per order. Once an express order is paid, your Telegram alerts chat (Telegram Bot below) gets pinged right away and every 30 minutes until you tap "Got it" or reply /ack, or the order moves to In Production or Shipped. Express is paused automatically while Away Mode is on.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-express-enabled"' + ( settings.express_enabled ? ' checked' : '' ) + ' /><label for="yp-set-express-enabled">Offer Express at checkout</label></div>' +
 					'<div class="yp-field"><label for="yp-set-express-fee">Express fee ($ per order)</label><input type="number" min="0" step="0.01" id="yp-set-express-fee" value="' + YP.escapeAttr( String( settings.express_fee ) ) + '" /></div>' +
 				'</div>' +

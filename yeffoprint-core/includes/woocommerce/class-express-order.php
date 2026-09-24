@@ -49,8 +49,16 @@ class YeffoPrint_Express_Order {
 		add_action( 'woocommerce_store_api_checkout_order_processed', [ __CLASS__, 'clear_session' ] );
 	}
 
+	/**
+	 * Off when switched off in Settings, and paused automatically while
+	 * Away Mode is on (direct request) — skipping a line that isn't
+	 * moving would be a promise the store can't keep. Resumes on its own
+	 * the day Away Mode's return date passes, same as the notice itself.
+	 */
 	public static function is_enabled(): bool {
-		return (bool) get_option( YeffoPrint_Admin_Menu::EXPRESS_ENABLED_OPTION, true ) && self::fee() > 0;
+		return (bool) get_option( YeffoPrint_Admin_Menu::EXPRESS_ENABLED_OPTION, true )
+			&& self::fee() > 0
+			&& ! YeffoPrint_Admin_Menu::away_mode();
 	}
 
 	public static function fee(): float {
