@@ -202,7 +202,10 @@ class YeffoPrint_Order_Pay_Address {
 				'priority' => 100,
 			];
 		}
-		$fields[ $type . '_phone' ]['required'] = false;
+		// Required on the shipping address, since some carriers need it
+		// (direct request). A separate billing address may leave it blank
+		// and falls back to the shipping phone in capture().
+		$fields[ $type . '_phone' ]['required'] = 'shipping' === $type;
 
 		foreach ( $fields as $key => $field ) {
 			$short = substr( $key, strlen( $type ) + 1 );
@@ -359,8 +362,9 @@ class YeffoPrint_Order_Pay_Address {
 		}
 
 		if ( ! $billing_differs ) {
-			$billing          = $shipping;
-			$billing['phone'] = $shipping['phone'] ?: $order->get_billing_phone();
+			$billing = $shipping;
+		} elseif ( '' === $billing['phone'] ) {
+			$billing['phone'] = $shipping['phone'];
 		}
 
 		$before = self::order_address( $order, 'shipping' ) + [ 'billing' => self::order_address( $order, 'billing' ) ];
@@ -532,6 +536,11 @@ class YeffoPrint_Order_Pay_Address {
 
 		$errors = [];
 		$fields = WC()->countries->get_address_fields( $address['country'], '' );
+
+		if ( $is_shipping && '' === $address['phone'] ) {
+			/* translators: %s: Shipping */
+			$errors[] = sprintf( __( '%s address: Phone is required.', 'yeffoprint' ), $which );
+		}
 
 		foreach ( $fields as $key => $field ) {
 			if ( ! array_key_exists( $key, $address ) || empty( $field['required'] ) || 'phone' === $key ) {
