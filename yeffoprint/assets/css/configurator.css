@@ -768,6 +768,12 @@ body.yp-has-sticky-bar {
 	padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Lift the chat bubble (web-chat-widget.css) above the bar so it doesn't
+   sit on top of Add to Cart. */
+body.yp-has-sticky-bar .yp-chat-widget {
+	bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
 .yp-sticky-bar__actions {
 	display: flex;
 	align-items: center;
