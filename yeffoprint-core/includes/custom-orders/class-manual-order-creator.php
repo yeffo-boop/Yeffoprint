@@ -175,6 +175,8 @@ class YeffoPrint_Manual_Order_Creator {
 	 *                                     purchase a label, just adds the cost to the invoice; the actual
 	 *                                     label is purchased later from the order screen's own Shippo panel,
 	 *                                     same as any other order.
+	 *     @type bool   $customer_picks_shipping  Ignored when $shipping is given. Flags the order so the
+	 *                                     customer picks one of the saved shipping options on the payment page.
 	 * }
 	 * @return array{order:\WC_Order, custom_orders: array<int, array{id:int, order_type:string}>}|\WP_Error
 	 */
@@ -198,6 +200,27 @@ class YeffoPrint_Manual_Order_Creator {
 		}
 		if ( ! $billing_address ) {
 			$billing_address = $shipping_address;
+		}
+
+		// Direct request: "restrict international shipping to just
+		// international customers and the other 2 to domestic customers."
+		// Only checkable when staff picked one of the saved options and
+		// typed the address in; otherwise the payment page checks it once
+		// the customer fills in their own address.
+		if ( ! empty( $payload['shipping'] ) && is_array( $payload['shipping'] ) && $shipping_address ) {
+			$picked = YeffoPrint_Shippo_Settings::find_manual_order_shipping_option( (string) ( $payload['shipping']['service'] ?? '' ) );
+			if ( $picked && ! YeffoPrint_Shippo_Settings::option_ships_to( $picked, $shipping_address['country'] ) ) {
+				return new \WP_Error(
+					'yeffoprint_shipping_region_mismatch',
+					sprintf(
+						/* translators: 1: shipping option label, 2: country code */
+						__( '%1$s doesn’t ship to %2$s. Pick a shipping option for this address.', 'yeffoprint-core' ),
+						$picked['label'],
+						$shipping_address['country']
+					),
+					[ 'status' => 400 ]
+				);
+			}
 		}
 
 		$customer = self::resolve_or_create_customer( is_array( $payload['customer'] ?? null ) ? $payload['customer'] : [] );
@@ -333,6 +356,14 @@ class YeffoPrint_Manual_Order_Creator {
 		// a staff-provided address always wins.
 		if ( ! empty( $payload['customer_provides_address'] ) && ! $shipping_address ) {
 			$order->update_meta_data( YeffoPrint_Order_Pay_Address::NEEDS_ADDRESS_META, 1 );
+		}
+
+		// Direct request: "Can they also choose a shipping option at that
+		// point so I don't need to?" Leaving the method on "Customer picks"
+		// has the payment page offer the saved shipping options that fit
+		// their address (class-order-pay-address.php).
+		if ( ! empty( $payload['customer_picks_shipping'] ) && empty( $payload['shipping'] ) ) {
+			$order->update_meta_data( YeffoPrint_Order_Pay_Address::CUSTOMER_PICKS_SHIPPING_META, 1 );
 		}
 
 		$order->save();
