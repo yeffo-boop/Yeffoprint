@@ -2499,9 +2499,6 @@
 		font-size: 0.68rem;
 	}
 
-	.post-type-archive-yp_template .yp-product-type-browse__card.is-active {
-		outline-offset: 2px;
-	}
 }
 
 .yp-gallery-head {
@@ -2527,10 +2524,26 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
-/* Selected category tile on Shop Labels (the tiles are its only filter). */
+/* Selected category tile on Shop Labels (the tiles are its only filter).
+   A brand-gradient ring drawn inside the tile (masked ::after), not an
+   outline: an outline sits outside the tile, and the phone tile row's
+   overflow-x scroll clipped it (direct report: "the border is cutoff"). */
 .yp-product-type-browse__card.is-active {
-	outline: 3px solid var(--wp--preset--color--near-black);
-	outline-offset: 3px;
+	position: relative;
+}
+
+.yp-product-type-browse__card.is-active::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	padding: 4px;
+	border-radius: inherit;
+	background: var(--wp--custom--gradient-brand);
+	-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+	pointer-events: none;
 }
 
 .yp-product-type-browse__clear {
