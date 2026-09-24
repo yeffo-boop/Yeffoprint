@@ -29,7 +29,7 @@
 				<span class="yp-choice-card__check" aria-hidden="true">&#10003;</span>
 				<span class="yp-choice-card__row">
 					<span>
-						<span class="yp-choice-card__title">I have my own print-ready design</span>
+						<span class="yp-choice-card__title">I have my own print-ready design <span class="yp-ai-tag">AI art welcome</span></span>
 						<span class="yp-choice-card__desc">Upload a finished file — we print it as-is.</span>
 					</span>
 					<span class="yp-choice-card__badge is-free">No fee</span>
@@ -85,6 +85,55 @@
 				<label for="yp-co-instructions">Instructions <span class="description">(optional)</span></label>
 				<textarea id="yp-co-instructions" name="instructions" rows="4" maxlength="1000" class="widefat"></textarea>
 			</div>
+
+			<section class="yp-ai" data-yp-ai-panel hidden>
+				<div class="yp-ai__head">
+					<span class="yp-ai__spark" aria-hidden="true">&#10022;</span>
+					<div>
+						<span class="yp-ai__pill">New &middot; Now accepting AI artwork</span>
+						<h3 class="yp-ai__title">Made your label with AI? Upload it here.</h3>
+						<p class="yp-ai__sub">ChatGPT, Midjourney, Canva AI, Gemini &mdash; all welcome. Use the specs and starter prompt below, built for the size you picked, so it prints sharp.</p>
+					</div>
+				</div>
+				<p class="yp-ai__row-note" data-yp-ai-row-note hidden></p>
+				<div class="yp-ai__specs">
+					<div class="yp-ai__spec"><small>Your label</small><b data-yp-ai-size>&mdash;</b><span data-yp-ai-size-sub></span></div>
+					<div class="yp-ai__spec"><small>Shape</small><b data-yp-ai-ratio>&mdash;</b><span data-yp-ai-ratio-sub></span></div>
+					<div class="yp-ai__spec"><small>Resolution</small><b data-yp-ai-px>&mdash;</b><span data-yp-ai-px-sub></span></div>
+					<div class="yp-ai__spec"><small>File</small><b>PNG</b><span>transparent background</span></div>
+				</div>
+				<div class="yp-ai__label">
+					<span>Starter prompt</span>
+					<button type="button" class="yp-ai__copy" data-yp-ai-copy>Copy prompt</button>
+				</div>
+				<div class="yp-ai__prompt" data-yp-ai-prompt></div>
+				<p class="yp-ai__hint"><mark>Blue</mark> updates when you change size. <em>Pink</em> fills from your brand name, product details and style notes.</p>
+				<div class="yp-ai__tips">
+					<div class="yp-ai__do">
+						<h4>For the best print</h4>
+						<ul>
+							<li>Paste the exact size and ratio into your prompt</li>
+							<li>Ask for a transparent background</li>
+							<li>Ask for high resolution, or upscale 2&times; before uploading</li>
+							<li>Keep the words short and big</li>
+							<li>Download the original PNG</li>
+						</ul>
+					</div>
+					<div class="yp-ai__dont">
+						<h4>Avoid</h4>
+						<ul>
+							<li>Photos of a vial or bottle &ldquo;wearing&rdquo; the label</li>
+							<li>Tiny AI text like dosage or fine print (tell us in Instructions and we&rsquo;ll typeset it)</li>
+							<li>Screenshots or images saved from social apps</li>
+							<li>White boxes or borders around the design</li>
+						</ul>
+					</div>
+				</div>
+				<div class="yp-ai__warn">
+					<span class="yp-ai__warn-icon" aria-hidden="true">!</span>
+					<p><strong>AI art prints exactly as-is.</strong> Garbled letters, blurry edges or odd shapes on screen will look the same on the label. We check every file and message you before printing if something looks off.</p>
+				</div>
+			</section>
 
 			<div class="yp-field">
 				<label for="yp-co-files"><span data-yp-co-files-label-text>Inspiration files</span> <span class="description" data-yp-co-files-hint>(optional — PDF, SVG, PNG, or JPG, up to 5 files)</span></label>
