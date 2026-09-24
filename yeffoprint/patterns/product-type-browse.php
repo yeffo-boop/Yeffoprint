@@ -128,12 +128,18 @@ foreach ( $terms as $term ) {
 	<!-- /wp:paragraph -->
 
 	<!-- wp:html -->
+	<?php
+	// These tiles are the Shop Labels filter now that the Show/sort bar is
+	// gone (direct request), so mark the one in use and offer a way back.
+	$active_type = isset( $_GET['yp_product_type'] ) ? sanitize_title( wp_unslash( $_GET['yp_product_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	?>
 	<div class="yp-product-type-browse">
 		<?php foreach ( $terms as $term ) :
-			$url   = add_query_arg( 'yp_product_type', $term->slug, $base );
-			$image = $images[ $term->term_id ];
+			$url       = add_query_arg( 'yp_product_type', $term->slug, $base );
+			$image     = $images[ $term->term_id ];
+			$is_active = $active_type === $term->slug;
 			?>
-			<a class="yp-product-type-browse__card<?php echo $image ? ' yp-product-type-browse__card--photo' : ''; ?>" href="<?php echo esc_url( $url ); ?>">
+			<a class="yp-product-type-browse__card<?php echo $image ? ' yp-product-type-browse__card--photo' : ''; ?><?php echo $is_active ? ' is-active' : ''; ?>" href="<?php echo esc_url( $url ); ?>"<?php echo $is_active ? ' aria-current="page"' : ''; ?>>
 				<?php if ( $image ) : ?>
 					<span class="yp-product-type-browse__media">
 						<img
@@ -159,6 +165,9 @@ foreach ( $terms as $term ) {
 			</a>
 		<?php endforeach; ?>
 	</div>
+	<?php if ( $active_type ) : ?>
+		<p class="yp-product-type-browse__clear"><a href="<?php echo esc_url( $base ); ?>"><?php esc_html_e( 'Show all designs', 'yeffoprint' ); ?></a></p>
+	<?php endif; ?>
 	<!-- /wp:html -->
 
 </section>
