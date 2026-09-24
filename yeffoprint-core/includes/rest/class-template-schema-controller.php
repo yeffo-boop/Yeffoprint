@@ -111,18 +111,30 @@ class YeffoPrint_Template_Schema_Controller {
 		return $vial_id ? ( wp_get_attachment_image_url( $vial_id, 'large' ) ?: null ) : null;
 	}
 
+	/**
+	 * Listed in the Catalog → Sizes / Materials order (menu_order, set by
+	 * the up/down arrows there), not the order the ids happen to be
+	 * stored in on the Template — that is only a snapshot of the catalog
+	 * order at the Template's last save, so reordering the catalog never
+	 * reached existing product pages. Same order the custom label form
+	 * already uses (custom-orders/options).
+	 */
 	private function records( string $meta_key, int $template_id, callable $formatter ): array {
-		$ids = array_map( 'absint', (array) get_post_meta( $template_id, $meta_key, true ) );
-		$out = [];
+		$ids   = array_map( 'absint', (array) get_post_meta( $template_id, $meta_key, true ) );
+		$posts = [];
 
 		foreach ( $ids as $id ) {
 			$post = get_post( $id );
 			if ( $post && 'publish' === $post->post_status ) {
-				$out[] = $formatter( $post );
+				$posts[] = $post;
 			}
 		}
 
-		return $out;
+		usort( $posts, static function ( \WP_Post $a, \WP_Post $b ): int {
+			return [ $a->menu_order, $a->post_title ] <=> [ $b->menu_order, $b->post_title ];
+		} );
+
+		return array_map( $formatter, $posts );
 	}
 
 	private function format_size( \WP_Post $size ): array {
