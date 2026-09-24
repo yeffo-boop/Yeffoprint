@@ -273,7 +273,7 @@
 			{ id: 'sizes', label: 'Sizes' },
 			{ id: 'sticker-sizes', label: 'Sticker Sizes' },
 			{ id: 'templates', label: 'Templates' },
-			{ id: 'field-presets', label: 'Field Presets' }
+			{ id: 'label-fields', label: 'Label Fields' }
 		] },
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },

@@ -90,6 +90,33 @@ class YeffoPrint_Commerce_Record_Meta {
 	 */
 	public const GUIDE_NOTE = '_yp_guide_note';
 
+	/**
+	 * Material only — which drawn texture the label designer's material
+	 * swatch shows (direct request: "I don't want to use vial images,
+	 * just show the material itself", with an animated shimmer on the
+	 * holographic ones). 'auto' (the default, so every existing material
+	 * works with no migration) picks one from the material's own name —
+	 * see swatch_finish() below.
+	 */
+	public const SWATCH_FINISH = '_yp_swatch_finish';
+
+	public const SWATCH_FINISHES = [
+		'auto'        => 'Automatic (from the name)',
+		'glossy'      => 'White glossy',
+		'matte'       => 'White matte',
+		'clear'       => 'Clear',
+		'metallic'    => 'Metallic silver',
+		'holographic' => 'Holographic (shimmer)',
+		'prism'       => 'Prism (shimmer)',
+	];
+
+	/**
+	 * Size only — a short "what does this fit" line under each size card
+	 * in the label designer (e.g. "Fits 10 mL vials"). Optional; blank
+	 * shows nothing.
+	 */
+	public const FIT_NOTE = '_yp_fit_note';
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
 	}
@@ -145,6 +172,28 @@ class YeffoPrint_Commerce_Record_Meta {
 			'auth_callback' => [ $this, 'can_edit' ],
 		] );
 
+		register_post_meta( 'yp_material', self::SWATCH_FINISH, [
+			'type'          => 'string',
+			'single'        => true,
+			'default'       => 'auto',
+			'show_in_rest'  => [
+				'schema' => [
+					'type' => 'string',
+					'enum' => array_keys( self::SWATCH_FINISHES ),
+				],
+			],
+			'auth_callback' => [ $this, 'can_edit' ],
+		] );
+
+		register_post_meta( 'yp_size', self::FIT_NOTE, [
+			'type'              => 'string',
+			'single'            => true,
+			'default'           => '',
+			'show_in_rest'      => true,
+			'sanitize_callback' => 'sanitize_text_field',
+			'auth_callback'     => [ $this, 'can_edit' ],
+		] );
+
 		register_post_meta( 'yp_size', self::PRINT_WIDTH_MM, [
 			'type'          => 'number',
 			'single'        => true,
@@ -164,6 +213,36 @@ class YeffoPrint_Commerce_Record_Meta {
 
 	public function can_edit(): bool {
 		return current_user_can( 'edit_posts' );
+	}
+
+	/**
+	 * The swatch texture a Material actually renders with: its own
+	 * SWATCH_FINISH when an admin picked one, otherwise a guess from its
+	 * name so the live catalog (White Glossy, White Matte, Clear,
+	 * Holographic, Prism, Metallic) looks right with nothing configured.
+	 */
+	public static function swatch_finish( \WP_Post $material ): string {
+		$stored = (string) get_post_meta( $material->ID, self::SWATCH_FINISH, true );
+		if ( '' !== $stored && 'auto' !== $stored && isset( self::SWATCH_FINISHES[ $stored ] ) ) {
+			return $stored;
+		}
+
+		$name = strtolower( $material->post_title . ' ' . $material->post_name );
+		foreach ( [
+			'holo'   => 'holographic',
+			'prism'  => 'prism',
+			'clear'  => 'clear',
+			'metal'  => 'metallic',
+			'silver' => 'metallic',
+			'chrome' => 'metallic',
+			'matte'  => 'matte',
+		] as $needle => $finish ) {
+			if ( false !== strpos( $name, $needle ) ) {
+				return $finish;
+			}
+		}
+
+		return 'glossy';
 	}
 
 	/** Published Materials whose scope includes $for ('label' or 'sticker'). */

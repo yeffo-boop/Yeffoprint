@@ -56,6 +56,29 @@ function yeffoprint_asset_version( string $relative_path ) {
 }
 
 /**
+ * The label designer's shared Size/Material/Quantity pickers
+ * (assets/js/label-pickers.js + assets/css/label-pickers.css), used by
+ * both the Template page's configurator and the custom label form —
+ * each of those enqueues its own script with this as a dependency.
+ */
+function yeffoprint_register_label_pickers(): void {
+	wp_enqueue_style(
+		'yeffoprint-label-pickers',
+		get_theme_file_uri( 'assets/css/label-pickers.css' ),
+		[ 'yeffoprint-global' ],
+		yeffoprint_asset_version( 'assets/css/label-pickers.css' )
+	);
+
+	wp_register_script(
+		'yeffoprint-label-pickers',
+		get_theme_file_uri( 'assets/js/label-pickers.js' ),
+		[],
+		yeffoprint_asset_version( 'assets/js/label-pickers.js' ),
+		[ 'strategy' => 'defer' ]
+	);
+}
+
+/**
  * The Reconstitution Calculator page's URL, or '' while that page
  * doesn't exist yet — the configurator's and Label Designer's
  * reconstitution/dose tip links to it, and simply drops the link
@@ -215,10 +238,12 @@ add_action( 'wp_enqueue_scripts', function () {
 			yeffoprint_asset_version( 'assets/css/configurator.css' )
 		);
 
+		yeffoprint_register_label_pickers();
+
 		wp_enqueue_script(
 			'yeffoprint-configurator',
 			get_theme_file_uri( 'assets/js/configurator.js' ),
-			[],
+			[ 'yeffoprint-label-pickers' ],
 			yeffoprint_asset_version( 'assets/js/configurator.js' ),
 			[ 'strategy' => 'defer' ]
 		);
@@ -350,10 +375,12 @@ add_action( 'wp_enqueue_scripts', function () {
 			yeffoprint_asset_version( 'assets/css/custom-order.css' )
 		);
 
+		yeffoprint_register_label_pickers();
+
 		wp_enqueue_script(
 			'yeffoprint-custom-order-form',
 			get_theme_file_uri( 'assets/js/custom-order-form.js' ),
-			[],
+			[ 'yeffoprint-label-pickers' ],
 			yeffoprint_asset_version( 'assets/js/custom-order-form.js' ),
 			[ 'strategy' => 'defer' ]
 		);

@@ -32,6 +32,23 @@ class YeffoPrint_Admin_Field_Preset_Controller {
 	}
 
 	public function register_routes(): void {
+		// The Label Fields screen (views/label-fields.js): the one set of
+		// customization fields every Template shares. No id in the URL —
+		// there is only ever one, and ensure_global_preset() creates it
+		// on first visit if the site has none yet.
+		register_rest_route( self::NAMESPACE, '/admin/label-fields', [
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_label_fields' ],
+				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+			],
+			[
+				'methods'             => \WP_REST_Server::EDITABLE,
+				'callback'            => [ $this, 'save_label_fields' ],
+				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+			],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/field-preset/(?P<id>\d+)', [
 			[
 				'methods'             => \WP_REST_Server::READABLE,
@@ -68,6 +85,43 @@ class YeffoPrint_Admin_Field_Preset_Controller {
 		YeffoPrint_Field_Schema::update( $post_id, is_array( $params['field_schema'] ?? null ) ? $params['field_schema'] : [] );
 
 		return rest_ensure_response( $this->preset_payload( $post_id ) );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function get_label_fields() {
+		$preset_id = $this->global_preset_id();
+		if ( is_wp_error( $preset_id ) ) {
+			return $preset_id;
+		}
+
+		return rest_ensure_response( $this->preset_payload( $preset_id ) );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function save_label_fields( \WP_REST_Request $request ) {
+		$preset_id = $this->global_preset_id();
+		if ( is_wp_error( $preset_id ) ) {
+			return $preset_id;
+		}
+
+		$params = $request->get_json_params() ?: [];
+		YeffoPrint_Field_Schema::update( $preset_id, is_array( $params['field_schema'] ?? null ) ? $params['field_schema'] : [] );
+
+		return rest_ensure_response( $this->preset_payload( $preset_id ) );
+	}
+
+	/** @return int|\WP_Error */
+	private function global_preset_id() {
+		$preset_id = YeffoPrint_Field_Schema::ensure_global_preset();
+		if ( ! $preset_id ) {
+			return new \WP_Error(
+				'yeffoprint_label_fields_unavailable',
+				__( 'The label fields could not be loaded. Try again in a moment.', 'yeffoprint-core' ),
+				[ 'status' => 500 ]
+			);
+		}
+
+		return $preset_id;
 	}
 
 	/** @return int|\WP_Error Post ID on success. */

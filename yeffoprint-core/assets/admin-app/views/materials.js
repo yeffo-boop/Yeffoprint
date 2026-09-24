@@ -23,7 +23,8 @@
 		thickness: '_yp_thickness_mil',
 		scope: '_yp_material_scope',
 			inStock: '_yp_in_stock',
-		guideNote: '_yp_guide_note'
+		guideNote: '_yp_guide_note',
+		swatchFinish: '_yp_swatch_finish'
 	};
 
 	var SCOPES = {
@@ -208,6 +209,12 @@
 								'</select></div>' +
 								'<div class="yp-field"><label for="yp-mat-thickness">Thickness (mil)</label><input type="number" step="0.01" min="0" id="yp-mat-thickness" name="thickness" value="' + ( meta[ META.thickness ] || '' ) + '" /></div>' +
 							'</div>' +
+							'<div class="yp-field"><label for="yp-mat-finish">Swatch finish</label><select id="yp-mat-finish" name="swatch_finish">' +
+								Object.keys( yeffoprintAdminApp.swatchFinishes ).map( function ( key ) {
+									return '<option value="' + key + '"' + ( ( meta[ META.swatchFinish ] || 'auto' ) === key ? ' selected' : '' ) + '>' + YP.escapeHtml( yeffoprintAdminApp.swatchFinishes[ key ] ) + '</option>';
+								} ).join( '' ) +
+							'</select></div>' +
+							'<p class="yp-field__hint">The texture customers see for this material on the product page and custom label form. Holographic and Prism shimmer.</p>' +
 							'<div class="yp-field"><label for="yp-mat-price">Price adjustment ($, per label)</label><input type="number" step="0.01" id="yp-mat-price" name="price_adjustment" value="' + ( meta[ META.priceAdjustment ] || '0' ) + '" /></div>' +
 							'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-mat-active" name="active"' + ( ! isEdit || 'publish' === material.status ? ' checked' : '' ) + ' /><label for="yp-mat-active">Active (visible to customers)</label></div>' +
 							'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-mat-in-stock" name="in_stock"' + ( ! isEdit || false !== meta[ META.inStock ] ? ' checked' : '' ) + ' /><label for="yp-mat-in-stock">In stock</label></div>' +
@@ -311,6 +318,7 @@
 			body.meta[ META.hoverImage ] = parseInt( form.hover_image.value, 10 ) || 0;
 			body.meta[ META.inStock ] = form.in_stock.checked;
 			body.meta[ META.guideNote ] = form.guide_note.value;
+			body.meta[ META.swatchFinish ] = form.swatch_finish.value;
 			if ( ! existing ) {
 				body.menu_order = allMaterials.length; // New materials land at the end of the list, not menu_order 0 (see move()'s docblock above).
 			}

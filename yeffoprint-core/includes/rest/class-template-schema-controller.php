@@ -145,6 +145,7 @@ class YeffoPrint_Template_Schema_Controller {
 			'print_width_mm'   => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRINT_WIDTH_MM, true ),
 			'print_height_mm'  => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRINT_HEIGHT_MM, true ),
 			'price_adjustment' => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
+			'fit_note'         => (string) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::FIT_NOTE, true ),
 		];
 	}
 
@@ -159,6 +160,9 @@ class YeffoPrint_Template_Schema_Controller {
 			'hover_image_url'  => $hover_id ? ( wp_get_attachment_image_url( $hover_id, 'thumbnail' ) ?: null ) : null,
 			'price_adjustment' => (float) get_post_meta( $material->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
 			'in_stock'         => (bool) get_post_meta( $material->ID, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ),
+			// Label designer swatch (assets/js/label-pickers.js).
+			'swatch_finish'    => YeffoPrint_Commerce_Record_Meta::swatch_finish( $material ),
+			'thickness_mil'    => (float) get_post_meta( $material->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ),
 		];
 	}
 }

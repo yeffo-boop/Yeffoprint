@@ -14,7 +14,7 @@
  * creates nothing on its own.
  *
  * The field-schema repeater itself is YP.createFieldSchemaEditor()
- * (field-schema-editor.js), shared with views/field-presets.js — this
+ * (field-schema-editor.js), shared with views/label-fields.js — this
  * file's only extra responsibility is keeping that editor's drag
  * preview in sync with whichever image is currently the featured
  * image, via bindMediaPicker's onSelect/onRemove hooks.
@@ -92,7 +92,7 @@
 	/** Read-only stand-in for the interactive field-schema-editor.js widget, shown instead of it whenever a shared default preset (Settings → Label Configurator) is active — see sharedPreset above. */
 	function renderSharedFieldsReadOnly( container, preset ) {
 		container.innerHTML =
-			'<p class="yp-field__hint">Every template shares these fields from the <strong>' + YP.escapeHtml( preset.title ) + '</strong> preset. Add, edit, or remove a field there and it applies here automatically. <a href="#/field-presets">Manage shared fields &rarr;</a></p>' +
+			'<p class="yp-field__hint">Every template shares the same customization fields. Add, edit, or remove them on the Label Fields screen and the change applies here automatically. <a href="#/label-fields">Edit label fields &rarr;</a></p>' +
 			( preset.fields.length
 				? '<table class="yp-record-table"><thead><tr><th>Label</th><th>Type</th><th>Required</th></tr></thead><tbody>' +
 					preset.fields.map( function ( field ) {

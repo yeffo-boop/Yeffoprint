@@ -373,10 +373,17 @@ class YeffoPrint_Custom_Order_Controller {
 		// "2x3"-style Size name becomes the literal text "2&#215;3"
 		// instead of "2×3") — see class-custom-sticker-controller.php's
 		// options() for the full explanation.
+		// Print size, add-on and "Fits…" note feed the to-scale size
+		// strip (assets/js/label-pickers.js); the Label Designer and CSV
+		// import still only read id/name.
 		$format = static function ( \WP_Post $post ) {
 			return [
-				'id'   => $post->ID,
-				'name' => $post->post_title,
+				'id'               => $post->ID,
+				'name'             => $post->post_title,
+				'print_width_mm'   => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRINT_WIDTH_MM, true ),
+				'print_height_mm'  => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRINT_HEIGHT_MM, true ),
+				'price_adjustment' => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
+				'fit_note'         => (string) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::FIT_NOTE, true ),
 			];
 		};
 
@@ -391,6 +398,8 @@ class YeffoPrint_Custom_Order_Controller {
 				// existing consumer of this endpoint (custom-order-form.js)
 				// simply doesn't read this new key.
 				'price_adjustment' => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
+				'swatch_finish'    => YeffoPrint_Commerce_Record_Meta::swatch_finish( $post ),
+				'thickness_mil'    => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::THICKNESS_MIL, true ),
 			];
 		};
 

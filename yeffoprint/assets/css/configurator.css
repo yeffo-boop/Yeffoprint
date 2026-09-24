@@ -385,10 +385,6 @@
 	opacity: 0.55;
 }
 
-.yp-option-pill--out-of-stock .yp-swatch-chip {
-	filter: grayscale(1);
-}
-
 .yp-option-pill--out-of-stock .yp-option-pill__meta {
 	color: var(--wp--preset--color--magenta-deep);
 	font-weight: 600;
@@ -402,17 +398,6 @@
 .yp-option-pill__meta {
 	font-size: 0.75rem;
 	color: var(--wp--preset--color--charcoal);
-}
-
-.yp-swatch-chip {
-	width: 1.5rem;
-	height: 1.5rem;
-	border-radius: 999px;
-	background: var(--wp--preset--color--light-gray);
-	background-size: cover;
-	background-position: center;
-	margin-bottom: 0.3rem;
-	border: 1px solid var(--wp--preset--color--light-gray);
 }
 
 .yp-field {
@@ -481,29 +466,6 @@
 
 .yp-field__tooltip p {
 	margin: 0.6rem 0 0;
-}
-
-/* corner_style's built-in "?" diagram (direct request: "a graphic
-   example of what squared corners and rounded corners actually look
-   like") — see configurator.js's cornerStyleDiagramHtml(). */
-.yp-corner-style-diagram {
-	display: flex;
-	gap: 1rem;
-}
-
-.yp-corner-style-diagram__example {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 0.3rem;
-	font-size: 0.75rem;
-	color: var(--wp--preset--color--charcoal);
-}
-
-.yp-corner-style-diagram__rect {
-	fill: var(--wp--preset--color--white);
-	stroke: var(--wp--preset--color--near-black);
-	stroke-width: 1.5;
 }
 
 .yp-field__counter.is-over {
