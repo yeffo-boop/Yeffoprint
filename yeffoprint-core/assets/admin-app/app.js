@@ -2223,6 +2223,7 @@
 		}
 
 		var pkg = order.shippo_default_package;
+		var customs = order.shippo_customs || {};
 
 		return (
 			'<div class="yp-panel" data-yp-shippo-panel>' +
@@ -2235,6 +2236,13 @@
 					'<div class="yp-field"><label for="yp-shippo-width">Width (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-width" value="' + YP.escapeAttr( pkg.width_in ) + '" /></div>' +
 					'<div class="yp-field"><label for="yp-shippo-height">Height (in)</label><input type="number" min="0.1" step="0.1" id="yp-shippo-height" value="' + YP.escapeAttr( pkg.height_in ) + '" /></div>' +
 				'</div>' +
+				( customs.international
+					? '<p class="yp-panel__hint">International shipment: this customs info goes on the label.</p>' +
+						'<div class="yp-shippo-dims">' +
+							'<div class="yp-field"><label for="yp-shippo-customs-description">Contents</label><input type="text" id="yp-shippo-customs-description" value="' + YP.escapeAttr( customs.description ) + '" /></div>' +
+							'<div class="yp-field"><label for="yp-shippo-customs-value">Value (' + YP.escapeHtml( customs.currency ) + ')</label><input type="number" min="0.01" step="0.01" id="yp-shippo-customs-value" value="' + YP.escapeAttr( customs.value ) + '" /></div>' +
+						'</div>'
+					: '' ) +
 				'<button type="button" class="wp-block-button__link is-style-outline yp-shippo-get-rates" data-yp-shippo-get-rates>Get Rates</button>' +
 				'<div data-yp-shippo-rates></div>' +
 				'<div data-yp-shippo-error></div>' +
@@ -2328,6 +2336,12 @@
 			width_in: parseFloat( panel.querySelector( '#yp-shippo-width' ).value ) || defaults.width_in,
 			height_in: parseFloat( panel.querySelector( '#yp-shippo-height' ).value ) || defaults.height_in
 		};
+
+		var customsDescription = panel.querySelector( '#yp-shippo-customs-description' );
+		if ( customsDescription ) {
+			parcel.customs_description = customsDescription.value;
+			parcel.customs_value = panel.querySelector( '#yp-shippo-customs-value' ).value;
+		}
 
 		button.disabled = true;
 		button.textContent = 'Getting rates…';

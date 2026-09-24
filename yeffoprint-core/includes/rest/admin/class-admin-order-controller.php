@@ -348,6 +348,7 @@ class YeffoPrint_Admin_Order_Controller {
 			// alongside it a bit." Shown next to, not instead of, the row above.
 			'shippo_configured'        => YeffoPrint_Shippo_Settings::is_configured(),
 			'shippo_default_package'   => YeffoPrint_Shippo_Settings::get_default_package(),
+			'shippo_customs'           => YeffoPrint_Admin_Shippo_Controller::customs_payload( $order ),
 			// Direct request: "need the ability to go back and print the label later." Every
 			// Shippo label already purchased on this order, printable link included, so the panel
 			// can offer a reprint regardless of whether it was purchased in this drawer session or

@@ -82,7 +82,15 @@ class YeffoPrint_Admin_Shippo_Controller {
 			);
 		}
 
-		$result = $client->get_rates( $address_to, $parcel );
+		$customs = null;
+		if ( 'international' === YeffoPrint_Shippo_Settings::region_for_country( $address_to['country'] ) ) {
+			$customs = $this->customs_from_request( $order, $params );
+			if ( is_wp_error( $customs ) ) {
+				return $customs;
+			}
+		}
+
+		$result = $client->get_rates( $address_to, $parcel, $customs );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
@@ -234,6 +242,58 @@ class YeffoPrint_Admin_Shippo_Controller {
 			'length_in' => isset( $params['length_in'] ) ? (float) $params['length_in'] : $default['length_in'],
 			'width_in'  => isset( $params['width_in'] ) ? (float) $params['width_in'] : $default['width_in'],
 			'height_in' => isset( $params['height_in'] ) ? (float) $params['height_in'] : $default['height_in'],
+		];
+	}
+
+	/**
+	 * The panel's customs fields (prefilled from customs_payload()), falling
+	 * back to the same defaults when a field is left blank.
+	 *
+	 * @return array{description:string,value:float,currency:string,tariff_number:string,signer:string}|\WP_Error
+	 */
+	private function customs_from_request( \WC_Order $order, array $params ) {
+		$defaults    = self::customs_payload( $order );
+		$description = sanitize_text_field( (string) ( $params['customs_description'] ?? '' ) );
+		$value       = isset( $params['customs_value'] ) && '' !== $params['customs_value'] ? (float) $params['customs_value'] : $defaults['value'];
+
+		if ( $value <= 0 ) {
+			return new \WP_Error( 'yeffoprint_shippo_customs_value', __( 'Enter the customs value for this international shipment.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		if ( $value > 2500 ) {
+			return new \WP_Error( 'yeffoprint_shippo_customs_value', __( 'International shipments valued over $2,500 need an export filing (AES/ITN), which this panel can\'t add. Buy this label in the Shippo dashboard instead.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return [
+			'description'   => '' !== $description ? $description : $defaults['description'],
+			'value'         => $value,
+			'currency'      => $defaults['currency'],
+			'tariff_number' => $defaults['tariff_number'],
+			'signer'        => YeffoPrint_Shippo_Settings::get_customs_defaults()['signer'],
+		];
+	}
+
+	/**
+	 * What the Shippo panel prefills its customs fields with, and whether
+	 * to show them at all. Value is what the customer paid for the goods
+	 * (items after discounts), not shipping or fees.
+	 *
+	 * @return array{international:bool,description:string,value:float,currency:string,tariff_number:string}
+	 */
+	public static function customs_payload( \WC_Order $order ): array {
+		$defaults = YeffoPrint_Shippo_Settings::get_customs_defaults();
+		$country  = '' !== trim( $order->get_shipping_address_1() ) ? $order->get_shipping_country() : $order->get_billing_country();
+
+		$value = 0.0;
+		foreach ( $order->get_items() as $item ) {
+			$value += (float) $item->get_total();
+		}
+
+		return [
+			'international' => 'international' === YeffoPrint_Shippo_Settings::region_for_country( (string) $country ),
+			'description'   => $defaults['description'],
+			'value'         => round( $value, 2 ),
+			'currency'      => $order->get_currency(),
+			'tariff_number' => $defaults['tariff_number'],
 		];
 	}
 
