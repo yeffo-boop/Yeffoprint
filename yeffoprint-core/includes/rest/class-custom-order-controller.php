@@ -234,7 +234,7 @@ class YeffoPrint_Custom_Order_Controller {
 
 		$batch = $is_canvas_submission
 			? $this->validate_canvas_row( $request_width_mm, $request_height_mm, $request )
-			: $this->validate_batch_rows( $request->get_param( 'batch' ) );
+			: $this->validate_batch_rows( $request->get_param( 'batch' ), false );
 
 		if ( is_wp_error( $batch ) ) {
 			return $batch;
@@ -606,6 +606,11 @@ class YeffoPrint_Custom_Order_Controller {
 			// Label Designer row: no SIZE_ID (0, harmlessly ignored by
 			// class-cart-pricing.php's adjustment() lookup) — these two
 			// keys are what actually drive its dynamic base price instead.
+			if ( ! empty( $row['custom_width_in'] ) ) {
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ]  = $row['custom_width_in'];
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] = $row['custom_height_in'];
+			}
+
 			if ( ! empty( $row['width_mm'] ) && ! empty( $row['height_mm'] ) ) {
 				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ]  = $row['width_mm'];
 				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] = $row['height_mm'];
@@ -647,7 +652,7 @@ class YeffoPrint_Custom_Order_Controller {
 	 *
 	 * @return array<int, array{size_id:int, material_id:int, quantity:int, compound_strength:string}>|\WP_Error
 	 */
-	private function validate_batch_rows( $raw ) {
+	private function validate_batch_rows( $raw, bool $require_custom_size = true ) {
 		if ( ! is_array( $raw ) || ! $raw ) {
 			return new \WP_Error( 'yeffoprint_empty_batch', __( 'Please add at least one label to your order.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
@@ -678,11 +683,27 @@ class YeffoPrint_Custom_Order_Controller {
 				return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Quantity must be at least 1 for every label.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 			}
 
+			// A Size with no print dimensions ("Custom") takes the
+			// customer's own label size, in inches (custom-order-form.js).
+			$custom_width_in  = 0.0;
+			$custom_height_in = 0.0;
+			if ( ! YeffoPrint_Commerce_Record_Meta::size_has_dimensions( $size_id ) ) {
+				$custom_width_in  = round( (float) ( $row['custom_width_in'] ?? 0 ), 2 );
+				$custom_height_in = round( (float) ( $row['custom_height_in'] ?? 0 ), 2 );
+				// The live price preview runs before the customer has typed
+				// a size; only the real submission insists on one.
+				if ( $require_custom_size && ( $custom_width_in < 0.25 || $custom_width_in > 24 || $custom_height_in < 0.25 || $custom_height_in > 24 ) ) {
+					return new \WP_Error( 'yeffoprint_custom_size_required', __( 'Enter a width and height (0.25 to 24 inches) for every label with a Custom size.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+				}
+			}
+
 			$rows[] = [
 				'size_id'           => $size_id,
 				'material_id'       => $material_id,
 				'quantity'          => $quantity,
 				'compound_strength' => sanitize_text_field( (string) ( $row['compound_strength'] ?? '' ) ),
+				'custom_width_in'   => $custom_width_in,
+				'custom_height_in'  => $custom_height_in,
 			];
 		}
 

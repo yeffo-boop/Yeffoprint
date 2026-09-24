@@ -198,6 +198,14 @@ class YeffoPrint_Order_Item_Meta {
 			$canvas_width_mm   = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ] ?? 0 );
 			$canvas_height_mm  = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] ?? 0 );
 			self::snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength, $canvas_width_mm, $canvas_height_mm );
+			// Custom Design row on a no-dimensions Size ("Custom"): show
+			// the size the customer typed instead of just "Custom"
+			// (unique add_meta_data replaces the Size row just written).
+			if ( ! empty( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] ) ) {
+				$item->add_meta_data( '_yp_custom_width_in', (float) $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ], true );
+				$item->add_meta_data( '_yp_custom_height_in', (float) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? 0 ), true );
+				$item->add_meta_data( __( 'Size', 'yeffoprint-core' ), YeffoPrint_Cart_Pricing::custom_inches_label( $values ), true );
+			}
 			return;
 		}
 
