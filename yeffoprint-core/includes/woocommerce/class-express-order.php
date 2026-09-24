@@ -79,6 +79,40 @@ class YeffoPrint_Express_Order {
 		return false;
 	}
 
+	/**
+	 * Adds or removes the express fee line on an already-placed order —
+	 * the "Pay for order" page's own Express checkbox (class-order-pay-
+	 * address.php), which has no cart for apply_fee() to run on. The
+	 * caller recalculates totals. Only adds while Express is enabled;
+	 * removing always works.
+	 */
+	public static function set_on_order( \WC_Order $order, bool $express ): void {
+		if ( $express === self::is_express( $order ) ) {
+			return;
+		}
+
+		if ( ! $express ) {
+			foreach ( $order->get_fees() as $item_id => $fee ) {
+				if ( $fee->get_meta( self::FEE_ITEM_META ) ) {
+					$order->remove_item( $item_id );
+				}
+			}
+			return;
+		}
+
+		if ( ! self::is_enabled() ) {
+			return;
+		}
+
+		$fee = new \WC_Order_Item_Fee();
+		$fee->set_name( self::label() );
+		$fee->set_amount( self::fee() );
+		$fee->set_total( self::fee() );
+		$fee->set_tax_status( 'none' ); // Same non-taxable treatment as apply_fee().
+		$fee->add_meta_data( self::FEE_ITEM_META, 'yes', true );
+		$order->add_item( $fee );
+	}
+
 	public static function is_chosen(): bool {
 		return WC()->session && (bool) WC()->session->get( self::SESSION_KEY );
 	}
@@ -159,20 +193,21 @@ class YeffoPrint_Express_Order {
 		wp_localize_script( 'yeffoprint-express-checkout', 'yeffoprintExpressCheckout', [
 			'namespace' => self::NAMESPACE,
 			'chosen'    => self::is_chosen(),
-			'html'      => $this->option_html(),
+			'html'      => self::option_html(),
 		] );
 	}
 
-	/** Every substitution already escaped — the JS inserts this verbatim. */
-	private function option_html(): string {
+	/** Every substitution already escaped — the JS inserts this verbatim. Also rendered server-side on the "Pay for order" page (class-order-pay-address.php), with $input_attrs naming the checkbox so it posts with the payment form. */
+	public static function option_html( string $input_attrs = '' ): string {
 		$price = html_entity_decode( wp_strip_all_tags( wc_price( self::fee() ) ), ENT_QUOTES, 'UTF-8' );
 
 		return sprintf(
-			'<label class="yp-express-option"><input type="checkbox" class="yp-express-option__input" /><span class="yp-express-option__icon" aria-hidden="true">%1$s</span><span class="yp-express-option__text"><strong class="yp-express-option__title">%2$s</strong><span class="yp-express-option__body">%3$s</span></span><span class="yp-express-option__price">+%4$s</span></label>',
+			'<label class="yp-express-option"><input type="checkbox" class="yp-express-option__input"%5$s /><span class="yp-express-option__icon" aria-hidden="true">%1$s</span><span class="yp-express-option__text"><strong class="yp-express-option__title">%2$s</strong><span class="yp-express-option__body">%3$s</span></span><span class="yp-express-option__price">+%4$s</span></label>',
 			'&#9889;',
 			esc_html__( 'Express: skip the line', 'yeffoprint-core' ),
 			esc_html__( 'Your order moves to the front of the production queue.', 'yeffoprint-core' ),
-			esc_html( $price )
+			esc_html( $price ),
+			$input_attrs ? ' ' . $input_attrs : ''
 		);
 	}
 }
