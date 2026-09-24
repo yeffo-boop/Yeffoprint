@@ -186,6 +186,16 @@ class YeffoPrint_Cart_Pricing {
 		return YeffoPrint_Pricing_Rule::calculate( $material_adjustment, $size_adjustment, $quantity, $tier_quantity ?? self::combined_label_quantity() );
 	}
 
+	/** "Custom: 2.5" × 1.25"" for a cart item (or order item values) carrying the customer's own label size. */
+	public static function custom_inches_label( array $values ): string {
+		return sprintf(
+			/* translators: 1: width in inches, 2: height in inches */
+			__( 'Custom: %1$s" × %2$s"', 'yeffoprint-core' ),
+			(string) (float) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] ?? 0 ),
+			(string) (float) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? 0 )
+		);
+	}
+
 	/**
 	 * Sticker counterpart to calculate_for_cart_item() above — same
 	 * "static, stateless, reusable from the order-item snapshot" reason.
@@ -270,6 +280,13 @@ class YeffoPrint_Cart_Pricing {
 				'key'   => __( 'Size', 'yeffoprint-core' ),
 				/* translators: 1: width in millimeters, 2: height in millimeters */
 				'value' => sprintf( __( '%1$smm × %2$smm', 'yeffoprint-core' ), rtrim( rtrim( number_format( $width_mm, 1 ), '0' ), '.' ), rtrim( rtrim( number_format( $height_mm, 1 ), '0' ), '.' ) ),
+			];
+		} elseif ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] ) ) {
+			// Template item on a no-dimensions Size ("Custom") — show the
+			// size the customer typed in (cart-controller add()).
+			$item_data[] = [
+				'key'   => __( 'Size', 'yeffoprint-core' ),
+				'value' => self::custom_inches_label( $cart_item ),
 			];
 		} else {
 			$size = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );

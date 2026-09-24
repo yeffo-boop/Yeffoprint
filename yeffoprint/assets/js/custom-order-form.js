@@ -114,7 +114,9 @@
 			size_id: sizesData.length ? sizesData[ 0 ].id : 0,
 			material_id: firstAvailableMaterialId(),
 			quantity: quantityPresets[ 0 ] || 10,
-			compound_strength: ''
+			compound_strength: '',
+			custom_width_in: '',
+			custom_height_in: ''
 		}, overrides || {} );
 	}
 
@@ -133,9 +135,23 @@
 				size_id: row.size_id,
 				material_id: row.material_id,
 				quantity: row.quantity,
-				compound_strength: row.compound_strength
+				compound_strength: row.compound_strength,
+				custom_width_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_width_in ) || 0 : 0,
+				custom_height_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_height_in ) || 0 : 0
 			};
 		} );
+	}
+
+	/** A row on a Size with no print dimensions ("Custom") needs the customer's own width/height. */
+	function rowNeedsCustomSize( row ) {
+		var size = sizesData.filter( function ( s ) { return s.id === row.size_id; } )[ 0 ];
+		return !! size && ! window.YPLabelPickers.hasDimensions( size );
+	}
+
+	function rowCustomSizeValid( row ) {
+		var w = parseFloat( row.custom_width_in );
+		var h = parseFloat( row.custom_height_in );
+		return w >= 0.25 && w <= 24 && h >= 0.25 && h <= 24;
 	}
 
 	/**
@@ -176,6 +192,16 @@
 						sizesData.map( function ( size ) {
 							return pickers.sizeTileHtml( size, { scale: stripScale, selected: size.id === row.size_id, attrs: ' data-row-size="' + size.id + '"' } );
 						} ).join( '' ) +
+					'</div>' +
+					// Same width/height entry as the product page's Custom size (configurator.js).
+					'<div class="yp-custom-size" data-row-custom-size' + ( rowNeedsCustomSize( row ) ? '' : ' hidden' ) + '>' +
+						'<p class="yp-custom-size__title">Enter your label size</p>' +
+						'<div class="yp-custom-size__row">' +
+							'<label class="yp-custom-size__field"><span>Width</span><span class="yp-custom-size__input"><input type="number" inputmode="decimal" min="0.25" max="24" step="0.05" placeholder="2.00" data-row-custom-width /><em>in</em></span></label>' +
+							'<span class="yp-custom-size__x" aria-hidden="true">×</span>' +
+							'<label class="yp-custom-size__field"><span>Height</span><span class="yp-custom-size__input"><input type="number" inputmode="decimal" min="0.25" max="24" step="0.05" placeholder="1.00" data-row-custom-height /><em>in</em></span></label>' +
+						'</div>' +
+						'<p class="yp-custom-size__hint">Measure the area you want the label to cover. We’ll confirm the fit before printing.</p>' +
 					'</div>' +
 				'</div>' +
 				'<div class="yp-field">' +
@@ -230,8 +256,23 @@
 					row.size_id = parseInt( button.getAttribute( 'data-row-size' ), 10 );
 					syncRowChoice( rowEl, '[data-row-size]', 'data-row-size', row.size_id );
 					rowEl.querySelector( '[data-row-size-caption]' ).innerHTML = sizeCaption( row );
+					rowEl.querySelector( '[data-row-custom-size]' ).hidden = ! rowNeedsCustomSize( row );
 					updatePricePreview();
 				} );
+			} );
+
+			var customSizeEl = rowEl.querySelector( '[data-row-custom-size]' );
+			var customWidthInput = customSizeEl.querySelector( '[data-row-custom-width]' );
+			var customHeightInput = customSizeEl.querySelector( '[data-row-custom-height]' );
+			customWidthInput.value = row.custom_width_in;
+			customHeightInput.value = row.custom_height_in;
+			customWidthInput.addEventListener( 'input', function () {
+				row.custom_width_in = customWidthInput.value;
+				customSizeEl.classList.remove( 'is-invalid' );
+			} );
+			customHeightInput.addEventListener( 'input', function () {
+				row.custom_height_in = customHeightInput.value;
+				customSizeEl.classList.remove( 'is-invalid' );
 			} );
 
 			rowEl.querySelectorAll( '[data-row-material]' ).forEach( function ( button ) {
@@ -280,7 +321,9 @@
 			size_id: source.size_id,
 			material_id: source.material_id,
 			quantity: source.quantity,
-			compound_strength: source.compound_strength
+			compound_strength: source.compound_strength,
+			custom_width_in: source.custom_width_in,
+			custom_height_in: source.custom_height_in
 		} ) );
 		renderBatch();
 		updatePricePreview();
@@ -898,6 +941,10 @@
 					if ( row.quantity ) {
 						overrides.quantity = row.quantity;
 					}
+					if ( row.custom_width_in && row.custom_height_in ) {
+						overrides.custom_width_in = String( row.custom_width_in );
+						overrides.custom_height_in = String( row.custom_height_in );
+					}
 					return createRow( overrides );
 				} );
 				renderBatch();
@@ -1077,6 +1124,17 @@
 
 		if ( 'own_design' === state.mode && ! uploadedFiles.some( function ( file ) { return file.id; } ) ) {
 			showFormError( 'Please attach your print-ready design file(s).' );
+			return;
+		}
+
+		var missingSizeRow = batchRows.filter( function ( row ) { return rowNeedsCustomSize( row ) && ! rowCustomSizeValid( row ); } )[ 0 ];
+		if ( missingSizeRow ) {
+			var missingEl = batchContainerEl.querySelector( '[data-row-id="' + missingSizeRow.id + '"] [data-row-custom-size]' );
+			showFormError( 'Enter a width and height (0.25 to 24 inches) for every label with a Custom size.' );
+			if ( missingEl ) {
+				missingEl.classList.add( 'is-invalid' );
+				missingEl.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+			}
 			return;
 		}
 
