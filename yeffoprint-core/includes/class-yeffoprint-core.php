@@ -59,6 +59,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/customers/class-customer-notes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-customer-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-coupon-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-abandoned-cart-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-dashboard-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-settings-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-surcharge-controller.php';
@@ -79,6 +80,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-pay-address.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-checkout-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-express-order.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-draft-order-retention.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-email-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-item-meta.php';
@@ -270,6 +272,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Unanswered_Digest();
 		new YeffoPrint_Proof_Reminder_Scheduler();
 		new YeffoPrint_Telegram_Express_Alerts();
+		new YeffoPrint_Abandoned_Carts();
+		new YeffoPrint_Admin_Abandoned_Cart_Controller();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)

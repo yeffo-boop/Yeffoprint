@@ -55,6 +55,15 @@ class YeffoPrint_Telegram_Callback_Handler {
 			return;
 		}
 
+		// Abandoned cart buttons (class-abandoned-carts.php): the owner's
+		// Send now / Don't send / Send code on a "Cart left behind" alert,
+		// and a linked customer's "No more reminders". Access is checked
+		// there, per action.
+		if ( in_array( $action, [ 'ac_send', 'ac_stop', 'ac_code', 'ac_optout' ], true ) ) {
+			$client->answer_callback_query( $callback_query_id, YeffoPrint_Abandoned_Carts::handle_telegram_action( $action, absint( $parts[1] ?? '' ), $chat_id ) );
+			return;
+		}
+
 		$custom_order_id = absint( $parts[1] ?? '' );
 
 		if ( ! $custom_order_id || ! in_array( $action, [ 'proof_approve', 'proof_reject' ], true ) ) {
