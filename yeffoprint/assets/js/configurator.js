@@ -295,6 +295,7 @@
 
 		function sync() {
 			stickyBar.hidden = desktopMq.matches;
+			document.body.classList.toggle( 'yp-has-sticky-bar', ! stickyBar.hidden );
 		}
 
 		sync();

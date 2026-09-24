@@ -59,11 +59,11 @@
 
 .yp-configurator__preview {
 	position: sticky;
-	/* --yp-header-height is published live by site.js (initHeaderScroll)
-	   — the header's real height changes with scroll compaction and nav
-	   wrapping, so a fixed guess doesn't reliably clear it at every
-	   viewport/zoom combination. 96px is the pre-JS/no-JS fallback. */
-	top: calc(var(--yp-header-height, 96px) + var(--wp--preset--spacing--xs));
+	/* Follows the customer down the form on desktop. Not offset by
+	   --yp-header-height: the header scrolls away (its sticky only spans
+	   the template-part <header> wrapping it), so an offset left a
+	   header-sized gap above the pinned preview. */
+	top: var(--wp--preset--spacing--sm, 1rem);
 }
 
 @media (max-width: 960px) {
@@ -739,9 +739,14 @@
 	font-weight: 600;
 }
 
+/* Fixed, not sticky: the bar sits after Similar designs in the template,
+   so a sticky one parks above the footer instead of floating over the
+   form (direct report: "getting stuck at the bottom when I scroll"). */
 .yp-sticky-bar {
-	position: sticky;
+	position: fixed;
+	right: 0;
 	bottom: 0;
+	left: 0;
 	z-index: 800;
 	align-items: center;
 	justify-content: space-between;
@@ -756,6 +761,17 @@
 
 .yp-sticky-bar:not([hidden]) {
 	display: flex;
+}
+
+/* Room under the footer so the fixed bar never covers its last links. */
+body.yp-has-sticky-bar {
+	padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Lift the chat bubble (web-chat-widget.css) above the bar so it doesn't
+   sit on top of Add to Cart. */
+body.yp-has-sticky-bar .yp-chat-widget {
+	bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .yp-sticky-bar__actions {
