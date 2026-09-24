@@ -10,8 +10,8 @@
  * is most AI-answer-engine bots, saw nothing but a "please enable
  * JavaScript" notice.
  *
- * Converting this into a dynamic block adds a real, always-visible
- * title/description/specs summary (yeffoprint_core_get_template_seo_data(),
+ * Converting this into a dynamic block adds a real, server-rendered
+ * title, description and price/size/material summary (yeffoprint_core_get_template_seo_data(),
  * the server-side counterpart of that same REST endpoint) ahead of the
  * interactive tool, with zero behavior change to the tool itself: every
  * class, id, and data-yp-* attribute below is unchanged from the old
@@ -39,24 +39,36 @@ $seo     = ( $post_id && function_exists( 'yeffoprint_core_get_template_seo_data
 
 $title = $seo['title'] ?? get_the_title( $post_id );
 
-$specs_parts = [];
+/*
+ * Starting price plus size and material counts, shown as small bubbles
+ * under the label preview. Each count bubble's title lists the names.
+ */
+$spec_chips = [];
 if ( $seo ) {
-	$specs_parts[] = $seo['starting_price'];
+	$spec_chips[] = [
+		'text'  => $seo['starting_price'],
+		'title' => '',
+		'class' => 'is-price',
+	];
 
-	if ( $seo['size_names'] ) {
-		$specs_parts[] = sprintf(
-			/* translators: %s: comma-separated list of available size names */
-			__( 'Available in: %s', 'yeffoprint' ),
-			implode( ', ', $seo['size_names'] )
-		);
+	$size_count = count( $seo['size_names'] );
+	if ( $size_count ) {
+		$spec_chips[] = [
+			/* translators: %d: number of available sizes */
+			'text'  => sprintf( _n( '%d size', '%d sizes', $size_count, 'yeffoprint' ), $size_count ),
+			'title' => implode( ', ', $seo['size_names'] ),
+			'class' => '',
+		];
 	}
 
-	if ( $seo['material_names'] ) {
-		$specs_parts[] = sprintf(
-			/* translators: %s: comma-separated list of available material names */
-			__( 'Materials: %s', 'yeffoprint' ),
-			implode( ', ', $seo['material_names'] )
-		);
+	$material_count = count( $seo['material_names'] );
+	if ( $material_count ) {
+		$spec_chips[] = [
+			/* translators: %d: number of available materials */
+			'text'  => sprintf( _n( '%d material', '%d materials', $material_count, 'yeffoprint' ), $material_count ),
+			'title' => implode( ', ', $seo['material_names'] ),
+			'class' => '',
+		];
 	}
 }
 ?>
@@ -74,12 +86,6 @@ if ( $seo ) {
 	</noscript>
 	<div class="yp-configurator__intro">
 		<h1 class="yp-configurator__title" data-yp-title><?php echo esc_html( $title ); ?></h1>
-		<?php if ( ! empty( $seo['description'] ) ) : ?>
-			<p class="yp-configurator__intro-description"><?php echo esc_html( $seo['description'] ); ?></p>
-		<?php endif; ?>
-		<?php if ( $specs_parts ) : ?>
-			<p class="yp-configurator__intro-specs"><?php echo esc_html( implode( ' · ', $specs_parts ) ); ?></p>
-		<?php endif; ?>
 	</div>
 	<div class="yp-configurator__status" role="status" aria-live="polite"><?php esc_html_e( 'Loading design…', 'yeffoprint' ); ?></div>
 	<div class="yp-configurator__skeleton" data-yp-skeleton aria-hidden="true">
@@ -100,9 +106,16 @@ if ( $seo ) {
 				<button type="button" id="yp-view-tab-vial" class="yp-view-tab" role="tab" aria-selected="false" aria-controls="yp-configurator-stage" tabindex="-1" data-yp-view="vial"><?php esc_html_e( 'Vial View', 'yeffoprint' ); ?></button>
 			</div>
 			<div class="yp-configurator__stage" id="yp-configurator-stage" role="tabpanel" aria-labelledby="yp-view-tab-label" tabindex="0" data-yp-stage></div>
+			<?php if ( $spec_chips ) : ?>
+				<ul class="yp-configurator__spec-chips">
+					<?php foreach ( $spec_chips as $chip ) : ?>
+						<li class="yp-spec-chip <?php echo esc_attr( $chip['class'] ); ?>"<?php echo $chip['title'] ? ' title="' . esc_attr( $chip['title'] ) . '"' : ''; ?>><?php echo esc_html( $chip['text'] ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+			<p class="yp-configurator__description" data-yp-description<?php echo empty( $seo['description'] ) ? ' hidden' : ''; ?>><?php echo esc_html( $seo['description'] ?? '' ); ?></p>
 			<p class="yp-configurator__live-preview-note" data-yp-live-preview-note hidden><?php esc_html_e( 'Live preview is temporarily off while we fine-tune this design — your label will still print exactly as you enter it below.', 'yeffoprint' ); ?></p>
 			<div class="yp-configurator__overflow-warning" data-yp-overflow-warning hidden><?php esc_html_e( 'Text is too long for this design.', 'yeffoprint' ); ?></div>
-			<p class="yp-configurator__description" data-yp-description hidden></p>
 		</div>
 		<div class="yp-configurator__controls">
 			<div class="yp-configurator__section" data-yp-section="size">
