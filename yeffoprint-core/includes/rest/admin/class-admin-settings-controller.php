@@ -69,6 +69,18 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( YeffoPrint_Shippo_Settings::CUSTOMS_SIGNER_OPTION, sanitize_text_field( (string) ( $params['shippo_customs_signer'] ?? '' ) ) );
 		update_option( YeffoPrint_Shippo_Settings::MANUAL_ORDER_SHIPPING_OPTIONS_OPTION, YeffoPrint_Shippo_Settings::sanitize_manual_order_shipping_options( (array) ( $params['manual_order_shipping_options'] ?? [] ) ) );
 
+		// Only when sent, same as default_field_preset_id below — the item
+		// checklist writes product meta, so an older client that doesn't
+		// know this panel must not untick every product on save.
+		if ( array_key_exists( 'local_pickup_enabled', $params ) ) {
+			YeffoPrint_Local_Pickup::save(
+				(bool) $params['local_pickup_enabled'],
+				(string) ( $params['local_pickup_label'] ?? '' ),
+				(string) ( $params['local_pickup_instructions'] ?? '' ),
+				is_array( $params['local_pickup_product_ids'] ?? null ) ? $params['local_pickup_product_ids'] : []
+			);
+		}
+
 		update_option( $M::LIVE_PREVIEW_ENABLED_OPTION, (bool) ( $params['live_preview_enabled'] ?? false ) );
 
 		// Only when sent: the Settings screen no longer offers this choice
@@ -152,6 +164,10 @@ class YeffoPrint_Admin_Settings_Controller {
 			'manual_order_shipping_options' => YeffoPrint_Shippo_Settings::get_manual_order_shipping_options(),
 			'shippo_webhook_url'         => esc_url_raw( YeffoPrint_Shippo_Webhook_Secret::webhook_url() ),
 			'shippo_webhook_status'      => YeffoPrint_Shippo_Webhook_Sync::last_message(),
+			'local_pickup_enabled'       => YeffoPrint_Local_Pickup::is_enabled(),
+			'local_pickup_label'         => (string) get_option( YeffoPrint_Local_Pickup::LABEL_OPTION, '' ),
+			'local_pickup_instructions'  => YeffoPrint_Local_Pickup::instructions(),
+			'local_pickup_products'      => YeffoPrint_Local_Pickup::products(),
 			'live_preview_enabled'       => (bool) get_option( $M::LIVE_PREVIEW_ENABLED_OPTION, true ),
 			'default_field_preset_id'    => (int) get_option( $M::DEFAULT_FIELD_PRESET_ID_OPTION, 0 ),
 			// {id, title} per published preset, for the dropdown — reuses
