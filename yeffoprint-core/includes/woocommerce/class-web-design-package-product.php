@@ -16,7 +16,7 @@
  * a customer land on a price, the package now exists as a real,
  * correctly-priced WooCommerce product they can search for and add to
  * a normal order from wp-admin (Orders → Add New), then send that
- * order's own "Pay for order" link — the same card/Venmo/Zelle/Coinbase
+ * order's own "Pay for order" link — the same card/Venmo/Zelle/crypto
  * checkout every other manually-created order in this store already
  * uses, so no new payment plumbing was needed for this at all.
  *

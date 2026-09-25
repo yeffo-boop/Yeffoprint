@@ -1919,7 +1919,7 @@
 	 * to whatever's still refundable), an optional reason, and, only
 	 * when this order's payment method actually supports it
 	 * (order.refund_gateway_supported — WooCommerce Payments does,
-	 * this store's Manual/Venmo/Zelle/Coinbase gateways don't), a
+	 * this store's Manual/Venmo/Zelle/NOWPayments gateways don't), a
 	 * checkbox to also attempt a real refund through that processor
 	 * rather than just recording one locally.
 	 */

@@ -1,6 +1,6 @@
 <?php
 /**
- * Checkout-block (Store API) registration for Coinbase Commerce — see
+ * Checkout-block (Store API) registration for NOWPayments — see
  * class-manual-payment-blocks-support.php's own docblock for why a
  * custom WC_Payment_Gateway needs this at all on this site (the classic
  * gateway works everywhere except actually showing up as a selectable
@@ -11,9 +11,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class YeffoPrint_Coinbase_Blocks_Support extends \Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType {
+class YeffoPrint_NOWPayments_Blocks_Support extends \Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType {
 
-	protected $name = 'yeffoprint_coinbase';
+	protected $name = 'yeffoprint_nowpayments';
 
 	public function initialize() {
 		$this->settings = get_option( 'woocommerce_' . $this->name . '_settings', [] );
@@ -25,14 +25,14 @@ class YeffoPrint_Coinbase_Blocks_Support extends \Automattic\WooCommerce\Blocks\
 
 	public function get_payment_method_script_handles() {
 		wp_register_script(
-			'yeffoprint-coinbase-blocks',
-			YEFFOPRINT_CORE_URL . 'assets/blocks/coinbase-payment-method.js',
+			'yeffoprint-nowpayments-blocks',
+			YEFFOPRINT_CORE_URL . 'assets/blocks/nowpayments-payment-method.js',
 			[ 'wc-blocks-registry', 'wc-settings', 'wp-element', 'wp-html-entities' ],
-			yeffoprint_core_asset_version( 'assets/blocks/coinbase-payment-method.js' ),
+			yeffoprint_core_asset_version( 'assets/blocks/nowpayments-payment-method.js' ),
 			true
 		);
 
-		return [ 'yeffoprint-coinbase-blocks' ];
+		return [ 'yeffoprint-nowpayments-blocks' ];
 	}
 
 	public function get_payment_method_data() {

@@ -11,7 +11,7 @@
  *
  * Shown on every email that can fire before an order actually ships —
  * a customer paying by card lands on customer_processing_order, a
- * manual-payment order (Venmo/Zelle/Coinbase) sits on
+ * manual-payment order (Venmo/Zelle/NOWPayments) sits on
  * customer_on_hold_order until confirmed, and customer_invoice is the
  * payment-reminder email for either of those. Deliberately not shown
  * on customer_shipped_order/customer_completed_order — those only ever

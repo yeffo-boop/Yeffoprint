@@ -1,7 +1,7 @@
 /**
- * Registers Coinbase Commerce with the Checkout block's own client-side
+ * Registers NOWPayments with the Checkout block's own client-side
  * payment method registry (window.wc.wcBlocksRegistry) — see class-
- * coinbase-blocks-support.php for why this file has to exist at all.
+ * nowpayments-blocks-support.php for why this file has to exist at all.
  * No build step, matching the rest of this codebase's JS.
  */
 ( function () {
@@ -11,7 +11,7 @@
 		return;
 	}
 
-	var settings = window.wc.wcSettings.getSetting( 'yeffoprint_coinbase_data', {} );
+	var settings = window.wc.wcSettings.getSetting( 'yeffoprint_nowpayments_data', {} );
 	var decode = window.wp.htmlEntities ? window.wp.htmlEntities.decodeEntities : function ( value ) { return value; };
 	var label = decode( settings.title || 'Pay with Crypto' );
 	var description = decode( settings.description || '' );
@@ -19,7 +19,7 @@
 	var content = window.wp.element.createElement( 'div', { className: 'yp-blocks-payment-description' }, description );
 
 	window.wc.wcBlocksRegistry.registerPaymentMethod( {
-		name: 'yeffoprint_coinbase',
+		name: 'yeffoprint_nowpayments',
 		label: label,
 		content: content,
 		edit: content,
