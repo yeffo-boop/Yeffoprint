@@ -227,6 +227,10 @@ add_action( 'wp_enqueue_scripts', function () {
 	if ( function_exists( 'WC' ) ) {
 		wp_localize_script( 'yeffoprint-site', 'yeffoprintCart', [
 			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			// Without it a logged-in shopper's drawer refresh is read as
+			// logged out (WP ignores the auth cookie on REST calls with no
+			// nonce) and shows the empty guest cart instead of theirs.
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
 		] );
 	}
 

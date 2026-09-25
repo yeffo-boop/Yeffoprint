@@ -237,7 +237,9 @@
 		}
 
 		function refreshDrawer() {
-			fetch( yeffoprintCart.restUrl + 'cart/drawer' )
+			fetch( yeffoprintCart.restUrl + 'cart/drawer', {
+				headers: yeffoprintCart.nonce ? { 'X-WP-Nonce': yeffoprintCart.nonce } : {}
+			} )
 				.then( function ( response ) {
 					return response.ok ? response.json() : null;
 				} )
