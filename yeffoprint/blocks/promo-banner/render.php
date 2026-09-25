@@ -53,6 +53,34 @@ $render_promo_style = static function ( array $banner ): string {
 };
 
 $is_rotator = count( $active ) > 1;
+
+/**
+ * Photos for a theme with `visual` => 'prints' (3D Prints Are Back):
+ * the newest published 3D prints that have a featured image, up to 3.
+ * Empty until one does, and render falls back to the color-bar mark.
+ *
+ * @return array<int, array{url:string, alt:string}>
+ */
+$promo_print_photos = static function (): array {
+	$ids = get_posts( [
+		'post_type'      => 'yp_print',
+		'post_status'    => 'publish',
+		'posts_per_page' => 3,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'fields'         => 'ids',
+		'meta_key'       => '_thumbnail_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+	] );
+
+	$photos = [];
+	foreach ( $ids as $id ) {
+		$url = get_the_post_thumbnail_url( $id, 'medium_large' );
+		if ( $url ) {
+			$photos[] = [ 'url' => $url, 'alt' => get_the_title( $id ) ];
+		}
+	}
+	return $photos;
+};
 ?>
 <?php if ( $is_rotator ) : ?>
 <div class="yp-promo-rotator" data-yp-promo-rotator>
@@ -66,6 +94,11 @@ $is_rotator = count( $active ) > 1;
 	// right thing instead of sending that lead into the label shop.
 	$cta_label = $theme['cta_label'] ?? __( 'Shop the Sale', 'yeffoprint-core' );
 	$cta_url   = $theme['cta_url'] ?? home_url( '/shop-labels/' );
+	// A code-optional theme (3D Prints Are Back) has no coupon: its chip
+	// reads "From $14", the Offer box's value after `code_label`.
+	$chip_label = $theme['code_label'] ?? __( 'Code', 'yeffoprint-core' );
+	$chip_value = empty( $theme['code_optional'] ) ? $banner['code'] : $banner['offer'];
+	$photos     = 'prints' === ( $theme['visual'] ?? '' ) ? $promo_print_photos() : [];
 	?>
 	<section
 		class="yp-promo<?php echo $is_rotator ? ' yp-promo--slide' . ( 0 === $index ? ' is-active' : '' ) : ''; ?>"
@@ -81,8 +114,8 @@ $is_rotator = count( $active ) > 1;
 				<div class="yp-promo__row">
 					<span class="yp-promo__code">
 						<span class="yp-promo__code-hole"></span>
-						<span class="yp-promo__code-label"><?php esc_html_e( 'Code', 'yeffoprint-core' ); ?></span>
-						<span class="yp-promo__code-value"><?php echo esc_html( $banner['code'] ); ?></span>
+						<span class="yp-promo__code-label"><?php echo esc_html( $chip_label ); ?></span>
+						<span class="yp-promo__code-value"><?php echo esc_html( $chip_value ); ?></span>
 					</span>
 					<a class="yp-promo__cta" href="<?php echo esc_url( $cta_url ); ?>">
 						<?php echo esc_html( $cta_label ); ?> &rarr;
@@ -91,6 +124,13 @@ $is_rotator = count( $active ) > 1;
 			</div>
 
 			<div class="yp-promo__visual" aria-hidden="true">
+				<?php if ( $photos ) : ?>
+				<div class="yp-promo__photos yp-promo__photos--<?php echo (int) count( $photos ); ?>">
+					<?php foreach ( $photos as $photo ) : ?>
+						<img class="yp-promo__photo" src="<?php echo esc_url( $photo['url'] ); ?>" alt="" loading="lazy" decoding="async" />
+					<?php endforeach; ?>
+				</div>
+				<?php else : ?>
 				<div class="yp-promo__proof">
 					<span class="yp-promo__corner yp-promo__corner--tl"></span>
 					<span class="yp-promo__corner yp-promo__corner--tr"></span>
@@ -106,6 +146,7 @@ $is_rotator = count( $active ) > 1;
 						<div class="yp-promo__bar yp-promo__bar--3"></div>
 					</div>
 				</div>
+				<?php endif; ?>
 			</div>
 
 		</div>

@@ -27,7 +27,8 @@ class YeffoPrint_Promo_Themes {
 	 *   bg:string, glow_a:string, glow_b:string, ink:string,
 	 *   ink_soft:string, accent:string, accent_ink:string,
 	 *   bars:array{0:string,1:string,2:string}, code_bg:string,
-	 *   code_ink:string, icon:string, cta_label?:string, cta_url?:string
+	 *   code_ink:string, icon:string, cta_label?:string, cta_url?:string,
+	 *   code_optional?:bool, code_label?:string, visual?:string
 	 * }> Keyed by a stable slug (stored in the option; never rename a
 	 *    key that's shipped, or an existing site's saved selection
 	 *    silently falls back to the default).
@@ -324,6 +325,40 @@ class YeffoPrint_Promo_Themes {
 				'icon'       => '<rect x="3" y="6" width="13" height="12" rx="1.5"/><circle cx="7" cy="10" r="1.1"/><path d="M4 15.5l3-3 2 2 4-4"/><path d="M20.6 3.4a1.9 1.9 0 0 1 0 2.7l-6.8 6.8-3 .7.7-3 6.8-6.8a1.9 1.9 0 0 1 2.3-.4z"/>',
 				'cta_label'  => __( 'Try the Designer', 'yeffoprint-core' ),
 				'cta_url'    => home_url( '/custom-design/' ),
+			],
+
+			/**
+			 * Not a discount either. Jeff: "announce that 3D prints are
+			 * back! somehow on the homepage", as an extra slide next to
+			 * whatever seasonal sale is running. There is no coupon, so
+			 * `code_optional` lets it go live with just the Offer box
+			 * filled in, and that Offer (e.g. "$14") shows in the chip
+			 * after `code_label` instead of a promo code. `visual` swaps
+			 * the color-bar mark for photos of the newest published 3D
+			 * prints (render.php falls back to the bars + cube icon when
+			 * none has a photo yet).
+			 */
+			'3d-prints-launch' => [
+				'label'         => __( '3D Prints Are Back', 'yeffoprint-core' ),
+				'eyebrow'       => __( 'New in the Shop', 'yeffoprint-core' ),
+				'headline'      => __( '3D prints are back!', 'yeffoprint-core' ),
+				'body'          => __( 'Printed in-house, in the colors you pick. Choose a piece, pick your filament colors, and we print it for you.', 'yeffoprint-core' ),
+				'bg'            => '#1E1030',
+				'glow_a'        => 'rgba(255,122,26,.16)',
+				'glow_b'        => 'rgba(120,70,200,.38)',
+				'ink'           => '#FFFFFF',
+				'ink_soft'      => '#CDBDE6',
+				'accent'        => '#FF7A1A',
+				'accent_ink'    => '#1E1030',
+				'bars'          => [ '#FF7A1A', '#9B6BD6', '#9BE564' ],
+				'code_bg'       => '#F4EEFF',
+				'code_ink'      => '#1E1030',
+				'icon'          => '<path d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path d="M4 7.4l8 4.6 8-4.6"/><line x1="12" y1="12" x2="12" y2="21.2"/>',
+				'cta_label'     => __( 'Shop 3D Prints', 'yeffoprint-core' ),
+				'cta_url'       => home_url( '/3d-prints/' ),
+				'code_optional' => true,
+				'code_label'    => __( 'From', 'yeffoprint-core' ),
+				'visual'        => 'prints',
 			],
 		];
 	}

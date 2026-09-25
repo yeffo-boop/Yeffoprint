@@ -127,15 +127,16 @@
 			var storefrontHtml =
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Homepage Promo</h2></div>' +
-					'<p class="yp-panel__hint">Themed banners between the header and the hero. Fill in an Offer and Promo code for any theme below to make it active — two or more active themes rotate automatically. Shown exactly as typed, so make sure a matching active WooCommerce coupon exists for each code before turning this on.</p>' +
+					'<p class="yp-panel__hint">Themed banners between the header and the hero. Fill in an Offer and Promo code for any theme below to make it active — two or more active themes rotate automatically. 3D Prints Are Back needs no code: put the starting price (e.g. $14) in its Offer box. Shown exactly as typed, so make sure a matching active WooCommerce coupon exists for each code before turning this on.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-promo-enabled"' + ( settings.promo_enabled ? ' checked' : '' ) + ' /><label for="yp-set-promo-enabled">Show it on the homepage</label></div>' +
 					'<table class="yp-tier-table"><thead><tr><th>Theme</th><th>Offer</th><th>Promo code</th></tr></thead><tbody>' +
 						Object.keys( settings.promo_themes ).map( function ( slug ) {
 							var banner = settings.promo_banners[ slug ] || {};
+							var codeOptional = ( settings.promo_code_optional || [] ).indexOf( slug ) !== -1;
 							return '<tr>' +
 								'<td>' + YP.escapeHtml( settings.promo_themes[ slug ] ) + '</td>' +
-								'<td><input type="text" data-yp-promo-offer="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.offer || '' ) + '" placeholder="15% off" /></td>' +
-								'<td><input type="text" data-yp-promo-code="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.code || '' ) + '" placeholder="SUMMERWEEN26" /></td>' +
+								'<td><input type="text" data-yp-promo-offer="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.offer || '' ) + '" placeholder="' + ( codeOptional ? '$14' : '15% off' ) + '" /></td>' +
+								'<td><input type="text" data-yp-promo-code="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.code || '' ) + '" placeholder="' + ( codeOptional ? 'Not needed' : 'SUMMERWEEN26' ) + '" /></td>' +
 							'</tr>';
 						} ).join( '' ) +
 					'</tbody></table>' +

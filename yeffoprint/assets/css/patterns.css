@@ -1631,6 +1631,47 @@
 	opacity: 0.85;
 }
 
+/* Photo stack for the 3D Prints Are Back theme (render.php's
+   `visual` => 'prints'): the newest 3D print photos, the middle one
+   raised and larger, in rounded cards on the banner's dark ground. */
+.yp-promo__photos {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+}
+
+.yp-promo__photo {
+	width: 170px;
+	aspect-ratio: 4 / 5;
+	object-fit: cover;
+	border-radius: 18px;
+	box-shadow: var(--wp--custom--shadow-elevation--high);
+	border: 3px solid color-mix(in srgb, var(--yp-promo-ink) 14%, transparent);
+}
+
+.yp-promo__photos--1 .yp-promo__photo {
+	width: 230px;
+}
+
+.yp-promo__photos--2 .yp-promo__photo:nth-child(2),
+.yp-promo__photos--3 .yp-promo__photo:nth-child(3) {
+	margin-left: -28px;
+	transform: rotate(5deg);
+}
+
+.yp-promo__photos--2 .yp-promo__photo:nth-child(1),
+.yp-promo__photos--3 .yp-promo__photo:nth-child(1) {
+	transform: rotate(-5deg);
+}
+
+.yp-promo__photos--3 .yp-promo__photo:nth-child(2) {
+	position: relative;
+	z-index: 1;
+	width: 200px;
+	margin-left: -28px;
+	margin-bottom: 18px;
+}
+
 /* ---------- Multi-banner rotation (2+ active themes) ----------
    Direct request: "select more than one active promo banner and have
    it slide through the active ones." Only one `.yp-promo--slide` is
@@ -1730,6 +1771,18 @@
 	.yp-promo__proof {
 		width: 150px;
 		height: 170px;
+	}
+
+	.yp-promo__photo {
+		width: 110px;
+	}
+
+	.yp-promo__photos--1 .yp-promo__photo {
+		width: 160px;
+	}
+
+	.yp-promo__photos--3 .yp-promo__photo:nth-child(2) {
+		width: 130px;
 	}
 }
 

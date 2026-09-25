@@ -1050,14 +1050,14 @@ class YeffoPrint_Admin_Menu {
 								class="regular-text"
 								name="<?php echo esc_attr( self::PROMO_BANNERS_OPTION . '[' . $slug . '][code]' ); ?>"
 								value="<?php echo esc_attr( $saved[ $slug ]['code'] ?? '' ); ?>"
-								placeholder="<?php esc_attr_e( 'SUMMERWEEN26', 'yeffoprint-core' ); ?>"
+								placeholder="<?php echo empty( $theme['code_optional'] ) ? esc_attr__( 'SUMMERWEEN26', 'yeffoprint-core' ) : esc_attr__( 'Not needed', 'yeffoprint-core' ); ?>"
 							/>
 						</td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
 		</table>
-		<p class="description"><?php esc_html_e( 'A theme is only active once both its Offer and Promo code are filled in. This plugin doesn\'t create the coupon itself, so make sure a matching WooCommerce coupon (Marketing → Coupons) with this exact code actually exists and is active before turning the banner on. Two or more active themes rotate automatically on the homepage.', 'yeffoprint-core' ); ?></p>
+		<p class="description"><?php esc_html_e( 'A theme is only active once both its Offer and Promo code are filled in. This plugin doesn\'t create the coupon itself, so make sure a matching WooCommerce coupon (Marketing → Coupons) with this exact code actually exists and is active before turning the banner on. Two or more active themes rotate automatically on the homepage. 3D Prints Are Back needs no code: put the starting price (e.g. $14) in its Offer box.', 'yeffoprint-core' ); ?></p>
 		<?php
 	}
 
@@ -1143,7 +1143,11 @@ class YeffoPrint_Admin_Menu {
 		$active = [];
 
 		foreach ( YeffoPrint_Promo_Themes::all() as $slug => $theme ) {
-			if ( empty( $saved[ $slug ]['offer'] ) || empty( $saved[ $slug ]['code'] ) ) {
+			// A non-discount theme (code_optional, e.g. 3D Prints Are
+			// Back) goes live on its Offer alone; every other theme still
+			// needs both.
+			$needs_code = empty( $theme['code_optional'] );
+			if ( empty( $saved[ $slug ]['offer'] ) || ( $needs_code && empty( $saved[ $slug ]['code'] ) ) ) {
 				continue;
 			}
 
