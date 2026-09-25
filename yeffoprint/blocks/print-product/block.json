@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/print-product",
+	"title": "3D Print Product",
+	"category": "theme",
+	"description": "A 3D print's product page: main photo with numbered color dots, a color picker per part, and Add to Cart (assets/js/print-product.js).",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}

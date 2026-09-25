@@ -50,6 +50,16 @@ class YeffoPrint_Cart_Pricing {
 		$sticker_tier_quantity = self::combined_sticker_quantity( $cart );
 
 		foreach ( $cart->get_cart() as $cart_item ) {
+			// 3D print: base price plus the picked colors' extra charges,
+			// per item — WooCommerce's own line quantity does the rest.
+			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
+				$cart_item['data']->set_price( YeffoPrint_Print_Meta::unit_price(
+					(int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ],
+					(array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] )
+				) );
+				continue;
+			}
+
 			// Checked first: a Custom Stickers line item also carries
 			// CUSTOM_ORDER_ID and TOTAL_QTY, same as a Custom Design
 			// labels item, but needs YeffoPrint_Sticker_Pricing's own
@@ -249,6 +259,15 @@ class YeffoPrint_Cart_Pricing {
 	 * those without an additional Store API schema extension.
 	 */
 	public function display_item_data( array $item_data, array $cart_item ): array {
+		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
+			// One "Base: Matte Black" row per color choice, so the
+			// customer can check every pick before paying.
+			foreach ( (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] ) as $pick ) {
+				$item_data[] = [ 'key' => (string) ( $pick['slot'] ?? '' ), 'value' => (string) ( $pick['name'] ?? '' ) ];
+			}
+			return $item_data;
+		}
+
 		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
 			return $this->sticker_item_data( $item_data, $cart_item );
 		}
@@ -408,7 +427,8 @@ class YeffoPrint_Cart_Pricing {
 		$is_linked_product = YeffoPrint_Linked_Product::get_template_id( $product_id )
 			|| $product_id === YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id()
 			|| $product_id === YeffoPrint_Custom_Order_Labels_Product::get_existing_product_id()
-			|| $product_id === YeffoPrint_Custom_Sticker_Product::get_existing_product_id();
+			|| $product_id === YeffoPrint_Custom_Sticker_Product::get_existing_product_id()
+			|| YeffoPrint_Print_Product::get_print_id( $product_id );
 
 		if ( ! $is_linked_product || self::$bypass_validation ) {
 			return $passed;

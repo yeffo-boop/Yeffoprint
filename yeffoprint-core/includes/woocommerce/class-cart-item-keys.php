@@ -95,4 +95,15 @@ class YeffoPrint_Cart_Item_Keys {
 	 */
 	public const CANVAS_WIDTH_MM  = 'yp_canvas_width_mm';
 	public const CANVAS_HEIGHT_MM = 'yp_canvas_height_mm';
+
+	/**
+	 * 3D Prints only (class-print-controller.php). PRINT_ID is the
+	 * yp_print record; PRINT_COLORS is the customer's pick per color
+	 * choice, in slot order: [ { slot, filament_id, name, extra }, … ].
+	 * Deliberately no TOTAL_QTY on a print item — that key is what the
+	 * label bulk-discount pool sums (combined_label_quantity()), and a
+	 * print's quantity is WooCommerce's own line quantity instead.
+	 */
+	public const PRINT_ID     = 'yp_print_id';
+	public const PRINT_COLORS = 'yp_print_colors';
 }

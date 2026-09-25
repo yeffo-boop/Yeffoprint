@@ -221,3 +221,15 @@ if ( ! function_exists( 'yeffoprint_core_order_addon_start_session' ) ) {
 		}
 	}
 }
+
+if ( ! function_exists( 'yeffoprint_core_get_print_data' ) ) {
+	/**
+	 * A 3D print's product-page data (blocks/print-product/render.php,
+	 * blocks/print-card/render.php): title, base price, ships-in, main
+	 * photo, and each color choice with its offered filament colors.
+	 * Null for anything that isn't a yp_print.
+	 */
+	function yeffoprint_core_get_print_data( int $print_id ): ?array {
+		return class_exists( 'YeffoPrint_Print_Meta' ) ? YeffoPrint_Print_Meta::get_item_payload( $print_id ) : null;
+	}
+}
