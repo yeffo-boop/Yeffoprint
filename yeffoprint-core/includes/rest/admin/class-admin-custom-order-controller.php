@@ -233,7 +233,7 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			// snapshot existed at all (no snapshot meta to read).
 			$raw_field_schema = (string) $m( YeffoPrint_Custom_Order_Meta::TEMPLATE_FIELD_SCHEMA );
 			$field_schema     = $raw_field_schema ? json_decode( $raw_field_schema, true ) : null;
-			$field_schema     = is_array( $field_schema ) ? $field_schema : ( $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [] );
+			$field_schema     = is_array( $field_schema ) ? $field_schema : ( $template_id ? YeffoPrint_Field_Schema::get_with_colors( $template_id ) : [] );
 
 			$payload['template'] = [
 				'template_id'    => $template_id,

@@ -281,6 +281,17 @@ class YeffoPrint_Field_Schema {
 	}
 
 	/**
+	 * get() plus the Template's own color choices as `color_choice`
+	 * fields (YeffoPrint_Label_Color_Meta::virtual_fields()). Used by
+	 * everything customer-facing (configurator, cart, checkout snapshot,
+	 * saved designs); the admin field editors keep using get() so the
+	 * choices never get written into the shared Label Fields set.
+	 */
+	public static function get_with_colors( int $post_id ): array {
+		return array_merge( self::get( $post_id ), YeffoPrint_Label_Color_Meta::virtual_fields( $post_id ) );
+	}
+
+	/**
 	 * Direct request: "I want every template to use the default template
 	 * preset I made... IF I add a field there, it adds to all templates."
 	 * A designated yp_field_preset (Settings → Label Configurator,
@@ -500,6 +511,8 @@ class YeffoPrint_Field_Schema {
 
 				if ( 'color' === $type ) {
 					$value = (string) ( sanitize_hex_color( $raw_value ) ?: '' );
+				} elseif ( 'color_choice' === $type ) {
+					$value = YeffoPrint_Label_Color_Meta::sanitize_pick( $field, $raw_value );
 				} elseif ( 'qr_code' === $type ) {
 					$value = '' !== trim( $raw_value ) ? esc_url_raw( $raw_value ) : '';
 					if ( '' !== $value && ! wp_http_validate_url( $value ) ) {
@@ -585,6 +598,10 @@ class YeffoPrint_Field_Schema {
 	public static function display_value( array $field, string $value ): string {
 		if ( 'corner_style' === ( $field['type'] ?? '' ) && isset( self::CORNER_STYLE_OPTIONS[ $value ] ) ) {
 			return self::CORNER_STYLE_OPTIONS[ $value ];
+		}
+
+		if ( 'color_choice' === ( $field['type'] ?? '' ) ) {
+			return YeffoPrint_Label_Color_Meta::display_pick( $field, $value );
 		}
 
 		return $value;

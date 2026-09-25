@@ -108,6 +108,334 @@
 				: '<p class="yp-field__hint">The shared preset has no fields yet.</p>' );
 	}
 
+	/* ---------- Color choices (YeffoPrint_Label_Color_Meta) ---------- */
+
+	var COLOR_TARGETS = [
+		{ key: 'background', label: 'Background', hint: 'Fills behind the artwork' },
+		{ key: 'text', label: 'Text', hint: 'Every label field’s text' },
+		{ key: 'layer', label: 'Artwork part', hint: 'Upload a shape layer' }
+	];
+	var MAX_COLOR_CHOICES = 4;
+
+	function hasDot( choice ) {
+		return null !== choice.x && undefined !== choice.x && null !== choice.y && undefined !== choice.y;
+	}
+
+	/**
+	 * The Template editor's "Color choices" panel — same shape as a 3D
+	 * print's color choices (views/prints.js): one card per choice, and
+	 * the artwork on the right to click each choice's dot onto.
+	 */
+	function createColorChoicesEditor( config ) {
+		var container = config.container;
+		var labelColors = config.labelColors || [];
+		var previewUrl = config.previewUrl || '';
+		var choices = ( config.choices || [] ).map( function ( c ) {
+			return {
+				name: c.name || '',
+				hint: c.hint || '',
+				target: c.target || 'background',
+				layer_id: c.layer_id || 0,
+				layer_url: c.layer_url || '',
+				x: c.x,
+				y: c.y,
+				colors: ( c.colors || [] ).slice(),
+				default_id: c.default_id || 0,
+				any_color: !! c.any_color
+			};
+		} );
+		var active = choices.length ? 0 : -1;
+
+		container.innerHTML =
+			'<p class="yp-field__hint">Parts of this label the customer can recolor. Each one gets a numbered dot on the product page. Leave empty and the label prints exactly as designed. Background needs artwork with a see-through background (PNG or SVG); Artwork part needs its shape uploaded as its own layer, the same size as the artwork.</p>' +
+			'<div class="yp-print-editor yp-color-choices">' +
+				'<div class="yp-print-editor__slots">' +
+					'<div data-yp-choices></div>' +
+					'<button type="button" class="yp-color-choices__add" data-yp-choice-add>+ Add color choice</button>' +
+				'</div>' +
+				'<div class="yp-print-editor__photo">' +
+					'<h3 class="yp-print-editor__heading">Where each color goes</h3>' +
+					'<p class="yp-print-editor__hint" data-yp-choice-hint></p>' +
+					'<div class="yp-print-photo" data-yp-choice-photo></div>' +
+					'<p class="yp-field__hint"><a href="#/label-colors">Edit Label Colors</a></p>' +
+				'</div>' +
+			'</div>';
+
+		var listEl = container.querySelector( '[data-yp-choices]' );
+		var addEl = container.querySelector( '[data-yp-choice-add]' );
+		var photoEl = container.querySelector( '[data-yp-choice-photo]' );
+		var hintEl = container.querySelector( '[data-yp-choice-hint]' );
+
+		function colorById( id ) {
+			for ( var i = 0; i < labelColors.length; i++ ) {
+				if ( labelColors[ i ].id === id ) {
+					return labelColors[ i ];
+				}
+			}
+			return null;
+		}
+
+		function hexOf( color ) {
+			return ( color.meta && color.meta._yp_label_color_hex ) || '#888888';
+		}
+
+		function renderList() {
+			addEl.hidden = choices.length >= MAX_COLOR_CHOICES;
+
+			if ( ! labelColors.length ) {
+				listEl.innerHTML = '<p class="yp-form__error">No active Label Colors yet. <a href="#/label-colors">Add your colors</a> first, then come back.</p>';
+				addEl.hidden = true;
+				return;
+			}
+
+			if ( ! choices.length ) {
+				listEl.innerHTML = '<p class="yp-field__hint">No color choices. Customers get this label exactly as designed.</p>';
+				return;
+			}
+
+			listEl.innerHTML = choices.map( function ( choice, i ) {
+				var offered = labelColors.filter( function ( c ) { return choice.colors.indexOf( c.id ) !== -1; } );
+				return (
+					'<div class="yp-print-slot' + ( i === active ? ' is-active' : '' ) + '" data-yp-choice="' + i + '">' +
+						'<div class="yp-print-slot__head">' +
+							'<span class="yp-print-num">' + ( i + 1 ) + '</span>' +
+							'<input type="text" data-yp-choice-field="name" placeholder="Name, e.g. Background" value="' + YP.escapeAttr( choice.name ) + '" aria-label="Choice name" />' +
+							'<input type="text" data-yp-choice-field="hint" placeholder="Short hint for customers" value="' + YP.escapeAttr( choice.hint ) + '" aria-label="Hint" />' +
+							'<button type="button" class="yp-print-where' + ( hasDot( choice ) ? ' is-set' : '' ) + '" data-yp-choice-place>' + ( hasDot( choice ) ? '&#10003; Dot placed' : 'Place dot' ) + '</button>' +
+						'</div>' +
+						'<p class="yp-color-choices__label">What it colors</p>' +
+						'<div class="yp-color-choices__targets">' +
+							COLOR_TARGETS.map( function ( t ) {
+								return '<button type="button" class="yp-color-choices__target' + ( t.key === choice.target ? ' is-on' : '' ) + '" data-yp-choice-target="' + t.key + '" aria-pressed="' + ( t.key === choice.target ? 'true' : 'false' ) + '"><strong>' + t.label + '</strong><span>' + t.hint + '</span></button>';
+							} ).join( '' ) +
+						'</div>' +
+						( 'layer' === choice.target
+							? '<div class="yp-color-choices__layer">' +
+								( choice.layer_url ? '<img src="' + YP.escapeAttr( choice.layer_url ) + '" alt="" />' : '<span>No layer yet. This choice stays hidden until one is uploaded.</span>' ) +
+								'<button type="button" class="yp-row-action" data-yp-choice-layer>' + ( choice.layer_url ? 'Change layer' : 'Upload layer' ) + '</button>' +
+							'</div>'
+							: '' ) +
+						'<p class="yp-color-choices__label">Colors offered</p>' +
+						'<div class="yp-print-chips">' +
+							labelColors.map( function ( c ) {
+								var on = choice.colors.indexOf( c.id ) !== -1;
+								return '<button type="button" class="yp-print-chip' + ( on ? ' is-on' : '' ) + '" data-yp-choice-chip="' + c.id + '" aria-pressed="' + ( on ? 'true' : 'false' ) + '">' +
+									YP.filamentSwatch( hexOf( c ), 'matte', 18 ) + YP.escapeHtml( c.title.raw ) +
+								'</button>';
+							} ).join( '' ) +
+							'<button type="button" class="yp-print-chip' + ( choice.any_color ? ' is-on' : '' ) + '" data-yp-choice-any aria-pressed="' + ( choice.any_color ? 'true' : 'false' ) + '"><span class="yp-filament-dot yp-color-choices__wheel" style="width:18px;height:18px"></span>Any color</button>' +
+						'</div>' +
+						'<div class="yp-print-slot__foot">' +
+							'<label>Starts on <select data-yp-choice-default aria-label="Starting color">' +
+								offered.map( function ( c ) {
+									return '<option value="' + c.id + '"' + ( choice.default_id === c.id ? ' selected' : '' ) + '>' + YP.escapeHtml( c.title.raw ) + '</option>';
+								} ).join( '' ) +
+							'</select></label>' +
+							'<button type="button" class="yp-row-action" data-yp-choice-remove>Remove choice</button>' +
+						'</div>' +
+					'</div>'
+				);
+			} ).join( '' );
+		}
+
+		function renderPhoto() {
+			if ( ! previewUrl ) {
+				photoEl.innerHTML = '<div class="yp-print-photo__empty">Set the artwork image above, then click it to place each color’s dot.</div>';
+				hintEl.textContent = '';
+				return;
+			}
+
+			photoEl.innerHTML = '<img src="' + YP.escapeAttr( previewUrl ) + '" alt="" draggable="false" />' +
+				choices.map( function ( choice, i ) {
+					return hasDot( choice )
+						? '<span class="yp-print-dot' + ( i === active ? ' is-active' : '' ) + '" style="left:' + choice.x + '%;top:' + choice.y + '%">' + ( i + 1 ) + '</span>'
+						: '';
+				} ).join( '' );
+
+			hintEl.innerHTML = active >= 0
+				? 'Placing dot <strong>' + ( active + 1 ) + ( choices[ active ].name ? ' · ' + YP.escapeHtml( choices[ active ].name ) : '' ) + '</strong>. Click that part on the artwork.'
+				: 'Add a color choice to place its dot.';
+		}
+
+		function render() {
+			renderList();
+			renderPhoto();
+		}
+
+		function pickLayer( choice ) {
+			if ( typeof wp === 'undefined' || ! wp.media ) {
+				return;
+			}
+			var frame = wp.media( { title: 'Select shape layer', library: { type: 'image' }, multiple: false } );
+			frame.on( 'select', function () {
+				var attachment = frame.state().get( 'selection' ).first().toJSON();
+				choice.layer_id = attachment.id;
+				choice.layer_url = ( attachment.sizes && attachment.sizes.medium ? attachment.sizes.medium.url : attachment.url );
+				render();
+			} );
+			frame.open();
+		}
+
+		addEl.addEventListener( 'click', function () {
+			if ( choices.length >= MAX_COLOR_CHOICES ) {
+				return;
+			}
+			var colors = labelColors.map( function ( c ) { return c.id; } );
+			var used = choices.map( function ( c ) { return c.target; } );
+			var target = used.indexOf( 'background' ) === -1 ? 'background' : ( used.indexOf( 'text' ) === -1 ? 'text' : 'layer' );
+			choices.push( {
+				name: 'layer' === target ? '' : ( 'background' === target ? 'Background' : 'Text' ),
+				hint: '',
+				target: target,
+				layer_id: 0,
+				layer_url: '',
+				x: null,
+				y: null,
+				colors: colors,
+				default_id: colors[ 'text' === target && colors.length > 1 ? 1 : 0 ] || 0,
+				any_color: false
+			} );
+			active = choices.length - 1;
+			render();
+		} );
+
+		listEl.addEventListener( 'input', function ( event ) {
+			var field = event.target.getAttribute( 'data-yp-choice-field' );
+			var card = event.target.closest( '[data-yp-choice]' );
+			if ( field && card ) {
+				choices[ parseInt( card.getAttribute( 'data-yp-choice' ), 10 ) ][ field ] = event.target.value;
+				if ( 'name' === field ) {
+					renderPhoto();
+				}
+			}
+		} );
+
+		listEl.addEventListener( 'change', function ( event ) {
+			var card = event.target.closest( '[data-yp-choice]' );
+			if ( card && event.target.hasAttribute( 'data-yp-choice-default' ) ) {
+				choices[ parseInt( card.getAttribute( 'data-yp-choice' ), 10 ) ].default_id = parseInt( event.target.value, 10 ) || 0;
+			}
+		} );
+
+		listEl.addEventListener( 'focusin', function ( event ) {
+			var card = event.target.closest( '[data-yp-choice]' );
+			var index = card ? parseInt( card.getAttribute( 'data-yp-choice' ), 10 ) : -1;
+			if ( card && index !== active ) {
+				active = index;
+				listEl.querySelectorAll( '[data-yp-choice]' ).forEach( function ( el ) {
+					el.classList.toggle( 'is-active', el === card );
+				} );
+				renderPhoto();
+			}
+		} );
+
+		listEl.addEventListener( 'click', function ( event ) {
+			var card = event.target.closest( '[data-yp-choice]' );
+			if ( ! card ) {
+				return;
+			}
+			var index = parseInt( card.getAttribute( 'data-yp-choice' ), 10 );
+			var choice = choices[ index ];
+			active = index;
+
+			var chip = event.target.closest( '[data-yp-choice-chip]' );
+			if ( chip ) {
+				var id = parseInt( chip.getAttribute( 'data-yp-choice-chip' ), 10 );
+				var at = choice.colors.indexOf( id );
+				if ( -1 === at ) {
+					choice.colors.push( id );
+				} else {
+					choice.colors.splice( at, 1 );
+				}
+				if ( choice.colors.indexOf( choice.default_id ) === -1 ) {
+					choice.default_id = choice.colors[ 0 ] || 0;
+				}
+				render();
+				return;
+			}
+
+			if ( event.target.closest( '[data-yp-choice-any]' ) ) {
+				choice.any_color = ! choice.any_color;
+				render();
+				return;
+			}
+
+			var targetButton = event.target.closest( '[data-yp-choice-target]' );
+			if ( targetButton ) {
+				choice.target = targetButton.getAttribute( 'data-yp-choice-target' );
+				render();
+				return;
+			}
+
+			if ( event.target.closest( '[data-yp-choice-layer]' ) ) {
+				pickLayer( choice );
+				return;
+			}
+
+			if ( event.target.closest( '[data-yp-choice-remove]' ) ) {
+				choices.splice( index, 1 );
+				active = Math.min( index, choices.length - 1 );
+				render();
+				return;
+			}
+
+			if ( event.target.closest( '[data-yp-choice-place]' ) ) {
+				render();
+				photoEl.scrollIntoView( { block: 'nearest', behavior: 'smooth' } );
+				return;
+			}
+
+			if ( ! event.target.closest( 'input, select' ) ) {
+				render();
+			}
+		} );
+
+		photoEl.addEventListener( 'click', function ( event ) {
+			var img = photoEl.querySelector( 'img' );
+			if ( ! img || active < 0 ) {
+				return;
+			}
+			var rect = img.getBoundingClientRect();
+			choices[ active ].x = Math.round( ( event.clientX - rect.left ) / rect.width * 1000 ) / 10;
+			choices[ active ].y = Math.round( ( event.clientY - rect.top ) / rect.height * 1000 ) / 10;
+
+			// Move on to the next choice still missing its dot, same as
+			// views/prints.js.
+			for ( var i = 1; i <= choices.length; i++ ) {
+				var next = ( active + i ) % choices.length;
+				if ( ! hasDot( choices[ next ] ) ) {
+					active = next;
+					break;
+				}
+			}
+			render();
+		} );
+
+		render();
+
+		return {
+			getChoices: function () {
+				return choices.map( function ( c ) {
+					return {
+						name: c.name,
+						hint: c.hint,
+						target: c.target,
+						layer_id: c.layer_id,
+						x: c.x,
+						y: c.y,
+						colors: c.colors,
+						default_id: c.default_id,
+						any_color: c.any_color
+					};
+				} );
+			},
+			setPreviewImage: function ( url ) {
+				previewUrl = url || '';
+				renderPhoto();
+			}
+		};
+	}
+
 	YP.views.templates = function ( viewEl ) {
 		var allTemplates = [];
 		var categoryTerms = [];
@@ -524,6 +852,10 @@
 								'<div data-yp-field-schema-container><p class="yp-field__hint">Loading&hellip;</p></div>' +
 							'</div>' +
 							'<div class="yp-panel">' +
+								'<div class="yp-panel__head"><h2>Color choices</h2></div>' +
+								'<div data-yp-color-choices-container><p class="yp-field__hint">Loading&hellip;</p></div>' +
+							'</div>' +
+							'<div class="yp-panel">' +
 								'<div class="yp-panel__head"><h2>Tags</h2></div>' +
 								'<p class="yp-field__hint">Drive the filters on the Shop Labels gallery page &mdash; Product Type is the main "peptide vial labels vs. other product labels" split; Style/Color/Material are finer facets.</p>' +
 								Object.keys( TAXONOMIES ).map( function ( taxonomy ) {
@@ -556,6 +888,7 @@
 			// is reopened. Until then, an artwork pick just remembers the
 			// URL so the editor opens already pointed at it.
 			var fieldSchemaEditor = null;
+			var colorChoicesEditor = null;
 			var pendingPreviewUrl = featuredMediaUrl;
 
 			YP.bindMediaPicker( {
@@ -566,11 +899,13 @@
 				preview: drawer.querySelector( '[data-yp-art-preview]' ),
 				onSelect: function ( attachment ) {
 					pendingPreviewUrl = attachment.url;
-					if ( fieldSchemaEditor ) { fieldSchemaEditor.setPreviewImage( pendingPreviewUrl ); }
+					if ( fieldSchemaEditor && fieldSchemaEditor.setPreviewImage ) { fieldSchemaEditor.setPreviewImage( pendingPreviewUrl ); }
+					if ( colorChoicesEditor ) { colorChoicesEditor.setPreviewImage( pendingPreviewUrl ); }
 				},
 				onRemove: function () {
 					pendingPreviewUrl = '';
-					if ( fieldSchemaEditor ) { fieldSchemaEditor.setPreviewImage( '' ); }
+					if ( fieldSchemaEditor && fieldSchemaEditor.setPreviewImage ) { fieldSchemaEditor.setPreviewImage( '' ); }
+					if ( colorChoicesEditor ) { colorChoicesEditor.setPreviewImage( '' ); }
 				}
 			} );
 			YP.bindMediaPicker( {
@@ -606,9 +941,12 @@
 				YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_field_preset?status=publish&per_page=100&orderby=title&order=asc' )
 			].concat( taxonomyKeys.map( function ( taxonomy ) {
 				return YP.request( yeffoprintAdminApp.wpApiUrl + taxonomy + '?per_page=100&orderby=name&order=asc' );
-			} ) );
+			} ) ).concat( [
+				YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_label_color?context=edit&status=publish&per_page=100&orderby=menu_order&order=asc' )
+			] );
 
 			Promise.all( checklistPromises ).then( function ( results ) {
+				var labelColors = results[ 3 + taxonomyKeys.length ] || [];
 				var sizes = results[ 0 ] || [];
 				var materials = results[ 1 ] || [];
 				var presetPosts = results[ 2 ] || [];
@@ -619,7 +957,7 @@
 
 				var loadGap = isEdit
 					? YP.request( adminEndpoint( template.id ) )
-					: Promise.resolve( { compatible_sizes: [], compatible_materials: [], field_schema: [] } );
+					: Promise.resolve( { compatible_sizes: [], compatible_materials: [], field_schema: [], color_choices: [] } );
 
 				var loadPresets = ( ! sharedPreset && presetPosts.length )
 					? Promise.all( presetPosts.map( function ( p ) {
@@ -672,6 +1010,13 @@
 						} );
 					}
 
+					colorChoicesEditor = createColorChoicesEditor( {
+						container: drawer.querySelector( '[data-yp-color-choices-container]' ),
+						choices: results2[ 0 ].color_choices || [],
+						labelColors: labelColors,
+						previewUrl: pendingPreviewUrl
+					} );
+
 					saveButtonEl.disabled = false;
 				} );
 			} ).catch( function ( error ) {
@@ -703,11 +1048,11 @@
 
 			drawer.querySelector( '[data-yp-form]' ).addEventListener( 'submit', function ( event ) {
 				event.preventDefault();
-				save( template, drawer, function () { return fieldSchemaEditor.getFields(); } );
+				save( template, drawer, function () { return fieldSchemaEditor.getFields(); }, function () { return colorChoicesEditor ? colorChoicesEditor.getChoices() : null; } );
 			} );
 		}
 
-		function save( existing, drawer, getFields ) {
+		function save( existing, drawer, getFields, getColorChoices ) {
 			var form = drawer.querySelector( '[data-yp-form]' );
 			var errorEl = drawer.querySelector( '[data-yp-form-error]' );
 			var saveButton = drawer.querySelector( '[data-yp-save]' );
@@ -751,6 +1096,10 @@
 						compatible_materials: Array.prototype.map.call( drawer.querySelectorAll( '[data-compat-material]:checked' ), function ( el ) { return parseInt( el.getAttribute( 'data-compat-material' ), 10 ); } ),
 						field_schema: getFields()
 					};
+					var colorChoices = getColorChoices();
+					if ( colorChoices ) {
+						gapBody.color_choices = colorChoices;
+					}
 					return YP.request( adminEndpoint( saved.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( gapBody ) } );
 				} )
 				.then( function () {

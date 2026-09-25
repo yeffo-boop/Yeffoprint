@@ -350,7 +350,7 @@ class YeffoPrint_Cart_Pricing {
 		// just after — matches the rows added to the order line item
 		// once it's placed (class-order-item-meta.php).
 		$template_id  = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
-		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+		$field_schema = $template_id ? YeffoPrint_Field_Schema::get_with_colors( $template_id ) : [];
 		$multiple     = count( $variants ) > 1;
 
 		foreach ( $variants as $index => $variant ) {

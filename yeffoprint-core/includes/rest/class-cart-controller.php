@@ -116,7 +116,7 @@ class YeffoPrint_Cart_Controller {
 		}
 
 		$raw_variants = $request->get_param( 'variants' );
-		$variants     = YeffoPrint_Field_Schema::sanitize_variants( $raw_variants, YeffoPrint_Field_Schema::get( $template_id ) );
+		$variants     = YeffoPrint_Field_Schema::sanitize_variants( $raw_variants, YeffoPrint_Field_Schema::get_with_colors( $template_id ) );
 		if ( is_wp_error( $variants ) ) {
 			return $variants;
 		}

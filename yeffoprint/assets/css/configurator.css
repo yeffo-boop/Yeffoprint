@@ -990,3 +990,240 @@ body.yp-has-sticky-bar .yp-chat-widget {
 	outline: 2px solid var(--wp--preset--color--cyan);
 	outline-offset: 2px;
 }
+
+/* ---------- Color choices (configurator.js, "Choose your colors") ---------- */
+
+.yp-color-choice {
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 14px;
+	padding: 0.9rem 1rem 0.85rem;
+	margin-bottom: 0.6rem;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-color-choice.is-active {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-color-choice__head {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.7rem;
+	margin-bottom: 0.7rem;
+}
+
+.yp-color-choice__num {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	margin-top: 2px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	font-size: 0.75rem;
+	font-weight: 700;
+}
+
+.yp-color-choice__text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.yp-color-choice__name {
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 1.1rem;
+	font-weight: 700;
+}
+
+.yp-color-choice__hint {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-color-choice__picked {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.yp-color-choice__picked i {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 1px solid rgba(20, 20, 20, 0.15);
+}
+
+.yp-color-choice__swatches {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.55rem;
+}
+
+.yp-color-swatch {
+	position: relative;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	border-radius: 50%;
+	border: 1px solid rgba(20, 20, 20, 0.14);
+	cursor: pointer;
+	transition: box-shadow 150ms ease, transform 120ms ease;
+}
+
+.yp-color-swatch:active {
+	transform: scale(0.94);
+}
+
+.yp-color-swatch.is-selected {
+	box-shadow: 0 0 0 3px var(--wp--preset--color--white), 0 0 0 5px var(--wp--preset--color--near-black);
+}
+
+.yp-color-swatch:focus-visible,
+.yp-color-swatch--any:focus-within {
+	outline: 2px solid var(--wp--preset--color--cyan);
+	outline-offset: 3px;
+}
+
+.yp-color-swatch--any {
+	display: inline-block;
+	background: conic-gradient(#ff0040, #ffb300, #fff200, #27d17f, #00aeef, #5b3cff, #ec008c, #ff0040);
+	overflow: hidden;
+}
+
+/* The wheel's center shows the custom pick once there is one. */
+.yp-color-swatch--any::after {
+	content: "";
+	position: absolute;
+	inset: 10px;
+	border-radius: 50%;
+	background: var(--yp-any-color, transparent);
+	box-shadow: 0 0 0 2px var(--wp--preset--color--white);
+	pointer-events: none;
+}
+
+.yp-color-swatch--any:not(.is-selected)::after {
+	background: var(--wp--preset--color--white);
+}
+
+.yp-color-swatch--any input {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.yp-color-choice__any-label {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-color-choice__contrast {
+	display: inline-block;
+	margin: 0.7rem 0 0;
+	padding: 0.2rem 0.65rem;
+	border-radius: 999px;
+	font-size: 0.8rem;
+	color: #1f7a4d;
+	background: #eaf6ef;
+}
+
+.yp-color-choice__contrast.is-low {
+	color: #9a3412;
+	background: #fef0e7;
+}
+
+.yp-color-choices__note {
+	margin: 0.2rem 0 0;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+@media (max-width: 600px) {
+	.yp-color-swatch {
+		width: 32px;
+		height: 32px;
+	}
+
+	.yp-color-choice__swatches {
+		gap: 0.45rem;
+	}
+
+	.yp-color-choice__any-label {
+		display: none;
+	}
+}
+
+/* Stage layers: fill behind the artwork, tinted shape layers over it, numbered dots on top. */
+.yp-stage__color-fill,
+.yp-stage__color-layer {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.yp-stage__color-layer {
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	-webkit-mask-position: center;
+	mask-position: center;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+}
+
+.yp-stage__color-dot {
+	position: absolute;
+	z-index: 3;
+	width: 28px;
+	height: 28px;
+	margin: -14px 0 0 -14px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	border: 3px solid var(--wp--preset--color--white);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+	font-size: 0.75rem;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+	transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-stage__color-dot.is-active {
+	transform: scale(1.2);
+	box-shadow: 0 0 0 4px rgba(0, 174, 239, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* The picked color, as a badge on the dot's corner — same as the 3D prints' dots. */
+.yp-stage__color-dot i {
+	position: absolute;
+	right: -8px;
+	bottom: -6px;
+	width: 15px;
+	height: 15px;
+	border-radius: 50%;
+	border: 2px solid var(--wp--preset--color--white);
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yp-stage__color-dot,
+	.yp-color-choice,
+	.yp-color-swatch {
+		transition: none;
+	}
+}

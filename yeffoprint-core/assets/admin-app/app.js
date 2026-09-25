@@ -274,6 +274,7 @@
 			{ id: 'sticker-sizes', label: 'Sticker Sizes' },
 			{ id: 'templates', label: 'Templates' },
 			{ id: 'label-fields', label: 'Label Fields' },
+			{ id: 'label-colors', label: 'Label Colors' },
 			{ id: 'prints', label: '3D Prints' },
 			{ id: 'filament-colors', label: 'Filament Colors' }
 		] },

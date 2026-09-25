@@ -414,7 +414,7 @@ class YeffoPrint_Guest_Saved_Design {
 			return new \WP_Error( 'yeffoprint_invalid_material', __( 'That material is not available for this design.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$field_schema = YeffoPrint_Field_Schema::get( $template_id );
+		$field_schema = YeffoPrint_Field_Schema::get_with_colors( $template_id );
 		$variants     = YeffoPrint_Field_Schema::sanitize_variants(
 			(array) $request->get_param( 'variants' ),
 			$field_schema,
