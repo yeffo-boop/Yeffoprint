@@ -220,6 +220,25 @@
 						'</tbody>' +
 					'</table>' +
 					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-shipping-option>+ Add shipping option</button>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Local Pickup</h2></div>' +
+					'<p class="yp-panel__hint">Direct request: "I want to add a local pickup option, but only for certain items." A free pickup option shows at checkout only when every item in the cart is ticked below. One unticked item and the customer has to pick a shipping option instead.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-pickup-enabled"' + ( settings.local_pickup_enabled ? ' checked' : '' ) + ' /><label for="yp-set-pickup-enabled">Offer local pickup at checkout</label></div>' +
+					'<div class="yp-field"><label for="yp-set-pickup-label">Name shown at checkout</label><input type="text" id="yp-set-pickup-label" value="' + YP.escapeAttr( settings.local_pickup_label ) + '" placeholder="Local pickup" /></div>' +
+					'<div class="yp-field"><label for="yp-set-pickup-instructions">Pickup instructions</label><textarea id="yp-set-pickup-instructions" rows="3" placeholder="Where and when to pick up, e.g. address and hours">' + YP.escapeHtml( settings.local_pickup_instructions ) + '</textarea></div>' +
+					'<p class="yp-panel__hint">Shown on the order confirmation page and in the order emails of pickup orders.</p>' +
+					'<div class="yp-field"><label>Items that can be picked up</label>' +
+						'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 16px;">' +
+							( settings.local_pickup_products || [] ).map( function ( product, i, all ) {
+								// Several Templates share a name ("Spectrum"), so show the URL slug to tell them apart.
+								var duplicate = all.some( function ( other ) { return other !== product && other.name === product.name; } );
+								var id = 'yp-set-pickup-product-' + product.id;
+								return '<div class="yp-field--checkbox yp-field"><input type="checkbox" id="' + id + '" data-yp-pickup-product="' + product.id + '"' + ( product.eligible ? ' checked' : '' ) + ' /><label for="' + id + '">' + YP.escapeHtml( product.name ) + ( duplicate ? ' <span style="color:var(--yp-muted,#767676);">(' + YP.escapeHtml( product.slug ) + ')</span>' : '' ) + '</label></div>';
+							} ).join( '' ) +
+						'</div>' +
+					'</div>' +
 				'</div>';
 
 			var integrationsHtml =
@@ -368,6 +387,11 @@
 				away_mode_enabled: viewEl.querySelector( '#yp-set-away-enabled' ).checked,
 				away_mode_return_date: viewEl.querySelector( '#yp-set-away-return' ).value,
 				express_enabled: viewEl.querySelector( '#yp-set-express-enabled' ).checked,
+				local_pickup_enabled: viewEl.querySelector( '#yp-set-pickup-enabled' ).checked,
+				local_pickup_label: viewEl.querySelector( '#yp-set-pickup-label' ).value,
+				local_pickup_instructions: viewEl.querySelector( '#yp-set-pickup-instructions' ).value,
+				local_pickup_product_ids: Array.prototype.filter.call( viewEl.querySelectorAll( '[data-yp-pickup-product]' ), function ( input ) { return input.checked; } )
+					.map( function ( input ) { return parseInt( input.getAttribute( 'data-yp-pickup-product' ), 10 ); } ),
 				express_fee: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-express-fee' ).value ) || 0 ),
 				dashboard_due_date_days: parseInt( viewEl.querySelector( '#yp-set-due-date' ).value, 10 ) || 7,
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
