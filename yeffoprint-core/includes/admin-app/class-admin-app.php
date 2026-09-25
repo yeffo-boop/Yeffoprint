@@ -174,6 +174,7 @@ class YeffoPrint_Admin_App {
 			// Every Template shares one field set now (Label Fields screen) —
 			// ensure_global_preset() makes sure it exists before the
 			// Templates screen reads it.
+			'defaultColorChoices'    => YeffoPrint_Label_Color_Meta::default_choices(),
 			'defaultFieldPreset'     => YeffoPrint_Field_Schema::ensure_global_preset() ? YeffoPrint_Field_Schema::default_preset() : null,
 			// Custom Orders' status filter dropdown (Phase 6) needs this
 			// before any order has loaded — same "list screen needs it

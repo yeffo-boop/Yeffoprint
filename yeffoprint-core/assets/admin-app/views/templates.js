@@ -957,7 +957,7 @@
 
 				var loadGap = isEdit
 					? YP.request( adminEndpoint( template.id ) )
-					: Promise.resolve( { compatible_sizes: [], compatible_materials: [], field_schema: [], color_choices: [] } );
+					: Promise.resolve( { compatible_sizes: [], compatible_materials: [], field_schema: [], color_choices: yeffoprintAdminApp.defaultColorChoices || [] } );
 
 				var loadPresets = ( ! sharedPreset && presetPosts.length )
 					? Promise.all( presetPosts.map( function ( p ) {

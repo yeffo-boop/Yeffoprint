@@ -63,9 +63,95 @@ class YeffoPrint_Label_Color_Meta {
 
 	private const SETUP_OPTION = 'yeffoprint_label_colors_setup';
 
+	private const DEFAULTS_OPTION = 'yeffoprint_label_color_defaults';
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
 		add_action( 'init', [ $this, 'maybe_setup' ], 20 );
+		add_action( 'init', [ $this, 'maybe_add_default_choices' ], 21 );
+	}
+
+	/**
+	 * Direct request: "automatically add a background color and a text
+	 * color to all label templates by default", shown to customers
+	 * right away, dots placed later in the admin. Runs once; a Template
+	 * that already has color choices is left alone.
+	 */
+	public function maybe_add_default_choices(): void {
+		if ( get_option( self::DEFAULTS_OPTION ) ) {
+			return;
+		}
+
+		$choices = self::default_choices();
+		if ( ! $choices ) {
+			return; // No Label Colors yet — try again on a later request.
+		}
+		update_option( self::DEFAULTS_OPTION, 1, true );
+
+		$template_ids = get_posts( [
+			'post_type'      => 'yp_template',
+			'post_status'    => [ 'publish', 'draft', 'pending', 'private', 'future' ],
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		] );
+
+		foreach ( $template_ids as $template_id ) {
+			if ( ! self::get_choices( (int) $template_id ) ) {
+				self::update_choices( (int) $template_id, $choices );
+			}
+		}
+	}
+
+	/**
+	 * Background and Text, every active Label Color
+	 * offered, no dots yet. Text starts on the shared fields' own text
+	 * color when it's one of the Label Colors, so labels read the same
+	 * as before until a customer changes it; otherwise Black.
+	 */
+	public static function default_choices(): array {
+		$colors = self::get_colors();
+		if ( ! $colors ) {
+			return [];
+		}
+
+		$ids = array_keys( $colors );
+		$by_hex = [];
+		foreach ( $colors as $id => $color ) {
+			$by_hex[ strtoupper( $color['hex'] ) ] = $id;
+		}
+
+		$text_hex = '#141414';
+		$preset_id = YeffoPrint_Field_Schema::get_default_preset_id();
+		if ( $preset_id ) {
+			foreach ( YeffoPrint_Field_Schema::get( $preset_id ) as $field ) {
+				if ( in_array( $field['type'] ?? '', [ 'text', 'textarea' ], true ) && ! empty( $field['text_color'] ) ) {
+					$text_hex = strtoupper( (string) $field['text_color'] );
+					break;
+				}
+			}
+		}
+
+		$text_default = $by_hex[ $text_hex ] ?? ( $by_hex['#141414'] ?? $ids[0] );
+
+		return [
+			[
+				'name'       => __( 'Background', 'yeffoprint-core' ),
+				'hint'       => __( 'Fills the label behind the text', 'yeffoprint-core' ),
+				'target'     => 'background',
+				'colors'     => $ids,
+				// Whichever of White/Black reads against the starting text.
+				'default_id' => self::is_light( $colors[ $text_default ]['hex'] )
+					? ( $by_hex['#141414'] ?? $ids[0] )
+					: ( $by_hex['#FFFFFF'] ?? $ids[0] ),
+			],
+			[
+				'name'       => __( 'Text', 'yeffoprint-core' ),
+				'hint'       => __( 'Compound name, strength and details', 'yeffoprint-core' ),
+				'target'     => 'text',
+				'colors'     => $ids,
+				'default_id' => $text_default,
+			],
+		];
 	}
 
 	public function register_meta(): void {
@@ -135,6 +221,11 @@ class YeffoPrint_Label_Color_Meta {
 		if ( count( $kept ) !== count( $fields ) ) {
 			YeffoPrint_Field_Schema::update( $preset_id, $kept );
 		}
+	}
+
+	private static function is_light( string $hex ): bool {
+		$n = hexdec( ltrim( $hex, '#' ) );
+		return ( 0.299 * ( ( $n >> 16 ) & 255 ) + 0.587 * ( ( $n >> 8 ) & 255 ) + 0.114 * ( $n & 255 ) ) > 150;
 	}
 
 	public static function sanitize_hex( $value ): string {
