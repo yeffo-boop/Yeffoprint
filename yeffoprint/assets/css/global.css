@@ -221,6 +221,16 @@ main.wp-block-group {
 	}
 }
 
+/* The header runs edge to edge now (parts/header.html's layout is no
+   longer capped at 1200px — direct request: "the header is getting
+   full with links"), so give it a little more breathing room at the
+   sides on wide screens. */
+@media (min-width: 1280px) {
+	.yp-header {
+		padding-inline: var(--wp--preset--spacing--lg);
+	}
+}
+
 .yp-header.is-scrolled {
 	padding-block: 0.65rem;
 	box-shadow: var(--wp--custom--shadow-elevation--low);
@@ -320,10 +330,63 @@ main.wp-block-group {
 	color: var(--wp--preset--color--near-black) !important;
 }
 
-/* Seven links plus the logo and icon buttons only fit on one row at
-   the default spacing from ~1220px up; below that the nav wrapped onto
-   a second line. Tighter link padding keeps it to one row down to
-   ~1060px, where the old six-link nav was already wrapping anyway. */
+/* "Shop" dropdown (Shop Labels, Custom Stickers, 3D Prints). Desktop
+   only — inside the mobile overlay the core block already lists the
+   sub-items expanded, and the overlay rules further down style them. */
+.yp-header__nav .yp-header__shop > .wp-block-navigation__submenu-icon {
+	color: var(--wp--preset--color--charcoal);
+	margin-left: -0.45rem;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container {
+	background: var(--wp--preset--color--white) !important;
+	border: 1px solid var(--wp--preset--color--light-gray) !important;
+	border-radius: var(--wp--custom--radius--input);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+	padding: 0.4rem !important;
+	min-width: 13rem !important;
+	margin-top: 0.35rem;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
+	display: block;
+	width: 100%;
+	padding: 0.55rem 0.8rem;
+}
+
+/* Mobile overlay: the Shop sub-items sit just under "Shop", slightly
+   indented and smaller, instead of the core block's centered column. */
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__submenu-container {
+	width: 100% !important;
+	padding: 0 0 0.5rem 1.25rem !important;
+	align-items: stretch !important;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
+	font-size: 1.15rem !important;
+	font-weight: 500;
+}
+
+/* The new section gets a small NEW tag in the menu. */
+.yp-header__nav .yp-header__new > a.wp-block-navigation-item__content::after {
+	content: "New";
+	display: inline-block;
+	margin-left: 0.45rem;
+	padding: 0.05rem 0.4rem;
+	border-radius: 999px;
+	background: #fce7f3;
+	color: var(--wp--preset--color--magenta-deep);
+	font-size: 0.65rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	vertical-align: 0.1em;
+}
+
+/* Tighter link padding on smaller laptops. With Shop Labels, Custom
+   Stickers and 3D Prints grouped under the one "Shop" menu below, the
+   nav is six items, which fits on one row comfortably from here down
+   to the mobile menu. */
 @media (max-width: 1279px) {
 	.yp-header__nav ul.wp-block-navigation__container {
 		gap: 0.25rem;

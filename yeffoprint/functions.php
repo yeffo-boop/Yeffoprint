@@ -230,6 +230,37 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
+	// 3D Prints: the /3d-prints/ grid and each item's product page.
+	if ( is_singular( 'yp_print' ) || is_post_type_archive( 'yp_print' ) ) {
+		wp_enqueue_style(
+			'yeffoprint-prints',
+			get_theme_file_uri( 'assets/css/prints.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/prints.css' )
+		);
+	}
+
+	if ( is_singular( 'yp_print' ) ) {
+		wp_enqueue_script(
+			'yeffoprint-print-product',
+			get_theme_file_uri( 'assets/js/print-product.js' ),
+			[ 'yeffoprint-site' ],
+			yeffoprint_asset_version( 'assets/js/print-product.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		// Same stale-nonce-from-a-cached-page risk as the configurator
+		// below — see that comment.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		wp_localize_script( 'yeffoprint-print-product', 'yeffoprintPrint', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+		] );
+	}
+
 	if ( is_singular( 'yp_template' ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',
@@ -827,6 +858,8 @@ add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/label-designer-choice' ) );
 	register_block_type( get_theme_file_path( 'blocks/label-configurator' ) );
 	register_block_type( get_theme_file_path( 'blocks/order-addon-gate' ) );
+	register_block_type( get_theme_file_path( 'blocks/print-product' ) );
+	register_block_type( get_theme_file_path( 'blocks/print-card' ) );
 } );
 
 /**

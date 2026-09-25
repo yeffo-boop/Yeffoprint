@@ -193,6 +193,37 @@ class YeffoPrint_Post_Type_Registry {
 			false,
 			false
 		) );
+
+		// 3D Prints (direct request): one record per printed item, with
+		// its own color choices (YeffoPrint_Print_Meta). Public like
+		// Templates — the storefront reads these directly — with the
+		// section itself at /3d-prints/ as this type's archive. Built
+		// admin-app-first, same as yp_web_design_addon above.
+		register_post_type( 'yp_print', array_merge(
+			$this->args(
+				__( '3D Prints', 'yeffoprint-core' ),
+				__( '3D Print', 'yeffoprint-core' ),
+				[ 'title', 'editor', 'thumbnail', 'page-attributes', 'custom-fields' ],
+				true,
+				false
+			),
+			[
+				'has_archive' => '3d-prints',
+				'rewrite'     => [ 'slug' => '3d-prints', 'with_front' => false ],
+				'query_var'   => 'yp_print',
+			]
+		) );
+
+		// The shared list of filament colors every 3D print picks from —
+		// see YeffoPrint_Print_Meta's docblock for why this is its own
+		// record type rather than per-item data.
+		register_post_type( 'yp_filament', $this->args(
+			__( 'Filament Colors', 'yeffoprint-core' ),
+			__( 'Filament Color', 'yeffoprint-core' ),
+			[ 'title', 'page-attributes', 'custom-fields' ],
+			false,
+			false
+		) );
 	}
 
 	/**

@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/print-card",
+	"title": "3D Print Card",
+	"category": "theme",
+	"description": "One 3D print in the /3d-prints/ grid. Used inside a Query Loop's Post Template.",
+	"usesContext": [ "postId" ],
+	"supports": {
+		"html": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}

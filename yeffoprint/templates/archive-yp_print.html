@@ -1,0 +1,39 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"1200px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:group {"className":"yp-section","layout":{"type":"constrained"}} -->
+	<div class="wp-block-group yp-section">
+		<!-- wp:paragraph {"className":"yp-eyebrow"} -->
+		<p class="yp-eyebrow">New</p>
+		<!-- /wp:paragraph -->
+		<!-- wp:heading {"level":1} -->
+		<h1 class="wp-block-heading">3D Prints</h1>
+		<!-- /wp:heading -->
+		<!-- wp:paragraph -->
+		<p>Printed to order in the colors you pick. Choose a color for each part and we'll print it just like that.</p>
+		<!-- /wp:paragraph -->
+	</div>
+	<!-- /wp:group -->
+
+	<!-- wp:query {"queryId":7,"query":{"perPage":24,"postType":"yp_print","inherit":true,"orderBy":"menu_order","order":"asc"},"className":"yp-print-query"} -->
+	<div class="wp-block-query yp-print-query">
+
+		<!-- wp:post-template {"className":"yp-print-grid"} -->
+			<!-- wp:yeffoprint/print-card /-->
+		<!-- /wp:post-template -->
+
+		<!-- wp:query-no-results -->
+			<!-- wp:paragraph {"className":"yp-gallery-empty"} -->
+			<p class="yp-gallery-empty">New 3D prints are on the way. Check back soon.</p>
+			<!-- /wp:paragraph -->
+		<!-- /wp:query-no-results -->
+
+	</div>
+	<!-- /wp:query -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

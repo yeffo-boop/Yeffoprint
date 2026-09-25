@@ -35,6 +35,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-web-design-addon-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-saved-design-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-sticker-size-meta.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/post-types/class-print-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/schema/class-field-schema.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/lib/class-qr-code-gen.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/qr/class-qr-renderer.php';
@@ -89,6 +90,8 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-design-fee-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-order-labels-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-sticker-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-print-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-print-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/uploads/class-secure-upload.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-custom-order-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/custom-orders/class-proof-meta.php';
@@ -185,6 +188,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Web_Design_Package_Meta();
 		new YeffoPrint_Web_Design_Addon_Meta();
 		new YeffoPrint_Sticker_Size_Meta();
+		new YeffoPrint_Print_Meta();
 		new YeffoPrint_Template_Query();
 		new YeffoPrint_Template_Search();
 		new YeffoPrint_Template_Schema_Controller();
@@ -226,6 +230,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Custom_Order_Payment();
 		new YeffoPrint_Custom_Order_Controller();
 		new YeffoPrint_Custom_Sticker_Controller();
+		new YeffoPrint_Print_Product();
+		new YeffoPrint_Print_Controller();
 		new YeffoPrint_Proof_Approval_Controller();
 		new YeffoPrint_Account_Endpoints();
 		new YeffoPrint_Social_Login();
