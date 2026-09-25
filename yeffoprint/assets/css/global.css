@@ -221,14 +221,21 @@ main.wp-block-group {
 	}
 }
 
-/* The header runs edge to edge now (parts/header.html's layout is no
-   longer capped at 1200px — direct request: "the header is getting
-   full with links"), so give it a little more breathing room at the
-   sides on wide screens. */
+/* The header's background runs edge to edge (parts/header.html's
+   layout is no longer capped at 1200px — direct request: "the header
+   is getting full with links"), but its row is inset from the sides
+   and capped at 1440px so the logo doesn't sit against the screen
+   edge on wide monitors (direct request: "move the logo back over
+   towards the right more"). */
 @media (min-width: 1280px) {
 	.yp-header {
-		padding-inline: var(--wp--preset--spacing--lg);
+		padding-inline: clamp(2.5rem, 6vw, 6rem);
 	}
+}
+
+.yp-header__row {
+	max-width: 1440px;
+	margin-inline: auto;
 }
 
 .yp-header.is-scrolled {

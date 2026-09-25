@@ -23,6 +23,7 @@
 	var summaryEl = root.querySelector( '[data-yp-summary]' );
 	var statusEl = root.querySelector( '[data-yp-status]' );
 	var addButton = root.querySelector( '[data-yp-add]' );
+	var sizesEl = root.querySelector( '[data-yp-sizes]' );
 	var basePrice = parseFloat( root.getAttribute( 'data-yp-base-price' ) ) || 0;
 
 	function money( amount ) {
@@ -31,6 +32,11 @@
 
 	function picked( slotEl ) {
 		return slotEl.querySelector( 'input[type="radio"]:checked' );
+	}
+
+	function pickedSize() {
+		var input = sizesEl ? sizesEl.querySelector( 'input[type="radio"]:checked' ) : null;
+		return input ? input.value : '';
 	}
 
 	function slotName( slotEl ) {
@@ -45,7 +51,7 @@
 
 	function update() {
 		var unit = basePrice;
-		var parts = [];
+		var parts = sizesEl ? [ 'Size ' + ( pickedSize() || '(not picked)' ) ] : [];
 
 		slots.forEach( function ( slotEl ) {
 			var index = slotEl.getAttribute( 'data-yp-slot' );
@@ -103,7 +109,10 @@
 		} );
 	} );
 
-	form.addEventListener( 'change', update );
+	form.addEventListener( 'change', function () {
+		setStatus( '', false ); // A fresh pick clears an old "Pick a size." message.
+		update();
+	} );
 	qtyInput.addEventListener( 'input', update );
 
 	form.addEventListener( 'submit', function ( event ) {
@@ -111,6 +120,13 @@
 
 		var colors = {};
 		var missing = '';
+
+		if ( sizesEl && ! pickedSize() ) {
+			setStatus( 'Pick a size.', true );
+			sizesEl.scrollIntoView( { block: 'nearest', behavior: 'smooth' } );
+			return;
+		}
+
 		slots.forEach( function ( slotEl ) {
 			var input = picked( slotEl );
 			if ( input ) {
@@ -133,6 +149,7 @@
 			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': yeffoprintPrint.nonce },
 			body: JSON.stringify( {
 				print_id: parseInt( root.getAttribute( 'data-yp-print-id' ), 10 ),
+				size: pickedSize(),
 				colors: colors,
 				quantity: quantity()
 			} )

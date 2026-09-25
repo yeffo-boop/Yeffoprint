@@ -262,6 +262,9 @@ class YeffoPrint_Cart_Pricing {
 		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
 			// One "Base: Matte Black" row per color choice, so the
 			// customer can check every pick before paying.
+			if ( '' !== (string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_SIZE ] ?? '' ) ) {
+				$item_data[] = [ 'key' => __( 'Size', 'yeffoprint-core' ), 'value' => (string) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_SIZE ] ];
+			}
 			foreach ( (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] ) as $pick ) {
 				$item_data[] = [ 'key' => (string) ( $pick['slot'] ?? '' ), 'value' => (string) ( $pick['name'] ?? '' ) ];
 			}

@@ -29,6 +29,7 @@ class YeffoPrint_Print_Meta {
 	public const PRICE       = '_yp_print_price';
 	public const SHIPS_IN    = '_yp_print_ships_in';
 	public const COLOR_SLOTS = '_yp_print_color_slots';
+	public const SIZES       = '_yp_print_sizes';
 
 	/* yp_filament */
 	public const HEX          = '_yp_filament_hex';
@@ -94,6 +95,22 @@ class YeffoPrint_Print_Meta {
 							'default_id' => [ 'type' => 'integer' ],
 						],
 					],
+				],
+			],
+		] );
+
+		// The sizes a customer picks one of ("12oz Can", "8.4oz Slim Can").
+		// Same price for every size; an item with none skips the picker.
+		register_post_meta( 'yp_print', self::SIZES, [
+			'type'              => 'array',
+			'single'            => true,
+			'default'           => [],
+			'sanitize_callback' => [ __CLASS__, 'sanitize_sizes' ],
+			'auth_callback'     => [ $this, 'can_edit' ],
+			'show_in_rest'      => [
+				'schema' => [
+					'type'  => 'array',
+					'items' => [ 'type' => 'string' ],
 				],
 			],
 		] );
@@ -172,6 +189,23 @@ class YeffoPrint_Print_Meta {
 		return $slots;
 	}
 
+	/** Trimmed, non-empty, de-duplicated size names in admin order. */
+	public static function sanitize_sizes( $value ): array {
+		if ( ! is_array( $value ) ) {
+			return [];
+		}
+
+		$sizes = array_filter( array_map( static function ( $size ) {
+			return is_scalar( $size ) ? sanitize_text_field( (string) $size ) : '';
+		}, $value ), 'strlen' );
+
+		return array_values( array_unique( $sizes ) );
+	}
+
+	public static function get_sizes( int $print_id ): array {
+		return self::sanitize_sizes( get_post_meta( $print_id, self::SIZES, true ) );
+	}
+
 	public static function get_slots( int $print_id ): array {
 		return self::sanitize_slots( get_post_meta( $print_id, self::COLOR_SLOTS, true ) );
 	}
@@ -244,6 +278,7 @@ class YeffoPrint_Print_Meta {
 			'price'     => (float) get_post_meta( $print_id, self::PRICE, true ),
 			'ships_in'  => (string) get_post_meta( $print_id, self::SHIPS_IN, true ),
 			'image_url' => (string) get_the_post_thumbnail_url( $print_id, 'large' ),
+			'sizes'     => self::get_sizes( $print_id ),
 			'slots'     => $slots,
 		];
 	}
@@ -291,6 +326,24 @@ class YeffoPrint_Print_Meta {
 		}
 
 		return $resolved;
+	}
+
+	/**
+	 * The customer's size pick checked against the item's live sizes:
+	 * the size name, '' when the item has no sizes, or a WP_Error.
+	 */
+	public static function resolve_size( int $print_id, $size ) {
+		$sizes = self::get_sizes( $print_id );
+		if ( ! $sizes ) {
+			return '';
+		}
+
+		$size = is_scalar( $size ) ? sanitize_text_field( (string) $size ) : '';
+		if ( ! in_array( $size, $sizes, true ) ) {
+			return new \WP_Error( 'yeffoprint_print_size_missing', __( 'Pick a size.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return $size;
 	}
 
 	/** Base price plus every picked color's extra charge, per item — read live, never cached in the cart. */
