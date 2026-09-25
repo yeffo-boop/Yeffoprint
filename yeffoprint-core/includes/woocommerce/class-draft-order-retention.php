@@ -5,7 +5,7 @@
  * "Draft" (checkout-draft) the moment a customer presses Place order,
  * and only moves it on once payment goes through — so a draft is a
  * checkout that got as far as paying and then stopped (card declined,
- * Coinbase window closed, tab closed). The admin app's Order History
+ * crypto payment window closed, tab closed). The admin app's Order History
  * shows them under its Drafts tab.
  *
  * WooCommerce's own nightly cleanup

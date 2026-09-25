@@ -218,7 +218,7 @@ class YeffoPrint_Admin_Order_Controller {
 	 * for this order's payment method) is passed straight through as
 	 * wc_create_refund()'s `refund_payment` flag — when the gateway
 	 * doesn't support automatic refunds (this store's Manual/Venmo/
-	 * Zelle/Coinbase gateways, none of which declare 'refunds' support),
+	 * Zelle/NOWPayments gateways, none of which declare 'refunds' support),
 	 * wc_create_refund() already knows to just record the refund without
 	 * attempting to contact a processor, so nothing extra is needed here
 	 * for that case.
@@ -364,7 +364,7 @@ class YeffoPrint_Admin_Order_Controller {
 			// Direct request: refund an order without leaving this app.
 			// `refund_gateway_supported` tells the frontend whether to
 			// even offer an "also refund via {gateway}" checkbox —
-			// this store's Manual/Venmo/Zelle/Coinbase gateways don't
+			// this store's Manual/Venmo/Zelle/NOWPayments gateways don't
 			// declare `WC_Payment_Gateway::supports('refunds')`, so a
 			// refund on one of those orders can only ever be a local
 			// record, never an automatic processor refund.
