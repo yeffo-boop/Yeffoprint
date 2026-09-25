@@ -24,7 +24,8 @@
 	var META = {
 		price: '_yp_print_price',
 		shipsIn: '_yp_print_ships_in',
-		slots: '_yp_print_color_slots'
+		slots: '_yp_print_color_slots',
+		sizes: '_yp_print_sizes'
 	};
 
 	var MAX_SLOTS = 8;
@@ -171,6 +172,8 @@
 								'<div class="yp-field"><label for="yp-pr-ships">Ships in</label><input type="text" id="yp-pr-ships" name="ships_in" placeholder="3 to 5 days" value="' + YP.escapeAttr( meta[ META.shipsIn ] || '' ) + '" /></div>' +
 							'</div>' +
 							'<div class="yp-field"><label for="yp-pr-desc">Description</label><textarea id="yp-pr-desc" name="description" rows="3">' + YP.escapeHtml( isEdit ? ( print.content.raw || '' ).replace( /<[^>]+>/g, '' ).trim() : '' ) + '</textarea></div>' +
+							'<div class="yp-field"><label for="yp-pr-sizes">Sizes</label><textarea id="yp-pr-sizes" name="sizes" rows="3" placeholder="12oz Can&#10;12oz Slim Can">' + YP.escapeHtml( ( meta[ META.sizes ] || [] ).join( '\n' ) ) + '</textarea>' +
+								'<p class="yp-field__hint">One size per line. The customer picks one, and every size costs the same. Leave empty if the item comes in one size.</p></div>' +
 
 							'<div class="yp-print-editor">' +
 								'<div class="yp-print-editor__slots">' +
@@ -460,6 +463,9 @@
 				};
 				body.meta[ META.price ] = Math.max( 0, parseFloat( form.price.value ) || 0 );
 				body.meta[ META.shipsIn ] = form.ships_in.value.trim();
+				body.meta[ META.sizes ] = form.sizes.value.split( '\n' )
+					.map( function ( size ) { return size.trim(); } )
+					.filter( function ( size, i, all ) { return size && all.indexOf( size ) === i; } );
 				body.meta[ META.slots ] = slots.map( function ( slot ) {
 					return {
 						name: slot.name.trim(),

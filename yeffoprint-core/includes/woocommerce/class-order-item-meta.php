@@ -302,6 +302,7 @@ class YeffoPrint_Order_Item_Meta {
 	private static function snapshot_print( \WC_Order_Item_Product $item, array $values ): void {
 		$print_id = (int) $values[ YeffoPrint_Cart_Item_Keys::PRINT_ID ];
 		$picks    = (array) ( $values[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] );
+		$size     = (string) ( $values[ YeffoPrint_Cart_Item_Keys::PRINT_SIZE ] ?? '' );
 
 		// Extra charges as priced right now (same live read as the cart's
 		// own price), not whatever they were when it was added.
@@ -315,8 +316,13 @@ class YeffoPrint_Order_Item_Meta {
 			'title'      => get_the_title( $print_id ),
 			'base_price' => (float) get_post_meta( $print_id, YeffoPrint_Print_Meta::PRICE, true ),
 			'unit_price' => YeffoPrint_Print_Meta::unit_price( $print_id, $picks ),
+			'size'       => $size,
 			'colors'     => array_values( $picks ),
 		] ), true );
+
+		if ( '' !== $size ) {
+			$item->add_meta_data( __( 'Size', 'yeffoprint-core' ), $size, true );
+		}
 
 		foreach ( $picks as $pick ) {
 			$label = (string) ( $pick['name'] ?? '' );

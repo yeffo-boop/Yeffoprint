@@ -60,6 +60,11 @@ class YeffoPrint_Print_Controller {
 			return new \WP_Error( 'yeffoprint_print_not_found', __( 'That item was not found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
 		}
 
+		$size = YeffoPrint_Print_Meta::resolve_size( $print_id, $request->get_param( 'size' ) );
+		if ( is_wp_error( $size ) ) {
+			return $size;
+		}
+
 		$picks = YeffoPrint_Print_Meta::resolve_picks( $print_id, (array) $request->get_param( 'colors' ) );
 		if ( is_wp_error( $picks ) ) {
 			return $picks;
@@ -74,6 +79,7 @@ class YeffoPrint_Print_Controller {
 		YeffoPrint_Cart_Pricing::allow_next_add( true );
 		$cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity, 0, [], [
 			YeffoPrint_Cart_Item_Keys::PRINT_ID     => $print_id,
+			YeffoPrint_Cart_Item_Keys::PRINT_SIZE   => $size,
 			YeffoPrint_Cart_Item_Keys::PRINT_COLORS => $picks,
 		] );
 		YeffoPrint_Cart_Pricing::allow_next_add( false );

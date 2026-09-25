@@ -22,6 +22,7 @@ if ( ! $print ) {
 }
 
 $slots       = $print['slots'];
+$sizes       = $print['sizes'];
 $description = get_post_field( 'post_content', $print_id );
 $has_extras  = false;
 $start_total = $print['price'];
@@ -138,6 +139,21 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 
 			<form class="yp-print__form" data-yp-print-form>
 
+					<?php if ( $sizes ) : ?>
+						<?php // No size starts picked: the wrong one won't fit, so the customer chooses on purpose. ?>
+						<fieldset class="yp-print-sizes" data-yp-sizes>
+							<legend class="yp-print__section-title"><?php esc_html_e( 'Choose your size', 'yeffoprint' ); ?></legend>
+							<div class="yp-print-sizes__options">
+								<?php foreach ( $sizes as $size ) : ?>
+									<label class="yp-print-size">
+										<input type="radio" name="size" value="<?php echo esc_attr( $size ); ?>"<?php checked( 1 === count( $sizes ) ); ?> />
+										<span><?php echo esc_html( $size ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</fieldset>
+					<?php endif; ?>
+
 				<?php if ( $slots ) : ?>
 					<p class="yp-print__section-title">
 						<?php esc_html_e( 'Choose your colors', 'yeffoprint' ); ?>
@@ -197,7 +213,7 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 
 				<p class="yp-print__status" role="status" aria-live="polite" data-yp-status></p>
 
-				<?php if ( $slots ) : ?>
+				<?php if ( $slots || $sizes ) : ?>
 					<p class="yp-print__summary" data-yp-summary></p>
 				<?php endif; ?>
 			</form>
