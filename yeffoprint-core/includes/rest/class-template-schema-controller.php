@@ -89,7 +89,7 @@ class YeffoPrint_Template_Schema_Controller {
 			'base_unit_price'       => function_exists( 'yeffoprint_core_base_unit_price' ) ? yeffoprint_core_base_unit_price() : 0,
 			'tiers'                 => YeffoPrint_Pricing_Rule::get_tiers(),
 			'quantity_presets'      => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
-			'field_schema'          => YeffoPrint_Field_Schema::get( $template->ID ),
+			'field_schema'          => YeffoPrint_Field_Schema::get_with_colors( $template->ID ),
 			// Product Type slugs (e.g. "peptide-vial-labels") —
 			// configurator.js shows its reconstitution/dose tip only on
 			// peptide templates, not on the cosmetics/skincare ones.

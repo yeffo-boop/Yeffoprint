@@ -91,6 +91,12 @@ class YeffoPrint_Admin_Template_Controller {
 			YeffoPrint_Field_Schema::update( $post_id, is_array( $params['field_schema'] ?? null ) ? $params['field_schema'] : [] );
 		}
 
+		// Only when sent, so an older admin tab without the Color choices
+		// editor never wipes them.
+		if ( array_key_exists( 'color_choices', $params ) ) {
+			YeffoPrint_Label_Color_Meta::update_choices( $post_id, $params['color_choices'] );
+		}
+
 		return rest_ensure_response( $this->template_payload( $post_id ) );
 	}
 
@@ -112,6 +118,10 @@ class YeffoPrint_Admin_Template_Controller {
 			'compatible_sizes'     => array_map( 'absint', (array) get_post_meta( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_SIZES, true ) ),
 			'compatible_materials' => array_map( 'absint', (array) get_post_meta( $post_id, YeffoPrint_Template_Meta::COMPATIBLE_MATERIALS, true ) ),
 			'field_schema'         => YeffoPrint_Field_Schema::get( $post_id ),
+			'color_choices'        => array_map( static function ( array $choice ) {
+				$choice['layer_url'] = $choice['layer_id'] ? (string) wp_get_attachment_image_url( $choice['layer_id'], 'medium' ) : '';
+				return $choice;
+			}, YeffoPrint_Label_Color_Meta::get_choices( $post_id ) ),
 		];
 	}
 }

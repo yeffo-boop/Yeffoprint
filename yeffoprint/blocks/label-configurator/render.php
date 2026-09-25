@@ -132,6 +132,10 @@ if ( $seo ) {
 				</div>
 				<div class="yp-option-group" role="radiogroup" aria-labelledby="yp-material-heading" data-yp-material-options></div>
 			</div>
+			<div class="yp-configurator__section" data-yp-section="colors" hidden>
+				<h2><?php esc_html_e( 'Choose your colors', 'yeffoprint' ); ?></h2>
+				<div class="yp-color-choices" data-yp-color-choices></div>
+			</div>
 			<div class="yp-configurator__section" data-yp-section="fields">
 				<h2><?php esc_html_e( 'Customize', 'yeffoprint' ); ?></h2>
 				<div data-yp-dose-tip hidden></div>

@@ -2396,3 +2396,13 @@ Verify: open any Template → size cards with dimensions, material swatches (Hol
 - **Header:** Shop Labels and Shop 3D Prints sit under one "Shop" dropdown, with Custom Stickers back on the main row. The header background runs full width, and its row is inset (`clamp(2.5rem, 6vw, 6rem)`) and capped at 1440px so the logo isn't pinned to the screen edge.
 
 Verify: add colors under Filament Colors, add a 3D Print with a photo and 2+ color choices, place the dots, publish → `/3d-prints/` lists it; pick colors (a silk color adds its charge), Add to Cart → drawer, cart and checkout show "Base: Matte Black" etc.; the placed order shows the same rows.
+
+## Label color choices (direct request: the 3D prints' numbered color dots on label templates, "a background color and text color")
+
+- **Data:** `yp_label_color` is the shared Label Colors list (name + `_yp_label_color_hex`; publish/draft is active/inactive, menu_order is the sort). Each Template has `_yp_color_choices`, up to 4 choices `{ name, hint, target, layer_id, x, y, colors[], default_id, any_color }`. `target` is `background` (painted behind the artwork, so it needs a see-through background), `text` (every text field) or `layer` (an uploaded shape layer, same canvas as the artwork, tinted over it). All in `class-label-color-meta.php`.
+- **Customer side:** `YeffoPrint_Field_Schema::get_with_colors()` appends each choice as a `color_choice` field. The pick is just another value in each batch label's `values`, so cart, checkout, the order snapshot, reorder and saved designs carry it unchanged, and summaries show the color name ("Background: Navy", or "Custom #A1B2C3" for Any color). `sanitize_pick()` falls back to the starting color instead of erroring. The admin field editors keep using plain `get()`.
+- **Product page:** configurator.js renders a "Choose your colors" section (numbered steps, swatches, optional Any color wheel, a readability check when a template offers both background and text) and repaints Label View with numbered dots. Layers use CSS `mask-image`, which needs the layer image same-origin or CORS-enabled.
+- **Admin app:** Templates → Color choices panel (click the artwork to place dots) and Catalog → Label Colors.
+- **Switch-over:** on the first request after deploy, `maybe_setup()` seeds the 8 old Color-field dots as Label Colors and removes the `color`-type field from the shared Label Fields set (Jeff: "Replace it"). Past orders keep their Color from their frozen schema.
+
+Verify: Templates → edit one → Color choices → add Background and Text, place dots, save → its page shows the steps and dots, and picking recolors the preview; Add to Cart → cart and order show "Background: Navy — Text: White".

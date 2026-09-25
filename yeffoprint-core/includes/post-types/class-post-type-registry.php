@@ -224,6 +224,16 @@ class YeffoPrint_Post_Type_Registry {
 			false,
 			false
 		) );
+
+		// The shared list of colors label Templates' color choices pick
+		// from — see YeffoPrint_Label_Color_Meta.
+		register_post_type( 'yp_label_color', $this->args(
+			__( 'Label Colors', 'yeffoprint-core' ),
+			__( 'Label Color', 'yeffoprint-core' ),
+			[ 'title', 'page-attributes', 'custom-fields' ],
+			false,
+			false
+		) );
 	}
 
 	/**

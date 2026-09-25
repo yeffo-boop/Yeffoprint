@@ -215,7 +215,7 @@ class YeffoPrint_Order_Item_Meta {
 		}
 
 		$variants     = (array) ( $values[ YeffoPrint_Cart_Item_Keys::VARIANTS ] ?? [] );
-		$field_schema = $template_id ? YeffoPrint_Field_Schema::get( $template_id ) : [];
+		$field_schema = $template_id ? YeffoPrint_Field_Schema::get_with_colors( $template_id ) : [];
 
 		if ( $custom_order_id ) {
 			// Only ever set here for a manually-created Template order
@@ -679,14 +679,15 @@ class YeffoPrint_Order_Item_Meta {
 	 * this value is about to go straight into a `style` attribute.
 	 */
 	private static function color_swatch_html( array $pair, string $class ): string {
-		if ( 'color' !== $pair['type'] || ! preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $pair['value'] ) ) {
+		$hex = (string) ( $pair['hex'] ?? '' );
+		if ( ! in_array( $pair['type'], [ 'color', 'color_choice' ], true ) || ! preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $hex ) ) {
 			return '';
 		}
 
 		return sprintf(
 			'<span class="%s" style="background-color:%s;"></span>',
 			esc_attr( $class ),
-			esc_attr( $pair['value'] )
+			esc_attr( $hex )
 		);
 	}
 
@@ -705,6 +706,9 @@ class YeffoPrint_Order_Item_Meta {
 				'label' => (string) ( $field['label'] ?? '' ),
 				'value' => YeffoPrint_Field_Schema::display_value( $field, $value ),
 				'type'  => (string) ( $field['type'] ?? '' ),
+				// The raw stored value — a color_choice shows its color
+				// name as the value, but the swatch still needs the hex.
+				'hex'   => $value,
 			];
 		}
 

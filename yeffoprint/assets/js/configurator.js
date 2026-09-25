@@ -71,6 +71,8 @@
 	var sizeOptionsEl = root.querySelector( '[data-yp-size-options]' );
 	var materialOptionsEl = root.querySelector( '[data-yp-material-options]' );
 	var fieldInputsEl = root.querySelector( '[data-yp-field-inputs]' );
+	var colorSectionEl = root.querySelector( '[data-yp-section="colors"]' );
+	var colorChoicesEl = root.querySelector( '[data-yp-color-choices]' );
 	var doseTipEl = root.querySelector( '[data-yp-dose-tip]' );
 	var quantityEl = root.querySelector( '[data-yp-quantity]' );
 	var variantCardsEl = root.querySelector( '[data-yp-variant-cards]' );
@@ -239,10 +241,18 @@
 		state.customHeightIn = item.custom_height_in ? String( item.custom_height_in ) : '';
 		state.materialId = item.material_id ? parseInt( item.material_id, 10 ) : null;
 		state.variants = item.variants.map( function ( variant ) {
+			var values = variant.values || {};
+			// A design saved before this template had color choices (or
+			// before one was added) starts on each choice's own color.
+			colorChoiceFields().forEach( function ( field ) {
+				if ( ! values[ field.id ] ) {
+					values[ field.id ] = field.default;
+				}
+			} );
 			return {
 				id: nextVariantId++,
 				quantity: variant.quantity || 1,
-				values: variant.values || {}
+				values: values
 			};
 		} );
 	}
@@ -271,6 +281,7 @@
 		renderMaterialOptions();
 		renderDoseTip();
 		renderFieldInputStructure();
+		renderColorChoices();
 		renderQuantityControl();
 		renderVariantCards();
 		renderStage();
@@ -666,8 +677,9 @@
 	 * "Optional details", each keeping the admin's own order.
 	 */
 	function renderFieldInputStructure() {
-		var required = schema.field_schema.filter( function ( field ) { return field.required; } );
-		var optional = schema.field_schema.filter( function ( field ) { return ! field.required; } );
+		var labelFields = schema.field_schema.filter( function ( field ) { return 'color_choice' !== field.type; } );
+		var required = labelFields.filter( function ( field ) { return field.required; } );
+		var optional = labelFields.filter( function ( field ) { return ! field.required; } );
 		var showTitles = required.length > 0 && optional.length > 0;
 
 		function groupHtml( title, fields ) {
@@ -749,7 +761,13 @@
 	}
 
 	function syncFieldValuesToActiveVariant() {
+		syncColorChoices();
+
 		schema.field_schema.forEach( function ( field ) {
+			if ( 'color_choice' === field.type ) {
+				return;
+			}
+
 			if ( 'corner_style' === field.type ) {
 				var group = fieldInputsEl.querySelector( '.yp-corner-style-options[data-field-id="' + field.id + '"]' );
 				if ( group ) {
@@ -773,6 +791,259 @@
 		if ( sizeOptionsEl.childElementCount ) {
 			renderSizeOptions();
 		}
+	}
+
+
+	/* ---------- Color choices ---------- */
+
+	/*
+	 * Direct request: the 3D prints' numbered color dots on label
+	 * templates, so customers can pick e.g. a background and a text
+	 * color. Each choice arrives as a `color_choice` field
+	 * (YeffoPrint_Label_Color_Meta::virtual_fields()): its pick is one
+	 * more value on the batch label, and the stage repaints to match —
+	 * a fill behind the artwork (background), every text field (text),
+	 * or a tinted shape layer over the artwork (layer).
+	 */
+	function colorChoiceFields() {
+		return ( schema && schema.field_schema ? schema.field_schema : [] ).filter( function ( field ) {
+			return 'color_choice' === field.type;
+		} );
+	}
+
+	function colorChoiceValue( field ) {
+		return ( activeVariant() && activeVariant().values[ field.id ] ) || field.default || '';
+	}
+
+	function colorOptionName( field, hex ) {
+		var match = ( field.options || [] ).filter( function ( option ) {
+			return option.hex.toUpperCase() === ( hex || '' ).toUpperCase();
+		} )[ 0 ];
+		return match ? match.name : ( hex ? 'Custom ' + hex.toUpperCase() : '' );
+	}
+
+	function hasColorDot( field ) {
+		return field.position && null !== field.position.x && undefined !== field.position.x && null !== field.position.y && undefined !== field.position.y;
+	}
+
+	function relativeLuminance( hex ) {
+		var n = parseInt( ( hex || '#000000' ).replace( '#', '' ), 16 );
+		return [ n >> 16, ( n >> 8 ) & 255, n & 255 ].map( function ( v ) {
+			v /= 255;
+			return v <= 0.03928 ? v / 12.92 : Math.pow( ( v + 0.055 ) / 1.055, 2.4 );
+		} ).reduce( function ( sum, v, i ) {
+			return sum + v * [ 0.2126, 0.7152, 0.0722 ][ i ];
+		}, 0 );
+	}
+
+	/** Background vs text readability, only when the template offers both. */
+	function colorContrastOk() {
+		var fields = colorChoiceFields();
+		var bg = fields.filter( function ( f ) { return 'background' === f.target; } )[ 0 ];
+		var tx = fields.filter( function ( f ) { return 'text' === f.target; } )[ 0 ];
+		if ( ! bg || ! tx ) {
+			return null;
+		}
+		var a = relativeLuminance( colorChoiceValue( bg ) );
+		var b = relativeLuminance( colorChoiceValue( tx ) );
+		return ( Math.max( a, b ) + 0.05 ) / ( Math.min( a, b ) + 0.05 ) >= 3;
+	}
+
+	function renderColorChoices() {
+		if ( ! colorSectionEl || ! colorChoicesEl ) {
+			return;
+		}
+
+		var fields = colorChoiceFields();
+		colorSectionEl.hidden = ! fields.length;
+		if ( ! fields.length ) {
+			colorChoicesEl.innerHTML = '';
+			return;
+		}
+
+		colorChoicesEl.innerHTML = fields.map( function ( field, index ) {
+			return (
+				'<div class="yp-color-choice" data-color-choice="' + escapeHtml( field.id ) + '" data-choice-index="' + index + '">' +
+					'<div class="yp-color-choice__head">' +
+						'<span class="yp-color-choice__num" aria-hidden="true">' + ( index + 1 ) + '</span>' +
+						'<div class="yp-color-choice__text">' +
+							'<span class="yp-color-choice__name" id="yp-color-choice-' + escapeHtml( field.id ) + '">' + escapeHtml( field.label ) + '</span>' +
+							( field.hint ? '<span class="yp-color-choice__hint">' + escapeHtml( field.hint ) + '</span>' : '' ) +
+						'</div>' +
+						'<span class="yp-color-choice__picked" data-color-picked><i></i><span></span></span>' +
+					'</div>' +
+					'<div class="yp-color-choice__swatches" role="radiogroup" aria-labelledby="yp-color-choice-' + escapeHtml( field.id ) + '">' +
+						( field.options || [] ).map( function ( option ) {
+							return '<button type="button" role="radio" aria-checked="false" class="yp-color-swatch" style="background:' + escapeHtml( option.hex ) + '" data-color-hex="' + escapeHtml( option.hex ) + '" title="' + escapeHtml( option.name ) + '" aria-label="' + escapeHtml( option.name ) + '"></button>';
+						} ).join( '' ) +
+						( field.any_color
+							? '<label class="yp-color-swatch yp-color-swatch--any" title="Any color"><span class="screen-reader-text">Any color</span><input type="color" data-color-any /></label><span class="yp-color-choice__any-label">Any color</span>'
+							: '' ) +
+					'</div>' +
+					( 'text' === field.target ? '<p class="yp-color-choice__contrast" data-color-contrast hidden></p>' : '' ) +
+				'</div>'
+			);
+		} ).join( '' ) +
+		'<p class="yp-color-choices__note">We send a proof before anything prints, so colors can still be tweaked after you see it.</p>';
+
+		colorChoicesEl.querySelectorAll( '[data-color-choice]' ).forEach( function ( card ) {
+			var field = fields[ parseInt( card.getAttribute( 'data-choice-index' ), 10 ) ];
+
+			function pick( hex ) {
+				activeVariant().values[ field.id ] = hex;
+				syncColorChoices();
+				applyStageColors();
+				updateActiveVariantCardSummary();
+			}
+
+			card.querySelectorAll( '[data-color-hex]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					pick( button.getAttribute( 'data-color-hex' ) );
+				} );
+			} );
+
+			var anyInput = card.querySelector( '[data-color-any]' );
+			if ( anyInput ) {
+				anyInput.addEventListener( 'input', function () {
+					pick( anyInput.value.toUpperCase() );
+				} );
+			}
+
+			// Hovering or focusing a step lights up its dot on the preview.
+			[ 'mouseenter', 'focusin' ].forEach( function ( type ) {
+				card.addEventListener( type, function () {
+					setActiveColorDot( field.id );
+				} );
+			} );
+		} );
+
+		syncColorChoices();
+	}
+
+	function syncColorChoices() {
+		if ( ! colorChoicesEl ) {
+			return;
+		}
+
+		colorChoiceFields().forEach( function ( field ) {
+			var card = colorChoicesEl.querySelector( '[data-color-choice="' + field.id + '"]' );
+			if ( ! card ) {
+				return;
+			}
+			var value = colorChoiceValue( field ).toUpperCase();
+			var matched = false;
+
+			card.querySelectorAll( '[data-color-hex]' ).forEach( function ( button ) {
+				var on = button.getAttribute( 'data-color-hex' ).toUpperCase() === value;
+				matched = matched || on;
+				button.classList.toggle( 'is-selected', on );
+				button.setAttribute( 'aria-checked', on ? 'true' : 'false' );
+			} );
+
+			var any = card.querySelector( '.yp-color-swatch--any' );
+			if ( any ) {
+				any.classList.toggle( 'is-selected', ! matched && !! value );
+				any.style.setProperty( '--yp-any-color', ! matched && value ? value : 'transparent' );
+				if ( /^#[0-9A-F]{6}$/.test( value ) ) {
+					any.querySelector( 'input' ).value = value.toLowerCase();
+				}
+			}
+
+			var picked = card.querySelector( '[data-color-picked]' );
+			picked.querySelector( 'i' ).style.background = value;
+			picked.querySelector( 'span' ).textContent = colorOptionName( field, value );
+
+			var contrastEl = card.querySelector( '[data-color-contrast]' );
+			if ( contrastEl ) {
+				var ok = colorContrastOk();
+				contrastEl.hidden = null === ok;
+				contrastEl.classList.toggle( 'is-low', false === ok );
+				contrastEl.textContent = false === ok ? 'These two colors are hard to read together.' : '✓ Easy to read';
+			}
+		} );
+	}
+
+	function setActiveColorDot( fieldId ) {
+		stageEl.querySelectorAll( '[data-color-dot]' ).forEach( function ( dot ) {
+			dot.classList.toggle( 'is-active', dot.getAttribute( 'data-color-dot' ) === fieldId );
+		} );
+		if ( colorChoicesEl ) {
+			colorChoicesEl.querySelectorAll( '[data-color-choice]' ).forEach( function ( card ) {
+				card.classList.toggle( 'is-active', card.getAttribute( 'data-color-choice' ) === fieldId );
+			} );
+		}
+	}
+
+	/**
+	 * Repaints the stage for the active label's picks. Label View only —
+	 * Vial View is a reference photo. Safe to call repeatedly: it clears
+	 * its own elements first.
+	 */
+	function applyStageColors() {
+		stageEl.querySelectorAll( '[data-color-el]' ).forEach( function ( el ) {
+			el.parentNode.removeChild( el );
+		} );
+
+		var fields = colorChoiceFields();
+		var isLabel = 'label' === state.view;
+		var textColor = null;
+		var backgroundImg = stageEl.querySelector( '.yp-stage__background' );
+
+		fields.forEach( function ( field, index ) {
+			var value = colorChoiceValue( field );
+
+			if ( 'text' === field.target ) {
+				textColor = value;
+			}
+
+			if ( ! isLabel ) {
+				return;
+			}
+
+			if ( 'background' === field.target ) {
+				var fill = document.createElement( 'div' );
+				fill.className = 'yp-stage__color-fill';
+				fill.setAttribute( 'data-color-el', '' );
+				fill.style.background = value;
+				stageEl.insertBefore( fill, stageEl.firstChild );
+			} else if ( 'layer' === field.target && field.layer_url ) {
+				var layer = document.createElement( 'div' );
+				var mask = 'url("' + field.layer_url.replace( /"/g, '%22' ) + '")';
+				layer.className = 'yp-stage__color-layer';
+				layer.setAttribute( 'data-color-el', '' );
+				layer.style.background = value;
+				layer.style.webkitMaskImage = mask;
+				layer.style.maskImage = mask;
+				if ( backgroundImg && backgroundImg.nextSibling ) {
+					stageEl.insertBefore( layer, backgroundImg.nextSibling );
+				} else {
+					stageEl.appendChild( layer );
+				}
+			}
+
+			if ( hasColorDot( field ) ) {
+				var dot = document.createElement( 'span' );
+				dot.className = 'yp-stage__color-dot';
+				dot.setAttribute( 'data-color-el', '' );
+				dot.setAttribute( 'data-color-dot', field.id );
+				dot.setAttribute( 'aria-hidden', 'true' );
+				dot.style.left = field.position.x + '%';
+				dot.style.top = field.position.y + '%';
+				dot.innerHTML = ( index + 1 ) + '<i style="background:' + escapeHtml( value ) + '"></i>';
+				stageEl.appendChild( dot );
+			}
+		} );
+
+		// Text color wins over each field's own admin text color.
+		schema.field_schema.forEach( function ( field ) {
+			if ( 'text' !== field.type && 'textarea' !== field.type ) {
+				return;
+			}
+			var el = stageEl.querySelector( '.yp-stage__field[data-field-id="' + field.id + '"]' );
+			if ( el ) {
+				el.style.color = textColor || field.text_color || '#000000';
+			}
+		} );
 	}
 
 	/* ---------- Quantity ---------- */
@@ -853,7 +1124,7 @@
 	}
 
 	function variantSummaryLabel( variant ) {
-		var firstField = schema.field_schema[ 0 ];
+		var firstField = schema.field_schema.filter( function ( field ) { return 'color_choice' !== field.type; } )[ 0 ];
 		if ( ! firstField ) {
 			return '';
 		}
@@ -962,6 +1233,7 @@
 		// same no-fields path.
 		if ( 'vial' === state.view || livePreviewSuppressed ) {
 			overflowWarningEl.hidden = true;
+			applyStageColors();
 			return;
 		}
 
@@ -1033,6 +1305,7 @@
 			stageEl.appendChild( el );
 		} );
 
+		applyStageColors();
 		refitStageFields();
 	}
 

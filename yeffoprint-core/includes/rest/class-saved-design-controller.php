@@ -92,7 +92,7 @@ class YeffoPrint_Saved_Design_Controller {
 		// the customer intends to come back and complete later.
 		$variants = YeffoPrint_Field_Schema::sanitize_variants(
 			$request->get_param( 'variants' ),
-			YeffoPrint_Field_Schema::get( $template_id ),
+			YeffoPrint_Field_Schema::get_with_colors( $template_id ),
 			false
 		);
 		if ( is_wp_error( $variants ) ) {

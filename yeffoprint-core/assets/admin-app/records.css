@@ -1788,3 +1788,86 @@
 	background: var(--wp--preset--color--cyan);
 	box-shadow: 0 0 0 3px rgba(0, 174, 239, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
+
+/* ---------- Template editor: Color choices (views/templates.js) ---------- */
+
+.yp-color-choices__add {
+	width: 100%;
+	padding: 0.8rem;
+	border: 1.5px dashed #cfccc6;
+	border-radius: 14px;
+	background: transparent;
+	color: var(--wp--preset--color--cyan-deep, #0078a4);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.yp-color-choices__label {
+	margin: 0.2rem 0 0.4rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #3a3a3c;
+}
+
+.yp-color-choices__targets {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.yp-color-choices__target {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+	padding: 0.5rem 0.65rem;
+	border: 1.5px solid #e7e5e1;
+	border-radius: 10px;
+	background: #fff;
+	font: inherit;
+	font-size: 0.78rem;
+	color: #3a3a3c;
+	text-align: left;
+	cursor: pointer;
+}
+
+.yp-color-choices__target strong {
+	font-size: 0.82rem;
+	color: #141414;
+}
+
+.yp-color-choices__target.is-on {
+	border-color: #141414;
+	box-shadow: 0 0 0 1px #141414;
+}
+
+.yp-color-choices__layer {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 0.75rem;
+	padding: 0.5rem 0.65rem;
+	border-radius: 10px;
+	background: #f7f6f3;
+	font-size: 0.8rem;
+	color: #3a3a3c;
+}
+
+.yp-color-choices__layer img {
+	width: 72px;
+	height: 34px;
+	object-fit: contain;
+	background: repeating-conic-gradient(#e7e5e1 0 25%, #fff 0 50%) 0 0 / 10px 10px;
+	border-radius: 4px;
+}
+
+.yp-color-choices__wheel {
+	background: conic-gradient(#ff0040, #ffb300, #fff200, #27d17f, #00aeef, #5b3cff, #ec008c, #ff0040);
+}
+
+@media (max-width: 700px) {
+	.yp-color-choices__targets {
+		grid-template-columns: 1fr;
+	}
+}

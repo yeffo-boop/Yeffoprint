@@ -467,7 +467,7 @@ class YeffoPrint_Manual_Order_Creator {
 		update_post_meta(
 			$custom_order_id,
 			YeffoPrint_Custom_Order_Meta::TEMPLATE_FIELD_SCHEMA,
-			wp_json_encode( $group['template_id'] ? YeffoPrint_Field_Schema::get( $group['template_id'] ) : [] )
+			wp_json_encode( $group['template_id'] ? YeffoPrint_Field_Schema::get_with_colors( $group['template_id'] ) : [] )
 		);
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $group['instructions'] );
 	}
@@ -841,7 +841,7 @@ class YeffoPrint_Manual_Order_Creator {
 			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$variants = YeffoPrint_Field_Schema::sanitize_variants( $payload['variants'] ?? null, YeffoPrint_Field_Schema::get( $template_id ) );
+		$variants = YeffoPrint_Field_Schema::sanitize_variants( $payload['variants'] ?? null, YeffoPrint_Field_Schema::get_with_colors( $template_id ) );
 		if ( is_wp_error( $variants ) ) {
 			return $variants;
 		}
