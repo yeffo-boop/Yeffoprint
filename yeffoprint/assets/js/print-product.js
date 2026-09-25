@@ -24,6 +24,7 @@
 	var statusEl = root.querySelector( '[data-yp-status]' );
 	var addButton = root.querySelector( '[data-yp-add]' );
 	var sizesEl = root.querySelector( '[data-yp-sizes]' );
+	var sizeErrorEl = root.querySelector( '[data-yp-size-error]' );
 	var basePrice = parseFloat( root.getAttribute( 'data-yp-base-price' ) ) || 0;
 
 	function money( amount ) {
@@ -111,6 +112,10 @@
 
 	form.addEventListener( 'change', function () {
 		setStatus( '', false ); // A fresh pick clears an old "Pick a size." message.
+		if ( sizesEl && pickedSize() ) {
+			sizesEl.classList.remove( 'is-missing' );
+			sizeErrorEl.hidden = true;
+		}
 		update();
 	} );
 	qtyInput.addEventListener( 'input', update );
@@ -121,9 +126,14 @@
 		var colors = {};
 		var missing = '';
 
+		// The message sits right at the size picker, not only under the
+		// button: on a phone the scroll up to the sizes would otherwise
+		// hide it, and Add to Cart looks like it did nothing.
 		if ( sizesEl && ! pickedSize() ) {
 			setStatus( 'Pick a size.', true );
-			sizesEl.scrollIntoView( { block: 'nearest', behavior: 'smooth' } );
+			sizesEl.classList.add( 'is-missing' );
+			sizeErrorEl.hidden = false;
+			sizesEl.scrollIntoView( { block: 'center', behavior: 'smooth' } );
 			return;
 		}
 

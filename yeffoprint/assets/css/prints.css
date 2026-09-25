@@ -180,6 +180,17 @@
 	gap: 0.5rem;
 }
 
+.yp-print-sizes__error {
+	margin: 0 0 0.6rem;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-print-sizes.is-missing .yp-print-size span {
+	border-color: var(--wp--preset--color--magenta-deep);
+}
+
 .yp-print-size {
 	position: relative;
 	cursor: pointer;

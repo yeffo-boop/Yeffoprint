@@ -143,6 +143,7 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 						<?php // No size starts picked: the wrong one won't fit, so the customer chooses on purpose. ?>
 						<fieldset class="yp-print-sizes" data-yp-sizes>
 							<legend class="yp-print__section-title"><?php esc_html_e( 'Choose your size', 'yeffoprint' ); ?></legend>
+							<p class="yp-print-sizes__error" data-yp-size-error role="alert" hidden><?php esc_html_e( 'Pick your can size to add this to your cart.', 'yeffoprint' ); ?></p>
 							<div class="yp-print-sizes__options">
 								<?php foreach ( $sizes as $size ) : ?>
 									<label class="yp-print-size">
