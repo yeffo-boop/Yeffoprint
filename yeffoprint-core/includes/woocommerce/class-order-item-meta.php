@@ -145,6 +145,11 @@ class YeffoPrint_Order_Item_Meta {
 	 * defaulting to an empty/irrelevant admin session cart.
 	 */
 	public static function apply( \WC_Order_Item_Product $item, array $values, ?int $tier_quantity = null ): void {
+		if ( ! empty( $values[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
+			self::snapshot_print( $item, $values );
+			return;
+		}
+
 		$custom_order_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ?? 0 );
 
 		// Checked first, same reason as class-cart-pricing.php's
@@ -285,6 +290,40 @@ class YeffoPrint_Order_Item_Meta {
 		$item->add_meta_data( __( 'Quantity', 'yeffoprint-core' ), $quantity, true );
 		if ( '' !== $compound_strength ) {
 			$item->add_meta_data( __( 'Compound/Strength', 'yeffoprint-core' ), $compound_strength, true );
+		}
+	}
+
+	/**
+	 * A 3D print line: the item and every color pick frozen as JSON (so
+	 * a later rename or price change never rewrites a past order), plus
+	 * one readable "Part: Color" row each for the order screen and
+	 * emails — the exact list production prints from.
+	 */
+	private static function snapshot_print( \WC_Order_Item_Product $item, array $values ): void {
+		$print_id = (int) $values[ YeffoPrint_Cart_Item_Keys::PRINT_ID ];
+		$picks    = (array) ( $values[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] );
+
+		// Extra charges as priced right now (same live read as the cart's
+		// own price), not whatever they were when it was added.
+		foreach ( $picks as &$pick ) {
+			$pick['extra'] = (float) get_post_meta( (int) ( $pick['filament_id'] ?? 0 ), YeffoPrint_Print_Meta::EXTRA_CHARGE, true );
+		}
+		unset( $pick );
+
+		$item->add_meta_data( '_yp_print_snapshot', wp_json_encode( [
+			'id'         => $print_id,
+			'title'      => get_the_title( $print_id ),
+			'base_price' => (float) get_post_meta( $print_id, YeffoPrint_Print_Meta::PRICE, true ),
+			'unit_price' => YeffoPrint_Print_Meta::unit_price( $print_id, $picks ),
+			'colors'     => array_values( $picks ),
+		] ), true );
+
+		foreach ( $picks as $pick ) {
+			$label = (string) ( $pick['name'] ?? '' );
+			if ( ! empty( $pick['extra'] ) && (float) $pick['extra'] > 0 ) {
+				$label .= ' (+' . html_entity_decode( wp_strip_all_tags( wc_price( (float) $pick['extra'] ) ) ) . ')';
+			}
+			$item->add_meta_data( (string) ( $pick['slot'] ?? __( 'Color', 'yeffoprint-core' ) ), $label, true );
 		}
 	}
 
@@ -756,6 +795,7 @@ class YeffoPrint_Order_Item_Meta {
 			'_yp_shape',
 			'_yp_batch_row_index',
 			'_yp_compound_strength_snapshot',
+			'_yp_print_snapshot',
 		] );
 	}
 }

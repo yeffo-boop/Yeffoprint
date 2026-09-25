@@ -202,7 +202,7 @@ class YeffoPrint_Cart_Controller {
 			'cart_item_key' => $cart_item_key,
 			'cart_count'    => WC()->cart->get_cart_contents_count(),
 			'cart_total'    => wp_strip_all_tags( WC()->cart->get_cart_total() ),
-			'drawer_html'   => $this->render_drawer(),
+			'drawer_html'   => self::drawer_html(),
 		] );
 	}
 
@@ -212,7 +212,7 @@ class YeffoPrint_Cart_Controller {
 
 		return rest_ensure_response( [
 			'cart_count'  => function_exists( 'WC' ) && WC()->cart ? WC()->cart->get_cart_contents_count() : 0,
-			'drawer_html' => $this->render_drawer(),
+			'drawer_html' => self::drawer_html(),
 		] );
 	}
 
@@ -236,18 +236,24 @@ class YeffoPrint_Cart_Controller {
 		] );
 	}
 
-	private function render_drawer(): string {
+	/** Public so other add-to-cart endpoints (class-print-controller.php) can answer with the same drawer payload. */
+	public static function drawer_html(): string {
 		if ( ! function_exists( 'WC' ) || ! WC()->cart || WC()->cart->is_empty() ) {
 			return '<p>' . esc_html__( 'Your cart is empty.', 'yeffoprint-core' ) . '</p>';
 		}
 
 		ob_start();
 		foreach ( WC()->cart->get_cart() as $cart_item_key => $cart_item ) {
+			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
+				self::render_print_drawer_item( $cart_item );
+				continue;
+			}
+
 			if ( empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
 				continue;
 			}
 
-			$this->render_drawer_item( $cart_item_key, $cart_item );
+			self::render_drawer_item( $cart_item_key, $cart_item );
 		}
 		?>
 		<p class="yp-cart-drawer__total">
@@ -262,7 +268,7 @@ class YeffoPrint_Cart_Controller {
 		return ob_get_clean();
 	}
 
-	private function render_drawer_item( string $cart_item_key, array $cart_item ): void {
+	private static function render_drawer_item( string $cart_item_key, array $cart_item ): void {
 		$template_id = (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ];
 		$size        = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::SIZE_ID ] ?? 0 );
 		$material    = get_post( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 );
@@ -304,6 +310,34 @@ class YeffoPrint_Cart_Controller {
 				<?php if ( $edit_url ) : ?>
 					<a href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit customization', 'yeffoprint-core' ); ?></a>
 				<?php endif; ?>
+			</div>
+		</div>
+		<?php
+	}
+
+	/** A 3D print line: photo, name, one "Part: Color" line per color choice, quantity and price. */
+	private static function render_print_drawer_item( array $cart_item ): void {
+		$print_id  = (int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ];
+		$picks     = (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] );
+		$quantity  = (int) $cart_item['quantity'];
+		$thumbnail = (string) get_the_post_thumbnail_url( $print_id, 'medium' );
+		?>
+		<div class="yp-cart-drawer__item">
+			<?php if ( $thumbnail ) : ?>
+				<img class="yp-cart-drawer__thumb" src="<?php echo esc_url( $thumbnail ); ?>" alt="" />
+			<?php endif; ?>
+			<div class="yp-cart-drawer__details">
+				<strong><?php echo esc_html( get_the_title( $print_id ) ); ?></strong>
+				<?php foreach ( $picks as $pick ) : ?>
+					<span><?php echo esc_html( ( $pick['slot'] ?? '' ) . ': ' . ( $pick['name'] ?? '' ) ); ?></span>
+				<?php endforeach; ?>
+				<span>
+					<?php
+					/* translators: %d: quantity */
+					echo esc_html( sprintf( __( 'Qty %d', 'yeffoprint-core' ), $quantity ) );
+					?>
+				</span>
+				<span class="yp-cart-drawer__price"><?php echo wp_kses_post( wc_price( $cart_item['data']->get_price() * $quantity ) ); ?></span>
 			</div>
 		</div>
 		<?php
