@@ -143,9 +143,13 @@ class YeffoPrint_Admin_Settings_Controller {
 	private function payload(): array {
 		$M = 'YeffoPrint_Admin_Menu';
 
-		$promo_themes = [];
+		$promo_themes        = [];
+		$promo_code_optional = [];
 		foreach ( YeffoPrint_Promo_Themes::all() as $slug => $theme ) {
 			$promo_themes[ $slug ] = $theme['label'];
+			if ( ! empty( $theme['code_optional'] ) ) {
+				$promo_code_optional[] = $slug;
+			}
 		}
 
 		$splash_image_id = (int) get_option( $M::SPLASH_IMAGE_ID_OPTION, 0 );
@@ -179,6 +183,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			'promo_enabled'              => (bool) get_option( $M::PROMO_ENABLED_OPTION, false ),
 			'promo_banners'              => $M::get_promo_banners(),
 			'promo_themes'               => $promo_themes,
+			'promo_code_optional'        => $promo_code_optional,
 			'contact_recipient_email'    => (string) get_option( $M::CONTACT_RECIPIENT_EMAIL_OPTION, $M::CONTACT_RECIPIENT_EMAIL_DEFAULT ),
 			'splash_enabled'             => (bool) get_option( $M::SPLASH_ENABLED_OPTION, false ),
 			'splash_image_id'            => $splash_image_id,
