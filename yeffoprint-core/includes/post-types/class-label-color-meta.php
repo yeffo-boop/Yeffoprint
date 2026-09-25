@@ -257,7 +257,10 @@ class YeffoPrint_Label_Color_Meta {
 				'x'          => isset( $choice['x'] ) && is_numeric( $choice['x'] ) ? max( 0.0, min( 100.0, (float) $choice['x'] ) ) : null,
 				'y'          => isset( $choice['y'] ) && is_numeric( $choice['y'] ) ? max( 0.0, min( 100.0, (float) $choice['y'] ) ) : null,
 				'colors'     => $colors,
-				'default_id' => in_array( $default, $colors, true ) ? $default : ( $colors[0] ?? 0 ),
+				// Offered colors are always the whole Label Colors list now
+				// (virtual_fields()); `colors`/`any_color` are kept only so
+				// older saved data still reads cleanly.
+				'default_id' => $default ?: ( $colors[0] ?? 0 ),
 				'any_color'  => ! empty( $choice['any_color'] ),
 			];
 		}
@@ -298,9 +301,10 @@ class YeffoPrint_Label_Color_Meta {
 
 	/**
 	 * A Template's color choices as customer-facing `color_choice`
-	 * fields. A choice with no usable colors is skipped (nothing to
-	 * pick), as is an "Artwork part" with no layer uploaded (nothing
-	 * to tint).
+	 * fields. Direct request: every choice offers the same set — every
+	 * active Label Color plus the Any color picker — so there's no
+	 * per-template color picking. An "Artwork part" with no layer
+	 * uploaded is skipped (nothing to tint).
 	 */
 	public static function virtual_fields( int $template_id ): array {
 		if ( 'yp_template' !== get_post_type( $template_id ) ) {
@@ -317,16 +321,9 @@ class YeffoPrint_Label_Color_Meta {
 		$used_ids   = [];
 
 		foreach ( $choices as $index => $choice ) {
-			$options = [];
-			foreach ( $choice['colors'] as $color_id ) {
-				if ( isset( $all_colors[ $color_id ] ) ) {
-					$options[] = [ 'name' => $all_colors[ $color_id ]['name'], 'hex' => $all_colors[ $color_id ]['hex'] ];
-				}
-			}
-
-			if ( ! $options && ! $choice['any_color'] ) {
-				continue;
-			}
+			$options = array_values( array_map( static function ( array $color ): array {
+				return [ 'name' => $color['name'], 'hex' => $color['hex'] ];
+			}, $all_colors ) );
 
 			$layer_url = '';
 			if ( 'layer' === $choice['target'] ) {
@@ -336,7 +333,7 @@ class YeffoPrint_Label_Color_Meta {
 				}
 			}
 
-			$default_hex = isset( $all_colors[ $choice['default_id'] ] ) && in_array( $choice['default_id'], $choice['colors'], true )
+			$default_hex = isset( $all_colors[ $choice['default_id'] ] )
 				? $all_colors[ $choice['default_id'] ]['hex']
 				: ( $options[0]['hex'] ?? '#141414' );
 
@@ -361,7 +358,7 @@ class YeffoPrint_Label_Color_Meta {
 				'hint'            => $choice['hint'],
 				'target'          => $choice['target'],
 				'layer_url'       => $layer_url,
-				'any_color'       => $choice['any_color'],
+				'any_color'       => true,
 				'options'         => $options,
 			] );
 		}

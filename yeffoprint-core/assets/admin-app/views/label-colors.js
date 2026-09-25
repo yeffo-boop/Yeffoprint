@@ -24,7 +24,7 @@
 		var allColors = [];
 
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Every color customers can pick for a label’s background, text or artwork parts. Each Template picks which of these it offers in its Color choices. A Draft color stops showing everywhere at once.</p>' +
+			'<p class="yp-app__intro">Every color customers can pick for a label’s background, text or artwork parts. Every Template’s color choices offer all of these, plus an Any color picker. A Draft color stops showing everywhere at once.</p>' +
 			'<div class="yp-list-toolbar">' +
 				'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search colors&hellip;" />' +
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-add>+ Add Color</button>' +

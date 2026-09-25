@@ -147,7 +147,7 @@
 		var active = choices.length ? 0 : -1;
 
 		container.innerHTML =
-			'<p class="yp-field__hint">Parts of this label the customer can recolor. Each one gets a numbered dot on the product page. Leave empty and the label prints exactly as designed. Background needs artwork with a see-through background (PNG or SVG); Artwork part needs its shape uploaded as its own layer, the same size as the artwork.</p>' +
+			'<p class="yp-field__hint">Parts of this label the customer can recolor. Each one gets a numbered dot on the product page. Every choice offers all your Label Colors plus an Any color picker. Leave empty and the label prints exactly as designed. Background needs artwork with a see-through background (PNG or SVG); Artwork part needs its shape uploaded as its own layer, the same size as the artwork.</p>' +
 			'<div class="yp-print-editor yp-color-choices">' +
 				'<div class="yp-print-editor__slots">' +
 					'<div data-yp-choices></div>' +
@@ -194,7 +194,6 @@
 			}
 
 			listEl.innerHTML = choices.map( function ( choice, i ) {
-				var offered = labelColors.filter( function ( c ) { return choice.colors.indexOf( c.id ) !== -1; } );
 				return (
 					'<div class="yp-print-slot' + ( i === active ? ' is-active' : '' ) + '" data-yp-choice="' + i + '">' +
 						'<div class="yp-print-slot__head">' +
@@ -215,19 +214,9 @@
 								'<button type="button" class="yp-row-action" data-yp-choice-layer>' + ( choice.layer_url ? 'Change layer' : 'Upload layer' ) + '</button>' +
 							'</div>'
 							: '' ) +
-						'<p class="yp-color-choices__label">Colors offered</p>' +
-						'<div class="yp-print-chips">' +
-							labelColors.map( function ( c ) {
-								var on = choice.colors.indexOf( c.id ) !== -1;
-								return '<button type="button" class="yp-print-chip' + ( on ? ' is-on' : '' ) + '" data-yp-choice-chip="' + c.id + '" aria-pressed="' + ( on ? 'true' : 'false' ) + '">' +
-									YP.filamentSwatch( hexOf( c ), 'matte', 18 ) + YP.escapeHtml( c.title.raw ) +
-								'</button>';
-							} ).join( '' ) +
-							'<button type="button" class="yp-print-chip' + ( choice.any_color ? ' is-on' : '' ) + '" data-yp-choice-any aria-pressed="' + ( choice.any_color ? 'true' : 'false' ) + '"><span class="yp-filament-dot yp-color-choices__wheel" style="width:18px;height:18px"></span>Any color</button>' +
-						'</div>' +
 						'<div class="yp-print-slot__foot">' +
 							'<label>Starts on <select data-yp-choice-default aria-label="Starting color">' +
-								offered.map( function ( c ) {
+								labelColors.map( function ( c ) {
 									return '<option value="' + c.id + '"' + ( choice.default_id === c.id ? ' selected' : '' ) + '>' + YP.escapeHtml( c.title.raw ) + '</option>';
 								} ).join( '' ) +
 							'</select></label>' +
@@ -337,28 +326,6 @@
 			var index = parseInt( card.getAttribute( 'data-yp-choice' ), 10 );
 			var choice = choices[ index ];
 			active = index;
-
-			var chip = event.target.closest( '[data-yp-choice-chip]' );
-			if ( chip ) {
-				var id = parseInt( chip.getAttribute( 'data-yp-choice-chip' ), 10 );
-				var at = choice.colors.indexOf( id );
-				if ( -1 === at ) {
-					choice.colors.push( id );
-				} else {
-					choice.colors.splice( at, 1 );
-				}
-				if ( choice.colors.indexOf( choice.default_id ) === -1 ) {
-					choice.default_id = choice.colors[ 0 ] || 0;
-				}
-				render();
-				return;
-			}
-
-			if ( event.target.closest( '[data-yp-choice-any]' ) ) {
-				choice.any_color = ! choice.any_color;
-				render();
-				return;
-			}
 
 			var targetButton = event.target.closest( '[data-yp-choice-target]' );
 			if ( targetButton ) {
