@@ -49,6 +49,13 @@
  * active type, the Shipping & billing panel is left out of render()
  * entirely rather than asking for a delivery address nothing will
  * ever ship to.
+ *
+ * Add to an existing order (#/manual-order/{id}) — direct request: "edit
+ * an order I made from my dashboard before it's been paid? Like if a
+ * customer wants to add something." Opened from the order window's Add
+ * items button. Same item pickers and pricing, but the Customer and
+ * Shipping panels are left out (the order already has both) and submit
+ * posts to /admin/manual-orders/{id}/items instead of creating an order.
  */
 
 ( function () {
@@ -127,7 +134,9 @@
 		web_design: 'Web Design Package'
 	};
 
-	YP.views[ 'manual-order' ] = function ( viewEl ) {
+	YP.views[ 'manual-order' ] = function ( viewEl, subId ) {
+		var addToOrderId = parseInt( subId, 10 ) || 0;
+
 		var emptyAddress = function () {
 			return { first_name: '', last_name: '', address_1: '', address_2: '', city: '', state: '', postcode: '', country: 'US', phone: '' };
 		};
@@ -137,6 +146,7 @@
 			options: null, // custom-orders/options — Custom Design's own sizes/materials.
 			stickerOptions: null, // custom-stickers/options — Custom Stickers' own sizes/materials/types/shapes.
 			webDesignPackages: null, // /wp/v2/yp_web_design_pkg — every published package, priced or not (see webDesignFieldsHtml()).
+			addToOrder: null, // GET /admin/order/{id} — only in "add to an existing order" mode (addToOrderId).
 			stickerUploads: [], // [{ name, id, error }] — same shape as the customer-facing form's own uploadedFiles.
 			selectedCustomer: null, // { id, display_name, email }
 			newCustomerMode: false,
@@ -165,12 +175,18 @@
 		Promise.all( [
 			YP.request( coreEndpoint( 'custom-orders/options' ) ),
 			YP.request( coreEndpoint( 'custom-stickers/options' ) ),
-			YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_web_design_pkg?context=edit&status=publish&per_page=100&orderby=menu_order&order=asc' )
+			YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_web_design_pkg?context=edit&status=publish&per_page=100&orderby=menu_order&order=asc' ),
+			addToOrderId ? YP.request( coreEndpoint( 'admin/order/' + addToOrderId ) ) : Promise.resolve( null )
 		] )
 			.then( function ( results ) {
 				state.options = results[ 0 ];
 				state.stickerOptions = results[ 1 ];
 				state.webDesignPackages = results[ 2 ];
+				state.addToOrder = results[ 3 ];
+				if ( state.addToOrder && ! state.addToOrder.editable ) {
+					viewEl.innerHTML = '<p class="yp-form__error">Order #' + YP.escapeHtml( String( state.addToOrder.number ) ) + ' has already been paid, so items can’t be added to it.</p>';
+					return;
+				}
 				render();
 			} )
 			.catch( function ( error ) {
@@ -187,21 +203,25 @@
 			// one *other*, physical item type is active alongside it (or
 			// instead of it).
 			var hasPhysicalItem = state.activeTypes.custom_design || state.activeTypes.sticker || state.activeTypes.template;
+			var adding          = state.addToOrder;
 
 			viewEl.innerHTML =
-				'<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' +
+				( adding
+					? '<p class="yp-app__intro">Adding items to <strong>Order #' + YP.escapeHtml( String( adding.number ) ) + '</strong>' + ( adding.customer_name ? ' for ' + YP.escapeHtml( adding.customer_name ) : '' ) + ' (currently $' + adding.total.toFixed( 2 ) + '). Its payment link stays the same and charges the new total. <a href="#/manual-order">Start a new order instead</a></p>'
+					: '<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' ) +
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Item types</h2></div>' +
 					'<div class="yp-form__actions">' + typeButtonsHtml + '</div>' +
 				'</div>' +
 
-				'<div class="yp-panel">' +
-					'<div class="yp-panel__head"><h2>Customer</h2></div>' +
-					'<div data-yp-customer-picker></div>' +
-				'</div>' +
+				( adding ? '' :
+					'<div class="yp-panel">' +
+						'<div class="yp-panel__head"><h2>Customer</h2></div>' +
+						'<div data-yp-customer-picker></div>' +
+					'</div>' ) +
 
-				( hasPhysicalItem ? shippingPanelHtml() : '' ) +
+				( hasPhysicalItem && ! adding ? shippingPanelHtml() : '' ) +
 
 				( state.activeTypes.custom_design ? customDesignFieldsHtml() : '' ) +
 				( state.activeTypes.sticker ? stickerFieldsHtml() : '' ) +
@@ -222,16 +242,18 @@
 						'<p class="yp-panel__hint">No design-fee line item gets added to the order — for a VIP customer or as goodwill. The customer still pays for the print run itself.</p>'
 						: '' ) +
 					'<div class="yp-field yp-field--checkbox">' +
-						'<input type="checkbox" id="yp-mo-send-invoice" checked />' +
-						'<label for="yp-mo-send-invoice">Email the customer their order details and a payment link</label>' +
+						'<input type="checkbox" id="yp-mo-send-invoice"' + ( adding ? '' : ' checked' ) + ' />' +
+						'<label for="yp-mo-send-invoice">' + ( adding ? 'Email the customer the updated order and payment link' : 'Email the customer their order details and a payment link' ) + '</label>' +
 					'</div>' +
 					'<p class="yp-panel__hint">Sent right away via WooCommerce’s own Order details email, with the order’s real payment link — skip this if you’re taking payment another way (over the phone, in person) instead.</p>' +
 				'</div>' +
 
 				'<div data-yp-submit-status></div>' +
-				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>Create Order</button>';
+				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>' + submitLabel() + '</button>';
 
-			renderCustomerPicker();
+			if ( ! adding ) {
+				renderCustomerPicker();
+			}
 			// Both are no-ops (via their own null-guards) when
 			// hasPhysicalItem left the shipping panel out of the markup
 			// above. render() rebuilds the panel's HTML from scratch (e.g.
@@ -1273,6 +1295,10 @@
 
 		/* ---------- Submit ---------- */
 
+		function submitLabel() {
+			return state.addToOrder ? 'Add to Order #' + YP.escapeHtml( String( state.addToOrder.number ) ) : 'Create Order';
+		}
+
 		function submit() {
 			var statusEl     = viewEl.querySelector( '[data-yp-submit-status]' );
 			var submitButton = viewEl.querySelector( '[data-yp-submit]' );
@@ -1282,7 +1308,7 @@
 			// active type below contributes its own nested key rather than
 			// this body being shaped around exactly one order_type.
 			var body = {
-				customer: customerPayload(),
+				customer: state.addToOrder ? null : customerPayload(),
 				requires_proof: viewEl.querySelector( '#yp-mo-requires-proof' ).checked,
 				send_invoice_email: viewEl.querySelector( '#yp-mo-send-invoice' ).checked
 			};
@@ -1326,7 +1352,7 @@
 			// (and its fields) simply isn't in the DOM when nothing physical
 			// is active, so there's nothing here to read.
 			var hasPhysicalItem = state.activeTypes.custom_design || state.activeTypes.sticker || state.activeTypes.template;
-			if ( hasPhysicalItem ) {
+			if ( hasPhysicalItem && ! state.addToOrder ) {
 				body.customer_provides_address = state.shipping.customerProvidesAddress;
 				readAddressState( 'ship' );
 				body.shipping_address = shippingAddressPayload( state.shipping.address );
@@ -1342,17 +1368,26 @@
 			}
 
 			submitButton.disabled = true;
-			submitButton.textContent = 'Creating…';
+			submitButton.textContent = state.addToOrder ? 'Adding…' : 'Creating…';
 			statusEl.innerHTML = '';
 
-			YP.request( coreEndpoint( 'admin/manual-orders' ), {
+			YP.request( coreEndpoint( state.addToOrder ? 'admin/manual-orders/' + state.addToOrder.id + '/items' : 'admin/manual-orders' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify( body )
 			} )
 				.then( function ( result ) {
 					submitButton.disabled = false;
-					submitButton.textContent = 'Create Order';
+					submitButton.innerHTML = submitLabel();
+
+					// Add-to-order mode: straight back to the updated order.
+					if ( state.addToOrder ) {
+						window.location.hash = '#/order-history';
+						if ( YP.openWcOrderDrawer ) {
+							YP.openWcOrderDrawer( result.order_id );
+						}
+						return;
+					}
 
 					// Opens this same app's own order drawer, not the classic
 					// WooCommerce edit screen (result.order_edit_url) — direct
@@ -1397,7 +1432,7 @@
 				} )
 				.catch( function ( error ) {
 					submitButton.disabled = false;
-					submitButton.textContent = 'Create Order';
+					submitButton.innerHTML = submitLabel();
 					statusEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
 				} );
 		}

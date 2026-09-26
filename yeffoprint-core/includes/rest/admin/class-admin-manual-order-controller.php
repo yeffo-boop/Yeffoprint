@@ -30,6 +30,23 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
+		// Direct request: "the ability to edit an order I made from my
+		// dashboard before it's been paid? Like if a customer wants to add
+		// something or I made a mistake." Both only work while the order
+		// is still waiting on payment (YeffoPrint_Manual_Order_Creator::
+		// is_editable()); the order keeps its pay link either way.
+		register_rest_route( self::NAMESPACE, '/admin/manual-orders/(?P<id>\d+)', [
+			'methods'             => \WP_REST_Server::EDITABLE,
+			'callback'            => [ $this, 'update_order' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/manual-orders/(?P<id>\d+)/items', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'add_items' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		// Custom Stickers has no public pricing-preview endpoint the way
 		// Custom Design does (class-custom-order-controller.php's
 		// /custom-orders/pricing-preview) — the storefront prices a
@@ -150,6 +167,63 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 				];
 			}, $result['custom_orders'] ),
 		] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function update_order( \WP_REST_Request $request ) {
+		$order = $this->existing_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$result = YeffoPrint_Manual_Order_Creator::update_unpaid( $order, $request->get_json_params() ?: [] );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return rest_ensure_response( $this->edited_payload( $result, [] ) );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function add_items( \WP_REST_Request $request ) {
+		$order = $this->existing_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$result = YeffoPrint_Manual_Order_Creator::add_items( $order, $request->get_json_params() ?: [] );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return rest_ensure_response( $this->edited_payload( $result['order'], $result['custom_orders'] ) );
+	}
+
+	/** @return \WC_Order|\WP_Error */
+	private function existing_order( int $order_id ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : false;
+		if ( ! $order instanceof \WC_Order ) {
+			return new \WP_Error( 'yeffoprint_order_not_found', __( 'That order could not be found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		return $order;
+	}
+
+	/** Same shape create_order() returns, so the screen can reuse its "done" message and pay link. */
+	private function edited_payload( \WC_Order $order, array $custom_orders ): array {
+		return [
+			'success'       => true,
+			'order_id'      => $order->get_id(),
+			'total'         => (float) $order->get_total(),
+			'payment_url'   => $order->get_checkout_payment_url(),
+			'custom_orders' => array_map( static function ( array $custom_order ) {
+				return [
+					'id'           => $custom_order['id'],
+					'order_type'   => $custom_order['order_type'],
+					'approval_url' => yeffoprint_core_proof_approval_url( $custom_order['id'] ),
+				];
+			}, $custom_orders ),
+		];
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */

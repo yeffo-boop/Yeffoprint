@@ -1116,6 +1116,9 @@
 				: ( order.shipping_address ? order.shipping_address.replace( /\n/g, '<br>' ) : '—' )
 		);
 		fieldsHtml += wcOrderField( 'Payment Method', YP.escapeHtml( order.payment_method_title || '—' ) );
+		if ( order.payment_url ) {
+			fieldsHtml += wcOrderField( 'Payment Link', '<input type="text" readonly onclick="this.select();" value="' + YP.escapeAttr( order.payment_url ) + '" style="width:100%;padding:0.3rem 0.5rem;font-family:var(--wp--preset--font-family--mono);font-size:0.75rem;border:1.5px solid var(--wp--preset--color--light-gray);border-radius:var(--wp--custom--radius--control);" />' );
+		}
 		fieldsHtml += wcOrderField( 'Date', order.date ? new Date( order.date ).toLocaleString() : '—' );
 		if ( order.customer_note ) {
 			fieldsHtml += wcOrderField( 'Customer Note', YP.escapeHtml( order.customer_note ).replace( /\n/g, '<br>' ) );
@@ -1151,11 +1154,17 @@
 			// scrolling past everything else.
 			customerNotesPanelHtml( order ) +
 
-			'<div class="yp-panel">' +
-				'<div class="yp-panel__head"><h2>Items</h2></div>' +
-				wcOrderItemsHtml( order.items ) +
-				'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
-				'<p class="yp-panel__hint">' + wcOrderRewardsLine( order.rewards ) + '</p>' +
+			'<div class="yp-panel" data-yp-items-panel>' +
+				'<div class="yp-panel__head"><h2>Items</h2>' +
+					( order.editable
+						? '<span><button type="button" class="yp-row-action" data-yp-edit-order>Edit order</button> <button type="button" class="yp-row-action" data-yp-add-items>Add items</button></span>'
+						: '' ) +
+				'</div>' +
+				'<div data-yp-items-view>' +
+					wcOrderItemsHtml( order.items ) +
+					'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
+					'<p class="yp-panel__hint">' + wcOrderRewardsLine( order.rewards ) + '</p>' +
+				'</div>' +
 			'</div>' +
 
 			webDesignPanelHtml( order ) +
@@ -1177,10 +1186,139 @@
 			}
 		}
 
+		bindOrderEditor( order, drawer, bodyEl );
 		bindShippoPanel( order, bodyEl );
 		bindCustomerNotesPanel( order, bodyEl );
 		bindRefundPanel( order, bodyEl, drawer );
 		loadWebDesignPanel( order, bodyEl );
+	}
+
+	/**
+	 * Direct request: "the ability to edit an order I made from my
+	 * dashboard before it's been paid? Like if a customer wants to add
+	 * something or I made a mistake before they actually pay." Only
+	 * offered while the order is still waiting on payment (order.editable,
+	 * YeffoPrint_Manual_Order_Creator::is_editable()). Edit order swaps the
+	 * Items table for price inputs, a Remove toggle per line, the shipping
+	 * choice and the customer note, saved in one request. Add items opens
+	 * the Create Order screen in "add to this order" mode
+	 * (#/manual-order/{id}), so new items get the exact same pickers and
+	 * pricing. The pay link never changes; it just charges the new total.
+	 */
+	function bindOrderEditor( order, drawer, bodyEl ) {
+		var editButton = bodyEl.querySelector( '[data-yp-edit-order]' );
+		var addButton  = bodyEl.querySelector( '[data-yp-add-items]' );
+		if ( ! editButton ) {
+			return;
+		}
+
+		addButton.addEventListener( 'click', function () {
+			YP.closeDrawer( drawer );
+			window.location.hash = '#/manual-order/' + order.id;
+		} );
+
+		editButton.addEventListener( 'click', function () {
+			editButton.hidden = true;
+			addButton.hidden  = true;
+			renderOrderEditor( order, drawer, bodyEl );
+		} );
+	}
+
+	function orderEditorShippingOptionsHtml( order ) {
+		var options = ( yeffoprintAdminApp.shippo && yeffoprintAdminApp.shippo.manualOrderShippingOptions ) || [];
+		var home    = ( yeffoprintAdminApp.shippo && yeffoprintAdminApp.shippo.domesticCountry ) || 'US';
+		var country = String( order.shipping_country || '' ).toUpperCase();
+		var current = order.customer_picks_shipping
+			? 'Customer picks when they pay' + ( order.shipping_lines.length ? ' (picked ' + order.shipping_lines[ 0 ].title + ')' : '' )
+			: ( order.shipping_lines.length
+				? order.shipping_lines.map( function ( line ) { return line.title + ' — $' + line.amount.toFixed( 2 ); } ).join( ', ' )
+				: 'No shipping charge' );
+
+		return (
+			'<option value="keep" selected>Keep: ' + YP.escapeHtml( current ) + '</option>' +
+			'<option value="customer">Customer picks when they pay</option>' +
+			'<option value="none">No shipping charge</option>' +
+			options.map( function ( option ) {
+				// Same "Ships to" rule as the Create Order screen's own
+				// shippingOptionFits().
+				if ( country && option.region && 'any' !== option.region && ( country === home ) !== ( 'domestic' === option.region ) ) {
+					return '';
+				}
+				return '<option value="' + YP.escapeAttr( option.label ) + '">' + YP.escapeHtml( option.label ) + ' — $' + option.amount.toFixed( 2 ) + '</option>';
+			} ).join( '' )
+		);
+	}
+
+	function renderOrderEditor( order, drawer, bodyEl ) {
+		var viewEl = bodyEl.querySelector( '[data-yp-items-view]' );
+
+		viewEl.innerHTML =
+			'<p class="yp-panel__hint">Change a price or remove an item. To change a quantity, remove the item and use Add items to add it again. The customer’s payment link stays the same and charges the new total.</p>' +
+			'<table class="yp-record-table yp-record-table--top"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>' +
+				order.items.map( function ( item ) {
+					return (
+						'<tr data-yp-edit-item="' + item.id + '">' +
+							'<td>' + YP.escapeHtml( item.name ) + '</td>' +
+							'<td>' + item.quantity + '</td>' +
+							'<td><input type="number" step="0.01" min="0" style="width:7rem;" data-yp-edit-total value="' + item.total.toFixed( 2 ) + '" /></td>' +
+							'<td><label style="white-space:nowrap;"><input type="checkbox" data-yp-edit-remove /> Remove</label></td>' +
+						'</tr>'
+					);
+				} ).join( '' ) +
+			'</tbody></table>' +
+			'<div class="yp-field"><label for="yp-edit-shipping">Shipping</label><select id="yp-edit-shipping" data-yp-edit-shipping>' + orderEditorShippingOptionsHtml( order ) + '</select></div>' +
+			'<div class="yp-field"><label for="yp-edit-note">Note to customer</label><textarea id="yp-edit-note" rows="2" data-yp-edit-note>' + YP.escapeHtml( order.customer_note || '' ) + '</textarea></div>' +
+			'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-edit-send-invoice" data-yp-edit-send-invoice /><label for="yp-edit-send-invoice">Email the customer the updated order and payment link</label></div>' +
+			'<div data-yp-edit-error></div>' +
+			'<div class="yp-form__actions">' +
+				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-edit-save>Save changes</button>' +
+				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-edit-cancel>Cancel</button>' +
+			'</div>';
+
+		viewEl.querySelectorAll( '[data-yp-edit-remove]' ).forEach( function ( box ) {
+			box.addEventListener( 'change', function () {
+				var row = box.closest( 'tr' );
+				row.style.opacity = box.checked ? '0.45' : '';
+				row.querySelector( '[data-yp-edit-total]' ).disabled = box.checked;
+			} );
+		} );
+
+		viewEl.querySelector( '[data-yp-edit-cancel]' ).addEventListener( 'click', function () {
+			renderWcOrderDetail( order, drawer, bodyEl );
+		} );
+
+		viewEl.querySelector( '[data-yp-edit-save]' ).addEventListener( 'click', function () {
+			var saveButton = viewEl.querySelector( '[data-yp-edit-save]' );
+			var errorEl    = viewEl.querySelector( '[data-yp-edit-error]' );
+			var body = {
+				items: Array.prototype.map.call( viewEl.querySelectorAll( '[data-yp-edit-item]' ), function ( row ) {
+					return {
+						id: parseInt( row.getAttribute( 'data-yp-edit-item' ), 10 ),
+						total: row.querySelector( '[data-yp-edit-total]' ).value,
+						remove: row.querySelector( '[data-yp-edit-remove]' ).checked
+					};
+				} ),
+				shipping: viewEl.querySelector( '[data-yp-edit-shipping]' ).value,
+				customer_note: viewEl.querySelector( '[data-yp-edit-note]' ).value,
+				send_invoice_email: viewEl.querySelector( '[data-yp-edit-send-invoice]' ).checked
+			};
+
+			saveButton.disabled = true;
+			saveButton.textContent = 'Saving…';
+			errorEl.innerHTML = '';
+
+			YP.request( yeffoprintAdminApp.restUrl + 'admin/manual-orders/' + order.id, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( body )
+			} )
+				.then( function () { loadWcOrderDetail( order.id, drawer ); } )
+				.catch( function ( error ) {
+					saveButton.disabled = false;
+					saveButton.textContent = 'Save changes';
+					errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
+		} );
 	}
 
 	/**
