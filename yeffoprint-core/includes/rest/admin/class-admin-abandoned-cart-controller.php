@@ -81,6 +81,11 @@ class YeffoPrint_Admin_Abandoned_Cart_Controller {
 		}
 
 		YeffoPrint_Abandoned_Carts::send_stage( $row, $stage );
+
+		$after = YeffoPrint_Abandoned_Carts::get_row( (int) $row['id'] );
+		if ( $after && YeffoPrint_Abandoned_Carts::STATUS_ORDERED === $after['status'] ) {
+			return new \WP_Error( 'yeffoprint_abandoned_cart_ordered', __( 'Not sent: this customer has placed an order since leaving this cart.', 'yeffoprint-core' ), [ 'status' => 409 ] );
+		}
 		return rest_ensure_response( [ 'ok' => true, 'stage' => $stage ] );
 	}
 }

@@ -34,7 +34,11 @@
  * Stopping: the row closes the moment an order from that cart (or any
  * order from that email) is paid, when the shopper taps "Don't remind
  * me again" (which also opts that email out for good), when the owner
- * taps Don't send, or on its own once both reminders are out. Paused
+ * taps Don't send, when any other order for that customer shows up
+ * after the cart was left — paid or not, e.g. a pay-link order the
+ * owner built from their custom design request, which would otherwise
+ * get reminders (and a code) for the stale cart it replaced — or on its
+ * own once both reminders are out. Paused
  * while Away Mode is on, and never sends for a cart left more than
  * STALE_DAYS ago, so turning recovery on (or coming back from Away
  * Mode) never mass-mails old carts.
@@ -61,6 +65,7 @@ class YeffoPrint_Abandoned_Carts {
 	const STATUS_PURCHASED = 'purchased';  // Paid before any reminder went out — never really abandoned.
 	const STATUS_OPTED_OUT = 'opted_out';
 	const STATUS_STOPPED   = 'stopped';    // Owner tapped Don't send.
+	const STATUS_ORDERED   = 'ordered';    // Another order for this customer was placed after the cart was left.
 
 	private const DB_VERSION        = '1.0';
 	private const DB_VERSION_OPTION = 'yeffoprint_abandoned_cart_db_version';
@@ -85,6 +90,9 @@ class YeffoPrint_Abandoned_Carts {
 
 	/** On Hold counts: a Venmo/Zelle order waits there until the owner confirms payment. */
 	private const PAID_STATUSES = [ 'processing', 'on-hold', 'completed', 'in-production', 'shipped', 'delivered' ];
+
+	/** Orders in these states don't count as "they already ordered". */
+	private const NOT_ORDERED_STATUSES = [ 'checkout-draft', 'failed', 'cancelled', 'refunded', 'trash' ];
 
 	/** Recalculating totals fires woocommerce_cart_updated again. */
 	private static bool $refreshing = false;
@@ -378,7 +386,8 @@ class YeffoPrint_Abandoned_Carts {
 	 * @return array<int, array{name:string, detail:string, quantity:string, total:float, image:string}>
 	 */
 	private static function summarize( \WC_Cart $cart ): array {
-		$lines = [];
+		$fee_id = YeffoPrint_Custom_Design_Fee_Product::get_existing_product_id();
+		$lines  = [];
 		foreach ( $cart->get_cart() as $item ) {
 			$product     = $item['data'] ?? null;
 			$template_id = (int) ( $item[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
@@ -388,9 +397,12 @@ class YeffoPrint_Abandoned_Carts {
 
 			$name = $template_id ? get_the_title( $template_id ) : ( $product instanceof \WC_Product ? $product->get_name() : '' );
 
+			// Compound/strength tells apart lines that are otherwise the
+			// same size and material (one per vial in a custom batch).
 			$detail = array_filter( [
 				$size_id ? get_the_title( $size_id ) : '',
 				$material_id ? get_the_title( $material_id ) : '',
+				(string) ( $item[ YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH ] ?? '' ),
 			] );
 
 			$image = $template_id ? (string) get_the_post_thumbnail_url( $template_id, 'medium' ) : '';
@@ -411,6 +423,7 @@ class YeffoPrint_Abandoned_Carts {
 				'quantity' => $quantity,
 				'total'    => round( (float) ( $item['line_total'] ?? 0 ) + (float) ( $item['line_tax'] ?? 0 ), 2 ),
 				'image'    => $image,
+				'is_fee'   => $product instanceof \WC_Product && $fee_id && (int) $product->get_id() === $fee_id,
 			];
 		}
 		return $lines;
@@ -662,6 +675,68 @@ class YeffoPrint_Abandoned_Carts {
 		}
 	}
 
+	/**
+	 * Any order for this customer (by email, or account when signed in)
+	 * created after the cart was left, other than the cart's own checkout
+	 * order — that one keeps getting reminders, which send them to its pay
+	 * link. Catches orders that never went through this cart: a pay link
+	 * the owner built by hand, or one placed on another device.
+	 */
+	private static function order_placed_since( array $row ): ?\WC_Order {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return null;
+		}
+
+		$statuses = array_diff(
+			array_map( static function ( string $status ): string {
+				return 0 === strpos( $status, 'wc-' ) ? substr( $status, 3 ) : $status;
+			}, array_keys( wc_get_order_statuses() ) ),
+			self::NOT_ORDERED_STATUSES
+		);
+
+		$base = [
+			'type'         => 'shop_order',
+			'status'       => array_values( $statuses ),
+			'date_created' => '>=' . self::ts( $row['created_at'] ),
+			'orderby'      => 'date',
+			'order'        => 'ASC',
+			'limit'        => 5,
+		];
+
+		$queries = [ array_merge( $base, [ 'billing_email' => $row['email'] ] ) ];
+		if ( (int) $row['user_id'] ) {
+			$queries[] = array_merge( $base, [ 'customer_id' => (int) $row['user_id'] ] );
+		}
+
+		foreach ( $queries as $query ) {
+			foreach ( wc_get_orders( $query ) as $order ) {
+				if ( ! $order instanceof \WC_Order ) {
+					continue;
+				}
+				if ( (int) $order->get_id() === (int) $row['order_id'] || (int) $order->get_meta( self::ORDER_META ) === (int) $row['id'] ) {
+					continue;
+				}
+				return $order;
+			}
+		}
+		return null;
+	}
+
+	/** Closes an open row when the customer has since ordered; returns that order. */
+	private static function close_if_ordered( array $row ): ?\WC_Order {
+		$order = self::order_placed_since( $row );
+		if ( ! $order ) {
+			return null;
+		}
+
+		self::update_row( (int) $row['id'], [
+			'status'    => self::STATUS_ORDERED,
+			'order_id'  => $order->get_id(),
+			'closed_at' => self::now(),
+		] );
+		return $order;
+	}
+
 	/* ---------- Sweep ---------- */
 
 	public function ensure_scheduled(): void {
@@ -707,6 +782,10 @@ class YeffoPrint_Abandoned_Carts {
 				continue;
 			}
 
+			if ( self::close_if_ordered( $row ) ) {
+				continue;
+			}
+
 			if ( 0 === (int) $row['stage'] ) {
 				if ( $settings['owner_alerts'] && ! $row['owner_alerted_at'] && $idle >= $delay1 - self::OWNER_HEADS_UP ) {
 					self::alert_owner( $row );
@@ -730,6 +809,9 @@ class YeffoPrint_Abandoned_Carts {
 	public static function send_stage( array $row, int $stage ): bool {
 		$row = self::get_row( (int) $row['id'] );
 		if ( ! $row || self::STATUS_OPEN !== $row['status'] || (int) $row['stage'] >= $stage || self::is_opted_out( $row['email'] ) ) {
+			return false;
+		}
+		if ( self::close_if_ordered( $row ) ) {
 			return false;
 		}
 
@@ -780,7 +862,15 @@ class YeffoPrint_Abandoned_Carts {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-email-abandoned-cart.php';
 
 		$lines    = json_decode( (string) $row['summary'], true ) ?: [];
-		$first    = $lines[0]['name'] ?? '';
+		// The design fee rides along with a custom design, so it's never
+		// what the order is "for". Older rows have no is_fee flag.
+		$first = '';
+		foreach ( $lines as $line ) {
+			if ( empty( $line['is_fee'] ) && __( 'Custom Design Fee', 'yeffoprint-core' ) !== ( $line['name'] ?? '' ) ) {
+				$first = (string) $line['name'];
+				break;
+			}
+		}
 		$discount = 2 === $stage && '' !== $row['coupon_code'];
 		$percent  = rtrim( rtrim( number_format( $settings['discount_percent'], 2 ), '0' ), '.' );
 
@@ -969,6 +1059,14 @@ class YeffoPrint_Abandoned_Carts {
 			return __( 'Already handled.', 'yeffoprint-core' );
 		}
 
+		if ( 'ac_stop' !== $action ) {
+			$placed = self::close_if_ordered( $row );
+			if ( $placed ) {
+				/* translators: %s: order number */
+				return sprintf( __( 'Not sent: they already have order #%s.', 'yeffoprint-core' ), $placed->get_order_number() );
+			}
+		}
+
 		switch ( $action ) {
 			case 'ac_stop':
 				self::stop( $row_id );
@@ -1002,7 +1100,8 @@ class YeffoPrint_Abandoned_Carts {
 
 		// "Purchased" rows paid before any reminder — they were never
 		// really abandoned, so they're left out of the list and the stats.
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE created_at >= %s AND status <> %s ORDER BY updated_at DESC LIMIT 200", $since, self::STATUS_PURCHASED ), ARRAY_A ) ?: []; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// Same for "ordered" rows closed before any reminder went out.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE created_at >= %s AND status <> %s AND NOT ( status = %s AND stage = 0 ) ORDER BY updated_at DESC LIMIT 200", $since, self::STATUS_PURCHASED, self::STATUS_ORDERED ), ARRAY_A ) ?: []; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$delay1 = self::settings()['delay1_minutes'] * MINUTE_IN_SECONDS;
 		$left   = array_values( array_filter( $rows, static function ( array $row ) use ( $delay1 ): bool {
