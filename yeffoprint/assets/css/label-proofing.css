@@ -1,0 +1,183 @@
+/*
+ * Compound spell-check and the "I've double-checked my label details"
+ * confirmation (assets/js/label-proofing.js), shared by the Template
+ * page, the custom label form and the Label Designer.
+ */
+
+/* ---------- Compound spell-check ---------- */
+
+.yp-compound-check__input--ask {
+	border-color: #e8a33d !important;
+	box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.18);
+}
+
+.yp-compound-check {
+	margin-top: 0.5rem;
+	font-size: 0.8125rem;
+	line-height: 1.4;
+}
+
+.yp-compound-check.is-asking {
+	background: #fff7ea;
+	border: 1px solid #f3d9ae;
+	border-radius: 10px;
+	padding: 0.625rem 0.75rem;
+	font-size: 0.875rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-compound-check.is-good {
+	color: #1f7a4d;
+}
+
+.yp-compound-check.is-kept {
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-compound-check__q {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+}
+
+.yp-compound-check__icon {
+	flex: none;
+	width: 18px;
+	height: 18px;
+	margin-top: 1px;
+	border-radius: 50%;
+	background: #e8a33d;
+	color: #fff;
+	font-size: 0.75rem;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.yp-compound-check__q strong {
+	font-weight: 700;
+}
+
+.yp-compound-check__why {
+	display: block;
+	margin-top: 2px;
+	font-size: 0.8125rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-compound-check__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.5rem 0 0 1.625rem;
+}
+
+.yp-compound-check__actions button {
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	line-height: 1.2;
+	border-radius: 8px;
+	padding: 0.4rem 0.75rem;
+	cursor: pointer;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	background: #fff;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-compound-check__actions .yp-compound-check__use {
+	background: var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black);
+	color: #fff;
+}
+
+.yp-compound-check__actions button:focus-visible {
+	outline: 2px solid var(--wp--preset--color--cyan-deep);
+	outline-offset: 2px;
+}
+
+/* ---------- Confirmation checkbox ---------- */
+
+.yp-proof-confirm {
+	background: #fff;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: 14px;
+	padding: 0.875rem 1rem;
+	margin: 1rem 0;
+	text-align: left;
+}
+
+.yp-proof-confirm.is-checked {
+	border-color: #1f7a4d;
+}
+
+.yp-proof-confirm.is-error {
+	border-color: #d64545;
+	box-shadow: 0 0 0 3px rgba(214, 69, 69, 0.12);
+}
+
+.yp-proof-confirm__recap {
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal);
+	padding-bottom: 0.75rem;
+	margin-bottom: 0.75rem;
+	border-bottom: 1px dashed var(--wp--preset--color--light-gray);
+	overflow-wrap: anywhere;
+}
+
+.yp-proof-confirm__recap-label {
+	display: block;
+	margin-bottom: 0.25rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-proof-confirm__check {
+	display: flex;
+	gap: 0.75rem;
+	align-items: flex-start;
+	cursor: pointer;
+	margin: 0;
+	font-weight: 400;
+}
+
+.yp-proof-confirm__check input[type="checkbox"] {
+	flex: none;
+	width: 22px;
+	height: 22px;
+	margin: 1px 0 0;
+	accent-color: #1f7a4d;
+	cursor: pointer;
+}
+
+.yp-proof-confirm__check strong {
+	display: block;
+	font-size: 0.9375rem;
+	margin-bottom: 0.2rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-proof-confirm__text {
+	display: block;
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-proof-confirm__error {
+	margin: 0.625rem 0 0 2.125rem;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: #b42318;
+}
+
+/* Dimmed, not disabled: a click still lands, and points the customer
+   at the box instead of doing nothing. */
+.yp-needs-confirm {
+	opacity: 0.55;
+}

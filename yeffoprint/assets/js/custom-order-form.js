@@ -295,6 +295,9 @@
 			compoundInput.addEventListener( 'input', function () {
 				row.compound_strength = compoundInput.value;
 			} );
+			if ( window.YPLabelProofing ) {
+				window.YPLabelProofing.attachSpellCheck( compoundInput, { anchor: compoundInput.closest( '.yp-field' ) } );
+			}
 
 			renderRowQuantity( row, rowEl.querySelector( '[data-row-quantity]' ) );
 		} );
@@ -1378,6 +1381,27 @@
 		}
 	}
 
+	// Required "I've double-checked my label details" box, just above
+	// Continue to Payment (assets/js/label-proofing.js).
+	var proofConfirm = null;
+	if ( window.YPLabelProofing ) {
+		var proofConfirmEl = document.createElement( 'div' );
+		submitButton.parentNode.insertAdjacentElement( 'beforebegin', proofConfirmEl );
+		proofConfirm = window.YPLabelProofing.mountConfirm( proofConfirmEl, {
+			text: window.YPLabelProofing.CUSTOM_TEXT,
+			getRecap: function () {
+				var brand = document.getElementById( 'yp-co-brand' ).value.trim();
+				var details = batchRows.map( function ( row ) {
+					return String( row.compound_strength || '' ).trim();
+				} ).filter( Boolean );
+				return [ brand ].concat( details );
+			},
+			watch: form,
+			buttons: [ submitButton ],
+			actionLabel: 'continuing to payment'
+		} );
+	}
+
 	form.addEventListener( 'submit', function ( event ) {
 		event.preventDefault();
 		clearFormError();
@@ -1410,6 +1434,10 @@
 				showFormError( 'Please choose which past design to reorder.' );
 				return;
 			}
+		}
+
+		if ( proofConfirm && ! proofConfirm.require() ) {
+			return;
 		}
 
 		submitButton.disabled = true;

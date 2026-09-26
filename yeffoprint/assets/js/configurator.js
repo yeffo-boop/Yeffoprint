@@ -286,6 +286,7 @@
 		renderVariantCards();
 		renderStage();
 		renderSummary();
+		mountProofConfirm();
 
 		setupStickyBar();
 
@@ -736,7 +737,57 @@
 			} );
 		} );
 
+		attachCompoundCheck();
 		syncFieldValuesToActiveVariant();
+	}
+
+	/* ---------- Proofing (assets/js/label-proofing.js) ---------- */
+
+	var compoundCheck = null;
+	var proofConfirm = null;
+
+	/** The shared field set's Compound Name (found by its label, like doseNotesField()). */
+	function compoundField() {
+		return schema.field_schema.filter( function ( field ) {
+			return 'text' === field.type && /compound/i.test( field.label );
+		} )[ 0 ];
+	}
+
+	function attachCompoundCheck() {
+		var field = compoundField();
+		var input = field && window.YPLabelProofing ? fieldInputsEl.querySelector( '[data-field-id="' + field.id + '"]' ) : null;
+		compoundCheck = input ? window.YPLabelProofing.attachSpellCheck( input, { anchor: input.closest( '.yp-field' ) } ) : null;
+	}
+
+	/** One "We'll print" line per batch label: its text fields, in order. */
+	function proofRecapLines() {
+		var textFields = schema.field_schema.filter( function ( field ) {
+			return 'text' === field.type || 'textarea' === field.type;
+		} );
+		var lines = state.variants.map( function ( variant ) {
+			return textFields.map( function ( field ) {
+				return String( variant.values[ field.id ] || '' ).trim();
+			} ).filter( Boolean ).join( ' · ' );
+		} );
+
+		return lines.length > 1
+			? lines.map( function ( line, index ) { return 'Label ' + ( index + 1 ) + ': ' + ( line || '(blank)' ); } )
+			: lines;
+	}
+
+	function mountProofConfirm() {
+		if ( ! window.YPLabelProofing || proofConfirm ) {
+			return;
+		}
+		var el = document.createElement( 'div' );
+		summaryEl.insertAdjacentElement( 'beforebegin', el );
+		proofConfirm = window.YPLabelProofing.mountConfirm( el, {
+			text: window.YPLabelProofing.TEMPLATE_TEXT,
+			getRecap: proofRecapLines,
+			watch: root,
+			buttons: addToCartButtons,
+			actionLabel: 'adding to cart'
+		} );
 	}
 
 	function syncCornerStyleGroup( group, fieldId ) {
@@ -790,6 +841,10 @@
 		// redraws the size cards' corners to match.
 		if ( sizeOptionsEl.childElementCount ) {
 			renderSizeOptions();
+		}
+
+		if ( compoundCheck ) {
+			compoundCheck.refresh();
 		}
 	}
 
@@ -1731,6 +1786,10 @@
 				customSizeEl.scrollIntoView( { behavior: 'smooth', block: 'center' } );
 				customSizeEl.querySelector( parseFloat( state.customWidthIn ) >= 0.25 ? '[data-yp-custom-height]' : '[data-yp-custom-width]' ).focus( { preventScroll: true } );
 			}
+			return;
+		}
+
+		if ( proofConfirm && ! proofConfirm.require() ) {
 			return;
 		}
 

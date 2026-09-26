@@ -79,6 +79,36 @@ function yeffoprint_register_label_pickers(): void {
 }
 
 /**
+ * Compound spell-check + the required "I've double-checked my label
+ * details" box (assets/js/label-proofing.js + assets/css/label-
+ * proofing.css), used by the Template page's configurator and the
+ * custom label form (and the Label Designer it lazy-loads). The
+ * Compound List comes from the plugin (Catalog → Compound List).
+ */
+function yeffoprint_register_label_proofing(): void {
+	wp_enqueue_style(
+		'yeffoprint-label-proofing',
+		get_theme_file_uri( 'assets/css/label-proofing.css' ),
+		[ 'yeffoprint-global' ],
+		yeffoprint_asset_version( 'assets/css/label-proofing.css' )
+	);
+
+	wp_register_script(
+		'yeffoprint-label-proofing',
+		get_theme_file_uri( 'assets/js/label-proofing.js' ),
+		[],
+		yeffoprint_asset_version( 'assets/js/label-proofing.js' ),
+		[ 'strategy' => 'defer' ]
+	);
+
+	wp_localize_script(
+		'yeffoprint-label-proofing',
+		'yeffoprintLabelProofing',
+		class_exists( 'YeffoPrint_Compound_List' ) ? YeffoPrint_Compound_List::storefront_payload() : [ 'enabled' => false, 'compounds' => [] ]
+	);
+}
+
+/**
  * The Reconstitution Calculator page's URL, or '' while that page
  * doesn't exist yet — the configurator's and Label Designer's
  * reconstitution/dose tip links to it, and simply drops the link
@@ -274,11 +304,12 @@ add_action( 'wp_enqueue_scripts', function () {
 		);
 
 		yeffoprint_register_label_pickers();
+		yeffoprint_register_label_proofing();
 
 		wp_enqueue_script(
 			'yeffoprint-configurator',
 			get_theme_file_uri( 'assets/js/configurator.js' ),
-			[ 'yeffoprint-label-pickers' ],
+			[ 'yeffoprint-label-pickers', 'yeffoprint-label-proofing' ],
 			yeffoprint_asset_version( 'assets/js/configurator.js' ),
 			[ 'strategy' => 'defer' ]
 		);
@@ -411,11 +442,12 @@ add_action( 'wp_enqueue_scripts', function () {
 		);
 
 		yeffoprint_register_label_pickers();
+		yeffoprint_register_label_proofing();
 
 		wp_enqueue_script(
 			'yeffoprint-custom-order-form',
 			get_theme_file_uri( 'assets/js/custom-order-form.js' ),
-			[ 'yeffoprint-label-pickers' ],
+			[ 'yeffoprint-label-pickers', 'yeffoprint-label-proofing' ],
 			yeffoprint_asset_version( 'assets/js/custom-order-form.js' ),
 			[ 'strategy' => 'defer' ]
 		);

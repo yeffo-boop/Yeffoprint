@@ -46,6 +46,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/pricing/class-pricing-rule.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/pricing/class-sticker-pricing.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/configurator/quantity-presets.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/configurator/class-compound-list.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/api/template-api.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-template-schema-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-pricing-controller.php';
@@ -228,6 +229,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Dashboard_Controller();
 		new YeffoPrint_Admin_Settings_Controller();
 		new YeffoPrint_Admin_Surcharge_Controller();
+		new YeffoPrint_Compound_List();
 		new YeffoPrint_Admin_Rewards_Controller();
 		new YeffoPrint_Admin_Manual_Order_Controller();
 		new YeffoPrint_Custom_Order_Meta();

@@ -2406,3 +2406,11 @@ Verify: add colors under Filament Colors, add a 3D Print with a photo and 2+ col
 - **Switch-over:** on the first request after deploy, `maybe_setup()` seeds the 8 old Color-field dots as Label Colors and removes the `color`-type field from the shared Label Fields set (Jeff: "Replace it"). Past orders keep their Color from their frozen schema.
 
 Verify: Templates → edit one → Color choices → add Background and Text, place dots, save → its page shows the steps and dots, and picking recolors the preview; Add to Cart → cart and order show "Background: Navy — Text: White".
+
+## Label proofing (direct request: a compound-name spell-check and a required "details are correct" checkbox)
+
+Direct request: catch misspelled compound names before they print, and have the customer confirm their details.
+
+- **Compound List:** `YeffoPrint_Compound_List` (`includes/configurator/class-compound-list.php`) keeps one option with each correct spelling, its group, and "also typed as" spellings. Until it's first saved, the ~160-name starter list in that class is used. Admin: Catalog → Compound List (`views/compound-list.js`, `/admin/compound-list`), with an on/off switch and "Add N missing starter names" when the starter list grows.
+- **Spell-check:** theme `assets/js/label-proofing.js` gets the list through `yeffoprintLabelProofing` and checks the Template page's Compound Name field (found by its label) and each custom-form row's Product details. It runs when the customer leaves the field or pauses typing. It suggests the listed spelling for an alias or a near miss (1 typo for 5–7 letters, 2 for 8+, first letter must match). It flags case only on names whose capitals mean something (hGH, hCG, GHK-Cu, MOTS-c), so "RETATRUTIDE" is left alone. **Use** swaps the text in (firing `input`, so the preview and batch state update). **Keep** stops asking about that spelling. It never blocks checkout.
+- **Confirmation:** the same script mounts a required "I've double-checked my label details" box with a live "We'll print" recap, above Add to Cart on the Template page and above Continue to Payment on the custom form and in the Label Designer. The buttons are dimmed rather than disabled. Clicking one before ticking the box shows a red note and scrolls to it. It's enforced in the browser only.

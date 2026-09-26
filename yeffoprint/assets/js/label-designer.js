@@ -1474,6 +1474,28 @@
 		return new Blob( [ bytes ], { type: mime } );
 	}
 
+	// Required "I've double-checked my label details" box, same as the
+	// describe-it form's (assets/js/label-proofing.js).
+	var proofConfirm = null;
+	if ( window.YPLabelProofing && submitButton ) {
+		var proofConfirmEl = document.createElement( 'div' );
+		submitButton.parentNode.insertAdjacentElement( 'beforebegin', proofConfirmEl );
+		proofConfirm = window.YPLabelProofing.mountConfirm( proofConfirmEl, {
+			text: window.YPLabelProofing.CUSTOM_TEXT,
+			getRecap: function () {
+				var texts = canvas ? canvas.getObjects().filter( function ( obj ) {
+					return ! obj.excludeFromExport && ( 'textbox' === obj.type || 'text' === obj.type || 'i-text' === obj.type );
+				} ).map( function ( obj ) {
+					return String( obj.text || '' ).replace( /\s+/g, ' ' ).trim();
+				} ) : [];
+				return [ brandInput.value.trim() ].concat( texts );
+			},
+			watch: form,
+			buttons: [ submitButton ],
+			actionLabel: 'continuing to payment'
+		} );
+	}
+
 	form.addEventListener( 'submit', function ( event ) {
 		event.preventDefault();
 		clearFormError();
@@ -1504,6 +1526,9 @@
 		// object simply isn't there yet to export if this fires mid-upload.
 		if ( pendingUploadCount > 0 ) {
 			showFormError( 'Please wait for your image to finish uploading before continuing.' );
+			return;
+		}
+		if ( proofConfirm && ! proofConfirm.require() ) {
 			return;
 		}
 
