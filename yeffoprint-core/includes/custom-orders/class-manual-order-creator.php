@@ -286,53 +286,10 @@ class YeffoPrint_Manual_Order_Creator {
 		// Each still gets its OWN proof-approval shell when requested
 		// (see the class docblock above for why one shell per group
 		// rather than one shell for the whole order).
-		$requires_proof = ! empty( $payload['requires_proof'] );
-		$custom_orders  = [];
-
-		foreach ( $groups as $type => $group ) {
-			$custom_order_id = 0;
-
-			// 'web_design' is never in SHELL_TYPES (see this class's own
-			// docblock, "Web Design Package orders") — a package purchase
-			// never gets a proof-approval shell, regardless of this
-			// order-wide checkbox.
-			if ( $requires_proof && isset( self::SHELL_TYPES[ $type ] ) ) {
-				$custom_order_id = YeffoPrint_Custom_Order_Meta::create_shell(
-					self::SHELL_TYPES[ $type ],
-					self::shell_title( $type, $group ),
-					$customer->ID,
-					$customer->user_email,
-					trim( $customer->first_name . ' ' . $customer->last_name ) ?: $customer->display_name
-				);
-
-				if ( ! $custom_order_id ) {
-					self::rollback( $order, $custom_orders );
-					return new \WP_Error( 'yeffoprint_custom_order_failed', __( "Couldn't create the linked proof-approval record. Please try again.", 'yeffoprint-core' ), [ 'status' => 500 ] );
-				}
-			}
-
-			if ( 'custom_design' === $type ) {
-				$result = self::add_custom_design_rows( $order, $group['batch'], $custom_order_id, $group['waive_design_fee'] );
-			} elseif ( 'sticker' === $type ) {
-				$result = self::add_sticker_row( $order, $group, $custom_order_id );
-			} elseif ( 'template' === $type ) {
-				$result = self::add_template_row( $order, $group, $custom_order_id );
-			} else {
-				$result = self::add_web_design_row( $order, $group );
-			}
-
-			if ( is_wp_error( $result ) ) {
-				if ( $custom_order_id ) {
-					wp_delete_post( $custom_order_id, true );
-				}
-				self::rollback( $order, $custom_orders );
-				return $result;
-			}
-
-			if ( $custom_order_id ) {
-				self::populate_shell_meta( $custom_order_id, $type, $group );
-				$custom_orders[] = [ 'id' => $custom_order_id, 'order_type' => $type ];
-			}
+		$custom_orders = self::add_groups( $order, $groups, ! empty( $payload['requires_proof'] ), self::shell_customer( $customer ) );
+		if ( is_wp_error( $custom_orders ) ) {
+			$order->delete( true );
+			return $custom_orders;
 		}
 
 		if ( ! empty( $payload['shipping'] ) && is_array( $payload['shipping'] ) ) {
@@ -404,6 +361,321 @@ class YeffoPrint_Manual_Order_Creator {
 		}
 
 		return [ 'order' => $order, 'custom_orders' => $custom_orders ];
+	}
+
+	/**
+	 * Adds every validated group onto $order, each with its own proof
+	 * shell when $requires_proof is set — shared by create() and
+	 * add_items(). On failure, every shell this call made is deleted
+	 * again; line items it already added are the caller's to clean up
+	 * (create() deletes the whole order, add_items() removes just the new
+	 * items).
+	 *
+	 * @param array{id:int, email:string, name:string} $shell_customer
+	 * @return array<int, array{id:int, order_type:string}>|\WP_Error
+	 */
+	private static function add_groups( \WC_Order $order, array $groups, bool $requires_proof, array $shell_customer ) {
+		$custom_orders = [];
+		$cleanup       = static function () use ( &$custom_orders ) {
+			foreach ( $custom_orders as $created ) {
+				wp_delete_post( $created['id'], true );
+			}
+		};
+
+		foreach ( $groups as $type => $group ) {
+			$custom_order_id = 0;
+
+			// 'web_design' is never in SHELL_TYPES (see this class's own
+			// docblock, "Web Design Package orders") — a package purchase
+			// never gets a proof-approval shell, regardless of this
+			// order-wide checkbox.
+			if ( $requires_proof && isset( self::SHELL_TYPES[ $type ] ) ) {
+				$custom_order_id = YeffoPrint_Custom_Order_Meta::create_shell(
+					self::SHELL_TYPES[ $type ],
+					self::shell_title( $type, $group ),
+					$shell_customer['id'],
+					$shell_customer['email'],
+					$shell_customer['name']
+				);
+
+				if ( ! $custom_order_id ) {
+					$cleanup();
+					return new \WP_Error( 'yeffoprint_custom_order_failed', __( "Couldn't create the linked proof-approval record. Please try again.", 'yeffoprint-core' ), [ 'status' => 500 ] );
+				}
+			}
+
+			if ( 'custom_design' === $type ) {
+				$result = self::add_custom_design_rows( $order, $group['batch'], $custom_order_id, $group['waive_design_fee'] );
+			} elseif ( 'sticker' === $type ) {
+				$result = self::add_sticker_row( $order, $group, $custom_order_id );
+			} elseif ( 'template' === $type ) {
+				$result = self::add_template_row( $order, $group, $custom_order_id );
+			} else {
+				$result = self::add_web_design_row( $order, $group );
+			}
+
+			if ( is_wp_error( $result ) ) {
+				if ( $custom_order_id ) {
+					wp_delete_post( $custom_order_id, true );
+				}
+				$cleanup();
+				return $result;
+			}
+
+			if ( $custom_order_id ) {
+				self::populate_shell_meta( $custom_order_id, $type, $group );
+				$custom_orders[] = [ 'id' => $custom_order_id, 'order_type' => $type ];
+			}
+		}
+
+		return $custom_orders;
+	}
+
+	/** @return array{id:int, email:string, name:string} */
+	private static function shell_customer( \WP_User $customer ): array {
+		return [
+			'id'    => (int) $customer->ID,
+			'email' => $customer->user_email,
+			'name'  => trim( $customer->first_name . ' ' . $customer->last_name ) ?: $customer->display_name,
+		];
+	}
+
+	/**
+	 * Direct request: "the ability to edit an order I made from my
+	 * dashboard before it's been paid? Like if a customer wants to add
+	 * something or I made a mistake before they actually pay." Only an
+	 * order still waiting on its first payment — once it's paid (or on
+	 * hold for a Zelle/Venmo payment the customer already sent) the
+	 * customer has paid for what was on it, so changes go through a
+	 * refund instead.
+	 */
+	public static function is_editable( \WC_Order $order ): bool {
+		return $order->has_status( [ 'pending', 'failed' ] ) && ! $order->get_date_paid();
+	}
+
+	/**
+	 * Adds more items to an existing unpaid order — same payload groups
+	 * (custom_design/sticker/template/web_design + requires_proof) and the
+	 * same pricing as create(), just onto $order instead of a new one. The
+	 * order's own customer is reused, and its pay link stays the same;
+	 * the total simply grows.
+	 *
+	 * @return array{order:\WC_Order, custom_orders: array<int, array{id:int, order_type:string}>}|\WP_Error
+	 */
+	public static function add_items( \WC_Order $order, array $payload ) {
+		if ( ! self::is_editable( $order ) ) {
+			return self::not_editable_error();
+		}
+
+		$groups = self::validate_groups( $payload );
+		if ( is_wp_error( $groups ) ) {
+			return $groups;
+		}
+
+		$user           = $order->get_customer_id() ? get_user_by( 'id', $order->get_customer_id() ) : false;
+		$shell_customer = $user
+			? self::shell_customer( $user )
+			: [
+				'id'    => 0,
+				'email' => $order->get_billing_email(),
+				'name'  => trim( $order->get_formatted_billing_full_name() ),
+			];
+
+		$existing_item_ids = array_keys( $order->get_items() );
+
+		$custom_orders = self::add_groups( $order, $groups, ! empty( $payload['requires_proof'] ), $shell_customer );
+		if ( is_wp_error( $custom_orders ) ) {
+			foreach ( array_keys( $order->get_items() ) as $item_id ) {
+				if ( ! in_array( $item_id, $existing_item_ids, true ) ) {
+					$order->remove_item( $item_id );
+				}
+			}
+			$order->save();
+			return $custom_orders;
+		}
+
+		$order->calculate_totals();
+		$order->add_order_note( sprintf(
+			/* translators: %s: staff display name */
+			__( 'Items added by %s via the admin app before payment.', 'yeffoprint-core' ),
+			wp_get_current_user()->display_name
+		) );
+		$order->save();
+
+		if ( ! empty( $payload['send_invoice_email'] ) && function_exists( 'WC' ) && WC()->mailer() ) {
+			WC()->mailer()->customer_invoice( $order );
+		}
+
+		return [ 'order' => $order, 'custom_orders' => $custom_orders ];
+	}
+
+	/**
+	 * The rest of "edit before it's paid": change a line's price or
+	 * remove it, swap the shipping choice, and change the customer note.
+	 * Quantities aren't edited in place — a label row's price, proof and
+	 * print details all hang off its quantity, so a different quantity is
+	 * remove + add_items() instead.
+	 *
+	 * @param array $payload {
+	 *     @type array  $items          [ { id, total, remove } ] — existing product line items only.
+	 *     @type string $shipping       Optional. 'keep' (default), 'customer' (they pick on the pay
+	 *                                  page), 'none', or a saved shipping option's label.
+	 *     @type string $customer_note  Optional; left untouched when not sent.
+	 *     @type bool   $send_invoice_email
+	 * }
+	 * @return \WC_Order|\WP_Error
+	 */
+	public static function update_unpaid( \WC_Order $order, array $payload ) {
+		if ( ! self::is_editable( $order ) ) {
+			return self::not_editable_error();
+		}
+
+		$product_items = $order->get_items();
+		$changes       = [];
+		$removals      = [];
+		$prices        = [];
+
+		foreach ( (array) ( $payload['items'] ?? [] ) as $row ) {
+			$item_id = absint( $row['id'] ?? 0 );
+			if ( ! isset( $product_items[ $item_id ] ) ) {
+				continue;
+			}
+
+			if ( ! empty( $row['remove'] ) ) {
+				$removals[] = $item_id;
+				continue;
+			}
+
+			if ( isset( $row['total'] ) && '' !== $row['total'] ) {
+				$total = round( (float) $row['total'], 2 );
+				if ( $total < 0 ) {
+					return new \WP_Error( 'yeffoprint_invalid_price', __( 'Prices can’t be negative.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+				}
+				if ( abs( $total - (float) $product_items[ $item_id ]->get_total() ) >= 0.005 ) {
+					$prices[ $item_id ] = $total;
+				}
+			}
+		}
+
+		if ( count( $removals ) >= count( $product_items ) ) {
+			return new \WP_Error( 'yeffoprint_empty_order', __( 'An order needs at least one item. Add the new item first, or cancel the order instead.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$shipping = sanitize_text_field( (string) ( $payload['shipping'] ?? 'keep' ) );
+		$picked   = null;
+		if ( ! in_array( $shipping, [ 'keep', 'customer', 'none' ], true ) ) {
+			$picked = YeffoPrint_Shippo_Settings::find_manual_order_shipping_option( $shipping );
+			if ( ! $picked ) {
+				return new \WP_Error( 'yeffoprint_invalid_shipping', __( 'That shipping option no longer exists. Pick another one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+			$country = $order->get_shipping_country() ?: $order->get_billing_country();
+			if ( $country && ! YeffoPrint_Shippo_Settings::option_ships_to( $picked, $country ) ) {
+				return new \WP_Error(
+					'yeffoprint_shipping_region_mismatch',
+					sprintf(
+						/* translators: 1: shipping option label, 2: country code */
+						__( '%1$s doesn’t ship to %2$s. Pick a shipping option for this address.', 'yeffoprint-core' ),
+						$picked['label'],
+						$country
+					),
+					[ 'status' => 400 ]
+				);
+			}
+		}
+
+		// Everything validated — now apply.
+		foreach ( $prices as $item_id => $total ) {
+			$item = $product_items[ $item_id ];
+			$changes[] = sprintf(
+				/* translators: 1: item name, 2: old price, 3: new price */
+				__( '%1$s price %2$s → %3$s', 'yeffoprint-core' ),
+				$item->get_name(),
+				wp_strip_all_tags( wc_price( (float) $item->get_total() ) ),
+				wp_strip_all_tags( wc_price( $total ) )
+			);
+			$item->set_subtotal( $total );
+			$item->set_total( $total );
+			$item->save();
+		}
+
+		$orphaned_shells = [];
+		foreach ( $removals as $item_id ) {
+			$item            = $product_items[ $item_id ];
+			$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
+			if ( $custom_order_id ) {
+				$orphaned_shells[ $custom_order_id ] = true;
+			}
+			/* translators: %s: item name */
+			$changes[] = sprintf( __( 'removed %s', 'yeffoprint-core' ), $item->get_name() );
+			$order->remove_item( $item_id );
+		}
+
+		if ( 'keep' !== $shipping ) {
+			foreach ( $order->get_items( 'shipping' ) as $item_id => $item ) {
+				$order->remove_item( $item_id );
+			}
+
+			if ( 'customer' === $shipping ) {
+				$order->update_meta_data( YeffoPrint_Order_Pay_Address::CUSTOMER_PICKS_SHIPPING_META, 1 );
+				$changes[] = __( 'shipping: customer picks when they pay', 'yeffoprint-core' );
+			} else {
+				$order->delete_meta_data( YeffoPrint_Order_Pay_Address::CUSTOMER_PICKS_SHIPPING_META );
+				if ( $picked ) {
+					self::add_shipping_line( $order, [ 'service' => $picked['label'], 'amount' => $picked['amount'] ] );
+					/* translators: %s: shipping option label */
+					$changes[] = sprintf( __( 'shipping: %s', 'yeffoprint-core' ), $picked['label'] );
+				} else {
+					$changes[] = __( 'shipping: no charge', 'yeffoprint-core' );
+				}
+			}
+		}
+
+		if ( array_key_exists( 'customer_note', $payload ) ) {
+			$note = sanitize_textarea_field( (string) $payload['customer_note'] );
+			if ( $note !== $order->get_customer_note() ) {
+				$order->set_customer_note( $note );
+				$changes[] = __( 'note updated', 'yeffoprint-core' );
+			}
+		}
+
+		$order->calculate_totals();
+
+		if ( $changes ) {
+			$order->add_order_note( sprintf(
+				/* translators: 1: staff display name, 2: list of changes */
+				__( 'Edited by %1$s via the admin app before payment: %2$s.', 'yeffoprint-core' ),
+				wp_get_current_user()->display_name,
+				implode( '; ', $changes )
+			) );
+		}
+
+		$order->save();
+
+		// A proof shell whose items were all removed has nothing left to
+		// proof — trashed (not deleted, in case a proof was already
+		// uploaded to it) so it doesn't linger on the Custom Orders screen.
+		foreach ( array_keys( $orphaned_shells ) as $custom_order_id ) {
+			$still_used = false;
+			foreach ( $order->get_items() as $item ) {
+				if ( (int) $item->get_meta( '_yp_custom_order_id' ) === $custom_order_id ) {
+					$still_used = true;
+					break;
+				}
+			}
+			if ( ! $still_used ) {
+				wp_trash_post( $custom_order_id );
+			}
+		}
+
+		if ( ! empty( $payload['send_invoice_email'] ) && function_exists( 'WC' ) && WC()->mailer() ) {
+			WC()->mailer()->customer_invoice( $order );
+		}
+
+		return $order;
+	}
+
+	private static function not_editable_error(): \WP_Error {
+		return new \WP_Error( 'yeffoprint_order_not_editable', __( 'Only orders still waiting on payment can be edited.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 	}
 
 	/** Shared by validate_groups() below — a title for the proof-approval shell about to be created for one present group, same "brand/design name — timestamp" shape every order type already used when only one shell per order was possible. */
@@ -540,14 +812,6 @@ class YeffoPrint_Manual_Order_Creator {
 		}
 
 		return $groups;
-	}
-
-	/** Shared cleanup for create()'s per-group loop: an order (and any proof shells already minted for earlier groups in this same attempt) must never survive a later group failing to validate/add — called from both failure points in that loop. */
-	private static function rollback( \WC_Order $order, array $custom_orders ): void {
-		$order->delete( true );
-		foreach ( $custom_orders as $created ) {
-			wp_delete_post( $created['id'], true );
-		}
 	}
 
 	/**

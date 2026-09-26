@@ -13,7 +13,9 @@
  * Refunds (direct request) are the one exception — create_refund()
  * below wraps wc_create_refund() the same way the classic order
  * screen's own refund panel does, so a full/partial refund no longer
- * requires leaving this app.
+ * requires leaving this app. Editing an order that hasn't been paid yet
+ * lives in class-admin-manual-order-controller.php (same pricing code as
+ * creating one); this controller only reports whether it's allowed.
  *
  * get_formatted_meta_data() (WC_Order_Item's own method) is what
  * actually supplies every customization/quantity/template-selection
@@ -323,6 +325,15 @@ class YeffoPrint_Admin_Order_Controller {
 			'shipping_total'       => (float) $order->get_shipping_total(),
 			'total'                => (float) $order->get_total(),
 			'edit_url'             => $order->get_edit_order_url(),
+			// Direct request: edit an order "before it's been paid" — lets
+			// the drawer offer Edit order, and show the pay link it keeps.
+			'editable'             => YeffoPrint_Manual_Order_Creator::is_editable( $order ),
+			'payment_url'          => $order->needs_payment() ? $order->get_checkout_payment_url() : null,
+			'customer_picks_shipping' => YeffoPrint_Order_Pay_Address::customer_picks_shipping( $order ),
+			'shipping_lines'       => array_values( array_map( static function ( \WC_Order_Item_Shipping $item ): array {
+				return [ 'title' => $item->get_method_title(), 'amount' => (float) $item->get_total() ];
+			}, $order->get_items( 'shipping' ) ) ),
+			'shipping_country'     => $order->get_shipping_country() ?: $order->get_billing_country(),
 			// Direct request: print a real shipping label from this drawer, "without having to go to
 			// WooCommerce" — the WooCommerce Shipping plugin only ever renders its label-purchase UI
 			// as a meta box (#woocommerce-order-label) on the classic order edit screen; there's no
@@ -438,6 +449,7 @@ class YeffoPrint_Admin_Order_Controller {
 		$product = $item->get_product();
 
 		return [
+			'id'        => $item->get_id(),
 			'name'      => $item->get_name(),
 			'quantity'  => $item->get_quantity(),
 			'total'     => (float) $item->get_total(),
