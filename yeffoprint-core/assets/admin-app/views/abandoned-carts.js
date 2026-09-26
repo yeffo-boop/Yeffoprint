@@ -49,6 +49,9 @@
 		if ( 'opted_out' === cart.status ) {
 			return pill( 'neutral', 'Opted out' );
 		}
+		if ( 'ordered' === cart.status ) {
+			return pill( 'good', 'Ordered' );
+		}
 		if ( 'stopped' === cart.status ) {
 			return pill( 'neutral', 'Stopped' );
 		}
@@ -151,7 +154,7 @@
 				if ( 'open' === cart.status ) {
 					actions.push( '<button type="button" class="yp-row-action" data-yp-ac-stop="' + cart.id + '">Stop</button>' );
 				}
-				if ( cart.order_id && 'recovered' === cart.status ) {
+				if ( cart.order_id && ( 'recovered' === cart.status || 'ordered' === cart.status ) ) {
 					actions.push( '<button type="button" class="yp-row-action" data-yp-open-order="' + cart.order_id + '">Order ' + YP.escapeHtml( cart.order_number ) + '</button>' );
 				}
 				actions.push( '<button type="button" class="yp-row-action" data-yp-ac-toggle="' + cart.id + '">View cart</button>' );
