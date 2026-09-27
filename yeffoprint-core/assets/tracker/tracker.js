@@ -18,6 +18,10 @@
  *   premixed: volume = dose mg ÷ (mg/mL on the label)
  *   units to draw = volume (mL) × 100   (U-100 insulin syringe)
  *
+ * Order labels (Vials tab) builds one template cart line from the
+ * customer's vials through the storefront's own REST routes; see
+ * openLabelOrder().
+ *
  * All customer text is rendered with textContent (via h()), never innerHTML.
  */
 ( function () {
@@ -1267,7 +1271,15 @@
 			) );
 		}
 
-		var lowSoon = false;
+		if ( list.length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-lo-promo' },
+				h( 'div', { class: 'ypt-eyebrow' }, 'Labels' ),
+				h( 'h2', null, list.length > 1 ? 'Label all ' + list.length + ' vials in one order' : 'Order a label for this vial' ),
+				h( 'p', null, 'Pick a design and we fill in each peptide and strength for you.' ),
+				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent', onclick: openLabelOrder }, 'Order labels' )
+			) );
+		}
+
 		list.forEach( function ( v ) {
 			var info = vialInfo( v );
 			var color = colorForCompound( v.compound );
@@ -1285,9 +1297,6 @@
 				status.push( h( 'b', null, info.dosesLeft + ' dose' + ( info.dosesLeft === 1 ? '' : 's' ) + ' left' ) );
 				if ( info.lastDose ) {
 					status.push( ' · last dose ' + fmtDay( info.lastDose ).replace( /^\w+, /, '' ) );
-				}
-				if ( info.dosesLeft <= 3 ) {
-					lowSoon = true;
 				}
 			} else if ( info.left != null ) {
 				status.push( h( 'b', null, fmtNum( info.left, 0 ) + ' units left' ) );
@@ -1316,14 +1325,6 @@
 			) );
 		} );
 
-		wrap.appendChild( h( 'div', { class: 'ypt-banner', style: { marginTop: '6px' } },
-			h( 'div', null,
-				h( 'b', null, lowSoon ? 'Running low? ' : 'Labels for your vials? ' ),
-				'Match every vial to its dose with a YeffoDesign peptide label. ',
-				h( 'a', { href: CFG.labelsUrl }, 'Shop peptide labels' )
-			)
-		) );
-
 		var finished = vials( true ).filter( function ( v ) {
 			return v.finished;
 		} );
@@ -1337,6 +1338,598 @@
 		}
 
 		return wrap;
+	}
+
+	/* ---------- Order labels: one design for every vial ---------- */
+
+	/*
+	 * Builds one normal template batch — the same cart line the product
+	 * page's "Add another label" rows make — with one label row per
+	 * peptide, then sends the customer to the cart. Designs, fields, sizes,
+	 * materials and prices all come from the storefront's own routes
+	 * (/templates/{id}/configurator, /pricing/calculate, /cart/add), so the
+	 * cart re-validates everything exactly as it does for the product page.
+	 * Nothing here is saved to the tracker.
+	 */
+
+	var labelCache = { list: null, schemas: {} };
+	var LABEL_STAGE_REF = 480; // About the product-page stage width the templates' font sizes are set for.
+	var CORNERS = [ [ 'squared', 'Squared' ], [ 'rounded', 'Rounded' ] ];
+
+	function labelKey( s ) {
+		return String( s || '' ).toLowerCase().replace( /[^a-z0-9]/g, '' );
+	}
+
+	/** What prints as a vial's Strength: "5 mg", "5000 IU", or "10 mg/mL" for a premixed vial. */
+	function vialStrength( v ) {
+		if ( v.mode === 'conc' ) {
+			return +v.conc > 0 ? fmtNum( +v.conc ) + ' mg/mL' : '';
+		}
+		return +v.amount > 0 ? fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) : '';
+	}
+
+	/** One row per peptide + strength: open vials ticked, a few recently finished ones offered unticked. */
+	function labelRows() {
+		var rows = [];
+		var qty = ( CFG.qtyPresets || [] )[ 0 ] || 10;
+		var finished = vials( true ).filter( function ( v ) {
+			return v.finished;
+		} );
+		vials( false ).concat( finished ).forEach( function ( v ) {
+			var strength = vialStrength( v );
+			var key = labelKey( v.compound ) + '|' + labelKey( strength );
+			if ( rows.some( function ( r ) {
+				return r.key === key;
+			} ) ) {
+				return;
+			}
+			if ( v.finished && rows.filter( function ( r ) {
+				return ! r.open;
+			} ).length >= 5 ) {
+				return;
+			}
+			rows.push( { key: key, compound: v.compound, strength: strength, qty: qty, on: ! v.finished, open: ! v.finished, values: null } );
+		} );
+		return rows;
+	}
+
+	function loadLabelTemplates() {
+		if ( labelCache.list ) {
+			return Promise.resolve( labelCache.list );
+		}
+		return api( 'GET', 'tracker/label-templates' ).then( function ( data ) {
+			labelCache.list = { templates: data.templates || [], startingPrice: data.startingPrice || '' };
+			return labelCache.list;
+		} );
+	}
+
+	function loadLabelSchema( id ) {
+		if ( labelCache.schemas[ id ] ) {
+			return Promise.resolve( labelCache.schemas[ id ] );
+		}
+		return api( 'GET', 'templates/' + id + '/configurator' ).then( function ( s ) {
+			labelCache.schemas[ id ] = s;
+			return s;
+		} );
+	}
+
+	function openLabelOrder() {
+		if ( state.offline ) {
+			toast( 'Connect to the internet to order labels.' );
+			return;
+		}
+		var rows = labelRows();
+		var o = { templateId: 0, title: '', schema: null, sizeId: 0, materialId: 0, shared: {}, confirmed: false };
+		var body = h( 'div', null );
+		var foot = h( 'div', { class: 'ypt-lo-foot' } );
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+
+		function showError( msg ) {
+			err.textContent = msg;
+			err.hidden = false;
+			err.scrollIntoView( { block: 'nearest' } );
+		}
+
+		function picked() {
+			return rows.filter( function ( r ) {
+				return r.on;
+			} );
+		}
+
+		function fieldsOf( types ) {
+			return ( o.schema ? o.schema.field_schema : [] ).filter( function ( f ) {
+				return types.indexOf( f.type ) !== -1;
+			} );
+		}
+
+		/** Label fields that differ per vial (compound, strength, batch…); corners and colors are picked once for the order. */
+		function rowFields() {
+			return fieldsOf( [ 'text', 'textarea', 'qr_code' ] );
+		}
+
+		function sharedFields() {
+			return fieldsOf( [ 'corner_style', 'color_choice', 'color' ] );
+		}
+
+		function findField( list, re ) {
+			return list.filter( function ( f ) {
+				return f.type === 'text' && re.test( f.label );
+			} )[ 0 ] || null;
+		}
+
+		function sharedValue( f ) {
+			return o.shared[ f.id ] != null ? o.shared[ f.id ] : ( f.type === 'corner_style' ? ( CORNERS.some( function ( c ) {
+				return c[ 0 ] === f.default;
+			} ) ? f.default : '' ) : ( f.default || '' ) );
+		}
+
+		function colorFor( target ) {
+			var f = fieldsOf( [ 'color_choice' ] ).filter( function ( x ) {
+				return x.target === target;
+			} )[ 0 ];
+			return f ? sharedValue( f ) : '';
+		}
+
+		function nameOf( list, id ) {
+			var x = ( list || [] ).filter( function ( r ) {
+				return r.id === id;
+			} )[ 0 ];
+			return x ? x.name : '';
+		}
+
+		function show( step ) {
+			err.hidden = true;
+			var eyebrow = ui.sheet && ui.sheet.node.querySelector( '.ypt-sheet__head .ypt-eyebrow' );
+			if ( eyebrow ) {
+				eyebrow.textContent = 'Step ' + step + ' of 3';
+			}
+			body.textContent = '';
+			foot.textContent = '';
+			body.appendChild( h( 'div', { class: 'ypt-lo-progress', 'aria-hidden': 'true' }, [ 1, 2, 3 ].map( function ( n ) {
+				return h( 'i', { class: n <= step ? 'is-on' : null } );
+			} ) ) );
+			[ stepVials, stepDesign, stepReview ][ step - 1 ]();
+			if ( body.parentNode ) {
+				body.parentNode.scrollTop = 0;
+			}
+		}
+
+		/* Step 1: which vials, and how many labels each. */
+		function stepVials() {
+			if ( ! rows.length ) {
+				body.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
+					h( 'p', null, 'Add a vial on the Vials tab first, then come back here to order labels for it.' )
+				) );
+				foot.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', onclick: closeSheet }, 'Close' ) );
+				return;
+			}
+			body.appendChild( h( 'p', { class: 'ypt-muted ypt-small ypt-lo-lead' }, 'Each vial gets its own label with its peptide and strength filled in.' ) );
+
+			var next = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+				show( 2 );
+			} }, 'Next: pick a design' );
+
+			function update() {
+				var list = picked();
+				next.disabled = ! list.length || list.some( function ( r ) {
+					return ! ( r.qty >= 1 );
+				} );
+			}
+
+			rows.forEach( function ( r ) {
+				var row, box;
+				var qty = h( 'input', { class: 'ypt-lo-qty__n', type: 'number', inputmode: 'numeric', min: '1', step: '1', value: String( r.qty ), 'aria-label': 'Labels for ' + r.compound, oninput: function () {
+					r.qty = Math.max( 0, parseInt( this.value, 10 ) || 0 );
+					update();
+				} } );
+				function setOn( on ) {
+					r.on = on;
+					box.setAttribute( 'aria-checked', on ? 'true' : 'false' );
+					row.classList.toggle( 'is-on', on );
+					update();
+				}
+				function bump( d ) {
+					r.qty = Math.max( 1, ( r.qty || 0 ) + d );
+					qty.value = String( r.qty );
+					setOn( true );
+				}
+				box = h( 'button', { type: 'button', class: 'ypt-lo-check', role: 'checkbox', 'aria-checked': r.on ? 'true' : 'false', 'aria-label': r.compound + ( r.strength ? ' ' + r.strength : '' ), onclick: function () {
+					setOn( ! r.on );
+				} }, icon( 'check' ) );
+				row = h( 'div', { class: 'ypt-card ypt-lo-row' + ( r.on ? ' is-on' : '' ) },
+					box,
+					h( 'div', { class: 'ypt-lo-row__main' },
+						h( 'b', null, r.compound ),
+						h( 'span', { class: 'ypt-muted ypt-small' }, [ r.strength || 'Strength not set', r.open ? '' : 'finished' ].filter( Boolean ).join( ' · ' ) )
+					),
+					h( 'div', { class: 'ypt-lo-qty' },
+						h( 'button', { type: 'button', 'aria-label': 'Fewer labels', onclick: function () {
+							bump( -10 );
+						} }, '−' ),
+						qty,
+						h( 'button', { type: 'button', 'aria-label': 'More labels', onclick: function () {
+							bump( 10 );
+						} }, '+' )
+					)
+				);
+				body.appendChild( row );
+			} );
+			body.appendChild( h( 'p', { class: 'ypt-hint' }, 'The number is how many labels to print for that peptide.' ) );
+			foot.appendChild( next );
+			update();
+		}
+
+		/* Step 2: design, then size, material, corners and colors for the whole order. */
+		function stepDesign() {
+			var grid = h( 'div', { class: 'ypt-lo-grid' }, h( 'p', { class: 'ypt-muted' }, 'Loading designs…' ) );
+			var opts = h( 'div', null );
+			var next = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', disabled: true, onclick: function () {
+				show( 3 );
+			} }, 'Next: check labels' );
+			body.appendChild( grid );
+			body.appendChild( opts );
+			body.appendChild( err );
+			foot.appendChild( h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+				show( 1 );
+			} }, 'Back' ) );
+			foot.appendChild( next );
+
+			function update() {
+				next.disabled = ! o.schema || ! o.sizeId || ! o.materialId || sharedFields().some( function ( f ) {
+					return f.required && ! sharedValue( f );
+				} );
+			}
+
+			function choices( list, current, onPick ) {
+				var node = h( 'div', { class: 'ypt-chips' } );
+				list.forEach( function ( c ) {
+					node.appendChild( h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm ypt-lo-choice', 'aria-pressed': c[ 0 ] === current ? 'true' : 'false', onclick: function () {
+						[].forEach.call( node.children, function ( b ) {
+							b.setAttribute( 'aria-pressed', 'false' );
+						} );
+						this.setAttribute( 'aria-pressed', 'true' );
+						onPick( c[ 0 ] );
+						update();
+					} }, c[ 1 ], c[ 2 ] ? h( 'small', null, c[ 2 ] ) : null ) );
+				} );
+				return node;
+			}
+
+			function colorPicker( f ) {
+				var label = h( 'span', null );
+				var node = h( 'div', { class: 'ypt-swatches' } );
+				function sync() {
+					var v = sharedValue( f );
+					var match = ( f.options || [] ).filter( function ( c ) {
+						return String( c.hex ).toLowerCase() === String( v ).toLowerCase();
+					} )[ 0 ];
+					label.textContent = match ? ' · ' + match.name : '';
+					[].forEach.call( node.children, function ( b ) {
+						b.setAttribute( 'aria-pressed', b.dataset.hex.toLowerCase() === String( v ).toLowerCase() ? 'true' : 'false' );
+					} );
+				}
+				( f.options || [] ).forEach( function ( c ) {
+					node.appendChild( h( 'button', { type: 'button', class: 'ypt-swatch', 'data-hex': c.hex, title: c.name, 'aria-label': c.name, style: { background: c.hex }, onclick: function () {
+						o.shared[ f.id ] = c.hex;
+						sync();
+						update();
+					} } ) );
+				} );
+				sync();
+				return h( 'div', { class: 'ypt-field' }, h( 'div', { class: 'ypt-label' }, f.label, label ), node );
+			}
+
+			function renderOptions() {
+				var s = o.schema;
+				opts.textContent = '';
+				// Custom sizes (the customer types inches) stay on the product page.
+				var sizes = ( s.sizes || [] ).filter( function ( z ) {
+					return +z.print_width_mm > 0 && +z.print_height_mm > 0;
+				} );
+				var mats = ( s.materials || [] ).filter( function ( m ) {
+					return m.in_stock;
+				} );
+				if ( ! sizes.length || ! mats.length ) {
+					opts.appendChild( h( 'p', { class: 'ypt-error' }, 'This design can’t be ordered from here right now. Please pick another one.' ) );
+					update();
+					return;
+				}
+				if ( ! sizes.some( function ( z ) {
+					return z.id === o.sizeId;
+				} ) ) {
+					o.sizeId = sizes[ 0 ].id;
+				}
+				if ( ! mats.some( function ( m ) {
+					return m.id === o.materialId;
+				} ) ) {
+					o.materialId = mats[ 0 ].id;
+				}
+				opts.appendChild( field( 'Size', choices( sizes.map( function ( z ) {
+					return [ z.id, z.name, z.fit_note ];
+				} ), o.sizeId, function ( v ) {
+					o.sizeId = v;
+				} ) ) );
+				opts.appendChild( field( 'Material', choices( mats.map( function ( m ) {
+					return [ m.id, m.name, '' ];
+				} ), o.materialId, function ( v ) {
+					o.materialId = v;
+				} ) ) );
+				sharedFields().forEach( function ( f ) {
+					if ( f.type === 'corner_style' ) {
+						opts.appendChild( field( f.label, choices( CORNERS, sharedValue( f ), function ( v ) {
+							o.shared[ f.id ] = v;
+						} ) ) );
+					} else if ( f.type === 'color_choice' ) {
+						opts.appendChild( colorPicker( f ) );
+					} else {
+						opts.appendChild( field( f.label, h( 'input', { class: 'ypt-input ypt-lo-color', type: 'color', value: sharedValue( f ) || '#141414', oninput: function () {
+							o.shared[ f.id ] = this.value;
+							update();
+						} } ) ) );
+					}
+				} );
+				update();
+			}
+
+			function pick( t, card ) {
+				[].forEach.call( grid.children, function ( c ) {
+					c.setAttribute( 'aria-pressed', c === card ? 'true' : 'false' );
+				} );
+				if ( o.templateId !== t.id ) {
+					o.templateId = t.id;
+					o.schema = null;
+					o.shared = {};
+				}
+				o.title = t.title;
+				err.hidden = true;
+				opts.textContent = '';
+				opts.appendChild( h( 'p', { class: 'ypt-muted' }, 'Loading options…' ) );
+				update();
+				loadLabelSchema( t.id ).then( function ( s ) {
+					if ( o.templateId === t.id ) {
+						o.schema = s;
+						renderOptions();
+					}
+				} ).catch( function ( e ) {
+					opts.textContent = '';
+					showError( isNetworkError( e ) ? 'You’re offline. Connect to the internet to order labels.' : e.message );
+				} );
+			}
+
+			loadLabelTemplates().then( function ( data ) {
+				grid.textContent = '';
+				if ( ! data.templates.length ) {
+					grid.appendChild( h( 'p', { class: 'ypt-muted' }, 'No designs are available here right now. ', h( 'a', { href: CFG.labelsUrl }, 'Shop peptide labels' ) ) );
+					return;
+				}
+				data.templates.forEach( function ( t ) {
+					var card = h( 'button', { type: 'button', class: 'ypt-lo-tpl', 'aria-pressed': t.id === o.templateId ? 'true' : 'false', onclick: function () {
+						pick( t, card );
+					} },
+						h( 'span', { class: 'ypt-lo-tpl__img' }, t.artworkUrl ? h( 'img', { src: t.artworkUrl, alt: '', loading: 'lazy' } ) : null ),
+						h( 'b', null, t.title ),
+						data.startingPrice ? h( 'span', { class: 'ypt-muted ypt-small' }, data.startingPrice ) : null
+					);
+					grid.appendChild( card );
+				} );
+				if ( o.templateId && o.schema ) {
+					renderOptions();
+				}
+			} ).catch( function ( e ) {
+				grid.textContent = '';
+				showError( isNetworkError( e ) ? 'You’re offline. Connect to the internet to order labels.' : e.message );
+			} );
+		}
+
+		/** The design's artwork with this row's own text drawn where the product page draws it. */
+		function labelPreview( r ) {
+			var s = o.schema;
+			var wrap = h( 'div', { class: 'ypt-lo-preview' } );
+			var bg = colorFor( 'background' );
+			if ( bg ) {
+				wrap.appendChild( h( 'span', { class: 'ypt-lo-preview__fill', style: { background: bg } } ) );
+			}
+			if ( s.artwork_url ) {
+				wrap.appendChild( h( 'img', { src: s.artwork_url, alt: '', onload: function () {
+					fit();
+				} } ) );
+			}
+			var textColor = colorFor( 'text' );
+			var nodes = [];
+			s.field_schema.forEach( function ( f ) {
+				if ( ( f.type !== 'text' && f.type !== 'textarea' ) || f.show_in_preview === false || ! f.position ) {
+					return;
+				}
+				var el = h( 'div', { class: 'ypt-lo-preview__f' + ( f.type === 'textarea' ? ' is-multi' : '' ), style: {
+					left: f.position.x + '%',
+					top: f.position.y + '%',
+					transform: 'translate(' + ( f.alignment === 'left' ? '0%' : f.alignment === 'right' ? '-100%' : '-50%' ) + ', -50%)',
+					textAlign: f.alignment || 'center',
+					color: textColor || f.text_color || '#000000',
+					textTransform: { uppercase: 'uppercase', lowercase: 'lowercase', capitalize: 'capitalize' }[ f.formatting_rule ] || 'none',
+				} } );
+				el.fieldDef = f;
+				nodes.push( el );
+				wrap.appendChild( el );
+			} );
+
+			function fit() {
+				var w = wrap.clientWidth;
+				if ( ! w ) {
+					return;
+				}
+				var scale = w / LABEL_STAGE_REF;
+				nodes.forEach( function ( el ) {
+					var f = el.fieldDef;
+					el.textContent = r.values[ f.id ] || '';
+					var max = Math.max( 6, ( +f.font_size_max || 24 ) * scale );
+					var min = Math.max( 5, ( +f.font_size_min || 10 ) * scale );
+					var size = max;
+					el.style.maxWidth = ( w * 0.86 ) + 'px';
+					el.style.fontSize = size + 'px';
+					while ( size > min && el.scrollWidth > w * 0.86 + 1 ) {
+						size -= 0.5;
+						el.style.fontSize = size + 'px';
+					}
+				} );
+			}
+			wrap.refresh = fit;
+			return wrap;
+		}
+
+		/* Step 3: every label, filled in and editable, then add to cart. */
+		function stepReview() {
+			var s = o.schema;
+			var list = picked();
+			var perRow = rowFields();
+			var compoundF = findField( perRow, /compound|peptide|product name/i ) || perRow.filter( function ( f ) {
+				return f.type === 'text' && f.required;
+			} )[ 0 ] || null;
+			var strengthF = findField( perRow, /strength|dos(e|age)|\bmg\b/i );
+			if ( strengthF === compoundF ) {
+				strengthF = null;
+			}
+			var previews = [];
+
+			list.forEach( function ( r ) {
+				if ( ! r.values ) {
+					r.values = {};
+					if ( compoundF ) {
+						r.values[ compoundF.id ] = r.compound;
+					}
+					if ( strengthF ) {
+						r.values[ strengthF.id ] = r.strength;
+					}
+				}
+			} );
+
+			body.appendChild( h( 'p', { class: 'ypt-muted ypt-small ypt-lo-lead' }, [ o.title, nameOf( s.sizes, o.sizeId ), nameOf( s.materials, o.materialId ) ].filter( Boolean ).join( ' · ' ) ) );
+
+			list.forEach( function ( r ) {
+				var preview = labelPreview( r );
+				previews.push( preview );
+				var main = [];
+				var extra = [];
+				perRow.forEach( function ( f ) {
+					var always = f === compoundF || f === strengthF || f.required;
+					var id = 'ypt-lo-' + labelKey( r.key ) + '-' + f.id;
+					var attrs = { class: f.type === 'textarea' ? 'ypt-textarea' : 'ypt-input', id: id, value: r.values[ f.id ] || '', maxlength: String( f.max_chars || 40 ), placeholder: f.type === 'qr_code' ? 'https://' : '', oninput: function () {
+						r.values[ f.id ] = this.value;
+						preview.refresh();
+					} };
+					if ( f.type === 'qr_code' ) {
+						attrs.type = 'url';
+						attrs.inputmode = 'url';
+					}
+					var control = h( f.type === 'textarea' ? 'textarea' : 'input', attrs );
+					( always || r.values[ f.id ] ? main : extra ).push( field( f.label + ( f.required ? '' : ' (optional)' ), control, null, id ) );
+				} );
+				var more = extra.length ? h( 'div', { hidden: true }, extra ) : null;
+				var moreBtn = extra.length ? h( 'button', { type: 'button', class: 'ypt-link ypt-lo-more', onclick: function () {
+					more.hidden = false;
+					this.hidden = true;
+				} }, '+ More details (' + extra.map( function ( node ) {
+					return node.querySelector( 'label' ).textContent.replace( ' (optional)', '' );
+				} ).join( ', ' ) + ')' ) : null;
+
+				body.appendChild( h( 'div', { class: 'ypt-card ypt-lo-label' },
+					h( 'div', { class: 'ypt-lo-label__head' },
+						h( 'b', null, r.compound ),
+						h( 'span', { class: 'ypt-muted ypt-small' }, r.qty + ' label' + ( r.qty === 1 ? '' : 's' ) )
+					),
+					preview,
+					main,
+					moreBtn,
+					more
+				) );
+			} );
+
+			var count = list.reduce( function ( n, r ) {
+				return n + r.qty;
+			}, 0 );
+			var total = h( 'b', null, '' );
+			body.appendChild( h( 'div', { class: 'ypt-lo-total' }, h( 'span', { class: 'ypt-muted' }, count + ' labels' ), total ) );
+
+			var confirmBox = h( 'input', { type: 'checkbox', id: 'ypt-lo-confirm', checked: o.confirmed, onchange: function () {
+				o.confirmed = this.checked;
+				err.hidden = true;
+			} } );
+			body.appendChild( h( 'label', { class: 'ypt-lo-confirm', for: 'ypt-lo-confirm' },
+				confirmBox,
+				h( 'span', null, h( 'b', null, 'I’ve double-checked my label details. ' ), 'Every label prints exactly as entered, so check each peptide name and strength.' )
+			) );
+			body.appendChild( err );
+
+			var add = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent ypt-btn--block', onclick: submit }, 'Add to cart' );
+			foot.appendChild( h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+				show( 2 );
+			} }, 'Back' ) );
+			foot.appendChild( add );
+
+			// Layout exists once the sheet is on screen; the artwork's own onload refits too.
+			window.requestAnimationFrame( function () {
+				previews.forEach( function ( p ) {
+					p.refresh();
+				} );
+			} );
+
+			api( 'GET', 'pricing/calculate?quantity=' + count + '&size_id=' + o.sizeId + '&material_id=' + o.materialId ).then( function ( p ) {
+				if ( p && p.total != null ) {
+					total.textContent = '$' + ( +p.total ).toFixed( 2 );
+					add.textContent = 'Add to cart · $' + ( +p.total ).toFixed( 2 );
+				}
+			} ).catch( function () {} );
+
+			function problem() {
+				for ( var i = 0; i < list.length; i++ ) {
+					for ( var j = 0; j < perRow.length; j++ ) {
+						var f = perRow[ j ];
+						var v = String( list[ i ].values[ f.id ] || '' ).trim();
+						if ( f.required && ! v ) {
+							return 'Fill in ' + f.label + ' for ' + list[ i ].compound + '.';
+						}
+					}
+				}
+				return o.confirmed ? '' : 'Tick the box to confirm your label details.';
+			}
+
+			function submit() {
+				err.hidden = true;
+				var msg = problem();
+				if ( msg ) {
+					showError( msg );
+					return;
+				}
+				var shared = {};
+				sharedFields().forEach( function ( f ) {
+					shared[ f.id ] = sharedValue( f );
+				} );
+				var variants = list.map( function ( r ) {
+					var values = Object.assign( {}, shared );
+					perRow.forEach( function ( f ) {
+						values[ f.id ] = String( r.values[ f.id ] || '' ).trim();
+					} );
+					return { quantity: r.qty, values: values };
+				} );
+				var label = add.textContent;
+				add.disabled = true;
+				add.textContent = 'Adding…';
+				api( 'POST', 'cart/add', { template_id: o.templateId, size_id: o.sizeId, material_id: o.materialId, variants: variants } ).then( function () {
+					add.textContent = 'Opening your cart…';
+					window.location.href = CFG.cartUrl;
+				} ).catch( function ( e ) {
+					add.disabled = false;
+					add.textContent = label;
+					if ( handleAuthError( e ) ) {
+						return;
+					}
+					showError( isNetworkError( e ) ? 'You’re offline. Connect to the internet and try again.' : e.message );
+				} );
+			}
+		}
+
+		openSheet( 'Order labels', 'Step 1 of 3', body, foot );
+		show( 1 );
 	}
 
 	/* ---------- Me ---------- */
