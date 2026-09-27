@@ -68,6 +68,11 @@
 	background: var(--wp--preset--color--warm-white);
 }
 
+/* A size's own photo is showing: the dots were placed on the main photo. */
+.yp-print__photo.is-size-photo .yp-print__dot {
+	display: none;
+}
+
 .yp-print__dot {
 	position: absolute;
 	width: 30px;

@@ -1881,7 +1881,7 @@
 
 .yp-print-size-row {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 8rem auto auto;
+	grid-template-columns: minmax(0, 1fr) 8rem auto auto auto;
 	gap: 0.5rem;
 	align-items: center;
 }
@@ -1903,4 +1903,18 @@
 	.yp-print-addons-editor {
 		grid-template-columns: 1fr;
 	}
+}
+
+.yp-print-size-row__photo {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+
+.yp-print-size-row__photo img {
+	width: 32px;
+	height: 32px;
+	object-fit: cover;
+	border-radius: 6px;
+	border: 1px solid #ddd;
 }

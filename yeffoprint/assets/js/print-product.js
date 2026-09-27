@@ -36,6 +36,10 @@
 	var imageFile = root.querySelector( '[data-yp-image-file]' );
 	var imageLabel = root.querySelector( '[data-yp-image-label]' );
 	var imageId = 0;
+	var photoEl = root.querySelector( '[data-yp-photo]' );
+	var photoImg = root.querySelector( '[data-yp-photo-img]' );
+	var photoEmpty = root.querySelector( '[data-yp-photo-empty]' );
+	var mainImage = photoEl ? photoEl.getAttribute( 'data-yp-main-image' ) : '';
 	var imageUploading = null;
 
 	function money( amount ) {
@@ -59,6 +63,26 @@
 		}
 		var input = sizesEl.querySelector( 'input[type="radio"]:checked' );
 		return input ? parseFloat( input.getAttribute( 'data-price' ) ) || basePrice : fromPrice;
+	}
+
+	// The picked size's own photo, or the main photo for a size without
+	// one. Dots belong to the main photo, so they hide on a size photo.
+	function showSizePhoto() {
+		if ( ! photoImg || ! sizesEl ) {
+			return;
+		}
+		var input = sizesEl.querySelector( 'input[type="radio"]:checked' );
+		var sizeImage = input ? input.getAttribute( 'data-image' ) : '';
+		var src = sizeImage || mainImage;
+
+		if ( src && photoImg.getAttribute( 'src' ) !== src ) {
+			photoImg.setAttribute( 'src', src );
+		}
+		photoImg.hidden = ! src;
+		if ( photoEmpty ) {
+			photoEmpty.hidden = !! src;
+		}
+		photoEl.classList.toggle( 'is-size-photo', !! sizeImage && sizeImage !== mainImage );
 	}
 
 	function addonOn( addonEl ) {
@@ -169,6 +193,7 @@
 
 	form.addEventListener( 'change', function () {
 		setStatus( '', false ); // A fresh pick clears an old "Pick a size." message.
+		showSizePhoto();
 		if ( sizesEl && pickedSize() ) {
 			sizesEl.classList.remove( 'is-missing' );
 			sizeErrorEl.hidden = true;
