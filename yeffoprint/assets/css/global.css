@@ -357,6 +357,19 @@ main.wp-block-group {
 	margin-top: 0.35rem;
 }
 
+/* The menu sits a little below its parent (margin-top above), and that
+   gap isn't part of the parent item, so moving the mouse down through
+   it counted as leaving the menu and closed it before a link could be
+   clicked. An invisible strip over the gap keeps the pointer "inside". */
+.yp-header__nav .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 100%;
+	height: calc(0.35rem + 2px);
+}
+
 .yp-header__nav .wp-block-navigation__responsive-container:not(.is-menu-open) .wp-block-navigation__submenu-container a.wp-block-navigation-item__content {
 	display: block;
 	width: 100%;
