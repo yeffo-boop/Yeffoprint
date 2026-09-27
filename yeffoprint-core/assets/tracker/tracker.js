@@ -925,12 +925,28 @@
 		}
 
 		if ( ! protocols().length ) {
+			var hasVial = vials( false ).length > 0;
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
-				h( 'h2', null, 'Add your first peptide' ),
-				h( 'p', null, 'Set the dose, units and schedule once. Each day you’ll see what’s due, tap to log it, and get a reminder when it’s time.' ),
-				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+				h( 'h2', null, 'Let’s set up your first peptide' ),
+				h( 'p', null, 'Two quick steps. Once you’re set, each day shows what’s due, the units to draw, and a reminder when it’s time.' ),
+				h( 'ol', { class: 'ypt-steps' },
+					h( 'li', { class: hasVial ? 'is-done' : null },
+						h( 'b', null, 'Mix your vial' ),
+						h( 'span', null, hasVial ? 'Done.' : 'What’s in the vial and how much water you added.' )
+					),
+					h( 'li', null,
+						h( 'b', null, 'Set your dose and schedule' ),
+						h( 'span', null, 'How much, how often, and what time.' )
+					)
+				),
+				hasVial ? h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+					openProtocolSheet( null, { p: { compound: vials( false )[ 0 ].compound } } );
+				} }, 'Set your schedule' ) : h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+					openVialSheet( null, null );
+				} }, 'Mix your vial' ),
+				h( 'p', { style: { marginTop: '12px', marginBottom: '0' } }, h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
 					openProtocolSheet( null );
-				} }, 'Add a peptide' )
+				} }, hasVial ? 'Add a different peptide' : 'No vial to mix (pens, capsules)? Skip to your schedule' ) )
 			) );
 			return wrap;
 		}
@@ -1036,7 +1052,7 @@
 				) );
 			} else if ( ! log && ( p.unit === 'mcg' || p.unit === 'mg' || p.unit === 'IU' ) && ( p.route || 'Subcutaneous' ).match( /cutaneous|muscular/ ) ) {
 				card.appendChild( h( 'button', { type: 'button', class: 'ypt-draw', style: { width: '100%', textAlign: 'left' }, onclick: function () {
-					openVialSheet( null, p );
+					openVialSheet( null, { compound: p.compound, dose: p.dose, unit: p.unit } );
 				} }, 'Add your vial to see how many units to draw →' ) );
 			}
 		}
@@ -1620,8 +1636,12 @@
 
 	/* ---------- Add / edit a peptide ---------- */
 
-	function openProtocolSheet( existing ) {
-		var p = existing ? JSON.parse( JSON.stringify( existing ) ) : {
+	/**
+	 * Add / edit a peptide. `draft` ({ p, id }) reopens the sheet with
+	 * what was already typed, after a detour to Mix a vial.
+	 */
+	function openProtocolSheet( existing, draft ) {
+		var defaults = {
 			compound: '',
 			dose: '',
 			unit: 'mcg',
@@ -1634,9 +1654,14 @@
 			notes: '',
 			paused: false,
 		};
+		var p = existing ? JSON.parse( JSON.stringify( existing ) ) : defaults;
+		if ( draft && draft.p ) {
+			p = Object.assign( {}, p, draft.p );
+		}
 		p.schedule = Object.assign( { type: 'daily', days: [ new Date().getDay() ], every: 2, on: 5, off: 2 }, p.schedule || {} );
-		var id = existing ? existing.id : uid( 'p' );
+		var id = draft && draft.id ? draft.id : existing ? existing.id : uid( 'p' );
 		var err = h( 'p', { class: 'ypt-error', hidden: true } );
+		var vialBox = h( 'div', null );
 		var schedDetail = h( 'div', null );
 		var timesBox = h( 'div', { class: 'ypt-times' } );
 		var drawBox = h( 'div', null );
@@ -1701,25 +1726,55 @@
 			}
 		}
 
-		function renderDraw() {
-			drawBox.textContent = '';
-			var v = currentVial( p );
-			if ( ! p.compound ) {
+		// Step 1 of a new peptide: the vial, so the dose step can show units to draw.
+		function renderVial() {
+			vialBox.textContent = '';
+			var v = p.compound ? currentVial( p ) : null;
+			if ( v ) {
+				var c = vialConcentration( v );
+				vialBox.appendChild( h( 'div', { class: 'ypt-vialpick' },
+					h( 'div', null,
+						h( 'b', null, v.mode === 'conc' ? fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' : fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) + ' + ' + fmtNum( +v.water ) + ' mL water' ),
+						h( 'span', null, 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ( c ? ' · ' + fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' : '' ) )
+					),
+					h( 'button', { type: 'button', class: 'ypt-pill', onclick: detourToVial }, 'New vial' )
+				) );
 				return;
 			}
-			if ( v ) {
-				var u = unitsForDose( p.dose, p.unit, v );
-				drawBox.appendChild( h( 'div', { class: 'ypt-draw' },
-					u != null ? [ 'Draw ', h( 'b', null, fmtNum( u, 1 ) + ' units' ), ' per dose from your vial mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + '.' ]
-						: 'Your ' + v.compound + ' vial is in ' + ( vialConcentration( v ) || {} ).unit + ', so pick a dose unit to match.' ) );
-			} else if ( p.unit !== 'units' && p.unit !== 'mL' ) {
-				drawBox.appendChild( h( 'button', { type: 'button', class: 'ypt-draw', style: { width: '100%', textAlign: 'left' }, onclick: function () {
-					saveProtocol( true );
-				} }, 'Add your vial to see units to draw →' ) );
-			}
+			vialBox.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent ypt-btn--block', style: { fontSize: '15px', padding: '13px' }, onclick: detourToVial }, 'Mix your vial first' ) );
+			vialBox.appendChild( h( 'p', { class: 'ypt-hint' }, 'Enter what’s in the vial and the water you added, and every dose will show the units to draw. Pens, capsules or anything premeasured can skip this.' ) );
 		}
 
-		function saveProtocol( thenVial ) {
+		function detourToVial() {
+			var draftP = JSON.parse( JSON.stringify( p ) );
+			closeSheet();
+			openVialSheet( null, {
+				compound: p.compound,
+				dose: p.dose,
+				unit: p.unit,
+				onSaved: function ( vial ) {
+					var next = Object.assign( draftP, { compound: draftP.compound || vial.compound } );
+					if ( vial.mode === 'iu' && next.unit !== 'IU' && ! next.dose ) {
+						next.unit = 'IU';
+					}
+					openProtocolSheet( existing, { p: next, id: id } );
+				},
+			} );
+		}
+
+		function renderDraw() {
+			drawBox.textContent = '';
+			var v = p.compound ? currentVial( p ) : null;
+			if ( ! v || ! ( parseFloat( p.dose ) > 0 ) ) {
+				return;
+			}
+			var u = unitsForDose( p.dose, p.unit, v );
+			drawBox.appendChild( h( 'div', { class: 'ypt-draw' },
+				u != null ? [ 'Draw ', h( 'b', null, fmtNum( u, 1 ) + ' units' ), ' on a U-100 syringe for each dose.' ]
+					: 'Your vial is measured in ' + ( vialConcentration( v ) || {} ).unit + ', so pick that unit for your dose.' ) );
+		}
+
+		function saveProtocol() {
 			var dose = parseFloat( p.dose );
 			err.hidden = true;
 			var problem = ! p.compound ? 'Enter the peptide’s name.'
@@ -1749,11 +1804,7 @@
 			};
 			closeSheet();
 			put( 'protocol', id, data );
-			if ( thenVial ) {
-				openVialSheet( null, Object.assign( { id: id }, data ) );
-			} else {
-				toast( existing ? 'Saved' : data.compound + ' added' );
-			}
+			toast( existing ? 'Saved' : data.compound + ' added' );
 		}
 
 		var doseInput = h( 'input', { class: 'ypt-input', id: 'ypt-p-dose', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: p.dose, placeholder: '250', oninput: function ( e ) {
@@ -1764,8 +1815,10 @@
 		var body = [
 			field( 'Peptide', compoundInput( 'ypt-p-compound', p.compound, function ( v ) {
 				p.compound = v;
+				renderVial();
 				renderDraw();
 			} ), null, 'ypt-p-compound' ),
+			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Vial' ), vialBox ),
 			h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: 'ypt-p-dose' }, 'Dose' ),
 				h( 'div', { class: 'ypt-row' }, h( 'div', { style: { flex: '0 0 34%' } }, doseInput ),
@@ -1834,20 +1887,27 @@
 
 		renderSchedDetail();
 		renderTimes();
+		renderVial();
 		renderDraw();
 
 		openSheet( existing ? 'Edit peptide' : 'Add a peptide', existing ? existing.compound : 'New protocol', body,
 			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
-				saveProtocol( false );
+				saveProtocol();
 			} }, existing ? 'Save changes' : 'Save' ) );
 	}
 
 	/* ---------- Mix a vial (the calculator) ---------- */
 
-	function openVialSheet( existing, forProtocol ) {
+	/**
+	 * Mix a vial. `opts` (all optional): compound, dose + unit to preview,
+	 * and onSaved(vial) — set when Add a peptide sent the customer here
+	 * first, so saving goes straight back to it.
+	 */
+	function openVialSheet( existing, opts ) {
+		opts = opts || {};
 		var v = existing ? JSON.parse( JSON.stringify( existing ) ) : {
-			compound: forProtocol ? forProtocol.compound : '',
-			mode: forProtocol && forProtocol.unit === 'IU' ? 'iu' : 'mg',
+			compound: opts.compound || '',
+			mode: opts.unit === 'IU' ? 'iu' : 'mg',
 			amount: '',
 			water: '',
 			conc: '',
@@ -1857,9 +1917,9 @@
 			finished: false,
 		};
 		var id = existing ? existing.id : uid( 'v' );
-		var p = forProtocol || null;
-		var calc = { dose: p ? p.dose : '', unit: p ? p.unit : 'mcg' };
-		if ( ! p && v.compound ) {
+		var p = null;
+		var calc = { dose: opts.dose || '', unit: opts.unit || 'mcg' };
+		if ( v.compound && ! opts.dose ) {
 			p = protocols().filter( function ( x ) {
 				return sameCompound( x.compound, v.compound );
 			} )[ 0 ] || null;
@@ -1869,6 +1929,7 @@
 		}
 		var err = h( 'p', { class: 'ypt-error', hidden: true } );
 		var inputs = h( 'div', null );
+		var strength = h( 'div', { 'aria-live': 'polite' } );
 		var result = h( 'div', { class: 'ypt-calc-result', 'aria-live': 'polite' } );
 
 		function numInput( id2, key, placeholder, target, onInput ) {
@@ -1916,12 +1977,16 @@
 				inputs.appendChild( field( 'Bacteriostatic water added (mL)', w, null, 'ypt-v-water' ) );
 				inputs.appendChild( chips( 'water', [ 1, 2, 2.5, 3 ], 'mL' ) );
 			}
+			inputs.appendChild( field( v.mode === 'conc' ? 'Opened on' : 'Mixed on', h( 'input', { class: 'ypt-input', id: 'ypt-v-mixed', type: 'date', value: v.mixed, max: todayStr(), onchange: function ( e ) {
+				v.mixed = e.target.value || todayStr();
+			} } ), null, 'ypt-v-mixed' ) );
+			inputs.appendChild( strength );
 			var doseUnits = v.mode === 'iu' ? [ 'IU' ] : [ 'mcg', 'mg' ];
 			if ( doseUnits.indexOf( calc.unit ) === -1 ) {
 				calc.unit = doseUnits[ 0 ];
 			}
 			inputs.appendChild( h( 'div', { class: 'ypt-field' },
-				h( 'label', { for: 'ypt-v-dose' }, 'Your dose' ),
+				h( 'label', { for: 'ypt-v-dose' }, 'Check a dose (optional)' ),
 				h( 'div', { class: 'ypt-row' },
 					h( 'div', { style: { flex: '0 0 40%' } }, numInput( 'ypt-v-dose', 'dose', v.mode === 'iu' ? '2' : '250', calc ) ),
 					doseUnits.length > 1 ? seg( doseUnits, calc.unit, function ( u ) {
@@ -1929,7 +1994,7 @@
 						renderResult();
 					} ) : h( 'div', { class: 'ypt-seg' }, h( 'button', { type: 'button', 'aria-pressed': 'true' }, 'IU' ) )
 				),
-				p ? h( 'p', { class: 'ypt-hint' }, 'From your ' + p.compound + ' schedule.' ) : null
+				h( 'p', { class: 'ypt-hint' }, p ? 'From your ' + p.compound + ' schedule.' : 'See how many units that is. You’ll set your actual dose with your schedule.' )
 			) );
 			inputs.appendChild( h( 'div', { class: 'ypt-field' },
 				h( 'span', { class: 'ypt-label' }, 'Syringe' ),
@@ -1940,15 +2005,31 @@
 			) );
 		}
 
+		// What the mix works out to — shown as soon as the vial is filled
+		// in, before (and without) any dose.
+		function renderStrength() {
+			strength.textContent = '';
+			var c = vialConcentration( v );
+			var total = vialTotalUnits( v );
+			if ( ! c ) {
+				return;
+			}
+			strength.appendChild( h( 'div', { class: 'ypt-stats' },
+				h( 'div', { class: 'ypt-stat' }, h( 'b', null, fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' ), h( 'span', null, 'strength' ) ),
+				h( 'div', { class: 'ypt-stat' }, h( 'b', null, c.unit === 'mg' ? fmtNum( c.amount * 1000 / 100, 1 ) + ' mcg' : fmtNum( c.amount / 100, 2 ) + ' IU' ), h( 'span', null, 'per syringe unit' ) ),
+				h( 'div', { class: 'ypt-stat' }, h( 'b', null, total ? fmtNum( total, 0 ) : '–' ), h( 'span', null, 'units in the vial' ) )
+			) );
+		}
+
 		function renderResult() {
+			renderStrength();
 			result.textContent = '';
 			var units = unitsForDose( calc.dose, calc.unit, v );
 			var c = vialConcentration( v );
 			var total = vialTotalUnits( v );
 			var cap = +v.syringe || 50;
-			if ( ! c || units == null ) {
-				result.appendChild( h( 'p', { class: 'ypt-muted' }, 'Fill in the vial and your dose to see how much to draw.' ) );
-				result.appendChild( drawSyringe( 0, cap ) );
+			result.hidden = ! c || units == null;
+			if ( result.hidden ) {
 				return;
 			}
 			var over = units > cap;
@@ -1961,11 +2042,9 @@
 			} else if ( units < 2 ) {
 				result.appendChild( h( 'div', { class: 'ypt-draw ypt-draw--warn' }, 'Under 2 units is hard to measure. Adding more water makes each dose easier to draw.' ) );
 			}
-			result.appendChild( h( 'div', { class: 'ypt-stats' },
-				h( 'div', { class: 'ypt-stat' }, h( 'b', null, c.unit === 'mg' ? fmtNum( c.amount * 1000 / 100, 1 ) + ' mcg' : fmtNum( c.amount / 100, 2 ) + ' IU' ), h( 'span', null, 'per unit' ) ),
-				h( 'div', { class: 'ypt-stat' }, h( 'b', null, fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' ), h( 'span', null, 'strength' ) ),
-				h( 'div', { class: 'ypt-stat' }, h( 'b', null, total ? String( Math.floor( ( total + 0.0001 ) / units ) ) : '–' ), h( 'span', null, 'doses per vial' ) )
-			) );
+			if ( total ) {
+				result.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '10px' } }, 'About ' + Math.floor( ( total + 0.0001 ) / units ) + ' doses from this vial.' ) );
+			}
 		}
 
 		var body = [
@@ -1982,7 +2061,7 @@
 				var match = protocols().filter( function ( x ) {
 					return sameCompound( x.compound, name );
 				} )[ 0 ];
-				if ( match && ! forProtocol ) {
+				if ( match && ! opts.dose ) {
 					p = match;
 					calc.dose = match.dose;
 					calc.unit = match.unit;
@@ -1992,9 +2071,6 @@
 			} ), null, 'ypt-v-compound' ),
 			inputs,
 			result,
-			field( 'Mixed on', h( 'input', { class: 'ypt-input', id: 'ypt-v-mixed', type: 'date', value: v.mixed, max: todayStr(), onchange: function ( e ) {
-				v.mixed = e.target.value || todayStr();
-			} } ), null, 'ypt-v-mixed' ),
 			h( 'p', { class: 'ypt-hint' }, 'Same math as the ', h( 'a', { href: CFG.calculatorUrl }, 'Peptide & Hormone Calculator' ), '. Always double-check against your vial’s label.' ),
 			existing ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px' }, onclick: function () {
 				if ( window.confirm( 'Delete this vial?' ) ) {
@@ -2020,7 +2096,7 @@
 					return;
 				}
 				closeSheet();
-				put( 'vial', id, {
+				var saved = {
 					compound: v.compound.trim(),
 					mode: v.mode,
 					amount: v.mode === 'conc' ? 0 : +v.amount,
@@ -2030,11 +2106,21 @@
 					mixed: v.mixed || todayStr(),
 					syringe: +v.syringe || 50,
 					finished: !! v.finished,
-				} );
-				if ( ! existing && ! protocols().some( function ( x ) {
-					return sameCompound( x.compound, v.compound );
+				};
+				put( 'vial', id, saved );
+				if ( opts.onSaved ) {
+					opts.onSaved( saved );
+					toast( 'Vial saved' );
+				} else if ( ! existing && ! protocols().some( function ( x ) {
+					return sameCompound( x.compound, saved.compound );
 				} ) ) {
-					toast( 'Vial saved. Add a ' + v.compound + ' schedule to track doses from it.' );
+					// Step 2 of first-time setup: straight on to the schedule.
+					openProtocolSheet( null, { p: {
+						compound: saved.compound,
+						dose: parseFloat( calc.dose ) > 0 ? calc.dose : '',
+						unit: saved.mode === 'iu' ? 'IU' : calc.unit,
+					} } );
+					toast( 'Vial saved. Now set your dose and schedule.' );
 				} else {
 					toast( 'Vial saved' );
 				}
