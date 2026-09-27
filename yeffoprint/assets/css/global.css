@@ -337,10 +337,12 @@ main.wp-block-group {
 	color: var(--wp--preset--color--near-black) !important;
 }
 
-/* "Shop" dropdown (Shop Labels, Custom Stickers, 3D Prints). Desktop
-   only — inside the mobile overlay the core block already lists the
-   sub-items expanded, and the overlay rules further down style them. */
-.yp-header__nav .yp-header__shop > .wp-block-navigation__submenu-icon {
+/* "Shop" dropdown (Shop Labels, Custom Stickers, 3D Prints) and "Tools"
+   (Peptide Calculator, Dose Tracker). Desktop only — inside the mobile
+   overlay the core block already lists the sub-items expanded, and the
+   overlay rules further down style them. */
+.yp-header__nav .yp-header__shop > .wp-block-navigation__submenu-icon,
+.yp-header__nav .yp-header__tools > .wp-block-navigation__submenu-icon {
 	color: var(--wp--preset--color--charcoal);
 	margin-left: -0.45rem;
 }
@@ -391,7 +393,8 @@ main.wp-block-group {
 }
 
 /* Tighter link padding on smaller laptops. With Shop Labels, Custom
-   Stickers and 3D Prints grouped under the one "Shop" menu below, the
+   Stickers and 3D Prints grouped under the one "Shop" menu (and the
+   calculator and tracker under "Tools") below, the
    nav is six items, which fits on one row comfortably from here down
    to the mobile menu. */
 @media (max-width: 1279px) {

@@ -47,6 +47,10 @@ $display_name = $current_user->first_name ?: $current_user->display_name;
 		<strong><?php esc_html_e( 'Connect Telegram', 'yeffoprint' ); ?></strong>
 		<span><?php esc_html_e( 'Order updates the moment they happen', 'yeffoprint' ); ?></span>
 	</a>
+	<a class="yp-account-quicklink" href="<?php echo esc_url( home_url( '/tracker/' ) ); ?>">
+		<strong><?php esc_html_e( 'Dose Tracker', 'yeffoprint' ); ?></strong>
+		<span><?php esc_html_e( 'Log doses, vials and reminders', 'yeffoprint' ); ?></span>
+	</a>
 	<a class="yp-account-quicklink" href="<?php echo esc_url( home_url( '/shop-labels/' ) ); ?>">
 		<strong><?php esc_html_e( 'Shop Labels', 'yeffoprint' ); ?></strong>
 		<span><?php esc_html_e( 'Browse the full design gallery', 'yeffoprint' ); ?></span>

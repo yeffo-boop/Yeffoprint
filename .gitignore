@@ -66,3 +66,6 @@ wp-includes/
 /wp-signup.php
 /wp-trackback.php
 /xmlrpc.php
+# Dose Tracker master key fallback location (never commit)
+wp-content/yeffoprint-private/
+yeffoprint-tracker.key

@@ -182,6 +182,13 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-digest.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-telegram-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-chat-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-crypto.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-store.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-schedule.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-push.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-reminders.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-app.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-tracker-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -276,6 +283,10 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Webhook_Sync();
 		new YeffoPrint_Telegram_Webhook_Controller();
 		new YeffoPrint_Web_Chat_Controller();
+		new YeffoPrint_Tracker_Store();
+		new YeffoPrint_Tracker_Reminders();
+		new YeffoPrint_Tracker_App();
+		new YeffoPrint_Tracker_Controller();
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
 		new YeffoPrint_Telegram_Login();
