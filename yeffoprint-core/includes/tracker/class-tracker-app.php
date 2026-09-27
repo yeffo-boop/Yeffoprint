@@ -1,0 +1,197 @@
+<?php
+/**
+ * The Dose Tracker web app at /tracker/ — direct request: "A lot of
+ * customers want a way to track what peptides they are taking daily
+ * (dosage, units, frequency, completion, etc). Can we build something
+ * mobile friendly..."
+ *
+ * Served straight from the plugin as its own full-screen app shell
+ * (not a theme page), because it's meant to be added to a phone's Home
+ * Screen and opened like an app: no site header/footer, its own web app
+ * manifest, and a service worker scoped to /tracker/ for offline use
+ * and push reminders. Same rewrite-rule approach as
+ * class-admin-app-shortcut.php's /design/.
+ *
+ *   /tracker/                        the app (sign-in screen when logged out)
+ *   /tracker/sw.js                   service worker (must be served from inside /tracker/ to control it)
+ *   /tracker/manifest.webmanifest    Home Screen install metadata
+ *   /tracker/session                 a fresh REST nonce for the signed-in customer
+ *
+ * Nothing about a customer's doses is printed into the page — the app
+ * fetches them from the nonce-checked REST API
+ * (rest/class-tracker-controller.php) — but the page still carries a
+ * per-user nonce, so it's sent no-store and never page-cached.
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+class YeffoPrint_Tracker_App {
+
+	public const SLUG = 'tracker';
+
+	private const QUERY_VAR = 'yeffoprint_tracker';
+
+	public function __construct() {
+		add_action( 'init', [ $this, 'register_rewrite' ] );
+		add_filter( 'query_vars', [ $this, 'register_query_var' ] );
+		add_action( 'template_redirect', [ $this, 'maybe_serve' ], 0 );
+	}
+
+	public static function url(): string {
+		return home_url( '/' . self::SLUG . '/' );
+	}
+
+	/** "/tracker/" (or "/sub/tracker/" when WordPress lives in a subfolder). */
+	private static function path(): string {
+		return (string) wp_parse_url( self::url(), PHP_URL_PATH );
+	}
+
+	public function register_rewrite(): void {
+		add_rewrite_rule( '^' . self::SLUG . '/?$', 'index.php?' . self::QUERY_VAR . '=app', 'top' );
+		add_rewrite_rule( '^' . self::SLUG . '/sw\.js$', 'index.php?' . self::QUERY_VAR . '=sw', 'top' );
+		add_rewrite_rule( '^' . self::SLUG . '/manifest\.webmanifest$', 'index.php?' . self::QUERY_VAR . '=manifest', 'top' );
+		add_rewrite_rule( '^' . self::SLUG . '/session$', 'index.php?' . self::QUERY_VAR . '=session', 'top' );
+	}
+
+	public function register_query_var( array $vars ): array {
+		$vars[] = self::QUERY_VAR;
+		return $vars;
+	}
+
+	public function maybe_serve(): void {
+		$what = get_query_var( self::QUERY_VAR );
+		if ( ! $what ) {
+			return;
+		}
+
+		switch ( $what ) {
+			case 'sw':
+				$this->serve_service_worker();
+				break;
+			case 'manifest':
+				$this->serve_manifest();
+				break;
+			case 'session':
+				$this->serve_session();
+				break;
+			default:
+				$this->serve_app();
+		}
+		exit;
+	}
+
+	private function serve_service_worker(): void {
+		status_header( 200 );
+		header( 'Content-Type: application/javascript; charset=utf-8' );
+		header( 'Cache-Control: no-cache' );
+		header( 'Service-Worker-Allowed: ' . self::path() );
+
+		// The shell assets' content-hashed URLs are baked in, so a deploy
+		// that changes them produces a new service worker (and a fresh cache).
+		$config = [
+			'version' => substr( md5( implode( '|', self::asset_urls() ) ), 0, 12 ),
+			'shell'   => array_values( self::asset_urls() ),
+			'appUrl'  => self::url(),
+		];
+		echo 'self.YP_TRACKER_SW = ' . wp_json_encode( $config ) . ";\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
+		readfile( YEFFOPRINT_CORE_PATH . 'assets/tracker/sw.js' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+	}
+
+	/**
+	 * A fresh wp_rest nonce once the page's own has expired (the app was
+	 * left open, or reopened from the Home Screen's cached copy). This
+	 * can't be the REST /session/nonce route: WordPress treats a REST
+	 * request without a valid nonce as signed out, so that route only
+	 * ever hands back a guest nonce. Same-origin JSON with no CORS
+	 * headers, so no other site can read it.
+	 */
+	private function serve_session(): void {
+		nocache_headers();
+		header( 'Cache-Control: no-store, private' );
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'X-Content-Type-Options: nosniff' );
+		status_header( 200 );
+		echo wp_json_encode( [ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
+			'signedIn' => is_user_logged_in(),
+			'nonce'    => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
+		] );
+	}
+
+	private function serve_manifest(): void {
+		status_header( 200 );
+		header( 'Content-Type: application/manifest+json; charset=utf-8' );
+		header( 'Cache-Control: public, max-age=3600' );
+
+		$icons = YEFFOPRINT_CORE_URL . 'assets/tracker/icons/';
+		echo wp_json_encode( [ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
+			'id'               => self::path(),
+			'name'             => 'YeffoDesign Dose Tracker',
+			'short_name'       => 'Dose Tracker',
+			'description'      => 'Track your peptide doses, vials and schedule.',
+			'start_url'        => self::path(),
+			'scope'            => self::path(),
+			'display'          => 'standalone',
+			'orientation'      => 'portrait',
+			'background_color' => '#FAF9F6',
+			'theme_color'      => '#FAF9F6',
+			'icons'            => [
+				[ 'src' => $icons . 'icon-192.png', 'sizes' => '192x192', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-512.png', 'sizes' => '512x512', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ],
+			],
+		], JSON_UNESCAPED_SLASHES );
+	}
+
+	private function serve_app(): void {
+		nocache_headers();
+		header( 'Cache-Control: no-store, private' );
+		header( 'X-Robots-Tag: noindex' );
+		header( 'Referrer-Policy: same-origin' );
+		status_header( 200 );
+
+		$user   = wp_get_current_user();
+		$assets = self::asset_urls();
+		$config = [
+			'signedIn'      => is_user_logged_in(),
+			'ready'         => YeffoPrint_Tracker_Crypto::is_ready(),
+			'firstName'     => $user->ID ? ( $user->first_name ?: $user->display_name ) : '',
+			'userKey'       => $user->ID ? substr( hash_hmac( 'sha256', (string) $user->ID, wp_salt( 'auth' ) ), 0, 16 ) : '',
+			'restUrl'       => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'         => $user->ID ? wp_create_nonce( 'wp_rest' ) : '',
+			'appUrl'        => self::url(),
+			'swUrl'         => home_url( '/' . self::SLUG . '/sw.js' ),
+			'loginUrl'      => wp_login_url( self::url() ),
+			'registerUrl'   => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_registration_url(),
+			'logoutUrl'     => $user->ID ? wp_logout_url( self::url() ) : '',
+			'homeUrl'       => home_url( '/' ),
+			'labelsUrl'     => home_url( '/shop-labels/' ),
+			'calculatorUrl' => home_url( '/peptide-calculator/' ),
+			'compounds'     => self::compound_names(),
+		];
+
+		include YEFFOPRINT_CORE_PATH . 'includes/tracker/views/app.php';
+	}
+
+	/** @return array{css:string,js:string} Content-hashed, so a deploy busts every cache (browser and service worker). */
+	public static function asset_urls(): array {
+		return [
+			'css' => YEFFOPRINT_CORE_URL . 'assets/tracker/tracker.css?ver=' . yeffoprint_core_asset_version( 'assets/tracker/tracker.css' ),
+			'js'  => YEFFOPRINT_CORE_URL . 'assets/tracker/tracker.js?ver=' . yeffoprint_core_asset_version( 'assets/tracker/tracker.js' ),
+		];
+	}
+
+	/** Autocomplete for "Add a peptide" — the same Catalog > Compound List the label spell-check uses, whether or not spell-check is switched on. @return string[] */
+	private static function compound_names(): array {
+		if ( ! class_exists( 'YeffoPrint_Compound_List' ) ) {
+			return [];
+		}
+		// Mixing waters are in the list for label spell-check, but aren't something anyone doses.
+		$names = array_filter( array_map( static function ( $row ) {
+			return is_array( $row ) ? (string) ( $row['name'] ?? '' ) : '';
+		}, YeffoPrint_Compound_List::get_compounds() ), static function ( $name ) {
+			return '' !== $name && false === stripos( $name, 'water' );
+		} );
+		natcasesort( $names );
+		return array_values( array_unique( $names ) );
+	}
+}

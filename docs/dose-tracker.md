@@ -1,0 +1,47 @@
+# Dose Tracker
+
+Customers' peptide dose log at **/tracker/**: a phone-friendly web app
+(installable to the Home Screen) served by `yeffoprint-core`
+(`includes/tracker/`, `includes/rest/class-tracker-controller.php`,
+`assets/tracker/`). Customers sign in with their normal YeffoDesign
+account.
+
+## What's stored, and how
+
+- One table, `wp_yeffoprint_tracker_records`. Every compound, dose, time,
+  vial and note is encrypted (XChaCha20-Poly1305, libsodium) before it is
+  written. Only the user id, record type and last-changed time are plain.
+- Each customer has their own random key, stored in user meta only in
+  encrypted ("wrapped") form. **Delete my data** in the app, deleting the
+  WordPress account, or Tools → Erase Personal Data removes the rows and
+  that key, so old backups can't be read either.
+- There is no admin screen that shows a customer's entries, by design.
+
+## The master key (back this up)
+
+The customer keys are wrapped with a master key that never goes in the
+database. On first use the plugin creates it automatically, in this order:
+
+1. `YEFFOPRINT_TRACKER_KEY` in `wp-config.php`, if you define it (a
+   base64 32-byte key: `php -r 'echo base64_encode(random_bytes(32)), "\n";'`).
+2. Otherwise a file named `yeffoprint-tracker.key` in the folder **above**
+   the WordPress install (outside the web root, outside the git clone and
+   outside wp-content backups).
+3. Only if that folder isn't writable: `wp-content/yeffoprint-private/tracker-key.php`
+   (a PHP file that prints nothing if requested over the web).
+
+**If the master key is lost, every customer's tracker data is unreadable.**
+Copy the key file (or the constant) somewhere safe and separate from your
+database backups. To move it into `wp-config.php` later, copy the file's
+contents into `define( 'YEFFOPRINT_TRACKER_KEY', '...' );`; the constant
+wins when both exist.
+
+## Reminders
+
+Web Push, sent by the `yeffoprint_tracker_reminder_sweep` cron event
+every 5 minutes (driven by the server's real cron, see
+`deploy-setup.md`). Messages are encrypted to each customer's browser, so
+Apple/Google push servers can't read them. iPhone needs iOS 16.4+ and the
+tracker added to the Home Screen; Android and desktop browsers work
+directly. The push signing key is created once and stored sealed with the
+master key (`yeffoprint_tracker_vapid` option).

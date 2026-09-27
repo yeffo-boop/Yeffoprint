@@ -615,6 +615,29 @@
 
 /* ---------- The math ---------- */
 
+/* Link into the Dose Tracker app (/tracker/, yeffoprint-core
+   includes/tracker/), which reuses this page's math for its vials. */
+.yp-pcalc__track {
+	display: block;
+	margin-top: 0.9rem;
+	padding: 0.75rem 0.9rem;
+	border-radius: 12px;
+	background: linear-gradient(135deg, #fff0f8, #eef9fe);
+	border: 1px solid #f6c3e0;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.9rem;
+	text-decoration: none;
+}
+
+.yp-pcalc__track b {
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-pcalc__track:hover,
+.yp-pcalc__track:focus-visible {
+	border-color: var(--wp--preset--color--magenta);
+}
+
 .yp-pcalc__method {
 	display: grid;
 	gap: 1.25rem;
