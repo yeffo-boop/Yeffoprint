@@ -641,3 +641,21 @@
 	font-size: var(--wp--preset--font-size--small);
 	color: var(--wp--preset--color--charcoal);
 }
+
+/* Lid text / image color, inside the add-on once it's ticked. */
+.yp-print-addon__colors {
+	margin-top: 0.8rem;
+}
+
+.yp-print-addon__colors-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.6rem;
+	margin: 0 0 0.5rem;
+	font-size: 0.9rem;
+}
+
+.yp-print-addon__toggle small {
+	font-size: 0.8rem;
+	color: var(--wp--preset--color--charcoal);
+}

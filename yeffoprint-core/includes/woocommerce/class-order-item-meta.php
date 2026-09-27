@@ -324,9 +324,11 @@ class YeffoPrint_Order_Item_Meta {
 			'colors'      => array_values( $picks ),
 			'text'        => $text,
 			'text_price'  => '' !== $text ? $addons['text_price'] : 0,
+			'text_color'  => $values[ YeffoPrint_Cart_Item_Keys::PRINT_TEXT_COLOR ] ?? null,
 			'image_id'    => $image_id,
 			'image_url'   => $image_id ? (string) wp_get_attachment_url( $image_id ) : '',
 			'image_price' => $image_id ? $addons['image_price'] : 0,
+			'image_color' => $values[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE_COLOR ] ?? null,
 		] ), true );
 
 		if ( '' !== $size ) {

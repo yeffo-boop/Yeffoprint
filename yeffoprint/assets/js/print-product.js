@@ -70,6 +70,11 @@
 		return addonOn( addonEl ) ? parseFloat( addonEl.querySelector( '[data-yp-addon-toggle]' ).getAttribute( 'data-price' ) ) || 0 : 0;
 	}
 
+	function addonColor( addonEl ) {
+		var input = addonEl ? addonEl.querySelector( '[data-yp-addon-colors] input:checked' ) : null;
+		return input;
+	}
+
 	function lidText() {
 		return textInput && addonOn( textAddon ) ? textInput.value.trim() : '';
 	}
@@ -107,11 +112,19 @@
 			}
 		} );
 
+		[ textAddon, imageAddon ].forEach( function ( addonEl ) {
+			var pickedEl = addonEl ? addonEl.querySelector( '[data-yp-addon-colors] [data-yp-picked]' ) : null;
+			var input = addonColor( addonEl );
+			if ( pickedEl ) {
+				pickedEl.textContent = input ? input.getAttribute( 'data-name' ) : 'Pick a color';
+				pickedEl.classList.toggle( 'is-missing', ! input );
+			}
+		} );
 		if ( lidText() ) {
-			parts.push( 'Text “' + lidText() + '”' );
+			parts.push( 'Text “' + lidText() + '” in ' + ( addonColor( textAddon ) ? addonColor( textAddon ).getAttribute( 'data-name' ) : '(color not picked)' ) );
 		}
 		if ( addonOn( imageAddon ) ) {
-			parts.push( imageId ? 'Your image' : 'Image (not uploaded yet)' );
+			parts.push( ( imageId ? 'Your image' : 'Image (not uploaded yet)' ) + ' in ' + ( addonColor( imageAddon ) ? addonColor( imageAddon ).getAttribute( 'data-name' ) : '(color not picked)' ) );
 		}
 		if ( textCount && textInput ) {
 			textCount.textContent = textInput.value.length;
@@ -270,6 +283,18 @@
 			return;
 		}
 
+		if ( lidText() && ! addonColor( textAddon ) ) {
+			setStatus( 'Pick a color for your text.', true );
+			textAddon.querySelector( '[data-yp-addon-colors]' ).scrollIntoView( { block: 'center', behavior: 'smooth' } );
+			return;
+		}
+
+		if ( addonOn( imageAddon ) && ! addonColor( imageAddon ) ) {
+			setStatus( 'Pick a color for your image.', true );
+			imageAddon.querySelector( '[data-yp-addon-colors]' ).scrollIntoView( { block: 'center', behavior: 'smooth' } );
+			return;
+		}
+
 		if ( addonOn( imageAddon ) && imageUploading ) {
 			setStatus( 'Your image is still uploading. One moment…', false );
 			return;
@@ -291,7 +316,9 @@
 				size: pickedSize(),
 				colors: colors,
 				text: lidText(),
+				text_color: lidText() && addonColor( textAddon ) ? parseInt( addonColor( textAddon ).value, 10 ) : 0,
 				image_id: addonOn( imageAddon ) ? imageId : 0,
+				image_color: addonOn( imageAddon ) && addonColor( imageAddon ) ? parseInt( addonColor( imageAddon ).value, 10 ) : 0,
 				quantity: quantity()
 			} )
 		} )

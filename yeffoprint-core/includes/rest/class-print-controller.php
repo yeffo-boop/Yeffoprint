@@ -70,7 +70,13 @@ class YeffoPrint_Print_Controller {
 			return $picks;
 		}
 
-		$addons = YeffoPrint_Print_Meta::resolve_addons( $print_id, $request->get_param( 'text' ), $request->get_param( 'image_id' ) );
+		$addons = YeffoPrint_Print_Meta::resolve_addons(
+			$print_id,
+			$request->get_param( 'text' ),
+			$request->get_param( 'image_id' ),
+			$request->get_param( 'text_color' ),
+			$request->get_param( 'image_color' )
+		);
 		if ( is_wp_error( $addons ) ) {
 			return $addons;
 		}
@@ -88,6 +94,8 @@ class YeffoPrint_Print_Controller {
 			YeffoPrint_Cart_Item_Keys::PRINT_COLORS => $picks,
 			YeffoPrint_Cart_Item_Keys::PRINT_TEXT   => $addons['text'],
 			YeffoPrint_Cart_Item_Keys::PRINT_IMAGE  => $addons['image_id'],
+			YeffoPrint_Cart_Item_Keys::PRINT_TEXT_COLOR  => $addons['text_color'],
+			YeffoPrint_Cart_Item_Keys::PRINT_IMAGE_COLOR => $addons['image_color'],
 		] );
 		YeffoPrint_Cart_Pricing::allow_next_add( false );
 

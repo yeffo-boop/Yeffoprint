@@ -112,4 +112,8 @@ class YeffoPrint_Cart_Item_Keys {
 	// and their uploaded image's attachment ID (0 when not added).
 	public const PRINT_TEXT   = 'yp_print_text';
 	public const PRINT_IMAGE  = 'yp_print_image';
+	// The filament color each prints in: [ 'filament_id', 'name' ], or
+	// null when that add-on wasn't added.
+	public const PRINT_TEXT_COLOR  = 'yp_print_text_color';
+	public const PRINT_IMAGE_COLOR = 'yp_print_image_color';
 }

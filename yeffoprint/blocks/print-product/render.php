@@ -69,6 +69,31 @@ $money = static function ( float $amount ): string {
 };
 
 $archive_url = get_post_type_archive_link( 'yp_print' );
+
+/**
+ * Swatches for a lid add-on's color (text or image). Nothing starts
+ * picked: text in the lid's own color would vanish, so the customer
+ * chooses on purpose.
+ */
+$addon_swatches = static function ( string $name, string $label ) use ( $print ): void {
+	?>
+	<div class="yp-print-addon__colors" data-yp-addon-colors>
+		<p class="yp-print-addon__colors-head">
+			<strong><?php echo esc_html( $label ); ?></strong>
+			<span class="yp-print-slot__picked is-missing" data-yp-picked><?php esc_html_e( 'Pick a color', 'yeffoprint' ); ?></span>
+		</p>
+		<div class="yp-print-slot__swatches">
+			<?php foreach ( $print['addon_colors'] as $color ) : ?>
+				<label class="yp-print-swatch<?php echo $color['in_stock'] ? '' : ' is-out'; ?>" title="<?php echo esc_attr( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?>">
+					<input type="radio" name="<?php echo esc_attr( $name ); ?>" value="<?php echo (int) $color['id']; ?>" data-name="<?php echo esc_attr( $color['name'] ); ?>"<?php disabled( ! $color['in_stock'] ); ?> />
+					<span class="yp-print-swatch__dot<?php echo 'silk' === $color['finish'] ? ' is-silk' : ''; ?>" style="background-color:<?php echo esc_attr( $color['hex'] ); ?>"></span>
+					<span class="screen-reader-text"><?php echo esc_html( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?></span>
+				</label>
+			<?php endforeach; ?>
+		</div>
+	</div>
+	<?php
+};
 ?>
 <div class="yp-print" id="yp-print" data-yp-print-id="<?php echo (int) $print_id; ?>" data-yp-base-price="<?php echo esc_attr( (string) $print['price'] ); ?>" data-yp-from-price="<?php echo esc_attr( (string) $print['from_price'] ); ?>">
 
@@ -244,6 +269,7 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 									<p class="yp-print-addon__hint">
 										<span data-yp-text-count>0</span>/<?php echo (int) $addons['text_max']; ?> <?php esc_html_e( 'characters. We print it exactly as typed.', 'yeffoprint' ); ?>
 									</p>
+									<?php $addon_swatches( 'text_color', __( 'Text color', 'yeffoprint' ) ); ?>
 								</div>
 							</div>
 						<?php endif; ?>
@@ -255,6 +281,7 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 									<span>
 										<?php /* translators: %s: where on the print, e.g. "lid" */ ?>
 										<strong><?php echo esc_html( sprintf( __( 'Add an image to the %s', 'yeffoprint' ), $area ) ); ?></strong>
+										<small><?php esc_html_e( 'Single-color design', 'yeffoprint' ); ?></small>
 										<?php if ( $addons['image_price'] > 0 ) : ?>
 											<em>+<?php echo esc_html( $money( $addons['image_price'] ) ); ?></em>
 										<?php endif; ?>
@@ -265,7 +292,8 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 										<input type="file" accept=".png,.jpg,.jpeg,.svg,.pdf,image/png,image/jpeg,image/svg+xml,application/pdf" data-yp-image-file />
 										<span data-yp-image-label><?php esc_html_e( 'Choose a logo or image', 'yeffoprint' ); ?></span>
 									</label>
-									<p class="yp-print-addon__hint"><?php esc_html_e( 'PNG, JPG, SVG or PDF, up to 10MB. Simple, high-contrast art prints best.', 'yeffoprint' ); ?></p>
+									<p class="yp-print-addon__hint"><?php esc_html_e( 'Your image is printed in one color, so use a simple, single-color design like a logo, icon or silhouette. Photos, gradients and shading won’t come through. PNG, JPG, SVG or PDF, up to 10MB.', 'yeffoprint' ); ?></p>
+									<?php $addon_swatches( 'image_color', __( 'Image color', 'yeffoprint' ) ); ?>
 								</div>
 							</div>
 						<?php endif; ?>

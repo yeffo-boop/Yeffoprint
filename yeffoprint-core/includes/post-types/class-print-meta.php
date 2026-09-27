@@ -410,6 +410,8 @@ class YeffoPrint_Print_Meta {
 			'sizes'        => array_column( $size_options, 'name' ),
 			'size_options' => $size_options,
 			'addons'       => self::get_addons( $print_id ),
+			// Lid text / image print in any active filament color.
+			'addon_colors' => array_values( $filaments ),
 			'slots'        => $slots,
 		];
 	}
@@ -485,13 +487,17 @@ class YeffoPrint_Print_Meta {
 
 	/**
 	 * The customer's lid text / lid image checked against the item's
-	 * live add-on switches: [ 'text' => string, 'image_id' => int ] ('' /
-	 * 0 when not added), or a WP_Error.
+	 * live add-on switches, each with the filament color it prints in
+	 * (the image is printed as a single-color design): [ 'text' =>
+	 * string, 'text_color' => pick|null, 'image_id' => int,
+	 * 'image_color' => pick|null ] ('' / 0 / null when not added), or a
+	 * WP_Error. A pick is [ 'filament_id' => id, 'name' => color name ].
 	 */
-	public static function resolve_addons( int $print_id, $text, $image_id ) {
+	public static function resolve_addons( int $print_id, $text, $image_id, $text_color = 0, $image_color = 0 ) {
 		$addons   = self::get_addons( $print_id );
 		$text     = is_scalar( $text ) ? trim( sanitize_text_field( (string) $text ) ) : '';
 		$image_id = absint( $image_id );
+		$area     = $addons['area'];
 
 		if ( '' !== $text ) {
 			if ( ! $addons['text'] ) {
@@ -512,9 +518,50 @@ class YeffoPrint_Print_Meta {
 			}
 		}
 
+		$text_pick = null;
+		if ( '' !== $text ) {
+			/* translators: %s: where on the print, e.g. "lid" */
+			$text_pick = self::resolve_addon_color( $text_color, sprintf( __( 'your %s text', 'yeffoprint-core' ), $area ) );
+			if ( is_wp_error( $text_pick ) ) {
+				return $text_pick;
+			}
+		}
+
+		$image_pick = null;
+		if ( $image_id ) {
+			/* translators: %s: where on the print, e.g. "lid" */
+			$image_pick = self::resolve_addon_color( $image_color, sprintf( __( 'your %s image', 'yeffoprint-core' ), $area ) );
+			if ( is_wp_error( $image_pick ) ) {
+				return $image_pick;
+			}
+		}
+
 		return [
-			'text'     => $text,
-			'image_id' => $image_id,
+			'text'        => $text,
+			'text_color'  => $text_pick,
+			'image_id'    => $image_id,
+			'image_color' => $image_pick,
+		];
+	}
+
+	/** An add-on's color: any active, in-stock filament color. */
+	private static function resolve_addon_color( $filament_id, string $what ) {
+		$filaments   = self::get_filaments();
+		$filament_id = absint( $filament_id );
+
+		if ( ! isset( $filaments[ $filament_id ] ) ) {
+			/* translators: %s: e.g. "your lid text" */
+			return new \WP_Error( 'yeffoprint_print_color_missing', sprintf( __( 'Pick a color for %s.', 'yeffoprint-core' ), $what ), [ 'status' => 400 ] );
+		}
+
+		if ( ! $filaments[ $filament_id ]['in_stock'] ) {
+			/* translators: 1: color name, 2: e.g. "your lid text" */
+			return new \WP_Error( 'yeffoprint_print_color_out', sprintf( __( '%1$s is out of stock. Pick another color for %2$s.', 'yeffoprint-core' ), $filaments[ $filament_id ]['name'], $what ), [ 'status' => 400 ] );
+		}
+
+		return [
+			'filament_id' => $filament_id,
+			'name'        => $filaments[ $filament_id ]['name'],
 		];
 	}
 
@@ -529,15 +576,26 @@ class YeffoPrint_Print_Meta {
 		$image_id = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE ] ?? 0 );
 		$rows     = [];
 
+		$text_color  = (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_TEXT_COLOR ] ?? [] );
+		$image_color = (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE_COLOR ] ?? [] );
+
 		if ( '' !== $text ) {
 			/* translators: %s: where on the print, e.g. "Lid" */
 			$rows[] = [ 'label' => sprintf( __( '%s text', 'yeffoprint-core' ), $area ), 'value' => $text, 'url' => '' ];
+			if ( ! empty( $text_color['name'] ) ) {
+				/* translators: %s: where on the print, e.g. "Lid" */
+				$rows[] = [ 'label' => sprintf( __( '%s text color', 'yeffoprint-core' ), $area ), 'value' => (string) $text_color['name'], 'url' => '' ];
+			}
 		}
 
 		if ( $image_id ) {
 			$url    = (string) wp_get_attachment_url( $image_id );
 			/* translators: %s: where on the print, e.g. "Lid" */
 			$rows[] = [ 'label' => sprintf( __( '%s image', 'yeffoprint-core' ), $area ), 'value' => $url ? wp_basename( $url ) : __( 'Uploaded image', 'yeffoprint-core' ), 'url' => $url ];
+			if ( ! empty( $image_color['name'] ) ) {
+				/* translators: %s: where on the print, e.g. "Lid" */
+				$rows[] = [ 'label' => sprintf( __( '%s image color', 'yeffoprint-core' ), $area ), 'value' => (string) $image_color['name'], 'url' => '' ];
+			}
 		}
 
 		return $rows;
