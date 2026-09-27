@@ -165,6 +165,8 @@ class YeffoPrint_Tracker_App {
 			'logoutUrl'     => $user->ID ? wp_logout_url( self::url() ) : '',
 			'homeUrl'       => home_url( '/' ),
 			'labelsUrl'     => home_url( '/shop-labels/' ),
+			'cartUrl'       => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/cart/' ),
+			'qtyPresets'    => function_exists( 'yeffoprint_core_quantity_presets' ) ? array_values( array_map( 'intval', yeffoprint_core_quantity_presets() ) ) : [ 10, 20, 30, 50, 100 ],
 			'calculatorUrl' => home_url( '/peptide-calculator/' ),
 			'compounds'     => self::compound_names(),
 		];

@@ -868,3 +868,95 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 	top: calc(var(--ypt-safe-top) + 12px);
 	bottom: auto;
 }
+
+/* ---------- Order labels (Vials tab) ---------- */
+
+.ypt-lo-promo {
+	position: relative;
+	overflow: hidden;
+	border-radius: 18px;
+	padding: 16px;
+	margin-bottom: 12px;
+	color: #fff;
+	background: linear-gradient(120deg, #141414 0%, #2A1330 55%, #0A3A52 100%);
+}
+
+.ypt-lo-promo .ypt-eyebrow { color: #F7A8D6; }
+.ypt-lo-promo h2 { font-family: var(--ypt-heading); font-size: 20px; line-height: 1.15; margin: 4px 0 6px; }
+.ypt-lo-promo p { font-size: 13px; opacity: 0.85; margin: 0 0 12px; }
+
+.ypt-lo-foot { display: flex; gap: 8px; width: 100%; }
+.ypt-lo-lead { margin: 0 0 12px; }
+
+.ypt-lo-progress { display: flex; gap: 6px; margin: 2px 0 14px; }
+.ypt-lo-progress i { flex: 1; height: 4px; border-radius: 4px; background: var(--ypt-line); }
+.ypt-lo-progress i.is-on { background: var(--ypt-magenta); }
+
+.ypt-lo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; opacity: 0.65; }
+.ypt-lo-row.is-on { opacity: 1; }
+.ypt-lo-row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ypt-lo-row__main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ypt-lo-check {
+	width: 26px;
+	height: 26px;
+	flex: none;
+	border-radius: 8px;
+	border: 2px solid #CFCCC6;
+	background: #fff;
+	color: transparent;
+	display: grid;
+	place-items: center;
+	padding: 0;
+}
+.ypt-lo-check svg { width: 16px; height: 16px; stroke-width: 3; }
+.ypt-lo-check[aria-checked="true"] { background: var(--ypt-magenta); border-color: var(--ypt-magenta); color: #fff; }
+
+.ypt-lo-qty { display: flex; align-items: center; border: 1px solid var(--ypt-line); border-radius: 10px; background: #fff; overflow: hidden; flex: none; }
+.ypt-lo-qty button { border: 0; background: none; width: 32px; height: 38px; font-size: 18px; color: var(--ypt-mute); }
+.ypt-lo-qty__n { width: 44px; border: 0; text-align: center; font-family: var(--ypt-mono); font-size: 16px; padding: 0; -moz-appearance: textfield; }
+.ypt-lo-qty__n::-webkit-inner-spin-button, .ypt-lo-qty__n::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.ypt-lo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ypt-lo-tpl {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	text-align: left;
+	border: 2px solid var(--ypt-line);
+	border-radius: 14px;
+	background: #fff;
+	padding: 8px;
+	font-size: 14px;
+}
+.ypt-lo-tpl[aria-pressed="true"] { border-color: var(--ypt-magenta); box-shadow: 0 0 0 3px rgba(236, 0, 140, 0.15); }
+.ypt-lo-tpl__img { width: 100%; aspect-ratio: 15 / 7; border-radius: 8px; background: var(--ypt-soft); overflow: hidden; margin-bottom: 4px; }
+.ypt-lo-tpl__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+.ypt-lo-choice { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.ypt-lo-choice small { font-size: 11px; opacity: 0.75; }
+.ypt-lo-color { padding: 4px; height: 46px; }
+
+.ypt-lo-label__head { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.ypt-lo-label .ypt-field { margin-top: 10px; }
+.ypt-lo-more { margin-top: 10px; font-size: 13px; text-align: left; }
+
+.ypt-lo-preview {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 15 / 7;
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--ypt-soft);
+	border: 1px solid var(--ypt-line);
+}
+.ypt-lo-preview img, .ypt-lo-preview__fill { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ypt-lo-preview__f { position: absolute; white-space: nowrap; line-height: 1.15; }
+.ypt-lo-preview__f.is-multi { white-space: pre-wrap; }
+
+.ypt-lo-total { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 2px 10px; }
+.ypt-lo-total b { font-family: var(--ypt-heading); font-size: 22px; }
+
+.ypt-lo-confirm { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; background: var(--ypt-soft); border-radius: 12px; padding: 12px; }
+.ypt-lo-confirm input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--ypt-magenta); }

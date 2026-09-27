@@ -12,6 +12,7 @@
  *   DELETE /tracker/push                  remove it
  *   POST   /tracker/push/test             send a test reminder to this customer's devices
  *   DELETE /tracker/all                   "Delete my data" — rows plus the customer's key
+ *   GET    /tracker/label-templates       designs offered by "Order labels" (public storefront data)
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -71,6 +72,12 @@ class YeffoPrint_Tracker_Controller {
 		register_rest_route( self::NAMESPACE, '/tracker/all', [
 			'methods'             => \WP_REST_Server::DELETABLE,
 			'callback'            => [ $this, 'delete_all' ],
+			'permission_callback' => $perm,
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/label-templates', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'label_templates' ],
 			'permission_callback' => $perm,
 		] );
 	}
@@ -212,6 +219,54 @@ class YeffoPrint_Tracker_Controller {
 	public function delete_all(): \WP_REST_Response {
 		YeffoPrint_Tracker_Store::delete_all( get_current_user_id() );
 		return self::no_store( [ 'ok' => true ] );
+	}
+
+	/**
+	 * The designs "Order labels" offers: published peptide/pen label
+	 * Templates that can be added to the cart (every other Template if
+	 * none are tagged yet). Public storefront data; each one's fields,
+	 * sizes and materials come from the regular /templates/{id}/configurator
+	 * route, and the order itself goes through /cart/add like the product page.
+	 */
+	public function label_templates(): \WP_REST_Response {
+		$query = [
+			'post_type'      => 'yp_template',
+			'post_status'    => 'publish',
+			'posts_per_page' => 60,
+			'orderby'        => [ 'menu_order' => 'ASC', 'title' => 'ASC' ],
+			'fields'         => 'ids',
+		];
+
+		$ids = get_posts( array_merge( $query, [
+			'tax_query' => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				[
+					'taxonomy' => 'yp_product_type',
+					'field'    => 'slug',
+					'terms'    => [ 'peptide-vial-labels', 'pen-labels' ],
+				],
+			],
+		] ) );
+		if ( ! $ids ) {
+			$ids = get_posts( $query );
+		}
+
+		$templates = [];
+		foreach ( $ids as $id ) {
+			if ( ! YeffoPrint_Linked_Product::get_linked_product_id( (int) $id ) ) {
+				continue;
+			}
+			$templates[] = [
+				'id'         => (int) $id,
+				'title'      => get_post_field( 'post_title', $id ),
+				'artworkUrl' => get_the_post_thumbnail_url( $id, 'medium_large' ) ?: '',
+				'url'        => (string) get_permalink( $id ),
+			];
+		}
+
+		return self::no_store( [
+			'templates'     => $templates,
+			'startingPrice' => function_exists( 'yeffoprint_core_starting_price_label' ) ? yeffoprint_core_starting_price_label() : '',
+		] );
 	}
 
 	private static function push_id( string $endpoint ): string {

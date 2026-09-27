@@ -45,3 +45,17 @@ Apple/Google push servers can't read them. iPhone needs iOS 16.4+ and the
 tracker added to the Home Screen; Android and desktop browsers work
 directly. The push signing key is created once and stored sealed with the
 master key (`yeffoprint_tracker_vapid` option).
+
+## Order labels
+
+The Vials tab's **Order labels** button turns the customer's vials into
+one template order: tick vials and label counts, pick a design (peptide
+and pen label Templates, via `GET tracker/label-templates`), size,
+material, corners and colors once, then check each label. Compound and
+strength come prefilled from each vial (`5 mg`, `5000 IU`, or `2.5 mg/mL`
+for a premixed vial) and stay editable. It adds a single cart line with
+one batch row per vial through the storefront's own `/cart/add`, the same
+as the product page's "Add another label", so pricing, validation and
+"Edit customization" work unchanged, and then opens the cart. Custom
+sizes (typed inches) stay on the product page. Nothing from this flow is
+saved in the tracker.
