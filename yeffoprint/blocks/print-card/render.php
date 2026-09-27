@@ -30,7 +30,7 @@ $count = count( $print['slots'] );
 			echo esc_html( sprintf(
 				/* translators: %s: price, e.g. "$34.00" */
 				__( 'From %s', 'yeffoprint' ),
-				'$' . number_format( $print['price'], 2 )
+				'$' . number_format( $print['from_price'], 2 )
 			) );
 			?>
 			<?php if ( $count ) : ?>

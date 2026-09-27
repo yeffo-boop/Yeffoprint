@@ -296,8 +296,8 @@ class YeffoPrint_Order_Item_Meta {
 	/**
 	 * A 3D print line: the item and every color pick frozen as JSON (so
 	 * a later rename or price change never rewrites a past order), plus
-	 * one readable "Part: Color" row each for the order screen and
-	 * emails — the exact list production prints from.
+	 * one readable "Part: Color" row each (plus any lid text/image) for
+	 * the order screen and emails — the exact list production prints from.
 	 */
 	private static function snapshot_print( \WC_Order_Item_Product $item, array $values ): void {
 		$print_id = (int) $values[ YeffoPrint_Cart_Item_Keys::PRINT_ID ];
@@ -311,13 +311,24 @@ class YeffoPrint_Order_Item_Meta {
 		}
 		unset( $pick );
 
+		$text     = (string) ( $values[ YeffoPrint_Cart_Item_Keys::PRINT_TEXT ] ?? '' );
+		$image_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE ] ?? 0 );
+		$addons   = YeffoPrint_Print_Meta::get_addons( $print_id );
+
 		$item->add_meta_data( '_yp_print_snapshot', wp_json_encode( [
-			'id'         => $print_id,
-			'title'      => get_the_title( $print_id ),
-			'base_price' => (float) get_post_meta( $print_id, YeffoPrint_Print_Meta::PRICE, true ),
-			'unit_price' => YeffoPrint_Print_Meta::unit_price( $print_id, $picks ),
-			'size'       => $size,
-			'colors'     => array_values( $picks ),
+			'id'          => $print_id,
+			'title'       => get_the_title( $print_id ),
+			'base_price'  => YeffoPrint_Print_Meta::price_for_size( $print_id, $size ),
+			'unit_price'  => YeffoPrint_Print_Meta::unit_price( $print_id, $picks, $size, $text, $image_id ),
+			'size'        => $size,
+			'colors'      => array_values( $picks ),
+			'text'        => $text,
+			'text_price'  => '' !== $text ? $addons['text_price'] : 0,
+			'text_color'  => $values[ YeffoPrint_Cart_Item_Keys::PRINT_TEXT_COLOR ] ?? null,
+			'image_id'    => $image_id,
+			'image_url'   => $image_id ? (string) wp_get_attachment_url( $image_id ) : '',
+			'image_price' => $image_id ? $addons['image_price'] : 0,
+			'image_color' => $values[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE_COLOR ] ?? null,
 		] ), true );
 
 		if ( '' !== $size ) {
@@ -330,6 +341,12 @@ class YeffoPrint_Order_Item_Meta {
 				$label .= ' (+' . html_entity_decode( wp_strip_all_tags( wc_price( (float) $pick['extra'] ) ) ) . ')';
 			}
 			$item->add_meta_data( (string) ( $pick['slot'] ?? __( 'Color', 'yeffoprint-core' ) ), $label, true );
+		}
+
+		// "Lid text" / "Lid image" rows. The image row holds the upload's
+		// full URL so production can open it from the order screen.
+		foreach ( YeffoPrint_Print_Meta::addon_rows( $print_id, $values ) as $row ) {
+			$item->add_meta_data( $row['label'], '' !== $row['url'] ? $row['url'] : $row['value'], true );
 		}
 	}
 

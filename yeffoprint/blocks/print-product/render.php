@@ -21,11 +21,17 @@ if ( ! $print ) {
 	return;
 }
 
-$slots       = $print['slots'];
-$sizes       = $print['sizes'];
-$description = get_post_field( 'post_content', $print_id );
-$has_extras  = false;
-$start_total = $print['price'];
+$slots        = $print['slots'];
+$sizes        = $print['size_options'];
+$addons       = $print['addons'];
+$description  = get_post_field( 'post_content', $print_id );
+$has_extras   = false;
+$size_prices  = array_unique( array_column( $sizes, 'price' ) );
+$varied_sizes = count( $size_prices ) > 1;
+// One size is picked up front only when it's the only size; otherwise
+// the total starts at the cheapest size, same as the "From" price.
+$start_total  = $sizes ? ( 1 === count( $sizes ) ? $sizes[0]['price'] : $print['from_price'] ) : $print['price'];
+$area         = $addons['area'];
 
 /**
  * The default pick for a slot: its admin-set default when that color is
@@ -63,8 +69,33 @@ $money = static function ( float $amount ): string {
 };
 
 $archive_url = get_post_type_archive_link( 'yp_print' );
+
+/**
+ * Swatches for a lid add-on's color (text or image). Nothing starts
+ * picked: text in the lid's own color would vanish, so the customer
+ * chooses on purpose.
+ */
+$addon_swatches = static function ( string $name, string $label ) use ( $print ): void {
+	?>
+	<div class="yp-print-addon__colors" data-yp-addon-colors>
+		<p class="yp-print-addon__colors-head">
+			<strong><?php echo esc_html( $label ); ?></strong>
+			<span class="yp-print-slot__picked is-missing" data-yp-picked><?php esc_html_e( 'Pick a color', 'yeffoprint' ); ?></span>
+		</p>
+		<div class="yp-print-slot__swatches">
+			<?php foreach ( $print['addon_colors'] as $color ) : ?>
+				<label class="yp-print-swatch<?php echo $color['in_stock'] ? '' : ' is-out'; ?>" title="<?php echo esc_attr( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?>">
+					<input type="radio" name="<?php echo esc_attr( $name ); ?>" value="<?php echo (int) $color['id']; ?>" data-name="<?php echo esc_attr( $color['name'] ); ?>"<?php disabled( ! $color['in_stock'] ); ?> />
+					<span class="yp-print-swatch__dot<?php echo 'silk' === $color['finish'] ? ' is-silk' : ''; ?>" style="background-color:<?php echo esc_attr( $color['hex'] ); ?>"></span>
+					<span class="screen-reader-text"><?php echo esc_html( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?></span>
+				</label>
+			<?php endforeach; ?>
+		</div>
+	</div>
+	<?php
+};
 ?>
-<div class="yp-print" id="yp-print" data-yp-print-id="<?php echo (int) $print_id; ?>" data-yp-base-price="<?php echo esc_attr( (string) $print['price'] ); ?>">
+<div class="yp-print" id="yp-print" data-yp-print-id="<?php echo (int) $print_id; ?>" data-yp-base-price="<?php echo esc_attr( (string) $print['price'] ); ?>" data-yp-from-price="<?php echo esc_attr( (string) $print['from_price'] ); ?>">
 
 	<nav class="yp-print__crumbs" aria-label="<?php esc_attr_e( 'Breadcrumb', 'yeffoprint' ); ?>">
 		<a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Home', 'yeffoprint' ); ?></a>
@@ -111,7 +142,12 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 			<p class="yp-eyebrow"><?php esc_html_e( '3D Prints', 'yeffoprint' ); ?></p>
 			<h1 class="yp-print__title"><?php echo esc_html( $print['title'] ); ?></h1>
 			<p class="yp-print__price">
-				<?php echo esc_html( $money( $print['price'] ) ); ?>
+				<?php if ( $varied_sizes ) : ?>
+					<?php /* translators: %s: lowest price, e.g. "$18.00" */ ?>
+					<?php echo esc_html( sprintf( __( 'From %s', 'yeffoprint' ), $money( $print['from_price'] ) ) ); ?>
+				<?php else : ?>
+					<?php echo esc_html( $money( $sizes ? $sizes[0]['price'] : $print['price'] ) ); ?>
+				<?php endif; ?>
 				<?php if ( $has_extras ) : ?>
 					<small><?php esc_html_e( '+ color upgrades', 'yeffoprint' ); ?></small>
 				<?php endif; ?>
@@ -143,12 +179,17 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 						<?php // No size starts picked: the wrong one won't fit, so the customer chooses on purpose. ?>
 						<fieldset class="yp-print-sizes" data-yp-sizes>
 							<legend class="yp-print__section-title"><?php esc_html_e( 'Choose your size', 'yeffoprint' ); ?></legend>
-							<p class="yp-print-sizes__error" data-yp-size-error role="alert" hidden><?php esc_html_e( 'Pick your can size to add this to your cart.', 'yeffoprint' ); ?></p>
+							<p class="yp-print-sizes__error" data-yp-size-error role="alert" hidden><?php esc_html_e( 'Pick your size to add this to your cart.', 'yeffoprint' ); ?></p>
 							<div class="yp-print-sizes__options">
 								<?php foreach ( $sizes as $size ) : ?>
 									<label class="yp-print-size">
-										<input type="radio" name="size" value="<?php echo esc_attr( $size ); ?>"<?php checked( 1 === count( $sizes ) ); ?> />
-										<span><?php echo esc_html( $size ); ?></span>
+										<input type="radio" name="size" value="<?php echo esc_attr( $size['name'] ); ?>" data-price="<?php echo esc_attr( (string) $size['price'] ); ?>"<?php checked( 1 === count( $sizes ) ); ?> />
+										<span>
+											<?php echo esc_html( $size['name'] ); ?>
+											<?php if ( $varied_sizes ) : ?>
+												<small><?php echo esc_html( $money( $size['price'] ) ); ?></small>
+											<?php endif; ?>
+										</span>
 									</label>
 								<?php endforeach; ?>
 							</div>
@@ -201,6 +242,64 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 					<p class="yp-print__note"><?php esc_html_e( 'Crossed-out colors are out of stock right now. Colors can look slightly different in person.', 'yeffoprint' ); ?></p>
 				<?php endif; ?>
 
+				<?php if ( $addons['text'] || $addons['image'] ) : ?>
+					<?php // Both off until ticked, so the upcharge is always the customer's own choice. ?>
+					<div class="yp-print-addons" data-yp-addons>
+						<p class="yp-print__section-title">
+							<?php /* translators: %s: where on the print, e.g. "lid" */ ?>
+							<?php echo esc_html( sprintf( __( 'Personalize the %s', 'yeffoprint' ), $area ) ); ?>
+							<span class="yp-print-addons__optional"><?php esc_html_e( 'Optional', 'yeffoprint' ); ?></span>
+						</p>
+
+						<?php if ( $addons['text'] ) : ?>
+							<div class="yp-print-addon" data-yp-addon="text">
+								<label class="yp-print-addon__toggle">
+									<input type="checkbox" data-yp-addon-toggle data-price="<?php echo esc_attr( (string) $addons['text_price'] ); ?>" />
+									<span>
+										<?php /* translators: %s: where on the print, e.g. "lid" */ ?>
+										<strong><?php echo esc_html( sprintf( __( 'Add text to the %s', 'yeffoprint' ), $area ) ); ?></strong>
+										<?php if ( $addons['text_price'] > 0 ) : ?>
+											<em>+<?php echo esc_html( $money( $addons['text_price'] ) ); ?></em>
+										<?php endif; ?>
+									</span>
+								</label>
+								<div class="yp-print-addon__body" data-yp-addon-body hidden>
+									<label class="screen-reader-text" for="yp-print-text"><?php esc_html_e( 'Your text', 'yeffoprint' ); ?></label>
+									<input type="text" id="yp-print-text" name="text" maxlength="<?php echo (int) $addons['text_max']; ?>" placeholder="<?php esc_attr_e( 'e.g. Jess’s Peptides', 'yeffoprint' ); ?>" autocomplete="off" data-yp-text />
+									<p class="yp-print-addon__hint">
+										<span data-yp-text-count>0</span>/<?php echo (int) $addons['text_max']; ?> <?php esc_html_e( 'characters. We print it exactly as typed.', 'yeffoprint' ); ?>
+									</p>
+									<?php $addon_swatches( 'text_color', __( 'Text color', 'yeffoprint' ) ); ?>
+								</div>
+							</div>
+						<?php endif; ?>
+
+						<?php if ( $addons['image'] ) : ?>
+							<div class="yp-print-addon" data-yp-addon="image">
+								<label class="yp-print-addon__toggle">
+									<input type="checkbox" data-yp-addon-toggle data-price="<?php echo esc_attr( (string) $addons['image_price'] ); ?>" />
+									<span>
+										<?php /* translators: %s: where on the print, e.g. "lid" */ ?>
+										<strong><?php echo esc_html( sprintf( __( 'Add an image to the %s', 'yeffoprint' ), $area ) ); ?></strong>
+										<small><?php esc_html_e( 'Single-color design', 'yeffoprint' ); ?></small>
+										<?php if ( $addons['image_price'] > 0 ) : ?>
+											<em>+<?php echo esc_html( $money( $addons['image_price'] ) ); ?></em>
+										<?php endif; ?>
+									</span>
+								</label>
+								<div class="yp-print-addon__body" data-yp-addon-body hidden>
+									<label class="yp-print-addon__file">
+										<input type="file" accept=".png,.jpg,.jpeg,.svg,.pdf,image/png,image/jpeg,image/svg+xml,application/pdf" data-yp-image-file />
+										<span data-yp-image-label><?php esc_html_e( 'Choose a logo or image', 'yeffoprint' ); ?></span>
+									</label>
+									<p class="yp-print-addon__hint"><?php esc_html_e( 'Your image is printed in one color, so use a simple, single-color design like a logo, icon or silhouette. Photos, gradients and shading won’t come through. PNG, JPG, SVG or PDF, up to 10MB.', 'yeffoprint' ); ?></p>
+									<?php $addon_swatches( 'image_color', __( 'Image color', 'yeffoprint' ) ); ?>
+								</div>
+							</div>
+						<?php endif; ?>
+					</div>
+				<?php endif; ?>
+
 				<div class="yp-print__buy">
 					<div class="yp-print__qty">
 						<button type="button" data-yp-qty="-1" aria-label="<?php esc_attr_e( 'Decrease quantity', 'yeffoprint' ); ?>">&minus;</button>
@@ -214,7 +313,7 @@ $archive_url = get_post_type_archive_link( 'yp_print' );
 
 				<p class="yp-print__status" role="status" aria-live="polite" data-yp-status></p>
 
-				<?php if ( $slots || $sizes ) : ?>
+				<?php if ( $slots || $sizes || $addons['text'] || $addons['image'] ) : ?>
 					<p class="yp-print__summary" data-yp-summary></p>
 				<?php endif; ?>
 			</form>

@@ -315,7 +315,7 @@ class YeffoPrint_Cart_Controller {
 		<?php
 	}
 
-	/** A 3D print line: photo, name, size, one "Part: Color" line per color choice, quantity and price. */
+	/** A 3D print line: photo, name, size, one "Part: Color" line per color choice, any lid text/image, quantity and price. */
 	private static function render_print_drawer_item( array $cart_item ): void {
 		$print_id  = (int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ];
 		$picks     = (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] );
@@ -333,6 +333,9 @@ class YeffoPrint_Cart_Controller {
 				<?php endif; ?>
 				<?php foreach ( $picks as $pick ) : ?>
 					<span><?php echo esc_html( ( $pick['slot'] ?? '' ) . ': ' . ( $pick['name'] ?? '' ) ); ?></span>
+				<?php endforeach; ?>
+				<?php foreach ( YeffoPrint_Print_Meta::addon_rows( $print_id, $cart_item ) as $row ) : ?>
+					<span><?php echo esc_html( $row['label'] . ': ' . $row['value'] ); ?></span>
 				<?php endforeach; ?>
 				<span>
 					<?php
