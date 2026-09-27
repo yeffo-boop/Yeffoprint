@@ -50,12 +50,16 @@ class YeffoPrint_Cart_Pricing {
 		$sticker_tier_quantity = self::combined_sticker_quantity( $cart );
 
 		foreach ( $cart->get_cart() as $cart_item ) {
-			// 3D print: base price plus the picked colors' extra charges,
-			// per item — WooCommerce's own line quantity does the rest.
+			// 3D print: the size's price plus the picked colors' extra
+			// charges and any lid text/image charge, per item —
+			// WooCommerce's own line quantity does the rest.
 			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
 				$cart_item['data']->set_price( YeffoPrint_Print_Meta::unit_price(
 					(int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ],
-					(array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] )
+					(array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] ),
+					(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_SIZE ] ?? '' ),
+					(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_TEXT ] ?? '' ),
+					(int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE ] ?? 0 )
 				) );
 				continue;
 			}
@@ -267,6 +271,9 @@ class YeffoPrint_Cart_Pricing {
 			}
 			foreach ( (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] ) as $pick ) {
 				$item_data[] = [ 'key' => (string) ( $pick['slot'] ?? '' ), 'value' => (string) ( $pick['name'] ?? '' ) ];
+			}
+			foreach ( YeffoPrint_Print_Meta::addon_rows( (int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ], $cart_item ) as $row ) {
+				$item_data[] = [ 'key' => $row['label'], 'value' => $row['value'] ];
 			}
 			return $item_data;
 		}

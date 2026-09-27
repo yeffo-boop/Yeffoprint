@@ -43,7 +43,9 @@ class YeffoPrint_Print_Product {
 			return;
 		}
 
-		$price      = (float) get_post_meta( $print_id, YeffoPrint_Print_Meta::PRICE, true );
+		// The cheapest size (or the base price), so wp-admin shows the
+		// real "from" price; the cart always prices the actual pick.
+		$price      = YeffoPrint_Print_Meta::from_price( $print_id );
 		$product_id = self::get_linked_product_id( $print_id );
 		$product    = $product_id ? wc_get_product( $product_id ) : false;
 

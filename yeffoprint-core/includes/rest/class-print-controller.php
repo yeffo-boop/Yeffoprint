@@ -70,6 +70,11 @@ class YeffoPrint_Print_Controller {
 			return $picks;
 		}
 
+		$addons = YeffoPrint_Print_Meta::resolve_addons( $print_id, $request->get_param( 'text' ), $request->get_param( 'image_id' ) );
+		if ( is_wp_error( $addons ) ) {
+			return $addons;
+		}
+
 		$product_id = YeffoPrint_Print_Product::get_linked_product_id( $print_id );
 		$product    = $product_id && function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : null;
 		if ( ! $product || 'publish' !== $product->get_status() ) {
@@ -81,6 +86,8 @@ class YeffoPrint_Print_Controller {
 			YeffoPrint_Cart_Item_Keys::PRINT_ID     => $print_id,
 			YeffoPrint_Cart_Item_Keys::PRINT_SIZE   => $size,
 			YeffoPrint_Cart_Item_Keys::PRINT_COLORS => $picks,
+			YeffoPrint_Cart_Item_Keys::PRINT_TEXT   => $addons['text'],
+			YeffoPrint_Cart_Item_Keys::PRINT_IMAGE  => $addons['image_id'],
 		] );
 		YeffoPrint_Cart_Pricing::allow_next_add( false );
 

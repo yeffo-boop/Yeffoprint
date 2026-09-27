@@ -25,7 +25,9 @@
 		price: '_yp_print_price',
 		shipsIn: '_yp_print_ships_in',
 		slots: '_yp_print_color_slots',
-		sizes: '_yp_print_sizes'
+		sizes: '_yp_print_sizes',
+		sizePrices: '_yp_print_size_prices',
+		addons: '_yp_print_addons'
 	};
 
 	var MAX_SLOTS = 8;
@@ -101,6 +103,12 @@
 				var meta = print.meta || {};
 				var slots = meta[ META.slots ] || [];
 				var price = parseFloat( meta[ META.price ] ) || 0;
+				var sizePriceList = ( meta[ META.sizes ] || [] ).map( function ( name ) {
+					return parseFloat( ( meta[ META.sizePrices ] || {} )[ name ] ) || price;
+				} ).filter( function ( p ) { return p > 0; } );
+				var priceLabel = sizePriceList.length && Math.min.apply( null, sizePriceList ) !== Math.max.apply( null, sizePriceList )
+					? '$' + Math.min.apply( null, sizePriceList ).toFixed( 2 ) + '–$' + Math.max.apply( null, sizePriceList ).toFixed( 2 )
+					: '$' + ( sizePriceList.length ? sizePriceList[ 0 ] : price ).toFixed( 2 );
 				var isPublished = 'publish' === print.status;
 				var img = imageUrl( print );
 
@@ -109,7 +117,7 @@
 						'<td><div class="yp-filament-name">' +
 							( img ? '<img class="yp-swatch" src="' + YP.escapeAttr( img ) + '" alt="" />' : '<span class="yp-swatch"></span>' ) +
 							'<div class="yp-record-name">' + YP.escapeHtml( print.title.raw || '(untitled)' ) + '</div></div></td>' +
-						'<td><span class="yp-chip">$' + price.toFixed( 2 ) + '</span></td>' +
+						'<td><span class="yp-chip">' + priceLabel + '</span></td>' +
 						'<td>' + ( slots.length ? slots.map( function ( s, i ) { return '<span class="yp-chip">' + ( i + 1 ) + ' · ' + YP.escapeHtml( s.name || 'Unnamed' ) + '</span>'; } ).join( ' ' ) : 'One color, no choice' ) + '</td>' +
 						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Published' : 'Draft' ) + '</span></td>' +
 						'<td class="yp-row-actions">' +
@@ -151,6 +159,11 @@
 			var slots = ( meta[ META.slots ] || [] ).map( function ( s ) {
 				return { name: s.name || '', hint: s.hint || '', x: s.x, y: s.y, colors: ( s.colors || [] ).slice(), default_id: s.default_id || 0 };
 			} );
+			var sizePrices = meta[ META.sizePrices ] || {};
+			var sizes = ( meta[ META.sizes ] || [] ).map( function ( name ) {
+				return { name: name, price: sizePrices[ name ] ? String( sizePrices[ name ] ) : '' };
+			} );
+			var addons = meta[ META.addons ] || {};
 			var activeSlot = slots.length ? 0 : -1;
 			var photoUrl = isEdit ? imageUrl( print ) : '';
 
@@ -172,8 +185,22 @@
 								'<div class="yp-field"><label for="yp-pr-ships">Ships in</label><input type="text" id="yp-pr-ships" name="ships_in" placeholder="3 to 5 days" value="' + YP.escapeAttr( meta[ META.shipsIn ] || '' ) + '" /></div>' +
 							'</div>' +
 							'<div class="yp-field"><label for="yp-pr-desc">Description</label><textarea id="yp-pr-desc" name="description" rows="3">' + YP.escapeHtml( isEdit ? ( print.content.raw || '' ).replace( /<[^>]+>/g, '' ).trim() : '' ) + '</textarea></div>' +
-							'<div class="yp-field"><label for="yp-pr-sizes">Sizes</label><textarea id="yp-pr-sizes" name="sizes" rows="3" placeholder="12oz Can&#10;12oz Slim Can">' + YP.escapeHtml( ( meta[ META.sizes ] || [] ).join( '\n' ) ) + '</textarea>' +
-								'<p class="yp-field__hint">One size per line. The customer picks one, and every size costs the same. Leave empty if the item comes in one size.</p></div>' +
+							'<div class="yp-field"><label>Sizes</label>' +
+								'<p class="yp-field__hint">The customer picks one. Give a size its own price, or leave the price empty to use the base price. No sizes means the item comes in one size.</p>' +
+								'<div class="yp-print-sizes-editor" data-yp-sizes></div>' +
+								'<button type="button" class="yp-row-action" data-yp-size-add>+ Add size</button>' +
+							'</div>' +
+							'<div class="yp-field"><label>Personalization</label>' +
+								'<p class="yp-field__hint">Paid extras the customer can tick on the product page. Both start unticked.</p>' +
+								'<div class="yp-print-addons-editor">' +
+									'<div class="yp-field"><label for="yp-pr-area">Where it goes</label><input type="text" id="yp-pr-area" name="addon_area" placeholder="lid" value="' + YP.escapeAttr( addons.area || 'lid' ) + '" /></div>' +
+									'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-pr-text" name="addon_text"' + ( addons.text ? ' checked' : '' ) + ' /><label for="yp-pr-text">Offer custom text</label></div>' +
+									'<div class="yp-field"><label for="yp-pr-text-price">Text charge ($)</label><input type="number" step="0.01" min="0" id="yp-pr-text-price" name="addon_text_price" value="' + ( parseFloat( addons.text_price ) || '' ) + '" /></div>' +
+									'<div class="yp-field"><label for="yp-pr-text-max">Max characters</label><input type="number" step="1" min="1" max="200" id="yp-pr-text-max" name="addon_text_max" value="' + ( parseInt( addons.text_max, 10 ) || 30 ) + '" /></div>' +
+									'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-pr-image" name="addon_image"' + ( addons.image ? ' checked' : '' ) + ' /><label for="yp-pr-image">Offer custom image</label></div>' +
+									'<div class="yp-field"><label for="yp-pr-image-price">Image charge ($)</label><input type="number" step="0.01" min="0" id="yp-pr-image-price" name="addon_image_price" value="' + ( parseFloat( addons.image_price ) || '' ) + '" /></div>' +
+								'</div>' +
+							'</div>' +
 
 							'<div class="yp-print-editor">' +
 								'<div class="yp-print-editor__slots">' +
@@ -220,6 +247,50 @@
 			var countEl = drawer.querySelector( '[data-yp-count-value]' );
 			var photoEl = drawer.querySelector( '[data-yp-photo]' );
 			var photoHintEl = drawer.querySelector( '[data-yp-photo-hint]' );
+			var sizesEl = drawer.querySelector( '[data-yp-sizes]' );
+
+			function renderSizes() {
+				sizesEl.innerHTML = sizes.map( function ( size, i ) {
+					return '<div class="yp-print-size-row" data-yp-size="' + i + '">' +
+						'<input type="text" data-yp-size-field="name" placeholder="Size, e.g. 10 vials" value="' + YP.escapeAttr( size.name ) + '" aria-label="Size name" />' +
+						'<input type="number" step="0.01" min="0" data-yp-size-field="price" placeholder="Base price" value="' + YP.escapeAttr( size.price ) + '" aria-label="Price for this size" />' +
+						'<button type="button" class="yp-row-action" data-yp-size-up aria-label="Move up"' + ( i ? '' : ' disabled' ) + '>&uarr;</button>' +
+						'<button type="button" class="yp-row-action" data-yp-size-remove>Remove</button>' +
+					'</div>';
+				} ).join( '' );
+			}
+
+			sizesEl.addEventListener( 'input', function ( event ) {
+				var row = event.target.closest( '[data-yp-size]' );
+				var field = event.target.getAttribute( 'data-yp-size-field' );
+				if ( row && field ) {
+					sizes[ parseInt( row.getAttribute( 'data-yp-size' ), 10 ) ][ field ] = event.target.value;
+				}
+			} );
+
+			sizesEl.addEventListener( 'click', function ( event ) {
+				var row = event.target.closest( '[data-yp-size]' );
+				if ( ! row ) {
+					return;
+				}
+				var i = parseInt( row.getAttribute( 'data-yp-size' ), 10 );
+				if ( event.target.closest( '[data-yp-size-remove]' ) ) {
+					sizes.splice( i, 1 );
+					renderSizes();
+				} else if ( event.target.closest( '[data-yp-size-up]' ) && i > 0 ) {
+					sizes.splice( i - 1, 0, sizes.splice( i, 1 )[ 0 ] );
+					renderSizes();
+				}
+			} );
+
+			drawer.querySelector( '[data-yp-size-add]' ).addEventListener( 'click', function () {
+				sizes.push( { name: '', price: '' } );
+				renderSizes();
+				var inputs = sizesEl.querySelectorAll( '[data-yp-size-field="name"]' );
+				inputs[ inputs.length - 1 ].focus();
+			} );
+
+			renderSizes();
 
 			function defaultColors() {
 				return filaments.map( function ( f ) { return f.id; } );
@@ -463,9 +534,29 @@
 				};
 				body.meta[ META.price ] = Math.max( 0, parseFloat( form.price.value ) || 0 );
 				body.meta[ META.shipsIn ] = form.ships_in.value.trim();
-				body.meta[ META.sizes ] = form.sizes.value.split( '\n' )
-					.map( function ( size ) { return size.trim(); } )
-					.filter( function ( size, i, all ) { return size && all.indexOf( size ) === i; } );
+				var seen = {};
+				body.meta[ META.sizes ] = [];
+				body.meta[ META.sizePrices ] = {};
+				sizes.forEach( function ( size ) {
+					var name = size.name.trim();
+					var price = parseFloat( size.price );
+					if ( ! name || seen[ name ] ) {
+						return;
+					}
+					seen[ name ] = true;
+					body.meta[ META.sizes ].push( name );
+					if ( price > 0 ) {
+						body.meta[ META.sizePrices ][ name ] = Math.round( price * 100 ) / 100;
+					}
+				} );
+				body.meta[ META.addons ] = {
+					area: form.addon_area.value.trim() || 'lid',
+					text: form.addon_text.checked,
+					text_price: Math.max( 0, parseFloat( form.addon_text_price.value ) || 0 ),
+					text_max: Math.max( 1, Math.min( 200, parseInt( form.addon_text_max.value, 10 ) || 30 ) ),
+					image: form.addon_image.checked,
+					image_price: Math.max( 0, parseFloat( form.addon_image_price.value ) || 0 )
+				};
 				body.meta[ META.slots ] = slots.map( function ( slot ) {
 					return {
 						name: slot.name.trim(),

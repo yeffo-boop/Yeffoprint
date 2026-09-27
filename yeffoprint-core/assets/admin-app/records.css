@@ -1871,3 +1871,36 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* 3D Prints editor: one row per size (name + optional own price). */
+.yp-print-sizes-editor {
+	display: grid;
+	gap: 0.4rem;
+	margin: 0.4rem 0 0.5rem;
+}
+
+.yp-print-size-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 8rem auto auto;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+/* Personalization: area, then text and image switches with their charges. */
+.yp-print-addons-editor {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.5rem 1rem;
+	align-items: end;
+}
+
+.yp-print-addons-editor > .yp-field:first-child {
+	grid-column: 1 / -1;
+	max-width: 16rem;
+}
+
+@media (max-width: 640px) {
+	.yp-print-addons-editor {
+		grid-template-columns: 1fr;
+	}
+}

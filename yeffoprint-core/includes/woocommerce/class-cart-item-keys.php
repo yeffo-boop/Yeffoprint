@@ -108,4 +108,8 @@ class YeffoPrint_Cart_Item_Keys {
 	public const PRINT_ID     = 'yp_print_id';
 	public const PRINT_SIZE   = 'yp_print_size';
 	public const PRINT_COLORS = 'yp_print_colors';
+	// Paid lid personalization: the customer's text ('' when not added)
+	// and their uploaded image's attachment ID (0 when not added).
+	public const PRINT_TEXT   = 'yp_print_text';
+	public const PRINT_IMAGE  = 'yp_print_image';
 }

@@ -3,7 +3,9 @@
  * complete without this — every color is a real radio button — so this
  * only adds the live parts: each part's picked color name, the colored
  * badge on that part's photo dot, the running total, the "Your print"
- * summary, and Add to Cart through yeffoprint-core's /prints/cart
+ * summary, the optional lid text / lid image add-ons (the image goes
+ * up through the same /custom-orders/uploads endpoint the custom label
+ * form uses), and Add to Cart through yeffoprint-core's /prints/cart
  * endpoint, which opens the cart drawer the same way the label
  * configurator does (site.js listens for `yp:cart-updated`).
  */
@@ -26,6 +28,15 @@
 	var sizesEl = root.querySelector( '[data-yp-sizes]' );
 	var sizeErrorEl = root.querySelector( '[data-yp-size-error]' );
 	var basePrice = parseFloat( root.getAttribute( 'data-yp-base-price' ) ) || 0;
+	var fromPrice = parseFloat( root.getAttribute( 'data-yp-from-price' ) ) || basePrice;
+	var textAddon = root.querySelector( '[data-yp-addon="text"]' );
+	var imageAddon = root.querySelector( '[data-yp-addon="image"]' );
+	var textInput = root.querySelector( '[data-yp-text]' );
+	var textCount = root.querySelector( '[data-yp-text-count]' );
+	var imageFile = root.querySelector( '[data-yp-image-file]' );
+	var imageLabel = root.querySelector( '[data-yp-image-label]' );
+	var imageId = 0;
+	var imageUploading = null;
 
 	function money( amount ) {
 		return '$' + amount.toFixed( 2 );
@@ -40,6 +51,29 @@
 		return input ? input.value : '';
 	}
 
+	// Until a size is picked, the total shows the cheapest size (the
+	// "From" price) rather than a base price no size actually sells at.
+	function sizePrice() {
+		if ( ! sizesEl ) {
+			return basePrice;
+		}
+		var input = sizesEl.querySelector( 'input[type="radio"]:checked' );
+		return input ? parseFloat( input.getAttribute( 'data-price' ) ) || basePrice : fromPrice;
+	}
+
+	function addonOn( addonEl ) {
+		var toggle = addonEl ? addonEl.querySelector( '[data-yp-addon-toggle]' ) : null;
+		return !! toggle && toggle.checked;
+	}
+
+	function addonPrice( addonEl ) {
+		return addonOn( addonEl ) ? parseFloat( addonEl.querySelector( '[data-yp-addon-toggle]' ).getAttribute( 'data-price' ) ) || 0 : 0;
+	}
+
+	function lidText() {
+		return textInput && addonOn( textAddon ) ? textInput.value.trim() : '';
+	}
+
 	function slotName( slotEl ) {
 		var strong = slotEl.querySelector( '.yp-print-slot__label strong' );
 		return strong ? strong.textContent : '';
@@ -51,7 +85,7 @@
 	}
 
 	function update() {
-		var unit = basePrice;
+		var unit = sizePrice() + addonPrice( textAddon ) + addonPrice( imageAddon );
 		var parts = sizesEl ? [ 'Size ' + ( pickedSize() || '(not picked)' ) ] : [];
 
 		slots.forEach( function ( slotEl ) {
@@ -72,6 +106,16 @@
 				dotColor.classList.toggle( 'is-silk', !! input && 'silk' === input.getAttribute( 'data-finish' ) );
 			}
 		} );
+
+		if ( lidText() ) {
+			parts.push( 'Text “' + lidText() + '”' );
+		}
+		if ( addonOn( imageAddon ) ) {
+			parts.push( imageId ? 'Your image' : 'Image (not uploaded yet)' );
+		}
+		if ( textCount && textInput ) {
+			textCount.textContent = textInput.value.length;
+		}
 
 		totalEl.textContent = money( unit * quantity() );
 
@@ -119,6 +163,75 @@
 		update();
 	} );
 	qtyInput.addEventListener( 'input', update );
+	if ( textInput ) {
+		textInput.addEventListener( 'input', update );
+	}
+
+	// Ticking an add-on opens its box; unticking hides it and drops it
+	// from the price (the typed text / uploaded image stay, in case the
+	// customer ticks it again).
+	[ textAddon, imageAddon ].forEach( function ( addonEl ) {
+		if ( ! addonEl ) {
+			return;
+		}
+		var toggle = addonEl.querySelector( '[data-yp-addon-toggle]' );
+		var body = addonEl.querySelector( '[data-yp-addon-body]' );
+		toggle.addEventListener( 'change', function () {
+			body.hidden = ! toggle.checked;
+			addonEl.classList.toggle( 'is-on', toggle.checked );
+			if ( toggle.checked && addonEl === textAddon && textInput ) {
+				textInput.focus();
+			}
+		} );
+	} );
+
+	// The image uploads as soon as it's chosen, so Add to Cart only has
+	// to send its ID.
+	if ( imageFile ) {
+		imageFile.addEventListener( 'change', function () {
+			var file = imageFile.files && imageFile.files[ 0 ];
+			imageId = 0;
+			if ( ! file ) {
+				imageLabel.textContent = 'Choose a logo or image';
+				update();
+				return;
+			}
+
+			var data = new FormData();
+			data.append( 'files[]', file );
+			imageLabel.textContent = 'Uploading ' + file.name + '…';
+			imageAddon.classList.remove( 'is-error' );
+
+			imageUploading = fetch( yeffoprintPrint.restUrl + 'custom-orders/uploads', {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': yeffoprintPrint.nonce },
+				body: data
+			} )
+				.then( function ( response ) {
+					return response.json().then( function ( json ) {
+						return { ok: response.ok, data: json };
+					} );
+				} )
+				.then( function ( result ) {
+					var uploaded = result.ok && result.data && result.data.files && result.data.files[ 0 ];
+					if ( uploaded && uploaded.success ) {
+						imageId = uploaded.id;
+						imageLabel.textContent = '✓ ' + file.name;
+					} else {
+						imageLabel.textContent = ( uploaded && uploaded.message ) || ( result.data && result.data.message ) || 'That file didn’t upload. Try another.';
+						imageAddon.classList.add( 'is-error' );
+					}
+				} )
+				.catch( function () {
+					imageLabel.textContent = 'Couldn’t upload. Please try again.';
+					imageAddon.classList.add( 'is-error' );
+				} )
+				.then( function () {
+					imageUploading = null;
+					update();
+				} );
+		} );
+	}
 
 	form.addEventListener( 'submit', function ( event ) {
 		event.preventDefault();
@@ -151,6 +264,22 @@
 			return;
 		}
 
+		if ( addonOn( textAddon ) && ! lidText() ) {
+			setStatus( 'Type your text, or untick "Add text".', true );
+			textInput.focus();
+			return;
+		}
+
+		if ( addonOn( imageAddon ) && imageUploading ) {
+			setStatus( 'Your image is still uploading. One moment…', false );
+			return;
+		}
+
+		if ( addonOn( imageAddon ) && ! imageId ) {
+			setStatus( 'Choose your image, or untick "Add an image".', true );
+			return;
+		}
+
 		addButton.disabled = true;
 		setStatus( 'Adding to your cart…', false );
 
@@ -161,6 +290,8 @@
 				print_id: parseInt( root.getAttribute( 'data-yp-print-id' ), 10 ),
 				size: pickedSize(),
 				colors: colors,
+				text: lidText(),
+				image_id: addonOn( imageAddon ) ? imageId : 0,
 				quantity: quantity()
 			} )
 		} )

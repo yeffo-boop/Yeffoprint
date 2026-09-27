@@ -228,6 +228,116 @@
 	outline-offset: 2px;
 }
 
+/* A size's own price, under its name, when sizes cost different amounts. */
+.yp-print-size span small {
+	display: block;
+	font-size: 0.8rem;
+	font-weight: 500;
+	color: var(--wp--preset--color--charcoal);
+}
+
+/* Optional paid lid text / lid image, below the colors. */
+.yp-print-addons {
+	margin: 1.1rem 0 0.4rem;
+}
+
+.yp-print-addons__optional {
+	margin-left: 0.4rem;
+	font-weight: 500;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-print-addon {
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	background: var(--wp--preset--color--white);
+	padding: 0.75rem 1rem;
+	margin: 0 0 0.65rem;
+}
+
+.yp-print-addon.is-on {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.yp-print-addon__toggle {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	cursor: pointer;
+}
+
+.yp-print-addon__toggle input {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	accent-color: var(--wp--preset--color--near-black);
+}
+
+.yp-print-addon__toggle span {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.2rem 0.6rem;
+	width: 100%;
+}
+
+.yp-print-addon__toggle em {
+	margin-left: auto;
+	font-style: normal;
+	font-weight: 600;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-print-addon__body {
+	margin-top: 0.7rem;
+}
+
+.yp-print-addon__body input[type="text"] {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0.6rem 0.75rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	font: inherit;
+}
+
+.yp-print-addon__hint {
+	margin: 0.4rem 0 0;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-print-addon__file {
+	position: relative;
+	display: block;
+	padding: 0.7rem 0.9rem;
+	border: 1px dashed var(--wp--preset--color--charcoal);
+	border-radius: var(--wp--custom--radius--input);
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	overflow-wrap: anywhere;
+}
+
+.yp-print-addon__file input {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.yp-print-addon__file:focus-within {
+	outline: 2px solid var(--wp--custom--focus-ring);
+	outline-offset: 2px;
+}
+
+.yp-print-addon.is-error .yp-print-addon__file {
+	border-color: var(--wp--preset--color--magenta-deep);
+	color: var(--wp--preset--color--magenta-deep);
+}
+
 .yp-print-slot {
 	border: 1px solid var(--wp--preset--color--light-gray);
 	border-radius: var(--wp--custom--radius--input);
