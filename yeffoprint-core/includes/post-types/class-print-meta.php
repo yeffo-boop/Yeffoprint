@@ -31,6 +31,7 @@ class YeffoPrint_Print_Meta {
 	public const COLOR_SLOTS = '_yp_print_color_slots';
 	public const SIZES       = '_yp_print_sizes';
 	public const SIZE_PRICES = '_yp_print_size_prices';
+	public const SIZE_IMAGES = '_yp_print_size_images';
 	public const ADDONS      = '_yp_print_addons';
 
 	/** Longest lid text a customer can type, when the item doesn't set its own. */
@@ -134,6 +135,23 @@ class YeffoPrint_Print_Meta {
 				'schema' => [
 					'type'                 => 'object',
 					'additionalProperties' => [ 'type' => 'number' ],
+				],
+			],
+		] );
+
+		// Size name => photo attachment ID (direct request: "I will want
+		// to set a picture per size"). The product page swaps to it when
+		// that size is picked; a size without one keeps the main photo.
+		register_post_meta( 'yp_print', self::SIZE_IMAGES, [
+			'type'              => 'object',
+			'single'            => true,
+			'default'           => [],
+			'sanitize_callback' => [ __CLASS__, 'sanitize_size_images' ],
+			'auth_callback'     => [ $this, 'can_edit' ],
+			'show_in_rest'      => [
+				'schema' => [
+					'type'                 => 'object',
+					'additionalProperties' => [ 'type' => 'integer' ],
 				],
 			],
 		] );
@@ -272,6 +290,24 @@ class YeffoPrint_Print_Meta {
 		return $prices;
 	}
 
+	/** Size name => attachment ID, real IDs only. */
+	public static function sanitize_size_images( $value ): array {
+		if ( ! is_array( $value ) ) {
+			return [];
+		}
+
+		$images = [];
+		foreach ( $value as $size => $image_id ) {
+			$size     = sanitize_text_field( (string) $size );
+			$image_id = absint( $image_id );
+			if ( '' !== $size && $image_id ) {
+				$images[ $size ] = $image_id;
+			}
+		}
+
+		return $images;
+	}
+
 	public static function sanitize_addons( $value ): array {
 		$value = is_array( $value ) ? $value : [];
 		$area  = sanitize_text_field( (string) ( $value['area'] ?? '' ) );
@@ -291,20 +327,32 @@ class YeffoPrint_Print_Meta {
 		return self::sanitize_addons( get_post_meta( $print_id, self::ADDONS, true ) );
 	}
 
-	/** One entry per size, in admin order, each with the price it sells at. */
+	/**
+	 * One entry per size, in admin order, each with the price it sells
+	 * at and its own photo ('' when it uses the main photo).
+	 */
 	public static function get_size_options( int $print_id ): array {
 		$base    = (float) get_post_meta( $print_id, self::PRICE, true );
 		$prices  = self::sanitize_size_prices( get_post_meta( $print_id, self::SIZE_PRICES, true ) );
+		$images  = self::sanitize_size_images( get_post_meta( $print_id, self::SIZE_IMAGES, true ) );
 		$options = [];
 
 		foreach ( self::get_sizes( $print_id ) as $size ) {
 			$options[] = [
-				'name'  => $size,
-				'price' => $prices[ $size ] ?? $base,
+				'name'      => $size,
+				'price'     => $prices[ $size ] ?? $base,
+				'image_id'  => $images[ $size ] ?? 0,
+				'image_url' => isset( $images[ $size ] ) ? (string) wp_get_attachment_image_url( $images[ $size ], 'large' ) : '',
 			];
 		}
 
 		return $options;
+	}
+
+	/** The picked size's own photo URL at the given image size, or '' to use the main photo. */
+	public static function size_image_url( int $print_id, string $size, string $image_size = 'large' ): string {
+		$images = self::sanitize_size_images( get_post_meta( $print_id, self::SIZE_IMAGES, true ) );
+		return '' !== $size && isset( $images[ $size ] ) ? (string) wp_get_attachment_image_url( $images[ $size ], $image_size ) : '';
 	}
 
 	/** What the item sells at before colors and add-ons: the size's own price, else the base price. */

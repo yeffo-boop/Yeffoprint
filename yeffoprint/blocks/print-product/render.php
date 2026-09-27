@@ -108,11 +108,22 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print )
 	<div class="yp-print__layout">
 
 		<div class="yp-print__media">
-			<div class="yp-print__photo">
-				<?php if ( $print['image_url'] ) : ?>
-					<img src="<?php echo esc_url( $print['image_url'] ); ?>" alt="<?php echo esc_attr( $print['title'] ); ?>" />
-				<?php else : ?>
-					<div class="yp-print__photo-empty" aria-hidden="true"></div>
+			<?php
+			// A size's own photo replaces the main one while that size is
+			// picked (print-product.js). The color dots are placed on the
+			// main photo, so they hide while a size photo shows.
+			$has_size_images = (bool) array_filter( array_column( $sizes, 'image_url' ) );
+			$first_image     = $print['image_url'];
+			if ( ! $first_image && 1 === count( $sizes ) ) {
+				$first_image = $sizes[0]['image_url'];
+			}
+			?>
+			<div class="yp-print__photo<?php echo $first_image !== $print['image_url'] ? ' is-size-photo' : ''; ?>" data-yp-photo data-yp-main-image="<?php echo esc_attr( $print['image_url'] ); ?>">
+				<?php if ( $first_image || $has_size_images ) : ?>
+					<img src="<?php echo esc_url( $first_image ); ?>" alt="<?php echo esc_attr( $print['title'] ); ?>"<?php echo $first_image ? '' : ' hidden'; ?> data-yp-photo-img />
+				<?php endif; ?>
+				<?php if ( ! $first_image ) : ?>
+					<div class="yp-print__photo-empty" aria-hidden="true" data-yp-photo-empty></div>
 				<?php endif; ?>
 
 				<?php foreach ( $slots as $index => $slot ) : ?>
@@ -183,7 +194,7 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print )
 							<div class="yp-print-sizes__options">
 								<?php foreach ( $sizes as $size ) : ?>
 									<label class="yp-print-size">
-										<input type="radio" name="size" value="<?php echo esc_attr( $size['name'] ); ?>" data-price="<?php echo esc_attr( (string) $size['price'] ); ?>"<?php checked( 1 === count( $sizes ) ); ?> />
+										<input type="radio" name="size" value="<?php echo esc_attr( $size['name'] ); ?>" data-price="<?php echo esc_attr( (string) $size['price'] ); ?>" data-image="<?php echo esc_attr( $size['image_url'] ); ?>"<?php checked( 1 === count( $sizes ) ); ?> />
 										<span>
 											<?php echo esc_html( $size['name'] ); ?>
 											<?php if ( $varied_sizes ) : ?>

@@ -320,7 +320,10 @@ class YeffoPrint_Cart_Controller {
 		$print_id  = (int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ];
 		$picks     = (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] );
 		$quantity  = (int) $cart_item['quantity'];
-		$thumbnail = (string) get_the_post_thumbnail_url( $print_id, 'medium' );
+		// The picked size's own photo when it has one, so a 100-vial box
+		// doesn't show in the drawer as the 4-vial one.
+		$thumbnail = YeffoPrint_Print_Meta::size_image_url( $print_id, (string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_SIZE ] ?? '' ), 'medium' )
+			?: (string) get_the_post_thumbnail_url( $print_id, 'medium' );
 		?>
 		<div class="yp-cart-drawer__item">
 			<?php if ( $thumbnail ) : ?>

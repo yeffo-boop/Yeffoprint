@@ -27,6 +27,7 @@
 		slots: '_yp_print_color_slots',
 		sizes: '_yp_print_sizes',
 		sizePrices: '_yp_print_size_prices',
+		sizeImages: '_yp_print_size_images',
 		addons: '_yp_print_addons'
 	};
 
@@ -160,8 +161,9 @@
 				return { name: s.name || '', hint: s.hint || '', x: s.x, y: s.y, colors: ( s.colors || [] ).slice(), default_id: s.default_id || 0 };
 			} );
 			var sizePrices = meta[ META.sizePrices ] || {};
+			var sizeImages = meta[ META.sizeImages ] || {};
 			var sizes = ( meta[ META.sizes ] || [] ).map( function ( name ) {
-				return { name: name, price: sizePrices[ name ] ? String( sizePrices[ name ] ) : '' };
+				return { name: name, price: sizePrices[ name ] ? String( sizePrices[ name ] ) : '', imageId: parseInt( sizeImages[ name ], 10 ) || 0, imageUrl: '' };
 			} );
 			var addons = meta[ META.addons ] || {};
 			var activeSlot = slots.length ? 0 : -1;
@@ -186,7 +188,7 @@
 							'</div>' +
 							'<div class="yp-field"><label for="yp-pr-desc">Description</label><textarea id="yp-pr-desc" name="description" rows="3">' + YP.escapeHtml( isEdit ? ( print.content.raw || '' ).replace( /<[^>]+>/g, '' ).trim() : '' ) + '</textarea></div>' +
 							'<div class="yp-field"><label>Sizes</label>' +
-								'<p class="yp-field__hint">The customer picks one. Give a size its own price, or leave the price empty to use the base price. No sizes means the item comes in one size.</p>' +
+								'<p class="yp-field__hint">The customer picks one. Give a size its own price, or leave the price empty to use the base price. A size\u2019s photo replaces the main photo while it\u2019s picked. No sizes means the item comes in one size.</p>' +
 								'<div class="yp-print-sizes-editor" data-yp-sizes></div>' +
 								'<button type="button" class="yp-row-action" data-yp-size-add>+ Add size</button>' +
 							'</div>' +
@@ -254,6 +256,11 @@
 					return '<div class="yp-print-size-row" data-yp-size="' + i + '">' +
 						'<input type="text" data-yp-size-field="name" placeholder="Size, e.g. 10 vials" value="' + YP.escapeAttr( size.name ) + '" aria-label="Size name" />' +
 						'<input type="number" step="0.01" min="0" data-yp-size-field="price" placeholder="Base price" value="' + YP.escapeAttr( size.price ) + '" aria-label="Price for this size" />' +
+						'<span class="yp-print-size-row__photo">' +
+							( size.imageUrl ? '<img src="' + YP.escapeAttr( size.imageUrl ) + '" alt="" />' : '' ) +
+							'<button type="button" class="yp-row-action" data-yp-size-photo>' + ( size.imageId ? 'Change photo' : 'Add photo' ) + '</button>' +
+							( size.imageId ? '<button type="button" class="yp-row-action" data-yp-size-photo-remove aria-label="Remove this size\u2019s photo">&times;</button>' : '' ) +
+						'</span>' +
 						'<button type="button" class="yp-row-action" data-yp-size-up aria-label="Move up"' + ( i ? '' : ' disabled' ) + '>&uarr;</button>' +
 						'<button type="button" class="yp-row-action" data-yp-size-remove>Remove</button>' +
 					'</div>';
@@ -274,6 +281,16 @@
 					return;
 				}
 				var i = parseInt( row.getAttribute( 'data-yp-size' ), 10 );
+				if ( event.target.closest( '[data-yp-size-photo]' ) ) {
+					pickSizePhoto( sizes[ i ] );
+					return;
+				}
+				if ( event.target.closest( '[data-yp-size-photo-remove]' ) ) {
+					sizes[ i ].imageId = 0;
+					sizes[ i ].imageUrl = '';
+					renderSizes();
+					return;
+				}
 				if ( event.target.closest( '[data-yp-size-remove]' ) ) {
 					sizes.splice( i, 1 );
 					renderSizes();
@@ -284,11 +301,49 @@
 			} );
 
 			drawer.querySelector( '[data-yp-size-add]' ).addEventListener( 'click', function () {
-				sizes.push( { name: '', price: '' } );
+				sizes.push( { name: '', price: '', imageId: 0, imageUrl: '' } );
 				renderSizes();
 				var inputs = sizesEl.querySelectorAll( '[data-yp-size-field="name"]' );
 				inputs[ inputs.length - 1 ].focus();
 			} );
+
+			// One media frame per pick, so each size row gets its own photo.
+			function pickSizePhoto( size ) {
+				if ( typeof wp === 'undefined' || ! wp.media ) {
+					return;
+				}
+				var frame = wp.media( {
+					title: 'Photo for ' + ( size.name.trim() || 'this size' ),
+					multiple: false,
+					library: { type: 'image' },
+					button: { text: 'Use this photo' }
+				} );
+				frame.on( 'select', function () {
+					var attachment = frame.state().get( 'selection' ).first().toJSON();
+					size.imageId = attachment.id;
+					size.imageUrl = ( attachment.sizes && attachment.sizes.thumbnail && attachment.sizes.thumbnail.url ) || attachment.url;
+					renderSizes();
+				} );
+				frame.open();
+			}
+
+			// Thumbnails for sizes that already have a photo.
+			var savedIds = sizes.map( function ( size ) { return size.imageId; } ).filter( Boolean );
+			if ( savedIds.length ) {
+				YP.request( yeffoprintAdminApp.wpApiUrl + 'media?include=' + savedIds.join( ',' ) + '&per_page=100&_fields=id,source_url,media_details' )
+					.then( function ( media ) {
+						( media || [] ).forEach( function ( item ) {
+							var thumb = ( item.media_details && item.media_details.sizes && item.media_details.sizes.thumbnail && item.media_details.sizes.thumbnail.source_url ) || item.source_url;
+							sizes.forEach( function ( size ) {
+								if ( size.imageId === item.id ) {
+									size.imageUrl = thumb;
+								}
+							} );
+						} );
+						renderSizes();
+					} )
+					.catch( function () {} );
+			}
 
 			renderSizes();
 
@@ -537,6 +592,7 @@
 				var seen = {};
 				body.meta[ META.sizes ] = [];
 				body.meta[ META.sizePrices ] = {};
+				body.meta[ META.sizeImages ] = {};
 				sizes.forEach( function ( size ) {
 					var name = size.name.trim();
 					var price = parseFloat( size.price );
@@ -547,6 +603,9 @@
 					body.meta[ META.sizes ].push( name );
 					if ( price > 0 ) {
 						body.meta[ META.sizePrices ][ name ] = Math.round( price * 100 ) / 100;
+					}
+					if ( size.imageId ) {
+						body.meta[ META.sizeImages ][ name ] = size.imageId;
 					}
 				} );
 				body.meta[ META.addons ] = {
