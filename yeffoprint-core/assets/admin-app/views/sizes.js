@@ -3,7 +3,8 @@
  * `/wp/v2/yp_size` REST route, no new PHP), with fewer fields: `yp_size`
  * doesn't support 'editor' or 'thumbnail' (class-post-type-registry.php),
  * so there's no description or swatch image here, just name, print
- * dimensions, price adjustment, and active state.
+ * dimensions, price adjustment, and active state. A Circle size (round
+ * vial-lid stickers) takes one Diameter, saved as both width and height.
  */
 
 ( function () {
@@ -18,8 +19,13 @@
 		priceAdjustment: '_yp_price_adjustment',
 		widthMm: '_yp_print_width_mm',
 		heightMm: '_yp_print_height_mm',
-		fitNote: '_yp_fit_note'
+		fitNote: '_yp_fit_note',
+		shape: '_yp_size_shape'
 	};
+
+	function isCircle( size ) {
+		return !! size && !! size.meta && 'circle' === size.meta[ META.shape ];
+	}
 
 	function endpoint( path ) {
 		return yeffoprintAdminApp.wpApiUrl + 'yp_size' + ( path || '' );
@@ -79,11 +85,17 @@
 				var height = size.meta ? formatMm( size.meta[ META.heightMm ] ) : 0;
 				var priceAdjustment = size.meta ? parseFloat( size.meta[ META.priceAdjustment ] ) || 0 : 0;
 				var isPublished = 'publish' === size.status;
+				var dimensions = 'Not set';
+				if ( isCircle( size ) && width ) {
+					dimensions = '<span class="yp-size-shape-dot" aria-hidden="true"></span>' + width + '&nbsp;mm circle';
+				} else if ( width && height ) {
+					dimensions = width + '&nbsp;&times;&nbsp;' + height + '&nbsp;mm';
+				}
 
 				return (
 					'<tr data-id="' + size.id + '">' +
 						'<td><div class="yp-record-name">' + YP.escapeHtml( size.title.raw ) + '</div></td>' +
-						'<td><span class="yp-chip">' + ( width && height ? width + '&nbsp;&times;&nbsp;' + height + '&nbsp;mm' : 'Not set' ) + '</span></td>' +
+						'<td><span class="yp-chip">' + dimensions + '</span></td>' +
 						'<td><span class="yp-chip">' + ( priceAdjustment ? formatMoney( priceAdjustment ) : 'No adjustment' ) + '</span></td>' +
 						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span></td>' +
 						'<td class="yp-row-actions">' +
@@ -168,6 +180,7 @@
 		function openForm( size ) {
 			var isEdit = !! size;
 			var meta = ( size && size.meta ) || {};
+			var circle = isCircle( size );
 			var drawer = document.createElement( 'div' );
 			drawer.className = 'yp-drawer yp-drawer--center';
 			drawer.setAttribute( 'aria-hidden', 'true' );
@@ -181,9 +194,16 @@
 						'<form class="yp-form" data-yp-form>' +
 							'<div data-yp-form-error></div>' +
 							'<div class="yp-field"><label for="yp-size-name">Name</label><input type="text" id="yp-size-name" name="name" required value="' + ( isEdit ? YP.escapeAttr( size.title.raw ) : '' ) + '" placeholder="e.g. 2&quot; &times; 1&quot;" /></div>' +
+							'<div class="yp-field"><span class="yp-field__label" id="yp-size-shape-label">Shape</span>' +
+								'<div class="yp-segmented" role="radiogroup" aria-labelledby="yp-size-shape-label">' +
+									'<label class="yp-segmented__option"><input type="radio" name="shape" value="rectangle"' + ( circle ? '' : ' checked' ) + ' /><span><span class="yp-shape-icon yp-shape-icon--rectangle" aria-hidden="true"></span>Rectangle</span></label>' +
+									'<label class="yp-segmented__option"><input type="radio" name="shape" value="circle"' + ( circle ? ' checked' : '' ) + ' /><span><span class="yp-shape-icon yp-shape-icon--circle" aria-hidden="true"></span>Circle</span></label>' +
+								'</div>' +
+							'</div>' +
+							'<p class="yp-field__hint" data-yp-shape-hint>' + ( circle ? 'Round sticker, e.g. for vial lids. Previews show the label as a circle.' : 'Standard rectangular label.' ) + '</p>' +
 							'<div class="yp-form__row">' +
-								'<div class="yp-field"><label for="yp-size-width">Print width (mm)</label><input type="number" step="0.1" min="0" id="yp-size-width" name="width" value="' + ( meta[ META.widthMm ] || '' ) + '" /></div>' +
-								'<div class="yp-field"><label for="yp-size-height">Print height (mm)</label><input type="number" step="0.1" min="0" id="yp-size-height" name="height" value="' + ( meta[ META.heightMm ] || '' ) + '" /></div>' +
+								'<div class="yp-field"><label for="yp-size-width" data-yp-width-label>' + ( circle ? 'Diameter (mm)' : 'Print width (mm)' ) + '</label><input type="number" step="0.1" min="0" id="yp-size-width" name="width" value="' + ( meta[ META.widthMm ] || '' ) + '" /></div>' +
+								'<div class="yp-field" data-yp-height-field' + ( circle ? ' hidden' : '' ) + '><label for="yp-size-height">Print height (mm)</label><input type="number" step="0.1" min="0" id="yp-size-height" name="height" value="' + ( meta[ META.heightMm ] || '' ) + '" /></div>' +
 							'</div>' +
 							'<div class="yp-field"><label for="yp-size-fit">Fits</label><input type="text" id="yp-size-fit" name="fit_note" maxlength="60" value="' + YP.escapeAttr( meta[ META.fitNote ] || '' ) + '" placeholder="e.g. Fits 10 mL vials" /></div>' +
 							'<p class="yp-field__hint">Shown under this size’s card on the product page and custom label form (optional).</p>' +
@@ -201,7 +221,19 @@
 			YP.initDrawer( drawer );
 			YP.openDrawer( drawer );
 
-			drawer.querySelector( '[data-yp-form]' ).addEventListener( 'submit', function ( event ) {
+			var formEl = drawer.querySelector( '[data-yp-form]' );
+			formEl.querySelectorAll( 'input[name="shape"]' ).forEach( function ( radio ) {
+				radio.addEventListener( 'change', function () {
+					var isRound = 'circle' === formEl.shape.value;
+					drawer.querySelector( '[data-yp-width-label]' ).textContent = isRound ? 'Diameter (mm)' : 'Print width (mm)';
+					drawer.querySelector( '[data-yp-height-field]' ).hidden = isRound;
+					drawer.querySelector( '[data-yp-shape-hint]' ).textContent = isRound
+						? 'Round sticker, e.g. for vial lids. Previews show the label as a circle.'
+						: 'Standard rectangular label.';
+				} );
+			} );
+
+			formEl.addEventListener( 'submit', function ( event ) {
 				event.preventDefault();
 				save( size, drawer );
 			} );
@@ -227,8 +259,12 @@
 				status: form.active.checked ? 'publish' : 'draft',
 				meta: {}
 			};
+			var shape = 'circle' === form.shape.value ? 'circle' : 'rectangle';
+			body.meta[ META.shape ] = shape;
 			body.meta[ META.widthMm ] = parseFloat( form.width.value ) || 0;
-			body.meta[ META.heightMm ] = parseFloat( form.height.value ) || 0;
+			// A circle is as tall as it is wide, so pricing, proofs and
+			// anything else reading width × height need no special case.
+			body.meta[ META.heightMm ] = 'circle' === shape ? body.meta[ META.widthMm ] : parseFloat( form.height.value ) || 0;
 			body.meta[ META.priceAdjustment ] = parseFloat( form.price_adjustment.value ) || 0;
 			body.meta[ META.fitNote ] = form.fit_note.value.trim();
 			if ( ! existing ) {

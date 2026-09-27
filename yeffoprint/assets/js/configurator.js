@@ -443,6 +443,7 @@
 			button.addEventListener( 'click', function () {
 				state.sizeId = parseInt( button.getAttribute( 'data-option-id' ), 10 );
 				updateSelectedPill( sizeOptionsEl, state.sizeId );
+				applyStageShape();
 				renderSizeCaption();
 				renderDoseTip();
 				renderSummary();
@@ -524,8 +525,15 @@
 			return;
 		}
 
-		var hasCornerField = schema.field_schema.some( function ( field ) { return 'corner_style' === field.type; } );
 		sizeCaptionEl.hidden = false;
+		if ( pickers.isCircle( size ) ) {
+			sizeCaptionEl.innerHTML =
+				'Label size: <strong>' + pickers.inches( size.print_width_mm ) + ' circle</strong>' +
+				' · ' + Math.round( size.print_width_mm * 10 ) / 10 + ' mm across · shown to scale';
+			return;
+		}
+
+		var hasCornerField = schema.field_schema.some( function ( field ) { return 'corner_style' === field.type; } );
 		sizeCaptionEl.innerHTML =
 			'Label size: <strong>' + pickers.inches( size.print_width_mm ) + ' × ' + pickers.inches( size.print_height_mm ) + '</strong>' +
 			' · ' + Math.round( size.print_width_mm * 10 ) / 10 + ' × ' + Math.round( size.print_height_mm * 10 ) / 10 + ' mm' +
@@ -1257,6 +1265,18 @@
 		imgEl.src = yeffoprintConfigurator.restUrl + 'qr?format=png&text=' + encodeURIComponent( trimmed );
 	}
 
+	/**
+	 * A round Size (vial-lid stickers) masks Label View to a circle so
+	 * the customer sees what the round sticker keeps: the stage's own
+	 * ::after draws the circle and fades everything outside it
+	 * (configurator.css). A class rather than a child node, so
+	 * renderStage()'s innerHTML rebuilds never drop it.
+	 */
+	function applyStageShape() {
+		var size = selectedSize();
+		stageEl.classList.toggle( 'is-round', !! size && window.YPLabelPickers.isCircle( size ) );
+	}
+
 	// Rebuilds every field element — view toggle, variant switch, and
 	// initial load, where every field's position/value can change at
 	// once. Typing in one field only needs updateStageField() below.
@@ -1267,6 +1287,7 @@
 			? '<img class="yp-stage__background" src="' + escapeHtml( backgroundUrl ) + '" alt="" />'
 			: '';
 		stageEl.setAttribute( 'data-view', state.view );
+		applyStageShape();
 
 		// Admin kill switch (Dashboard → YeffoPrint → Settings → Label
 		// Configurator) for whenever field alignment is still being
