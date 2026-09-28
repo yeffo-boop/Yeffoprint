@@ -750,6 +750,51 @@
 		);
 	}
 
+	/**
+	 * Direct request: "usage statistics of the new dose tracker ... total
+	 * users that have used it and daily uses." Counts only, from
+	 * YeffoPrint_Tracker_Usage::summary() — the tracker's entries are
+	 * encrypted and never reach the admin. Bars are customers who used
+	 * the tracker that day; hovering one also shows doses logged.
+	 */
+	function trackerUsageHtml( usage ) {
+		if ( ! usage ) {
+			return '';
+		}
+
+		var tiles = [
+			{ label: 'Total users', count: usage.total_users },
+			{ label: 'Used it today', count: usage.active_today },
+			{ label: 'Last 7 days', count: usage.active_7_days },
+			{ label: 'Doses logged today', count: usage.doses_today }
+		];
+
+		var max = usage.days.reduce( function ( m, d ) { return Math.max( m, d.users ); }, 0 );
+		var bars = usage.days.map( function ( d ) {
+			var label = new Date( d.date + 'T00:00:00' ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } );
+			var tip = label + ': ' + d.users + ( 1 === d.users ? ' user' : ' users' ) + ' · ' + d.doses + ( 1 === d.doses ? ' dose' : ' doses' ) + ' logged';
+			var pct = max ? Math.max( d.users ? 4 : 0, Math.round( d.users / max * 100 ) ) : 0;
+			return '<div class="yp-usage-chart__bar" title="' + YP.escapeAttr( tip ) + '" aria-label="' + YP.escapeAttr( tip ) + '"><span style="height:' + pct + '%"></span></div>';
+		} ).join( '' );
+
+		var first = usage.days.length ? new Date( usage.days[ 0 ].date + 'T00:00:00' ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } ) : '';
+
+		return (
+			'<div class="yp-panel">' +
+				'<div class="yp-panel__head"><h2>Dose Tracker</h2></div>' +
+				'<p class="yp-panel__hint">Customers using the Dose Tracker. Counts only; their entries stay encrypted and private.</p>' +
+				'<div class="yp-stat-tiles yp-stat-tiles--flat">' +
+					tiles.map( function ( tile ) {
+						return '<div class="yp-stat-tile"><span class="yp-stat-tile__count">' + tile.count + '</span><span class="yp-stat-tile__label">' + YP.escapeHtml( tile.label ) + '</span></div>';
+					} ).join( '' ) +
+				'</div>' +
+				'<p class="yp-usage-chart__title">Daily users, last ' + usage.days.length + ' days' + ( max ? ' (busiest day: ' + max + ')' : '' ) + '</p>' +
+				'<div class="yp-usage-chart" role="img" aria-label="Daily Dose Tracker users for the last ' + usage.days.length + ' days">' + bars + '</div>' +
+				'<div class="yp-usage-chart__axis"><span>' + YP.escapeHtml( first ) + '</span><span>Today</span></div>' +
+			'</div>'
+		);
+	}
+
 	function renderDashboardSummary( summary, el ) {
 		var dueDateDays = summary.due_date_days;
 
@@ -881,7 +926,8 @@
 				'<div class="yp-panel__head"><h2>Active Maintenance Subscribers</h2><a href="#/maintenance">View all &rarr;</a></div>' +
 				'<p class="yp-panel__hint">Customers currently paying for ongoing site maintenance &amp; monitoring.</p>' +
 				maintenanceBody +
-			'</div>';
+			'</div>' +
+			trackerUsageHtml( summary.tracker_usage );
 
 		el.querySelectorAll( '[data-yp-dashboard-order]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {

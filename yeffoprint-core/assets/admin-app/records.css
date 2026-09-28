@@ -769,6 +769,55 @@
 	font-weight: 600;
 }
 
+/* Dose Tracker panel (app.js's trackerUsageHtml()) — the same tiles
+   sitting inside a panel, so outlined instead of a second shadow. */
+.yp-stat-tiles--flat .yp-stat-tile {
+	box-shadow: none;
+	border: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-usage-chart__title {
+	margin: 0.25rem 0 0.4rem;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-usage-chart {
+	display: flex;
+	align-items: flex-end;
+	gap: 3px;
+	height: 120px;
+	padding-bottom: 1px;
+	border-bottom: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-usage-chart__bar {
+	flex: 1 1 0;
+	height: 100%;
+	display: flex;
+	align-items: flex-end;
+}
+
+.yp-usage-chart__bar span {
+	display: block;
+	width: 100%;
+	background: var(--wp--preset--color--cyan-deep);
+	border-radius: 3px 3px 0 0;
+}
+
+.yp-usage-chart__bar:hover span {
+	opacity: 0.75;
+}
+
+.yp-usage-chart__axis {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 0.3rem;
+	font-size: 0.72rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
 /* ---------- List rows — the same compact row shape as .yp-attn__row,
    minus the urgency stripe, reused for every dashboard panel (Pending
    Orders, Shipped Packages, Pending Proofs, Awaiting Approval,

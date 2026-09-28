@@ -102,14 +102,20 @@ class YeffoPrint_Tracker_Store {
 		return null === $payload ? null : YeffoPrint_Tracker_Crypto::decrypt_record( $user_id, $kind, $record_id, (string) $payload );
 	}
 
+	public static function exists( int $user_id, string $kind, string $record_id ): bool {
+		global $wpdb;
+		$table = self::table_name();
+		return (bool) $wpdb->get_var(
+			$wpdb->prepare( "SELECT 1 FROM {$table} WHERE user_id = %d AND kind = %s AND record_id = %s", $user_id, $kind, $record_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+	}
+
 	/** @return true|\WP_Error */
 	public static function put( int $user_id, string $kind, string $record_id, array $data ) {
 		global $wpdb;
 		$table = self::table_name();
 
-		$exists = (bool) $wpdb->get_var(
-			$wpdb->prepare( "SELECT 1 FROM {$table} WHERE user_id = %d AND kind = %s AND record_id = %s", $user_id, $kind, $record_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		);
+		$exists = self::exists( $user_id, $kind, $record_id );
 		if ( ! $exists && self::count( $user_id ) >= self::MAX_RECORDS ) {
 			return new \WP_Error( 'yeffoprint_tracker_full', __( 'Your tracker is full. Delete some old entries and try again.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
@@ -143,6 +149,7 @@ class YeffoPrint_Tracker_Store {
 		global $wpdb;
 		$wpdb->delete( self::table_name(), [ 'user_id' => $user_id ], [ '%d' ] );
 		YeffoPrint_Tracker_Crypto::forget_user( $user_id );
+		YeffoPrint_Tracker_Usage::forget_user( $user_id );
 		delete_user_meta( $user_id, YeffoPrint_Tracker_Reminders::LAST_SWEEP_META );
 	}
 
