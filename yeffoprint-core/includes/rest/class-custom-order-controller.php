@@ -384,6 +384,7 @@ class YeffoPrint_Custom_Order_Controller {
 				'print_height_mm'  => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRINT_HEIGHT_MM, true ),
 				'price_adjustment' => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
 				'fit_note'         => (string) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::FIT_NOTE, true ),
+				'shape'            => YeffoPrint_Commerce_Record_Meta::size_shape( $post->ID ),
 			];
 		};
 

@@ -172,6 +172,10 @@
 		if ( ! pickers.hasDimensions( size ) ) {
 			return escapeHtml( size.fit_note || '' );
 		}
+		if ( pickers.isCircle( size ) ) {
+			return pickers.mmLabel( size ) + ' · ' + pickers.inches( size.print_width_mm ) + ' across' +
+				( size.fit_note ? ' · ' + escapeHtml( size.fit_note ) : '' );
+		}
 		return Math.round( size.print_width_mm * 10 ) / 10 + ' × ' + Math.round( size.print_height_mm * 10 ) / 10 + ' mm · ' +
 			pickers.inches( size.print_width_mm ) + ' × ' + pickers.inches( size.print_height_mm ) +
 			( size.fit_note ? ' · ' + escapeHtml( size.fit_note ) : '' );
@@ -644,7 +648,7 @@
 			return null;
 		}
 		if ( pickers.hasDimensions( size ) ) {
-			return { widthMm: size.print_width_mm, heightMm: size.print_height_mm, name: size.name || '', row: row };
+			return { widthMm: size.print_width_mm, heightMm: size.print_height_mm, name: size.name || '', row: row, circle: pickers.isCircle( size ) };
 		}
 		if ( ! rowCustomSizeValid( row ) ) {
 			return null;
@@ -709,8 +713,8 @@
 			var w = Math.round( target.widthMm * 10 ) / 10;
 			var h = Math.round( target.heightMm * 10 ) / 10;
 			var bestPx = aiPixels( target.widthMm, AI_BEST_DPI ) + ' × ' + aiPixels( target.heightMm, AI_BEST_DPI ) + ' px';
-			shape = aiShapeWords( ratio );
-			set( '[data-yp-ai-size]', escapeHtml( w + ' × ' + h + ' mm' ) );
+			shape = target.circle ? 'round (circular)' : aiShapeWords( ratio );
+			set( '[data-yp-ai-size]', escapeHtml( target.circle ? w + ' mm circle' : w + ' × ' + h + ' mm' ) );
 			set( '[data-yp-ai-size-sub]', escapeHtml( pickers.inches( target.widthMm ) + ' × ' + pickers.inches( target.heightMm ) + ( target.name ? ' · ' + target.name : '' ) ) );
 			set( '[data-yp-ai-ratio]', escapeHtml( aiRatioText( ratio ) ) );
 			set( '[data-yp-ai-ratio-sub]', escapeHtml( shape ) );
@@ -741,6 +745,7 @@
 			( shape ? shape.charAt( 0 ).toUpperCase() + shape.slice( 1 ) + ' layout, exact' : 'Exact' ) + ' aspect ratio ' + ratioMark + ' (' + sizeMark + '). ' +
 			'<mark>Transparent background</mark>, PNG, ' + pxMark + '. ' +
 			'Flat front-facing artwork only: no vial, bottle, mockup, shadow or 3D perspective. ' +
+			( target && target.circle ? 'The label is a circle ' + escapeHtml( Math.round( target.widthMm * 10 ) / 10 + ' mm' ) + ' across: fit everything inside the circle, nothing in the corners. ' : '' ) +
 			'Keep all text at least 2 mm from every edge. ' +
 			'Large, crisp, correctly spelled text: ' + aiField( details, '[product name and strength]' ) + '. ' +
 			'Style: ' + aiField( style, '[your colors and style]' ) + '.'

@@ -108,6 +108,26 @@
 	aspect-ratio: 1;
 }
 
+/* Round Size (admin Sizes → Shape: Circle, e.g. vial-lid stickers):
+   Label View shows a circle as tall as the stage, centered, and fades
+   whatever falls outside it, so the customer sees exactly what the
+   round sticker keeps. Square artwork fills the circle edge to edge.
+   Set by configurator.js's applyStageShape(). */
+.yp-configurator__stage.is-round[data-view="label"]::after {
+	content: "";
+	position: absolute;
+	top: 4%;
+	bottom: 4%;
+	left: 50%;
+	aspect-ratio: 1;
+	transform: translateX(-50%);
+	border-radius: 50%;
+	border: 1.5px dashed rgba(0, 0, 0, 0.35);
+	box-shadow: 0 0 0 100vmax rgba(240, 238, 234, 0.9);
+	pointer-events: none;
+	z-index: 2;
+}
+
 .yp-stage__background {
 	position: absolute;
 	inset: 0;

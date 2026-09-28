@@ -1923,7 +1923,11 @@
 		/** The design's artwork with this row's own text drawn where the product page draws it. */
 		function labelPreview( r ) {
 			var s = o.schema;
-			var wrap = h( 'div', { class: 'ypt-lo-preview' } );
+			var size = ( s.sizes || [] ).filter( function ( z ) {
+				return z.id === o.sizeId;
+			} )[ 0 ];
+			// A round Size (vial-lid stickers) masks the preview to a circle, as the product page does.
+			var wrap = h( 'div', { class: 'ypt-lo-preview' + ( size && size.shape === 'circle' ? ' is-round' : '' ) } );
 			var bg = colorFor( 'background' );
 			if ( bg ) {
 				wrap.appendChild( h( 'span', { class: 'ypt-lo-preview__fill', style: { background: bg } } ) );

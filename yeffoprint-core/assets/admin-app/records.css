@@ -552,6 +552,10 @@
 	outline: none;
 }
 
+.yp-field[hidden] {
+	display: none;
+}
+
 .yp-field--checkbox {
 	flex-direction: row;
 	align-items: center;
@@ -566,6 +570,79 @@
 	font-size: 0.76rem;
 	color: var(--wp--preset--color--charcoal);
 	margin: 0;
+}
+
+/* Sizes → Shape (Rectangle / Circle): two-option segmented control. */
+.yp-field__label {
+	font-size: 0.8rem;
+	font-weight: 600;
+}
+
+.yp-segmented {
+	display: inline-flex;
+	gap: 0.25rem;
+	padding: 0.25rem;
+	background: var(--wp--preset--color--warm-white);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	align-self: flex-start;
+}
+
+.yp-field .yp-segmented__option {
+	position: relative;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.yp-segmented__option input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.yp-segmented__option > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.4rem 0.85rem;
+	border-radius: var(--wp--custom--radius--control);
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-segmented__option input:checked + span {
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+	font-weight: 600;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.yp-segmented__option input:focus-visible + span {
+	outline: 2px solid var(--wp--preset--color--near-black);
+	outline-offset: 1px;
+}
+
+.yp-shape-icon {
+	display: inline-block;
+	width: 16px;
+	height: 11px;
+	border: 1.5px solid currentColor;
+	border-radius: 2px;
+}
+
+.yp-shape-icon--circle {
+	width: 13px;
+	height: 13px;
+	border-radius: 50%;
+}
+
+.yp-size-shape-dot {
+	display: inline-block;
+	width: 0.7em;
+	height: 0.7em;
+	margin-right: 0.35em;
+	border: 1.5px solid currentColor;
+	border-radius: 50%;
+	vertical-align: -0.05em;
 }
 
 .yp-media-field {

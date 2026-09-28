@@ -158,6 +158,8 @@ class YeffoPrint_Template_Schema_Controller {
 			'print_height_mm'  => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRINT_HEIGHT_MM, true ),
 			'price_adjustment' => (float) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
 			'fit_note'         => (string) get_post_meta( $size->ID, YeffoPrint_Commerce_Record_Meta::FIT_NOTE, true ),
+			// 'circle' draws the size card and the label preview round.
+			'shape'            => YeffoPrint_Commerce_Record_Meta::size_shape( $size->ID ),
 		];
 	}
 

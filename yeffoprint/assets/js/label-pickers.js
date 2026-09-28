@@ -44,6 +44,21 @@
 		return size && size.print_width_mm > 0 && size.print_height_mm > 0;
 	}
 
+	/**
+	 * A round Size (admin Catalog → Sizes → Shape: Circle), e.g. vial-lid
+	 * stickers. Its diameter is print_width_mm.
+	 */
+	function isCircle( size ) {
+		return !! size && 'circle' === size.shape;
+	}
+
+	/** '20 mm circle' / '45 × 21 mm'. */
+	function mmLabel( size ) {
+		return isCircle( size )
+			? mm( size.print_width_mm ) + ' mm circle'
+			: mm( size.print_width_mm ) + ' × ' + mm( size.print_height_mm ) + ' mm';
+	}
+
 	/** 45 → '1.77″' (two decimals, trailing zero dropped: 60.96 mm → '2.4″'). */
 	function inches( mm ) {
 		return ( mm / MM_PER_INCH ).toFixed( 2 ).replace( /0$/, '' ).replace( /\.$/, '' ) + '″';
@@ -86,7 +101,8 @@
 	 * area, with a few placeholder text bars so it reads as a label.
 	 * `withDimensions` adds width/height dimension lines in inches;
 	 * `rounded` rounds the corners (the Corner Finish field's choice).
-	 * A size with no dimensions (e.g. "Custom") draws a dashed outline.
+	 * A size with no dimensions (e.g. "Custom") draws a dashed outline;
+	 * a circle draws round, with its diameter as the one dimension.
 	 */
 	function sizeDrawing( size, scale, boxW, boxH, options ) {
 		options = options || {};
@@ -106,6 +122,24 @@
 		h = round( h );
 
 		var svg = '<svg class="yp-size-drawing" width="' + viewW + '" height="' + viewH + '" viewBox="0 0 ' + viewW + ' ' + viewH + '" aria-hidden="true" focusable="false">';
+
+		if ( ! isCustom && isCircle( size ) ) {
+			var cx = round( x + w / 2 );
+			var cy = round( y + h / 2 );
+			var d = Math.min( w, h );
+			var cbar = Math.max( 2, round( d * 0.1 ) );
+			svg += '<circle class="yp-size-drawing__label" cx="' + cx + '" cy="' + cy + '" r="' + round( d / 2 ) + '"/>';
+			svg += '<rect class="yp-size-drawing__ink" x="' + round( cx - d * 0.27 ) + '" y="' + round( cy - d * 0.2 ) + '" width="' + round( d * 0.54 ) + '" height="' + cbar + '" rx="' + round( cbar / 2 ) + '"/>';
+			svg += '<rect class="yp-size-drawing__line" x="' + round( cx - d * 0.32 ) + '" y="' + round( cy + d * 0.02 ) + '" width="' + round( d * 0.64 ) + '" height="' + round( cbar * 0.7 ) + '" rx="' + round( cbar * 0.35 ) + '"/>';
+			svg += '<rect class="yp-size-drawing__line" x="' + round( cx - d * 0.2 ) + '" y="' + round( cy + d * 0.18 ) + '" width="' + round( d * 0.4 ) + '" height="' + round( cbar * 0.7 ) + '" rx="' + round( cbar * 0.35 ) + '"/>';
+			if ( withDimensions ) {
+				var cby = round( y + h + 10 );
+				svg += '<path class="yp-size-drawing__guide" d="M' + x + ' ' + ( cby - 3 ) + 'v6M' + round( x + w ) + ' ' + ( cby - 3 ) + 'v6M' + x + ' ' + cby + 'H' + round( x + w ) + '"/>';
+				svg += '<text class="yp-size-drawing__dim" x="' + cx + '" y="' + ( cby + 12 ) + '" text-anchor="middle">⌀ ' + inches( size.print_width_mm ) + '</text>';
+			}
+			return svg + '</svg>';
+		}
+
 		svg += '<rect class="yp-size-drawing__label' + ( isCustom ? ' is-custom' : '' ) + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + r + '"/>';
 
 		if ( isCustom ) {
@@ -137,9 +171,7 @@
 	 */
 	function sizeCardHtml( size, options ) {
 		var selected = !! options.selected;
-		var meta = hasDimensions( size )
-			? mm( size.print_width_mm ) + ' × ' + mm( size.print_height_mm ) + ' mm'
-			: 'Any size';
+		var meta = hasDimensions( size ) ? mmLabel( size ) : 'Any size';
 
 		return (
 			'<button type="button" role="radio" aria-checked="' + ( selected ? 'true' : 'false' ) + '" class="yp-size-card' + ( selected ? ' is-selected' : '' ) + '" data-option-group="size" data-option-id="' + size.id + '">' +
@@ -160,7 +192,7 @@
 			'<button type="button" role="radio" aria-checked="' + ( selected ? 'true' : 'false' ) + '" class="yp-size-tile' + ( selected ? ' is-selected' : '' ) + '"' + ( options.attrs || '' ) + '>' +
 				sizeDrawing( size, options.scale, options.boxW || 62, options.boxH || 48, { rounded: true } ) +
 				'<span class="yp-size-tile__name">' + escapeHtml( size.name ) + '</span>' +
-				'<span class="yp-size-tile__mm">' + ( hasDimensions( size ) ? mm( size.print_width_mm ) + '×' + mm( size.print_height_mm ) : 'any' ) + '</span>' +
+				'<span class="yp-size-tile__mm">' + ( ! hasDimensions( size ) ? 'any' : isCircle( size ) ? '⌀' + mm( size.print_width_mm ) : mm( size.print_width_mm ) + '×' + mm( size.print_height_mm ) ) + '</span>' +
 			'</button>'
 		);
 	}
@@ -363,6 +395,8 @@
 	window.YPLabelPickers = {
 		inches: inches,
 		hasDimensions: hasDimensions,
+		isCircle: isCircle,
+		mmLabel: mmLabel,
 		groupScale: groupScale,
 		sizeDrawing: sizeDrawing,
 		sizeCardHtml: sizeCardHtml,

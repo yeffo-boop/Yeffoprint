@@ -117,6 +117,27 @@ class YeffoPrint_Commerce_Record_Meta {
 	 */
 	public const FIT_NOTE = '_yp_fit_note';
 
+	/**
+	 * Size only — the label's outline: 'rectangle' (the default, so every
+	 * existing size is unchanged) or 'circle' (direct request: round
+	 * stickers for peptide vial lids, with previews that show them
+	 * round). A circle's diameter is its print width; the admin app
+	 * saves the same value as its height so everything that reads
+	 * width × height (pricing, proofs, packing slips) keeps working.
+	 */
+	public const SHAPE = '_yp_size_shape';
+
+	public const SHAPES = [
+		'rectangle' => 'Rectangle',
+		'circle'    => 'Circle',
+	];
+
+	/** 'circle' or 'rectangle' for a Size post id. */
+	public static function size_shape( int $size_id ): string {
+		$shape = (string) get_post_meta( $size_id, self::SHAPE, true );
+		return isset( self::SHAPES[ $shape ] ) ? $shape : 'rectangle';
+	}
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
 	}
@@ -192,6 +213,19 @@ class YeffoPrint_Commerce_Record_Meta {
 			'show_in_rest'      => true,
 			'sanitize_callback' => 'sanitize_text_field',
 			'auth_callback'     => [ $this, 'can_edit' ],
+		] );
+
+		register_post_meta( 'yp_size', self::SHAPE, [
+			'type'          => 'string',
+			'single'        => true,
+			'default'       => 'rectangle',
+			'show_in_rest'  => [
+				'schema' => [
+					'type' => 'string',
+					'enum' => array_keys( self::SHAPES ),
+				],
+			],
+			'auth_callback' => [ $this, 'can_edit' ],
 		] );
 
 		register_post_meta( 'yp_size', self::PRINT_WIDTH_MM, [
