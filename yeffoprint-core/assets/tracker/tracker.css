@@ -960,3 +960,8 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 
 .ypt-lo-confirm { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; background: var(--ypt-soft); border-radius: 12px; padding: 12px; }
 .ypt-lo-confirm input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--ypt-magenta); }
+
+/* What's new */
+.ypt-news { padding: 12px 0; }
+.ypt-news b { display: block; margin-top: 2px; }
+.ypt-news p { margin: 4px 0 0; color: var(--ypt-mute); }
