@@ -2,12 +2,19 @@
  * Peptide & Hormone Calculator page (templates/peptide-calculator.html).
  * Pure client-side math, no REST calls. Three calculators share one
  * results panel, switched by the tabs at the top (and deep-linkable as
- * #peptide / #iu / #hormone):
+ * #peptide / #iu / #hormone / #blend, or #blend-mix for Mixing my own):
  *
  *   Peptides (mg):   concentration = vial mg ÷ water mL;  volume = dose ÷ concentration
  *   HGH / HCG (IU):  concentration = vial IU ÷ water mL;  volume = dose IU ÷ concentration
  *   Hormones:        per injection = weekly mg ÷ injections per week;
  *                    volume = per injection ÷ vial mg/mL
+ *   Blends, bought:  same as Peptides, with the concentration of the whole
+ *                    blend (total mg ÷ water) or of the one peptide the
+ *                    dose is measured by (its mg ÷ water)
+ *   Blends, mixing:  doses in the mix = smallest (vial mg ÷ dose) across
+ *                    the peptides — that vial goes in whole; every other
+ *                    vial gives (doses × its dose ÷ its mg) of its water.
+ *                    volume per dose = mixed mL ÷ doses in the mix
  *
  *   units to draw = volume (mL) × 100   (U-100 insulin syringe)
  *
@@ -85,15 +92,7 @@
 	function setHint( parts ) {
 		var hint = out( 'hint' );
 		hint.textContent = '';
-		parts.forEach( function ( part, i ) {
-			if ( i % 2 ) {
-				var b = document.createElement( 'b' );
-				b.textContent = part;
-				hint.appendChild( b );
-			} else {
-				hint.appendChild( document.createTextNode( part ) );
-			}
-		} );
+		boldParts( hint, parts );
 	}
 
 	function buildSyringe( cap ) {
@@ -169,6 +168,215 @@
 		out( 'cap-left' ).textContent = 'U-100 · ' + SYRINGE_ML[ cap ];
 		var step = cap === 100 ? 2 : 1;
 		out( 'cap-right' ).textContent = step + ( step === 1 ? ' unit' : ' units' ) + ' per mark';
+	}
+
+	/*
+	 * Blend peptides: one row per peptide (name, mg in the vial, and — when
+	 * mixing your own — the dose of it per injection). Rows live in
+	 * `parts` and are redrawn only when one is added or removed.
+	 */
+	var parts = [
+		{ name: 'BPC-157', mg: '10', dose: '250' },
+		{ name: 'TB-500', mg: '10', dose: '500' },
+	];
+	var MAX_PARTS = 5;
+	var partsBox = out( 'parts' );
+	var addPart = out( 'add-part' );
+	var ofSelect = document.getElementById( 'yp-pcalc-b-of' );
+
+	function blendKind() {
+		return form.querySelector( 'input[name="blendKind"]:checked' ).value;
+	}
+
+	function partName( part, i ) {
+		return String( part.name || '' ).trim() || 'Peptide ' + ( i + 1 );
+	}
+
+	function numField( value, unit, label, onInput ) {
+		var wrap = document.createElement( 'div' );
+		wrap.className = 'yp-pcalc__num';
+		var input = document.createElement( 'input' );
+		input.className = 'yp-pcalc__input';
+		input.type = 'number';
+		input.inputMode = 'decimal';
+		input.min = '0';
+		input.step = 'any';
+		input.value = value;
+		input.setAttribute( 'aria-label', label );
+		input.addEventListener( 'input', function () {
+			onInput( input.value );
+		} );
+		var u = document.createElement( 'span' );
+		u.className = 'yp-pcalc__unit';
+		u.textContent = unit;
+		wrap.appendChild( input );
+		wrap.appendChild( u );
+		return wrap;
+	}
+
+	function renderParts() {
+		var mix = blendKind() === 'mix';
+		var doseUnit = form.querySelector( 'input[name="bMixUnit"]:checked' ).value;
+		partsBox.textContent = '';
+		parts.forEach( function ( part, i ) {
+			var row = document.createElement( 'div' );
+			row.className = 'yp-pcalc__part';
+
+			var top = document.createElement( 'div' );
+			top.className = 'yp-pcalc__part-top';
+			var name = document.createElement( 'input' );
+			name.className = 'yp-pcalc__input yp-pcalc__part-name';
+			name.type = 'text';
+			name.maxLength = 40;
+			name.value = part.name;
+			name.placeholder = 'Peptide ' + ( i + 1 );
+			name.setAttribute( 'aria-label', 'Peptide ' + ( i + 1 ) + ' name' );
+			name.addEventListener( 'input', function () {
+				part.name = name.value;
+				fillOf();
+			} );
+			top.appendChild( name );
+			if ( parts.length > 2 ) {
+				var rm = document.createElement( 'button' );
+				rm.type = 'button';
+				rm.className = 'yp-pcalc__part-rm';
+				rm.textContent = '×';
+				rm.setAttribute( 'aria-label', 'Remove ' + partName( part, i ) );
+				rm.addEventListener( 'click', function () {
+					parts.splice( i, 1 );
+					renderParts();
+					update();
+				} );
+				top.appendChild( rm );
+			}
+			row.appendChild( top );
+
+			var nums = document.createElement( 'div' );
+			nums.className = 'yp-pcalc__row';
+			nums.appendChild( numField( part.mg, mix ? 'mg vial' : 'mg', partName( part, i ) + ' mg in the vial', function ( v ) {
+				part.mg = v;
+			} ) );
+			if ( mix ) {
+				nums.appendChild( numField( part.dose, doseUnit + ' dose', partName( part, i ) + ' dose per injection', function ( v ) {
+					part.dose = v;
+				} ) );
+			}
+			row.appendChild( nums );
+			partsBox.appendChild( row );
+		} );
+		addPart.hidden = parts.length >= MAX_PARTS;
+		fillOf();
+	}
+
+	// "That dose is": the whole blend, or measured by one peptide in it.
+	function fillOf() {
+		var current = ofSelect.value || 'all';
+		ofSelect.textContent = '';
+		var all = document.createElement( 'option' );
+		all.value = 'all';
+		all.textContent = 'The whole blend';
+		ofSelect.appendChild( all );
+		parts.forEach( function ( part, i ) {
+			var o = document.createElement( 'option' );
+			o.value = String( i );
+			o.textContent = 'The ' + partName( part, i ) + ' in it';
+			ofSelect.appendChild( o );
+		} );
+		ofSelect.value = +current < parts.length || current === 'all' ? current : 'all';
+	}
+
+	addPart.addEventListener( 'click', function () {
+		parts.push( { name: '', mg: '', dose: '' } );
+		renderParts();
+		var names = partsBox.querySelectorAll( '.yp-pcalc__part-name' );
+		names[ names.length - 1 ].focus();
+		update();
+	} );
+
+	// Fields and wording that change between Bought blended and Mixing my own.
+	function syncBlendKind() {
+		var mix = blendKind() === 'mix';
+		out( 'parts-title' ).textContent = mix ? 'Vials you’re combining' : 'Peptides in the vial';
+		out( 'parts-hint' ).textContent = mix ? 'mg in each vial, and your dose of it' : 'mg of each, printed on the vial';
+		out( 'b-water-label' ).textContent = mix ? 'Water added to each vial' : 'Bacteriostatic water added';
+		out( 'b-water-hint' ).textContent = mix ? 'before combining' : 'total volume';
+		out( 'b-dose-field' ).hidden = mix;
+		out( 'b-unit-field' ).hidden = ! mix;
+		renderParts();
+	}
+
+	// "250 mcg BPC-157 + 250 mcg TB-500", in the unit the dose was entered in.
+	function blendLine( amountsMg, unit ) {
+		return amountsMg.map( function ( a ) {
+			var v = unit === 'mcg' ? a.mg * 1000 : a.mg;
+			return fmt( v, unit === 'mcg' ? 1 : 3 ) + ' ' + unit + ' ' + a.name;
+		} ).join( ' + ' );
+	}
+
+	function blendParts( withDose ) {
+		var unit = form.querySelector( 'input[name="bMixUnit"]:checked' ).value;
+		var list = parts.map( function ( part, i ) {
+			var dose = parseFloat( part.dose );
+			return {
+				i: i,
+				name: partName( part, i ),
+				mg: parseFloat( part.mg ),
+				doseMg: unit === 'mcg' ? dose / 1000 : dose,
+			};
+		} );
+		var ok = list.length >= 2 && list.every( function ( x ) {
+			return x.mg > 0 && ( ! withDose || x.doseMg > 0 );
+		} );
+		return ok ? list : null;
+	}
+
+	function mlText( ml ) {
+		return fmt( ml, 2 ) + ' mL';
+	}
+
+	/*
+	 * Mixing your own: the step-by-step recipe. The vial that runs out
+	 * first goes in whole; the others give only what the same number of
+	 * doses needs, and the rest stays in its vial for next time.
+	 */
+	function mixRecipe( list, water ) {
+		var doses = Math.min.apply( null, list.map( function ( x ) {
+			return x.mg / x.doseMg;
+		} ) );
+		var base = list.filter( function ( x ) {
+			return x.mg / x.doseMg <= doses + 1e-9;
+		} )[ 0 ];
+		var total = 0;
+		list.forEach( function ( x ) {
+			x.used = doses * x.doseMg;
+			x.whole = x.used >= x.mg * 0.995;
+			x.ml = x.whole ? water : ( x.used / x.mg ) * water;
+			total += x.ml;
+		} );
+		var steps = [];
+		steps.push( [ 'Add ', mlText( water ), ' of bacteriostatic water to each vial and swirl gently until it’s clear.' ] );
+		var bigVial = total > 3 + 1e-9;
+		if ( bigVial ) {
+			steps.push( [ 'The blend will be ', mlText( total ), ', more than a standard 3 mL peptide vial holds. Combine it in an empty 5 or 10 mL sterile vial, or add less water to each vial.' ] );
+		}
+		var into = bigVial ? 'an empty sterile vial' : 'the ' + base.name + ' vial';
+		var moved = 0;
+		list.forEach( function ( x ) {
+			if ( ! bigVial && x === base ) {
+				return;
+			}
+			if ( bigVial && moved++ ) {
+				into = 'the same vial';
+			}
+			var draw = x.whole ? 'Draw all ' + mlText( x.ml ) : 'Draw ' + mlText( x.ml );
+			steps.push( [ draw + ' of ' + x.name + ( x.ml <= 1 ? ' (' + fmt( x.ml * 100, 0 ) + ' units)' : '' ) + ' and add it to ', into, x.whole ? '.' : '. Keep the rest (' + fmt( x.mg - x.used, 2 ) + ' mg) for next time.' ] );
+		} );
+		if ( bigVial ) {
+			steps.push( [ 'Swirl gently. That vial now holds ', mlText( total ), ': your blend. Label it with what’s inside.' ] );
+		} else {
+			steps.push( [ 'The ' + base.name + ' vial now holds ', mlText( total ), ': your blend. Label it with what’s inside.' ] );
+		}
+		return { doses: doses, total: total, steps: steps, base: base };
 	}
 
 	/*
@@ -282,7 +490,111 @@
 				};
 			},
 		},
+		blend: {
+			desc: 'For two or more peptides in one shot. Bought it blended? Enter the mg of each and the water. Mixing your own? We’ll show how much of each vial to combine.',
+			title: 'Your blend',
+			syringe: 50,
+			calc: function () {
+				var water = num( 'yp-pcalc-b-water' );
+				if ( ! ( water > 0 ) ) {
+					return null;
+				}
+				if ( blendKind() === 'mix' ) {
+					return calcMix( water );
+				}
+				var list = blendParts( false );
+				var unit = form.querySelector( 'input[name="bDoseUnit"]:checked' ).value;
+				var dose = num( 'yp-pcalc-b-dose' );
+				var doseMg = unit === 'mcg' ? dose / 1000 : dose;
+				if ( ! list || ! ( doseMg > 0 ) ) {
+					return null;
+				}
+				var totalMg = list.reduce( function ( n, x ) {
+					return n + x.mg;
+				}, 0 );
+				var by = ofSelect.value === 'all' ? null : list[ +ofSelect.value ];
+				var byMg = by ? by.mg : totalMg;
+				var byName = by ? by.name : 'blend';
+				var conc = byMg / water;
+				var vol = doseMg / conc;
+				var per = list.map( function ( x ) {
+					return { name: x.name, mg: ( x.mg / water ) * vol };
+				} );
+				var concLine = list.map( function ( x ) {
+					return fmt( x.mg / water, 2 ) + ' ' + x.name;
+				} ).join( ' · ' );
+				return {
+					vol: vol,
+					blend: 'Each dose has ' + blendLine( per, unit ) + '.',
+					stats: [
+						[ 'Concentration', fmt( totalMg / water, 3 ), 'mg/mL', concLine ],
+						[ 'Volume per dose', fmt( vol, 3 ), 'mL', 'of ' + fmt( water, 2 ) + ' mL in the vial' ],
+						[ 'Doses per vial', fmt( Math.floor( byMg / doseMg + 1e-9 ), 0 ), '', 'at ' + fmt( dose, 3 ) + ' ' + unit + ( by ? ' ' + by.name : ' of the blend' ) ],
+					],
+					steps: [
+						[ 'Concentration', ( by ? by.name + ' (mg)' : 'all peptides (mg)' ) + ' ÷ water (mL)', fmt( byMg, 3 ) + ' mg ÷ ' + fmt( water, 3 ) + ' mL = ' + fmt( conc, 3 ) + ' mg/mL of ' + byName ],
+						[ 'Volume per dose', 'dose ÷ concentration', fmt( doseMg, 4 ) + ' mg ÷ ' + fmt( conc, 3 ) + ' mg/mL = ' + fmt( vol, 3 ) + ' mL' ],
+						[ 'Units to draw', 'volume (mL) × 100', fmt( vol, 3 ) + ' mL × 100 = ' + fmt( vol * 100, 1 ) + ' units' ],
+					],
+					tooMuch: doseMg > byMg ? 'This dose is more than the whole vial holds (' + fmt( byMg, 3 ) + ' mg' + ( by ? ' of ' + by.name : '' ) + '). Double-check the dose unit.' : '',
+					fix: 'add less water to concentrate the vial',
+					label: blendLabel( list, water ),
+				};
+			},
+		},
 	};
+
+	function blendLabel( list, water ) {
+		var total = list.reduce( function ( n, x ) {
+			return n + ( x.used != null ? x.used : x.mg );
+		}, 0 );
+		return [
+			list.map( function ( x ) {
+				return fmt( x.used != null ? x.used : x.mg, 2 );
+			} ).join( ' + ' ) + ' mg',
+			'Blend',
+			list.map( function ( x ) {
+				return x.name;
+			} ).join( ' + ' ) + ' · ' + fmt( total / water, 2 ) + ' mg/mL',
+			'Mixed',
+		];
+	}
+
+	function calcMix( water ) {
+		var list = blendParts( true );
+		if ( ! list ) {
+			return null;
+		}
+		var unit = form.querySelector( 'input[name="bMixUnit"]:checked' ).value;
+		var r = mixRecipe( list, water );
+		var vol = r.total / r.doses;
+		var totalMg = list.reduce( function ( n, x ) {
+			return n + x.used;
+		}, 0 );
+		var doseMg = list.reduce( function ( n, x ) {
+			return n + x.doseMg;
+		}, 0 );
+		return {
+			vol: vol,
+			blend: 'Each dose has ' + blendLine( list.map( function ( x ) {
+				return { name: x.name, mg: x.doseMg };
+			} ), unit ) + '.',
+			recipe: r.steps,
+			stats: [
+				[ 'Mixed vial', fmt( r.total, 2 ), 'mL', fmt( totalMg, 2 ) + ' mg total · ' + fmt( totalMg / r.total, 3 ) + ' mg/mL' ],
+				[ 'Volume per dose', fmt( vol, 3 ), 'mL', fmt( doseMg * 1000, 1 ) + ' mcg of blend per shot' ],
+				[ 'Doses in the mix', fmt( Math.floor( r.doses + 1e-9 ), 0 ), '', 'uses the whole ' + r.base.name + ' vial' ],
+			],
+			steps: [
+				[ 'Doses in the mix', 'smallest of: vial mg ÷ dose', fmt( r.base.mg, 3 ) + ' mg ÷ ' + fmt( r.base.doseMg, 4 ) + ' mg = ' + fmt( r.doses, 1 ) + ' doses (' + r.base.name + ')' ],
+				[ 'Volume per dose', 'mixed mL ÷ doses', fmt( r.total, 3 ) + ' mL ÷ ' + fmt( r.doses, 1 ) + ' = ' + fmt( vol, 3 ) + ' mL' ],
+				[ 'Units to draw', 'volume (mL) × 100', fmt( vol, 3 ) + ' mL × 100 = ' + fmt( vol * 100, 1 ) + ' units' ],
+			],
+			tooMuch: r.doses < 1 ? 'One dose needs more than a whole vial of ' + r.base.name + '. Double-check the dose unit.' : '',
+			fix: 'add less water to each vial before combining',
+			label: blendLabel( list, r.total ),
+		};
+	}
 
 	function syncChips() {
 		root.querySelectorAll( '[data-yp-pcalc-chips]' ).forEach( function ( group ) {
@@ -290,6 +602,35 @@
 			group.querySelectorAll( '.yp-pcalc__chip' ).forEach( function ( chip ) {
 				chip.setAttribute( 'aria-pressed', String( parseFloat( chip.getAttribute( 'data-v' ) ) === v ) );
 			} );
+		} );
+	}
+
+	// Text pieces with every second one bolded, as in setHint().
+	function boldParts( node, parts ) {
+		parts.forEach( function ( part, i ) {
+			if ( i % 2 ) {
+				var b = document.createElement( 'b' );
+				b.textContent = part;
+				node.appendChild( b );
+			} else {
+				node.appendChild( document.createTextNode( part ) );
+			}
+		} );
+	}
+
+	// Blend extras: what's in each dose, and the mixing steps.
+	function showBlend( r ) {
+		var line = out( 'blend-dose' );
+		line.hidden = ! ( r && r.blend );
+		line.textContent = r && r.blend ? r.blend : '';
+		var box = out( 'recipe-box' );
+		var list = out( 'recipe' );
+		list.textContent = '';
+		box.hidden = ! ( r && r.recipe );
+		( r && r.recipe || [] ).forEach( function ( step ) {
+			var li = document.createElement( 'li' );
+			boldParts( li, step );
+			list.appendChild( li );
 		} );
 	}
 
@@ -317,6 +658,7 @@
 				steps[ i ].querySelector( 'span' ).textContent = '';
 			}
 			showWarning( '' );
+			showBlend( null );
 			drawSyringe( NaN, cap, false );
 			return;
 		}
@@ -361,6 +703,7 @@
 			showWarning( '' );
 		}
 
+		showBlend( r );
 		drawSyringe( units, cap, overCap );
 
 		out( 'label-amt' ).textContent = r.label[ 0 ];
@@ -428,6 +771,32 @@
 		} );
 	} );
 
+	form.querySelectorAll( 'input[name="blendKind"]' ).forEach( function ( radio ) {
+		radio.addEventListener( 'change', syncBlendKind );
+	} );
+
+	// Same as the peptide dose: switching mcg ↔ mg keeps each dose put.
+	form.querySelectorAll( 'input[name="bDoseUnit"]' ).forEach( function ( radio ) {
+		radio.addEventListener( 'change', function () {
+			var dose = document.getElementById( 'yp-pcalc-b-dose' );
+			var d = parseFloat( dose.value );
+			if ( d > 0 ) {
+				dose.value = String( Number( ( radio.value === 'mg' ? d / 1000 : d * 1000 ).toFixed( 4 ) ) );
+			}
+		} );
+	} );
+	form.querySelectorAll( 'input[name="bMixUnit"]' ).forEach( function ( radio ) {
+		radio.addEventListener( 'change', function () {
+			parts.forEach( function ( part ) {
+				var d = parseFloat( part.dose );
+				if ( d > 0 ) {
+					part.dose = String( Number( ( radio.value === 'mg' ? d / 1000 : d * 1000 ).toFixed( 4 ) ) );
+				}
+			} );
+			renderParts();
+		} );
+	} );
+
 	form.addEventListener( 'input', update );
 	form.addEventListener( 'change', update );
 	form.addEventListener( 'submit', function ( e ) {
@@ -441,6 +810,12 @@
 	}
 
 	var start = ( window.location.hash || '' ).slice( 1 );
+	// #blend-mix (linked from the Dose Tracker) opens Blends on Mixing my own.
+	if ( start === 'blend-mix' ) {
+		form.querySelector( 'input[name="blendKind"][value="mix"]' ).checked = true;
+		start = 'blend';
+	}
+	syncBlendKind();
 	if ( MODES[ start ] ) {
 		setMode( start );
 	} else {

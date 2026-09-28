@@ -965,3 +965,21 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-news { padding: 12px 0; }
 .ypt-news b { display: block; margin-top: 2px; }
 .ypt-news p { margin: 4px 0 0; color: var(--ypt-mute); }
+
+/* ---------- Blends (Mix sheet rows, per-dose contents) ---------- */
+
+.ypt-blend { display: flex; flex-direction: column; gap: 8px; }
+.ypt-blend__row { display: flex; gap: 8px; align-items: flex-start; }
+.ypt-blend__name { flex: 1 1 auto; min-width: 0; }
+.ypt-blend__amt { flex: 0 0 96px; position: relative; }
+.ypt-blend__amt .ypt-input { padding-right: 34px; }
+.ypt-blend__amt span {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 13px;
+	color: var(--ypt-mute);
+	pointer-events: none;
+}
+.ypt-draw__blend { display: block; margin-top: 3px; color: var(--ypt-ink); }

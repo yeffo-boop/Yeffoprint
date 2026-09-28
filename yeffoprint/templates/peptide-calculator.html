@@ -17,6 +17,7 @@
 					<button type="button" class="yp-pcalc__mode" role="tab" id="yp-pcalc-tab-peptide" data-mode="peptide" aria-selected="true" aria-controls="yp-pcalc-calc"><b>Peptides</b><small>mg · mixed with water</small></button>
 					<button type="button" class="yp-pcalc__mode" role="tab" id="yp-pcalc-tab-iu" data-mode="iu" aria-selected="false" aria-controls="yp-pcalc-calc" tabindex="-1"><b>HGH / HCG</b><small>IU · mixed with water</small></button>
 					<button type="button" class="yp-pcalc__mode" role="tab" id="yp-pcalc-tab-hormone" data-mode="hormone" aria-selected="false" aria-controls="yp-pcalc-calc" tabindex="-1"><b>Hormones</b><small>mg/mL · weekly dose</small></button>
+					<button type="button" class="yp-pcalc__mode" role="tab" id="yp-pcalc-tab-blend" data-mode="blend" aria-selected="false" aria-controls="yp-pcalc-calc" tabindex="-1"><b>Blends</b><small>2+ peptides · one shot</small></button>
 				</div>
 				<p class="yp-pcalc__mode-desc" data-yp-pcalc="mode-desc">For peptides measured in mg. Enter the mg in the vial, the bacteriostatic water you're adding, and your dose in mcg or mg.</p>
 			</div>
@@ -132,6 +133,55 @@
 						</div>
 					</div>
 
+					<div class="yp-pcalc__group" data-yp-pcalc-group="blend" hidden>
+						<div class="yp-pcalc__field">
+							<div class="yp-pcalc__field-label"><span id="yp-pcalc-blend-kind-label">How you got it</span></div>
+							<div class="yp-pcalc__seg yp-pcalc__seg--full" role="radiogroup" aria-labelledby="yp-pcalc-blend-kind-label">
+								<label><input type="radio" name="blendKind" value="bought" checked><span>Bought blended<small>one vial, 2+ peptides</small></span></label>
+								<label><input type="radio" name="blendKind" value="mix"><span>Mixing my own<small>combine separate vials</small></span></label>
+							</div>
+						</div>
+
+						<div class="yp-pcalc__field">
+							<div class="yp-pcalc__field-label"><span data-yp-pcalc="parts-title">Peptides in the vial</span><small data-yp-pcalc="parts-hint">mg of each, printed on the vial</small></div>
+							<div class="yp-pcalc__parts" data-yp-pcalc="parts"></div>
+							<button type="button" class="yp-pcalc__add" data-yp-pcalc="add-part">+ Add a peptide</button>
+						</div>
+
+						<div class="yp-pcalc__field">
+							<div class="yp-pcalc__field-label"><label for="yp-pcalc-b-water" data-yp-pcalc="b-water-label">Bacteriostatic water added</label><small data-yp-pcalc="b-water-hint">total volume</small></div>
+							<div class="yp-pcalc__num"><input class="yp-pcalc__input" id="yp-pcalc-b-water" type="number" inputmode="decimal" min="0" step="any" value="2"><span class="yp-pcalc__unit">mL</span></div>
+							<div class="yp-pcalc__chips" data-yp-pcalc-chips="yp-pcalc-b-water">
+								<button type="button" class="yp-pcalc__chip" data-v="1">1 mL</button>
+								<button type="button" class="yp-pcalc__chip" data-v="2">2 mL</button>
+								<button type="button" class="yp-pcalc__chip" data-v="3">3 mL</button>
+							</div>
+						</div>
+
+						<div class="yp-pcalc__field" data-yp-pcalc="b-dose-field">
+							<div class="yp-pcalc__field-label"><label for="yp-pcalc-b-dose">Desired dose</label><small>per injection</small></div>
+							<div class="yp-pcalc__row">
+								<div class="yp-pcalc__num"><input class="yp-pcalc__input" id="yp-pcalc-b-dose" type="number" inputmode="decimal" min="0" step="any" value="500"></div>
+								<div class="yp-pcalc__seg" role="radiogroup" aria-label="Dose unit">
+									<label><input type="radio" name="bDoseUnit" value="mcg" checked><span>mcg</span></label>
+									<label><input type="radio" name="bDoseUnit" value="mg"><span>mg</span></label>
+								</div>
+							</div>
+							<div class="yp-pcalc__of">
+								<label for="yp-pcalc-b-of">That dose is</label>
+								<select class="yp-pcalc__select" id="yp-pcalc-b-of"></select>
+							</div>
+						</div>
+
+						<div class="yp-pcalc__field" data-yp-pcalc="b-unit-field" hidden>
+							<div class="yp-pcalc__field-label"><span id="yp-pcalc-b-mix-unit-label">Doses above are in</span></div>
+							<div class="yp-pcalc__seg yp-pcalc__seg--full" role="radiogroup" aria-labelledby="yp-pcalc-b-mix-unit-label">
+								<label><input type="radio" name="bMixUnit" value="mcg" checked><span>mcg</span></label>
+								<label><input type="radio" name="bMixUnit" value="mg"><span>mg</span></label>
+							</div>
+						</div>
+					</div>
+
 					<div class="yp-pcalc__field">
 						<div class="yp-pcalc__field-label"><span id="yp-pcalc-syringe-label">Syringe size</span><small>U-100 insulin syringe</small></div>
 						<div class="yp-pcalc__seg yp-pcalc__seg--full" role="radiogroup" aria-labelledby="yp-pcalc-syringe-label">
@@ -153,6 +203,8 @@
 						<p class="yp-pcalc__draw-hint" data-yp-pcalc="hint">Pull the plunger to the <b>10</b> mark.</p>
 					</div>
 
+					<p class="yp-pcalc__blend-dose" data-yp-pcalc="blend-dose" hidden></p>
+
 					<div class="yp-pcalc__syringe">
 						<svg data-yp-pcalc="syringe" viewBox="0 0 680 112" role="img" aria-label="Syringe filled to the dose"></svg>
 						<div class="yp-pcalc__syringe-cap"><span data-yp-pcalc="cap-left">U-100 · 0.5 mL</span><span data-yp-pcalc="cap-right">1 unit per mark</span></div>
@@ -168,6 +220,11 @@
 						<div class="yp-pcalc__stat"><dt>Volume per dose</dt><dd>0.1<span>mL</span></dd><span class="yp-pcalc__sub">of 2 mL in the vial</span></div>
 						<div class="yp-pcalc__stat"><dt>Doses per vial</dt><dd>20</dd><span class="yp-pcalc__sub">at 250 mcg each</span></div>
 					</dl>
+
+					<div class="yp-pcalc__recipe" data-yp-pcalc="recipe-box" hidden>
+						<h3>How to mix it</h3>
+						<ol data-yp-pcalc="recipe"></ol>
+					</div>
 
 					<p class="yp-pcalc__note">
 						<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>

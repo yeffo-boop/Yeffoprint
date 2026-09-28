@@ -137,6 +137,8 @@ class YeffoPrint_Tracker_Reminders {
 		if ( 1.0 !== $dose && isset( $plural[ $unit ] ) ) {
 			$unit = $plural[ $unit ];
 		}
-		return rtrim( rtrim( number_format( $dose, 3, '.', '' ), '0' ), '.' ) . ' ' . $unit;
+		// A blend dosed by one of its peptides: "250 mcg BPC-157".
+		$of = sanitize_text_field( (string) ( $protocol['doseOf'] ?? '' ) );
+		return rtrim( rtrim( number_format( $dose, 3, '.', '' ), '0' ), '.' ) . ' ' . $unit . ( '' !== $of ? ' ' . $of : '' );
 	}
 }
