@@ -67,9 +67,9 @@
 
 .yp-pcalc__modes {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 6px;
-	max-width: 760px;
+	max-width: 960px;
 	padding: 6px;
 	background: var(--wp--preset--color--white);
 	border: 1px solid var(--wp--preset--color--light-gray);
@@ -125,6 +125,13 @@
 .yp-pcalc__mode:focus-visible {
 	outline: 2px solid var(--wp--custom--focus-ring);
 	outline-offset: 2px;
+}
+
+/* Four calculators: two rows of two on phones. */
+@media (max-width: 640px) {
+	.yp-pcalc__modes {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 
 @media (max-width: 460px) {
@@ -402,6 +409,139 @@
 .yp-pcalc__seg input:focus-visible + span {
 	outline: 2px solid var(--wp--custom--focus-ring);
 	outline-offset: 2px;
+}
+
+/* ---------- Blends ---------- */
+
+.yp-pcalc__parts {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 0.6rem;
+}
+
+.yp-pcalc__part {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 0.4rem;
+	padding: 0.6rem;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+}
+
+.yp-pcalc__part-top {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.yp-pcalc .yp-pcalc__part input.yp-pcalc__part-name {
+	flex: 1;
+	min-width: 0;
+	width: auto;
+	padding: 0.45rem 0.2rem;
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--near-black);
+	background: transparent;
+	border: 0;
+	border-bottom: 1.5px dashed var(--wp--preset--color--light-gray);
+	border-radius: 0;
+}
+
+.yp-pcalc .yp-pcalc__part input.yp-pcalc__part-name:focus {
+	outline: none;
+	border-bottom-color: var(--wp--preset--color--cyan);
+}
+
+.yp-pcalc__part .yp-pcalc__unit {
+	white-space: nowrap;
+	padding: 0 0.6rem;
+	font-size: 0.78rem;
+}
+
+.yp-pcalc .yp-pcalc__part .yp-pcalc__num input.yp-pcalc__input {
+	font-size: 1rem;
+	padding: 0.6rem 0 0.6rem 0.7rem;
+}
+
+.yp-pcalc__part-rm {
+	flex: 0 0 auto;
+	width: 2rem;
+	height: 2rem;
+	font-size: 1.2rem;
+	line-height: 1;
+	color: var(--wp--preset--color--charcoal);
+	background: transparent;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 999px;
+	cursor: pointer;
+}
+
+.yp-pcalc__add {
+	justify-self: start;
+	padding: 0.35rem 0;
+	font: inherit;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--magenta-deep);
+	background: none;
+	border: 0;
+	cursor: pointer;
+}
+
+.yp-pcalc__add[hidden],
+.yp-pcalc__field[hidden] {
+	display: none;
+}
+
+.yp-pcalc__of {
+	display: grid;
+	gap: 0.3rem;
+	font-size: 0.85rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-pcalc .yp-pcalc__select {
+	width: 100%;
+	padding: 0.65rem 0.8rem;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--near-black);
+	background: var(--wp--preset--color--warm-white);
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+}
+
+.yp-pcalc__blend-dose {
+	padding: 0.7rem 0.9rem;
+	font-size: 0.92rem;
+	font-weight: 600;
+	background: var(--wp--preset--color--warm-white);
+	border-radius: var(--wp--custom--radius--input);
+}
+
+.yp-pcalc__blend-dose[hidden],
+.yp-pcalc__recipe[hidden] {
+	display: none;
+}
+
+.yp-pcalc__recipe h3 {
+	margin: 0 0 0.5rem;
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.yp-pcalc__recipe ol {
+	display: grid;
+	gap: 0.45rem;
+	margin: 0;
+	padding-left: 1.3rem;
+	font-size: 0.9rem;
+}
+
+.yp-pcalc__recipe b {
+	font-weight: 700;
 }
 
 /* ---------- Results ---------- */

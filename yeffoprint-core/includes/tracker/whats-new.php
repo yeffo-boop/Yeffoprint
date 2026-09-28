@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-09-28c',
+		'date'  => '2026-09-28',
+		'title' => 'Blends',
+		'text'  => 'Tracking a blend like BPC-157 + TB-500? When you mix a vial, pick "Blend" and enter each peptide. It works for vials you bought blended and ones you mix yourself. Dose by the whole blend or by one peptide, and every dose shows how much of each you\'re getting.',
+	],
+	[
 		'id'    => '2026-09-28b',
 		'date'  => '2026-09-28',
 		'title' => 'Multi-dose pens',

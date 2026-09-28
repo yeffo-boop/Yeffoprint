@@ -7,9 +7,11 @@
  * the app opens instantly and works offline, queueing changes until the
  * connection is back. Records:
  *
- *   protocol  { compound, dose, unit, route, device:'syringe'|'pen'|'single', schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused }
+ *   protocol  { compound, dose, unit, route, device:'syringe'|'pen'|'single', schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused, doseOf }
+ *             doseOf: for a blend, the peptide the dose is measured by ('' = the whole blend).
  *   dose      { protocolId, compound, date, time, status:'taken'|'skipped', at, dose, unit, vialId, units, note }
- *   vial      { kind:'vial'|'pen', compound, mode:'mg'|'iu'|'conc', amount, water, conc, volume, mixed, syringe, finished }
+ *   vial      { kind:'vial'|'pen', compound, mode:'mg'|'iu'|'conc'|'blend', amount, water, conc, volume, mixed, syringe, finished, parts, blend }
+ *             A blend has parts [{ name, amount (mg) }] and amount = their total; blend is 'bought' or 'mixed' (the customer combined vials).
  *             A pen is a 3 mL cartridge the customer mixes like a vial; its dial is read as U-100 units (0.01 mL each).
  *   settings  { tz, reminders }
  *
@@ -17,6 +19,7 @@
  * Calculator page (theme assets/js/peptide-calculator.js):
  *   powder:   concentration = vial amount ÷ water mL;  volume = dose ÷ concentration
  *   premixed: volume = dose mg ÷ (mg/mL on the label)
+ *   blend:    concentration = total mg (or the one peptide the dose is measured by) ÷ water mL
  *   units to draw = volume (mL) × 100   (U-100 insulin syringe)
  *
  * Order labels (Vials tab) builds one template cart line from the
@@ -493,8 +496,43 @@
 		return ml > 0 ? ml * 100 : null;
 	}
 
-	/** Syringe units for one dose from this vial, or null when the units don't line up (e.g. an IU dose from an mg vial). */
-	function unitsForDose( dose, unit, v ) {
+	function isBlend( v ) {
+		return !! v && v.mode === 'blend' && Array.isArray( v.parts );
+	}
+
+	/** The blend part a dose is measured by, or null for the whole blend. */
+	function blendPart( v, doseOf ) {
+		if ( ! doseOf || ! isBlend( v ) ) {
+			return null;
+		}
+		return v.parts.filter( function ( x ) {
+			return sameCompound( x.name, doseOf );
+		} )[ 0 ] || null;
+	}
+
+	/** "BPC-157 10 mg + TB-500 5 mg" */
+	function blendSummary( v ) {
+		return v.parts.map( function ( x ) {
+			return x.name + ' ' + fmtNum( +x.amount ) + ' mg';
+		} ).join( ' + ' );
+	}
+
+	/** What one dose of `units` from a blend holds: "250 mcg BPC-157 + 125 mcg TB-500". */
+	function blendDoseLine( v, units ) {
+		if ( ! isBlend( v ) || ! ( +v.water > 0 ) || ! ( units > 0 ) ) {
+			return '';
+		}
+		return v.parts.map( function ( x ) {
+			var mg = ( +x.amount / +v.water ) * ( units / 100 );
+			return mg < 1 ? fmtNum( mg * 1000, 1 ) + ' mcg ' + x.name : fmtNum( mg, 3 ) + ' mg ' + x.name;
+		} ).join( ' + ' );
+	}
+
+	/**
+	 * Syringe units for one dose from this vial, or null when the units don't line up (e.g. an IU dose from an mg vial).
+	 * `doseOf` (blends only): the peptide the dose is measured by; otherwise the dose is of the whole blend.
+	 */
+	function unitsForDose( dose, unit, v, doseOf ) {
 		dose = parseFloat( dose );
 		if ( ! ( dose > 0 ) ) {
 			return null;
@@ -506,6 +544,10 @@
 			return dose * 100;
 		}
 		var c = vialConcentration( v );
+		var part = blendPart( v, doseOf );
+		if ( part ) {
+			c = +part.amount > 0 && +v.water > 0 ? { amount: part.amount / v.water, unit: 'mg' } : null;
+		}
 		if ( ! c ) {
 			return null;
 		}
@@ -551,7 +593,7 @@
 		var p = protocols().filter( function ( x ) {
 			return sameCompound( x.compound, v.compound ) && ! x.paused;
 		} )[ 0 ] || null;
-		var per = p ? unitsForDose( p.dose, p.unit, v ) : null;
+		var per = p ? unitsForDose( p.dose, p.unit, v, p.doseOf ) : null;
 		var dosesLeft = left != null && per ? Math.floor( ( left + 0.0001 ) / per ) : null;
 		// The date of the last scheduled dose this vial still covers.
 		var lastDose = null;
@@ -853,7 +895,7 @@
 	function logDose( slot, status ) {
 		var p = slot.protocol;
 		var v = status === 'taken' ? currentVial( p ) : null;
-		var units = v ? unitsForDose( p.dose, p.unit, v ) : ( p.unit === 'units' ? +p.dose : null );
+		var units = v ? unitsForDose( p.dose, p.unit, v, p.doseOf ) : ( p.unit === 'units' ? +p.dose : null );
 		var at = new Date();
 		// Logging a past day's dose: stamp it at its scheduled time.
 		if ( slot.date !== todayStr() ) {
@@ -1086,9 +1128,9 @@
 		var p = s.protocol;
 		var log = s.log;
 		var v = currentVial( p );
-		var units = log && log.units != null ? +log.units : ( v ? unitsForDose( p.dose, p.unit, v ) : null );
+		var units = log && log.units != null ? +log.units : ( v ? unitsForDose( p.dose, p.unit, v, p.doseOf ) : null );
 		var how = p.device === 'pen' ? 'pen' : p.device === 'single' ? 'single-use injector' : p.route ? routeInfo( p.route ).short || p.route.toLowerCase() : '';
-		var sub = [ amountLabel( p.dose, p.unit ), how, scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
+		var sub = [ amountLabel( p.dose, p.unit ) + ( p.doseOf ? ' ' + p.doseOf : '' ), how, scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
 
 		var actions;
 		if ( log ) {
@@ -1130,7 +1172,8 @@
 				card.appendChild( h( 'div', { class: 'ypt-draw' + ( info && info.age > VIAL_WARN_DAYS ? ' ypt-draw--warn' : '' ) },
 					isPen( v ) ? [ log ? 'Dialed ' : 'Dial ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on your pen' ] : [ log ? 'Drew ' : 'Draw ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on a U-100 syringe' ],
 					v ? ' · ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) : '',
-					info && info.age > VIAL_WARN_DAYS ? ' · ' + info.age + ' days old' : ''
+					info && info.age > VIAL_WARN_DAYS ? ' · ' + info.age + ' days old' : '',
+					isBlend( v ) ? h( 'span', { class: 'ypt-draw__blend' }, 'Each dose: ' + blendDoseLine( v, units ) ) : null
 				) );
 			} else if ( ! log && ( p.unit === 'mcg' || p.unit === 'mg' || p.unit === 'IU' ) && usesVial( p ) ) {
 				card.appendChild( h( 'button', { type: 'button', class: 'ypt-draw', style: { width: '100%', textAlign: 'left' }, onclick: function () {
@@ -1428,11 +1471,17 @@
 			var detail = [ 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) ];
 			if ( v.mode === 'conc' ) {
 				detail.push( fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' );
+			} else if ( isBlend( v ) ) {
+				detail.push( blendSummary( v ) );
+				detail.push( fmtNum( +v.water ) + ' mL' + ( v.blend === 'mixed' ? ' in all' : ' water' ) );
 			} else {
 				detail.push( fmtNum( +v.water ) + ' mL water' );
 			}
 			if ( isPen( v ) ) {
 				detail.unshift( 'Pen' );
+			}
+			if ( isBlend( v ) ) {
+				detail.unshift( isPen( v ) ? 'Blend' : 'Blend vial' );
 			}
 			if ( info.perDose ) {
 				detail.push( fmtNum( info.perDose, 1 ) + ' units/dose' );
@@ -1450,7 +1499,7 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-vial' },
 				h( 'div', { class: 'ypt-vial__img', 'aria-hidden': 'true' }, h( 'i', { style: { height: 'calc(' + info.pct + '% - 8px)', background: color, minHeight: info.pct > 0 ? '4px' : '0' } } ) ),
 				h( 'div', { style: { flex: '1', minWidth: '0' } },
-					h( 'h2', null, v.compound + ( v.mode !== 'conc' && +v.amount ? ' · ' + fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) : '' ) ),
+					h( 'h2', null, v.compound + ( v.mode !== 'conc' && ! isBlend( v ) && +v.amount ? ' · ' + fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) : '' ) ),
 					h( 'div', { class: 'ypt-muted ypt-small', style: { marginTop: '2px' } }, detail.join( ' · ' ) ),
 					h( 'div', { class: 'ypt-bar' }, h( 'i', { style: { width: info.pct + '%', background: color } } ) ),
 					h( 'div', { class: 'ypt-small' }, status ),
@@ -1505,8 +1554,13 @@
 		return String( s || '' ).toLowerCase().replace( /[^a-z0-9]/g, '' );
 	}
 
-	/** What prints as a vial's Strength: "5 mg", "5000 IU", or "10 mg/mL" for a premixed vial. */
+	/** What prints as a vial's Strength: "5 mg", "5000 IU", "10 mg/mL" for a premixed vial, or "10 mg + 5 mg" for a blend. */
 	function vialStrength( v ) {
+		if ( isBlend( v ) ) {
+			return v.parts.map( function ( x ) {
+				return fmtNum( +x.amount );
+			} ).join( ' + ' ) + ' mg';
+		}
 		if ( v.mode === 'conc' ) {
 			return +v.conc > 0 ? fmtNum( +v.conc ) + ' mg/mL' : '';
 		}
@@ -2429,6 +2483,7 @@
 		var schedDetail = h( 'div', null );
 		var timesBox = h( 'div', { class: 'ypt-times' } );
 		var drawBox = h( 'div', null );
+		var doseOfBox = h( 'div', null );
 		var unitBox = h( 'div', { style: { flex: '1 1 auto', minWidth: '0' } } );
 		var routeSelect;
 		var vialField = h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Vial' ), vialBox );
@@ -2552,7 +2607,7 @@
 				var c = vialConcentration( v );
 				vialBox.appendChild( h( 'div', { class: 'ypt-vialpick' },
 					h( 'div', null,
-						h( 'b', null, v.mode === 'conc' ? fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' : fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) + ' + ' + fmtNum( +v.water ) + ' mL water' ),
+						h( 'b', null, v.mode === 'conc' ? fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' : isBlend( v ) ? blendSummary( v ) + ' · ' + fmtNum( +v.water ) + ' mL' : fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) + ' + ' + fmtNum( +v.water ) + ' mL water' ),
 						h( 'span', null, 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ( c ? ' · ' + fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' : '' ) )
 					),
 					h( 'button', { type: 'button', class: 'ypt-pill', onclick: detourToVial }, pen ? 'New pen' : 'New vial' )
@@ -2581,16 +2636,38 @@
 			} );
 		}
 
+		// A blend's dose is either of the whole blend or measured by one peptide in it.
+		function renderDoseOf( v ) {
+			doseOfBox.textContent = '';
+			if ( ! isBlend( v ) ) {
+				return;
+			}
+			if ( p.doseOf && ! blendPart( v, p.doseOf ) ) {
+				p.doseOf = '';
+			}
+			doseOfBox.appendChild( h( 'div', { class: 'ypt-row', style: { alignItems: 'center', marginTop: '8px' } },
+				h( 'span', { class: 'ypt-shrink ypt-small' }, 'That dose is' ),
+				h( 'select', { class: 'ypt-select', id: 'ypt-p-doseof', 'aria-label': 'What the dose measures', onchange: function ( e ) {
+					p.doseOf = e.target.value;
+					renderDraw();
+				} }, [ h( 'option', { value: '', selected: ! p.doseOf }, 'the whole blend' ) ].concat( v.parts.map( function ( x ) {
+					return h( 'option', { value: x.name, selected: sameCompound( x.name, p.doseOf ) }, 'the ' + x.name + ' in it' );
+				} ) ) )
+			) );
+		}
+
 		function renderDraw() {
 			drawBox.textContent = '';
 			var v = p.compound ? currentVial( p ) : null;
+			renderDoseOf( v );
 			if ( ! v || ! ( parseFloat( p.dose ) > 0 ) ) {
 				return;
 			}
-			var u = unitsForDose( p.dose, p.unit, v );
+			var u = unitsForDose( p.dose, p.unit, v, p.doseOf );
 			drawBox.appendChild( h( 'div', { class: 'ypt-draw' },
 				u != null ? ( isPen( v ) ? [ 'Dial ', h( 'b', null, fmtNum( u, 1 ) + ' units' ), ' on your pen for each dose.' ] : [ 'Draw ', h( 'b', null, fmtNum( u, 1 ) + ' units' ), ' on a U-100 syringe for each dose.' ] )
-					: 'Your ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' is measured in ' + ( vialConcentration( v ) || {} ).unit + ', so pick that unit for your dose.' ) );
+					: 'Your ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' is measured in ' + ( vialConcentration( v ) || {} ).unit + ', so pick that unit for your dose.',
+				u != null && isBlend( v ) ? h( 'span', { class: 'ypt-draw__blend' }, 'Each dose: ' + blendDoseLine( v, u ) ) : null ) );
 		}
 
 		function saveProtocol() {
@@ -2621,6 +2698,7 @@
 				color: p.color,
 				notes: p.notes || '',
 				paused: !! p.paused,
+				doseOf: usesVial( p ) && blendPart( currentVial( p ), p.doseOf ) ? p.doseOf : '',
 			};
 			closeSheet();
 			put( 'protocol', id, data );
@@ -2655,6 +2733,7 @@
 			h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: 'ypt-p-dose' }, 'Dose' ),
 				h( 'div', { class: 'ypt-row' }, h( 'div', { style: { flex: '0 0 34%' } }, doseInput ), unitBox ),
+				doseOfBox,
 				drawBox
 			),
 			h( 'div', { class: 'ypt-field' },
@@ -2747,21 +2826,27 @@
 			finished: false,
 		};
 		v.kind = v.kind === 'pen' ? 'pen' : 'vial';
+		v.parts = Array.isArray( v.parts ) && v.parts.length ? v.parts : [ { name: '', amount: '' }, { name: '', amount: '' } ];
+		v.blend = v.blend === 'mixed' ? 'mixed' : 'bought';
+		// A new blend's name follows its peptides ("BPC-157 + TB-500") until the customer types their own.
+		var nameTouched = !! existing || !! v.compound;
+		var nameLabel;
 		var id = existing ? existing.id : uid( 'v' );
 		var p = null;
-		var calc = { dose: opts.dose || '', unit: opts.unit || 'mcg' };
+		var calc = { dose: opts.dose || '', unit: opts.unit || 'mcg', doseOf: '' };
 		if ( v.compound && ! opts.dose ) {
 			p = protocols().filter( function ( x ) {
 				return sameCompound( x.compound, v.compound );
 			} )[ 0 ] || null;
 			if ( p ) {
-				calc = { dose: p.dose, unit: p.unit };
+				calc = { dose: p.dose, unit: p.unit, doseOf: p.doseOf || '' };
 			}
 		}
 		var err = h( 'p', { class: 'ypt-error', hidden: true } );
 		var inputs = h( 'div', null );
 		var strength = h( 'div', { 'aria-live': 'polite' } );
 		var result = h( 'div', { class: 'ypt-calc-result', 'aria-live': 'polite' } );
+		var calcOfBox = h( 'div', null );
 
 		function numInput( id2, key, placeholder, target, onInput ) {
 			return h( 'input', { class: 'ypt-input', id: id2, type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: placeholder, value: ( target || v )[ key ], oninput: function ( e ) {
@@ -2786,12 +2871,101 @@
 			} ) );
 		}
 
+		function blendParts() {
+			return v.parts.filter( function ( x ) {
+				return String( x.name || '' ).trim() && +x.amount > 0;
+			} ).map( function ( x ) {
+				return { name: String( x.name ).trim(), amount: +x.amount };
+			} );
+		}
+
+		// Keep the blend's total (what the math reads) and default name in step with its rows.
+		function syncBlend() {
+			var list = blendParts();
+			v.amount = list.reduce( function ( n, x ) {
+				return n + x.amount;
+			}, 0 ) || '';
+			if ( ! nameTouched ) {
+				v.compound = v.parts.map( function ( x ) {
+					return String( x.name || '' ).trim();
+				} ).filter( Boolean ).join( ' + ' );
+				var el = document.getElementById( 'ypt-v-compound' );
+				if ( el ) {
+					el.value = v.compound;
+				}
+			}
+		}
+
+		function blendInputs( pen ) {
+			var mixed = v.blend === 'mixed';
+			var rowsBox = h( 'div', { class: 'ypt-blend' } );
+			function renderRows() {
+				rowsBox.textContent = '';
+				v.parts.forEach( function ( x, i ) {
+					var amt = h( 'input', { class: 'ypt-input', type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: '5', value: x.amount, 'aria-label': ( x.name || 'Peptide ' + ( i + 1 ) ) + ' mg', oninput: function ( e ) {
+						x.amount = e.target.value;
+						syncBlend();
+						renderResult();
+					} } );
+					rowsBox.appendChild( h( 'div', { class: 'ypt-blend__row' },
+						h( 'div', { class: 'ypt-blend__name' }, compoundInput( 'ypt-v-part-' + i, x.name, function ( name ) {
+							x.name = name;
+							syncBlend();
+							renderResult();
+						}, 'Peptide ' + ( i + 1 ) ) ),
+						h( 'div', { class: 'ypt-blend__amt' }, amt, h( 'span', null, 'mg' ) ),
+						v.parts.length > 2 ? h( 'button', { type: 'button', class: 'ypt-btn ypt-shrink', 'aria-label': 'Remove ' + ( x.name || 'this peptide' ), onclick: function () {
+							v.parts.splice( i, 1 );
+							syncBlend();
+							renderRows();
+							renderResult();
+						} }, '×' ) : null
+					) );
+				} );
+				if ( v.parts.length < 5 ) {
+					rowsBox.appendChild( h( 'button', { type: 'button', class: 'ypt-link', style: { alignSelf: 'flex-start' }, onclick: function () {
+						v.parts.push( { name: '', amount: '' } );
+						renderRows();
+						var el = document.getElementById( 'ypt-v-part-' + ( v.parts.length - 1 ) );
+						if ( el ) {
+							el.focus();
+						}
+					} }, '+ Add a peptide' ) );
+				}
+			}
+			renderRows();
+			inputs.appendChild( h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'How you got it' ),
+				seg( [ [ 'bought', 'Bought blended' ], [ 'mixed', 'I mixed my own' ] ], v.blend, function ( b ) {
+					v.blend = b;
+					renderInputs();
+					renderResult();
+				} )
+			) );
+			inputs.appendChild( h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, mixed ? 'mg of each that went in' : 'Peptides in the ' + ( pen ? 'pen' : 'vial' ) ),
+				rowsBox,
+				h( 'p', { class: 'ypt-hint' }, mixed ? [ 'Used part of a vial? Enter just the mg you added. ', h( 'a', { href: CFG.calculatorUrl + '#blend-mix' }, 'The blend mixer' ), ' works out how much of each vial to combine.' ] : 'As printed on the label.' )
+			) );
+			var w = numInput( 'ypt-v-water', 'water', pen ? '3' : '2' );
+			w.setAttribute( 'data-key', 'water' );
+			inputs.appendChild( field( mixed ? 'Total liquid in the blend (mL)' : 'Bacteriostatic water added (mL)', w, mixed ? 'All the water from the vials you combined.' : pen ? 'Pens hold 3 mL. Change it only if you filled yours with less.' : null, 'ypt-v-water' ) );
+			if ( ! pen && ! mixed ) {
+				inputs.appendChild( chips( 'water', [ 1, 2, 2.5, 3 ], 'mL' ) );
+			}
+		}
+
 		function renderInputs() {
 			inputs.textContent = '';
 			var amountUnit = v.mode === 'iu' ? 'IU' : 'mg';
 			var pen = v.kind === 'pen';
 			var where = pen ? 'pen' : 'vial';
-			if ( v.mode === 'conc' ) {
+			if ( nameLabel ) {
+				nameLabel.textContent = v.mode === 'blend' ? 'Blend name' : 'Peptide';
+			}
+			if ( v.mode === 'blend' ) {
+				blendInputs( pen );
+			} else if ( v.mode === 'conc' ) {
 				var c1 = numInput( 'ypt-v-conc', 'conc', '200' );
 				c1.setAttribute( 'data-key', 'conc' );
 				var c2 = numInput( 'ypt-v-volume', 'volume', '10' );
@@ -2829,6 +3003,7 @@
 						renderResult();
 					} ) : h( 'div', { class: 'ypt-seg' }, h( 'button', { type: 'button', 'aria-pressed': 'true' }, 'IU' ) )
 				),
+				calcOfBox,
 				h( 'p', { class: 'ypt-hint' }, p ? 'From your ' + p.compound + ' schedule.' : 'See how many units that is. You’ll set your actual dose with your schedule.' )
 			) );
 			if ( ! pen ) {
@@ -2856,12 +3031,42 @@
 				h( 'div', { class: 'ypt-stat' }, h( 'b', null, c.unit === 'mg' ? fmtNum( c.amount * 1000 / 100, 1 ) + ' mcg' : fmtNum( c.amount / 100, 2 ) + ' IU' ), h( 'span', null, isPen( v ) ? 'per unit dialed' : 'per syringe unit' ) ),
 				h( 'div', { class: 'ypt-stat' }, h( 'b', null, total ? fmtNum( total, 0 ) : '–' ), h( 'span', null, 'units in the ' + ( isPen( v ) ? 'pen' : 'vial' ) ) )
 			) );
+			if ( v.mode === 'blend' && +v.water > 0 ) {
+				strength.appendChild( h( 'p', { class: 'ypt-hint' }, 'Per mL: ' + blendParts().map( function ( x ) {
+					return fmtNum( x.amount / v.water, 2 ) + ' mg ' + x.name;
+				} ).join( ' · ' ) ) );
+			}
+		}
+
+		// Blends: whether the dose being checked is of the whole blend or one peptide in it.
+		function renderCalcOf() {
+			calcOfBox.textContent = '';
+			var list = v.mode === 'blend' ? blendParts() : [];
+			if ( ! list.length ) {
+				return;
+			}
+			if ( calc.doseOf && ! list.some( function ( x ) {
+				return sameCompound( x.name, calc.doseOf );
+			} ) ) {
+				calc.doseOf = '';
+			}
+			calcOfBox.appendChild( h( 'div', { class: 'ypt-row', style: { alignItems: 'center', marginTop: '8px' } },
+				h( 'span', { class: 'ypt-shrink ypt-small' }, 'That dose is' ),
+				h( 'select', { class: 'ypt-select', 'aria-label': 'What the dose measures', onchange: function ( e ) {
+					calc.doseOf = e.target.value;
+					renderResult();
+				} }, [ h( 'option', { value: '', selected: ! calc.doseOf }, 'the whole blend' ) ].concat( list.map( function ( x ) {
+					return h( 'option', { value: x.name, selected: sameCompound( x.name, calc.doseOf ) }, 'the ' + x.name + ' in it' );
+				} ) ) )
+			) );
 		}
 
 		function renderResult() {
 			renderStrength();
+			renderCalcOf();
 			result.textContent = '';
-			var units = unitsForDose( calc.dose, calc.unit, v );
+			var blendV = v.mode === 'blend' ? Object.assign( {}, v, { parts: blendParts() } ) : v;
+			var units = unitsForDose( calc.dose, calc.unit, blendV, calc.doseOf );
 			var c = vialConcentration( v );
 			var total = vialTotalUnits( v );
 			var cap = +v.syringe || 50;
@@ -2874,6 +3079,9 @@
 			result.appendChild( h( 'div', { class: 'ypt-eyebrow' }, pen ? 'Dial to' : 'Draw to' ) );
 			result.appendChild( h( 'div', { class: 'ypt-calc-big' }, fmtNum( units, 1 ), h( 'small', null, 'units' ) ) );
 			result.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '4px' } }, fmtNum( units / 100, 3 ) + ( pen ? ' mL, on a pen that dials in units (0.01 mL each)' : ' mL on a U-100 insulin syringe' ) ) );
+			if ( isBlend( blendV ) ) {
+				result.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '6px' } }, 'Each dose: ' + blendDoseLine( blendV, units ) ) );
+			}
 			if ( ! pen ) {
 				result.appendChild( drawSyringe( units, cap ) );
 			}
@@ -2903,25 +3111,45 @@
 			),
 			h( 'div', { class: 'ypt-field' },
 				h( 'span', { class: 'ypt-label' }, 'What’s in it' ),
-				seg( [ [ 'mg', 'Peptide (mg)' ], [ 'iu', 'HGH / HCG (IU)' ], [ 'conc', 'Premixed' ] ], v.mode, function ( m ) {
+				seg( [ [ 'mg', 'Peptide (mg)' ], [ 'iu', 'HGH / HCG (IU)' ], [ 'conc', 'Premixed' ], [ 'blend', 'Blend' ] ], v.mode, function ( m ) {
+					var was = v.mode;
 					v.mode = m;
+					if ( m === 'blend' ) {
+						syncBlend();
+					} else if ( was === 'blend' ) {
+						// Leaving a blend: don't keep its total as a single peptide's mg.
+						v.amount = '';
+					}
+					if ( ( m === 'blend' || was === 'blend' ) && ! nameTouched ) {
+						v.compound = m === 'blend' ? v.compound : '';
+						var el = document.getElementById( 'ypt-v-compound' );
+						if ( el ) {
+							el.value = v.compound;
+						}
+					}
 					renderInputs();
 					renderResult();
-				} )
+				}, 'ypt-seg--wrap' )
 			),
-			field( 'Peptide', compoundInput( 'ypt-v-compound', v.compound, function ( name ) {
-				v.compound = name;
-				var match = protocols().filter( function ( x ) {
-					return sameCompound( x.compound, name );
-				} )[ 0 ];
-				if ( match && ! opts.dose ) {
-					p = match;
-					calc.dose = match.dose;
-					calc.unit = match.unit;
-					renderInputs();
-					renderResult();
-				}
-			} ), null, 'ypt-v-compound' ),
+			( function () {
+				var f = field( v.mode === 'blend' ? 'Blend name' : 'Peptide', compoundInput( 'ypt-v-compound', v.compound, function ( name ) {
+					v.compound = name;
+					nameTouched = !! name;
+					var match = protocols().filter( function ( x ) {
+						return sameCompound( x.compound, name );
+					} )[ 0 ];
+					if ( match && ! opts.dose ) {
+						p = match;
+						calc.dose = match.dose;
+						calc.unit = match.unit;
+						calc.doseOf = match.doseOf || '';
+						renderInputs();
+						renderResult();
+					}
+				} ), null, 'ypt-v-compound' );
+				nameLabel = f.firstChild;
+				return f;
+			}() ),
 			inputs,
 			result,
 			h( 'p', { class: 'ypt-hint' }, 'Same math as the ', h( 'a', { href: CFG.calculatorUrl }, 'Peptide & Hormone Calculator' ), '. Always double-check against your vial’s label.' ),
@@ -2940,7 +3168,8 @@
 		openSheet( existing ? ( isPen( v ) ? 'Edit pen' : 'Edit vial' ) : opts.kind === 'pen' ? 'Mix a pen' : 'Mix a vial or pen', 'Vial & pen calculator', body,
 			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
 				err.hidden = true;
-				var problem = ! v.compound ? 'Enter the peptide’s name.'
+				var problem = v.mode === 'blend' && blendParts().length < 2 ? 'Add at least two peptides with their mg.'
+					: ! v.compound ? ( v.mode === 'blend' ? 'Give the blend a name.' : 'Enter the peptide’s name.' )
 					: ! vialConcentration( v ) || ! vialTotalUnits( v ) ? ( v.mode === 'conc' ? 'Enter the strength and size.' : 'Enter what’s in it and the water you added.' )
 					: '';
 				if ( problem ) {
@@ -2961,6 +3190,10 @@
 					syringe: +v.syringe || 50,
 					finished: !! v.finished,
 				};
+				if ( v.mode === 'blend' ) {
+					saved.parts = blendParts();
+					saved.blend = v.blend;
+				}
 				put( 'vial', id, saved );
 				if ( opts.onSaved ) {
 					opts.onSaved( saved );
@@ -2973,6 +3206,7 @@
 						compound: saved.compound,
 						dose: parseFloat( calc.dose ) > 0 ? calc.dose : '',
 						unit: saved.mode === 'iu' ? 'IU' : calc.unit,
+						doseOf: saved.parts ? calc.doseOf || '' : '',
 						device: saved.kind === 'pen' ? 'pen' : 'syringe',
 					} } );
 					toast( ( saved.kind === 'pen' ? 'Pen' : 'Vial' ) + ' saved. Now set your dose and schedule.' );
@@ -3127,7 +3361,7 @@
 			}
 			var p = d.protocolId ? state.records.protocol[ d.protocolId ] : null;
 			var v = currentVial( { compound: d.compound } );
-			var units = v ? unitsForDose( d.dose, d.unit, v ) : null;
+			var units = v ? unitsForDose( d.dose, d.unit, v, p ? p.doseOf : '' ) : null;
 			var t = timeVal.split( ':' );
 			var when = parseDate( date );
 			when.setHours( +t[ 0 ], +t[ 1 ] );
