@@ -59,3 +59,22 @@ as the product page's "Add another label", so pricing, validation and
 "Edit customization" work unchanged, and then opens the cart. Custom
 sizes (typed inches) stay on the product page. Nothing from this flow is
 saved in the tracker.
+
+## Injection site rotation
+
+Injections (under the skin or into the muscle) suggest the next spot on
+each Today card: the spot in that peptide's rotation that has gone
+longest without a dose, counting every injection the customer logged,
+so two peptides rotate around each other. Tapping **Take** logs the dose
+at the suggested spot; **Change** opens a body map (front and back,
+drawn mirror-style so the customer's left is on the left) to pick
+another spot and take the dose there. Under-the-skin spots: belly (four
+quarters), thighs, backs of the arms, love handles and glutes.
+Into-the-muscle spots: shoulders, thighs and glutes.
+
+The spot is stored on the dose record (`site`), encrypted with the rest
+of it. Editing a peptide has **Rotate injection sites** (on by default)
+and a map to choose the spots the customer uses. History shows a map
+shaded by how recently each spot was used, the day list shows each
+dose's spot, and the CSV export has an Injection site column. Reminders
+don't include the spot.
