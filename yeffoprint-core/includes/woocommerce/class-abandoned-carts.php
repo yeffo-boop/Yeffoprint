@@ -24,9 +24,11 @@
  *
  * Sending: same 5-minute sweep-over-a-table shape as class-telegram-
  * express-alerts.php (WP-Cron, so a quiet night can make a reminder a
- * few minutes late). Email 1 goes out after DELAY1 minutes of no cart
- * activity, Email 2 (with a single-use code for that email address
- * only, when the discount is on) after DELAY2 hours. The owner's
+ * few minutes late). Email 1 goes out delay1_hours (24 by default,
+ * direct request: "start 24 hours after they leave the cart") after the
+ * last cart activity, Email 2 (with a single-use code for that email
+ * address only, when the discount is on) delay2_hours after Email 1.
+ * The owner's
  * Telegram alert lands ~5 minutes before Email 1 with Send now / Don't
  * send / Send code instead buttons (class-telegram-callback-handler.php
  * routes `ac_*` taps to handle_owner_action()).
@@ -120,14 +122,18 @@ class YeffoPrint_Abandoned_Carts {
 	/* ---------- Settings ---------- */
 
 	/**
-	 * @return array{enabled:bool, delay1_minutes:int, delay2_hours:int,
+	 * delay1_hours replaced the original delay1_minutes (60), so a store
+	 * that saved the old setting still moves to the 24-hour default;
+	 * delay2_hours now counts from Email 1 rather than from the cart.
+	 *
+	 * @return array{enabled:bool, delay1_hours:int, delay2_hours:int,
 	 *   discount_enabled:bool, discount_percent:float, discount_hours:int,
 	 *   telegram_nudge:bool, owner_alerts:bool}
 	 */
 	public static function settings(): array {
 		$defaults = [
 			'enabled'          => true,
-			'delay1_minutes'   => 60,
+			'delay1_hours'     => 24,
 			'delay2_hours'     => 24,
 			'discount_enabled' => true,
 			'discount_percent' => 10.0,
@@ -141,8 +147,8 @@ class YeffoPrint_Abandoned_Carts {
 
 		return [
 			'enabled'          => (bool) $s['enabled'],
-			'delay1_minutes'   => max( 15, (int) $s['delay1_minutes'] ),
-			'delay2_hours'     => max( 2, (int) $s['delay2_hours'] ),
+			'delay1_hours'     => max( 1, (int) $s['delay1_hours'] ),
+			'delay2_hours'     => max( 1, (int) $s['delay2_hours'] ),
 			'discount_enabled' => (bool) $s['discount_enabled'],
 			'discount_percent' => min( 90.0, max( 1.0, (float) $s['discount_percent'] ) ),
 			'discount_hours'   => max( 1, (int) $s['discount_hours'] ),
@@ -765,11 +771,14 @@ class YeffoPrint_Abandoned_Carts {
 		}
 
 		$settings = self::settings();
-		$delay1   = $settings['delay1_minutes'] * MINUTE_IN_SECONDS;
+		$delay1   = $settings['delay1_hours'] * HOUR_IN_SECONDS;
 		$delay2   = $settings['delay2_hours'] * HOUR_IN_SECONDS;
 		$stale    = gmdate( 'Y-m-d H:i:s', time() - self::STALE_DAYS * DAY_IN_SECONDS );
+		// Email 2 follows Email 1 on its own schedule, with the same
+		// grace a late sweep gets for Email 1.
+		$stale2   = gmdate( 'Y-m-d H:i:s', time() - $delay2 - ( self::STALE_DAYS - 1 ) * DAY_IN_SECONDS );
 
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE status = %s AND stage < 2 AND updated_at >= %s ORDER BY updated_at ASC LIMIT 50", self::STATUS_OPEN, $stale ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE status = %s AND ( ( stage = 0 AND updated_at >= %s ) OR ( stage = 1 AND email1_at >= %s ) ) ORDER BY updated_at ASC LIMIT 50", self::STATUS_OPEN, $stale, $stale2 ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		foreach ( $rows ?: [] as $row ) {
 			$idle = time() - self::ts( $row['updated_at'] );
@@ -796,7 +805,7 @@ class YeffoPrint_Abandoned_Carts {
 				continue;
 			}
 
-			if ( 1 === (int) $row['stage'] && $idle >= $delay2 && time() - self::ts( $row['email1_at'] ) >= HOUR_IN_SECONDS ) {
+			if ( 1 === (int) $row['stage'] && time() - self::ts( $row['email1_at'] ) >= $delay2 ) {
 				self::send_stage( $row, 2 );
 			}
 		}
@@ -1103,10 +1112,9 @@ class YeffoPrint_Abandoned_Carts {
 		// Same for "ordered" rows closed before any reminder went out.
 		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE created_at >= %s AND status <> %s AND NOT ( status = %s AND stage = 0 ) ORDER BY updated_at DESC LIMIT 200", $since, self::STATUS_PURCHASED, self::STATUS_ORDERED ), ARRAY_A ) ?: []; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-		$delay1 = self::settings()['delay1_minutes'] * MINUTE_IN_SECONDS;
-		$left   = array_values( array_filter( $rows, static function ( array $row ) use ( $delay1 ): bool {
+		$left = array_values( array_filter( $rows, static function ( array $row ): bool {
 			// A cart touched in the last few minutes is still someone shopping.
-			return self::STATUS_OPEN !== $row['status'] || (int) $row['stage'] > 0 || time() - self::ts( $row['updated_at'] ) >= min( $delay1, 30 * MINUTE_IN_SECONDS );
+			return self::STATUS_OPEN !== $row['status'] || (int) $row['stage'] > 0 || time() - self::ts( $row['updated_at'] ) >= 30 * MINUTE_IN_SECONDS;
 		} ) );
 
 		$recovered = array_filter( $left, static function ( array $row ): bool {

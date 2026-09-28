@@ -229,11 +229,11 @@
 			el.innerHTML =
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Recovery settings</h2></div>' +
-					'<p class="yp-panel__hint">Reminders stop the moment the customer pays, taps “Don’t remind me again”, or you stop them. They pause while Away Mode is on, and a cart left more than 3 days ago is never emailed.</p>' +
+					'<p class="yp-panel__hint">Reminders stop the moment the customer pays, taps “Don’t remind me again”, or you stop them. They pause while Away Mode is on, and a cart left more than 3 days ago never gets a first reminder.</p>' +
 					checkbox( 'yp-ac-enabled', settings.enabled, 'Send cart reminders' ) +
 					'<div class="yp-form__row">' +
-						number( 'yp-ac-delay1', settings.delay1_minutes, 'Email 1 after (minutes)', 15 ) +
-						number( 'yp-ac-delay2', settings.delay2_hours, 'Email 2 after (hours)', 2 ) +
+						number( 'yp-ac-delay1', settings.delay1_hours, 'Email 1: hours after they leave', 1 ) +
+						number( 'yp-ac-delay2', settings.delay2_hours, 'Email 2: hours after Email 1', 1 ) +
 					'</div>' +
 					checkbox( 'yp-ac-discount', settings.discount_enabled, 'Put a single-use discount code in Email 2' ) +
 					'<div class="yp-form__row">' +
@@ -257,7 +257,7 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify( {
 						enabled: el.querySelector( '#yp-ac-enabled' ).checked,
-						delay1_minutes: el.querySelector( '#yp-ac-delay1' ).value,
+						delay1_hours: el.querySelector( '#yp-ac-delay1' ).value,
 						delay2_hours: el.querySelector( '#yp-ac-delay2' ).value,
 						discount_enabled: el.querySelector( '#yp-ac-discount' ).checked,
 						discount_percent: el.querySelector( '#yp-ac-percent' ).value,
