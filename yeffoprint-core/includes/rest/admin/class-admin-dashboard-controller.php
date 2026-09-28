@@ -75,6 +75,9 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			// uses, class-admin-order-controller.php's detail_payload()) instead of a
 			// plain status pill, but only when that plugin is actually active.
 			'shipping_label_available' => $this->is_shipping_plugin_active(),
+			// Direct request: Dose Tracker usage at a glance. Totals only —
+			// YeffoPrint_Tracker_Usage never returns anyone's own entries.
+			'tracker_usage'            => class_exists( 'YeffoPrint_Tracker_Usage' ) ? YeffoPrint_Tracker_Usage::summary() : null,
 		] );
 	}
 

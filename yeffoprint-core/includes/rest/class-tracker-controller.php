@@ -102,6 +102,7 @@ class YeffoPrint_Tracker_Controller {
 
 	public function get_state(): \WP_REST_Response {
 		$user_id = get_current_user_id();
+		YeffoPrint_Tracker_Usage::record( $user_id );
 
 		$state = [];
 		foreach ( self::WRITABLE_KINDS as $kind ) {
@@ -137,10 +138,15 @@ class YeffoPrint_Tracker_Controller {
 			return new \WP_Error( 'yeffoprint_tracker_too_big', __( 'That entry is too long.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$result = YeffoPrint_Tracker_Store::put( get_current_user_id(), $kind, $id, $data );
+		$user_id  = get_current_user_id();
+		$new_dose = 'dose' === $kind && ! YeffoPrint_Tracker_Store::exists( $user_id, $kind, $id );
+
+		$result = YeffoPrint_Tracker_Store::put( $user_id, $kind, $id, $data );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
+		// Counts only (admin Dashboard) — see YeffoPrint_Tracker_Usage.
+		YeffoPrint_Tracker_Usage::record( $user_id, $new_dose ? 1 : 0 );
 
 		return self::no_store( [ 'ok' => true, 'data' => $data ] );
 	}
