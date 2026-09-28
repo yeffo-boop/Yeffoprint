@@ -7,7 +7,7 @@
  * the app opens instantly and works offline, queueing changes until the
  * connection is back. Records:
  *
- *   protocol  { compound, dose, unit, route, schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused }
+ *   protocol  { compound, dose, unit, route, device:'syringe'|'pen'|'single', pen:{total,started}, schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused }
  *   dose      { protocolId, compound, date, time, status:'taken'|'skipped', at, dose, unit, vialId, units, note }
  *   vial      { compound, mode:'mg'|'iu'|'conc', amount, water, conc, volume, mixed, syringe, finished }
  *   settings  { tz, reminders }
@@ -35,8 +35,8 @@
 
 	var COLORS = [ '#00AEEF', '#EC008C', '#F5B400', '#7C4DFF', '#1F9D55', '#FF6B35', '#0078A4', '#C2007A' ];
 	// Countable units are stored singular and shown plural when the dose isn't 1 ("2 tablets").
-	var UNITS = [ 'mcg', 'mg', 'g', 'IU', 'units', 'mL', 'tablet', 'capsule', 'spray', 'drop', 'puff', 'patch', 'pump', 'application', 'suppository', 'dose' ];
-	var UNIT_PLURAL = { tablet: 'tablets', capsule: 'capsules', spray: 'sprays', drop: 'drops', puff: 'puffs', patch: 'patches', pump: 'pumps', application: 'applications', suppository: 'suppositories', dose: 'doses' };
+	var UNITS = [ 'mcg', 'mg', 'g', 'IU', 'units', 'mL', 'tablet', 'capsule', 'spray', 'drop', 'puff', 'patch', 'pump', 'application', 'suppository', 'dose', 'click' ];
+	var UNIT_PLURAL = { click: 'clicks', tablet: 'tablets', capsule: 'capsules', spray: 'sprays', drop: 'drops', puff: 'puffs', patch: 'patches', pump: 'pumps', application: 'applications', suppository: 'suppositories', dose: 'doses' };
 	/*
 	 * How it's taken. `v` is what's stored on a protocol: the first six are
 	 * the original values, so older protocols keep working. `units` are the
@@ -527,7 +527,7 @@
 
 	/** The vial a protocol draws from: the newest open vial of the same compound (injections only). */
 	function currentVial( p ) {
-		if ( ! isInjected( p.route ) ) {
+		if ( ! usesVial( p ) ) {
 			return null;
 		}
 		var list = vials( false ).filter( function ( v ) {
@@ -606,9 +606,28 @@
 		} )[ 0 ] || ROUTES[ ROUTES.length - 1 ];
 	}
 
-	/** Injections are the only routes with a vial to mix and units to draw. */
 	function isInjected( route ) {
 		return ! route || route === 'Subcutaneous' || route === 'Intramuscular';
+	}
+
+	/** Only syringe injections have a vial to mix and units to draw; pens and single-use injectors don't. */
+	function usesVial( p ) {
+		return isInjected( p.route ) && ( ! p.device || p.device === 'syringe' );
+	}
+
+	var DEVICES = [ [ 'syringe', 'Syringe' ], [ 'pen', 'Multi-dose pen' ], [ 'single', 'Single-use' ] ];
+
+	/** Doses left in the current multi-dose pen, from what it holds and the doses taken since it was started; null when unknown. */
+	function penInfo( p ) {
+		if ( p.device !== 'pen' || ! p.pen || ! ( +p.pen.total > 0 ) || ! ( +p.dose > 0 ) ) {
+			return null;
+		}
+		var started = p.pen.started || '';
+		var used = values( state.records.dose ).reduce( function ( sum, d ) {
+			return d.protocolId === p.id && d.status === 'taken' && d.unit === p.unit && String( d.date ) >= started ? sum + ( +d.dose || 0 ) : sum;
+		}, 0 );
+		var left = Math.max( 0, +p.pen.total - used );
+		return { left: left, doses: Math.floor( left / +p.dose + 1e-9 ) };
 	}
 
 	/** Unit choices: buttons when a few short ones fit on a phone, otherwise a dropdown. The current unit is always offered. */
@@ -620,7 +639,7 @@
 		var chars = opts.reduce( function ( n, o ) {
 			return n + o[ 1 ].length;
 		}, 0 );
-		if ( list.length <= 5 && chars <= 16 ) {
+		if ( list.length <= 5 && chars <= 18 ) {
 			return seg( opts, current, onPick );
 		}
 		return h( 'select', { class: 'ypt-select', 'aria-label': 'Unit', onchange: function ( e ) {
@@ -1068,7 +1087,8 @@
 		var log = s.log;
 		var v = currentVial( p );
 		var units = log && log.units != null ? +log.units : ( v ? unitsForDose( p.dose, p.unit, v ) : null );
-		var sub = [ amountLabel( p.dose, p.unit ), p.route ? routeInfo( p.route ).short || p.route.toLowerCase() : '', scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
+		var how = p.device === 'pen' ? 'pen' : p.device === 'single' ? 'single-use injector' : p.route ? routeInfo( p.route ).short || p.route.toLowerCase() : '';
+		var sub = [ amountLabel( p.dose, p.unit ), how, scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
 
 		var actions;
 		if ( log ) {
@@ -1112,7 +1132,13 @@
 					v ? ' · vial mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) : '',
 					info && info.age > VIAL_WARN_DAYS ? ' · ' + info.age + ' days old' : ''
 				) );
-			} else if ( ! log && ( p.unit === 'mcg' || p.unit === 'mg' || p.unit === 'IU' ) && ( p.route || 'Subcutaneous' ).match( /cutaneous|muscular/ ) ) {
+			} else if ( penInfo( p ) ) {
+				var pen = penInfo( p );
+				card.appendChild( h( 'div', { class: 'ypt-draw' + ( pen.doses <= 1 ? ' ypt-draw--warn' : '' ) },
+					pen.doses < 1 ? 'This pen looks empty. Start a new one in Edit.'
+						: [ h( 'b', null, pen.doses + ( pen.doses === 1 ? ' dose' : ' doses' ) ), ' left in this pen (' + amountLabel( pen.left, p.unit ) + ')' ]
+				) );
+			} else if ( ! log && ( p.unit === 'mcg' || p.unit === 'mg' || p.unit === 'IU' ) && usesVial( p ) ) {
 				card.appendChild( h( 'button', { type: 'button', class: 'ypt-draw', style: { width: '100%', textAlign: 'left' }, onclick: function () {
 					openVialSheet( null, { compound: p.compound, dose: p.dose, unit: p.unit } );
 				} }, 'Add your vial to see how many units to draw →' ) );
@@ -2338,6 +2364,9 @@
 		var routeSelect;
 		var vialField = h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Vial' ), vialBox );
 		var routeTouched = !! existing;
+		var deviceField = h( 'div', { class: 'ypt-field' } );
+		var penBox = h( 'div', null );
+		p.pen = Object.assign( { total: '', started: todayStr() }, p.pen || {} );
 		var unitTouched = !! existing || !! ( draft && draft.p && draft.p.unit );
 
 		function setRoute( route ) {
@@ -2350,16 +2379,58 @@
 			if ( routeSelect ) {
 				routeSelect.value = route;
 			}
+			renderDevice();
 			renderUnits();
 			renderVial();
 			renderDraw();
 		}
 
+		function renderDevice() {
+			deviceField.textContent = '';
+			deviceField.hidden = ! isInjected( p.route );
+			if ( deviceField.hidden ) {
+				return;
+			}
+			deviceField.appendChild( h( 'span', { class: 'ypt-label' }, 'Injected with' ) );
+			deviceField.appendChild( seg( DEVICES, p.device || 'syringe', function ( d ) {
+				p.device = d;
+				renderDevice();
+				renderUnits();
+				renderVial();
+				renderDraw();
+			} ) );
+			if ( p.device !== 'pen' ) {
+				return;
+			}
+			deviceField.appendChild( h( 'div', { class: 'ypt-row', style: { marginTop: '10px' } },
+				field( 'Pen holds (' + unitLabel( p.unit, 2 ) + ')', h( 'input', { class: 'ypt-input', id: 'ypt-p-pen-total', type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: 'Optional', value: p.pen.total || '', oninput: function ( e ) {
+					p.pen.total = e.target.value;
+				} } ), null, 'ypt-p-pen-total' ),
+				field( 'Pen started', h( 'input', { class: 'ypt-input', id: 'ypt-p-pen-start', type: 'date', value: p.pen.started || todayStr(), onchange: function ( e ) {
+					p.pen.started = e.target.value || todayStr();
+				} } ), null, 'ypt-p-pen-start' )
+			) );
+			var info = existing ? penInfo( Object.assign( {}, existing, { device: 'pen', pen: p.pen, unit: p.unit, dose: p.dose } ) ) : null;
+			deviceField.appendChild( h( 'p', { class: 'ypt-hint' },
+				info ? info.doses + ( info.doses === 1 ? ' dose' : ' doses' ) + ' left in this pen. ' : 'Add how much the pen holds and we’ll count the doses left. ',
+				existing ? h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
+					p.pen.started = todayStr();
+					renderDevice();
+				} }, 'Started a new pen today' ) : null ) );
+		}
+
 		function renderUnits() {
 			unitBox.textContent = '';
-			unitBox.appendChild( unitPicker( routeInfo( p.route ).units, p.unit, function ( u ) {
+			var units = routeInfo( p.route ).units;
+			if ( isInjected( p.route ) && p.device === 'pen' ) {
+				units = units.concat( [ 'click' ] );
+			}
+			unitBox.appendChild( unitPicker( units, p.unit, function ( u ) {
 				p.unit = u;
 				unitTouched = true;
+				if ( p.device === 'pen' ) {
+					renderDevice();
+				}
 				renderDraw();
 			} ) );
 			doseInput.placeholder = isInjected( p.route ) ? '250' : '1';
@@ -2428,7 +2499,7 @@
 		// Step 1 of a new peptide: the vial, so the dose step can show units to draw.
 		function renderVial() {
 			vialBox.textContent = '';
-			vialField.hidden = ! isInjected( p.route );
+			vialField.hidden = ! usesVial( p );
 			if ( vialField.hidden ) {
 				return;
 			}
@@ -2495,6 +2566,8 @@
 				dose: dose,
 				unit: p.unit,
 				route: p.route,
+				device: isInjected( p.route ) ? p.device || 'syringe' : '',
+				pen: isInjected( p.route ) && p.device === 'pen' ? { total: parseFloat( p.pen.total ) || 0, started: p.pen.started || todayStr() } : null,
 				schedule: { type: p.schedule.type, days: p.schedule.days.map( Number ), every: +p.schedule.every || 2, on: +p.schedule.on || 5, off: +p.schedule.off || 0 },
 				times: p.times.filter( Boolean ).filter( function ( t, i, a ) {
 					return a.indexOf( t ) === i;
@@ -2533,6 +2606,7 @@
 			} ).concat( ROUTES.some( function ( r ) {
 				return r.v === p.route;
 			} ) ? [] : [ h( 'option', { value: p.route, selected: true }, p.route ) ] ) ), null, 'ypt-p-route' ),
+			deviceField,
 			vialField,
 			h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: 'ypt-p-dose' }, 'Dose' ),
@@ -2593,6 +2667,7 @@
 
 		renderSchedDetail();
 		renderTimes();
+		renderDevice();
 		renderUnits();
 		renderVial();
 		renderDraw();
