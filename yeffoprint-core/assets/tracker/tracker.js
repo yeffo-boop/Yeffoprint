@@ -999,6 +999,10 @@
 			if ( banner ) {
 				wrap.appendChild( banner );
 			}
+			var news = whatsNewBanner();
+			if ( news ) {
+				wrap.appendChild( news );
+			}
 		}
 
 		if ( ! protocols().length ) {
@@ -1135,6 +1139,70 @@
 			}
 		}
 		return card;
+	}
+
+	/* ---------- What's new (entries come from includes/tracker/whats-new.php) ---------- */
+
+	var NEWS_KEY = 'ypt-news-seen';
+
+	function newsList() {
+		return CFG.whatsNew || [];
+	}
+
+	/** Entries this browser hasn't seen. Someone brand new to the tracker has nothing to catch up on, so they start caught up. */
+	function unseenNews() {
+		var list = newsList();
+		if ( ! list.length ) {
+			return [];
+		}
+		var seen = loadJSON( NEWS_KEY, null );
+		if ( seen === null ) {
+			if ( ! protocols().length && ! vials( true ).length ) {
+				saveJSON( NEWS_KEY, list[ 0 ].id );
+				return [];
+			}
+			seen = '';
+		}
+		return list.filter( function ( n ) {
+			return String( n.id ) > String( seen );
+		} );
+	}
+
+	function markNewsSeen() {
+		var list = newsList();
+		if ( list.length ) {
+			saveJSON( NEWS_KEY, list[ 0 ].id );
+		}
+	}
+
+	function whatsNewBanner() {
+		var fresh = unseenNews();
+		if ( ! fresh.length ) {
+			return null;
+		}
+		return h( 'div', { class: 'ypt-banner ypt-banner--info' },
+			h( 'div', null, h( 'b', null, 'New: ' + fresh[ 0 ].title + '. ' ), fresh.length > 1 ? 'Plus ' + ( fresh.length - 1 ) + ' more update' + ( fresh.length > 2 ? 's' : '' ) + '. ' : '',
+				h( 'div', { style: { marginTop: '8px' } }, h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+					markNewsSeen();
+					render();
+					openWhatsNew();
+				} }, 'See what’s new' ) ) ),
+			h( 'button', { type: 'button', class: 'ypt-banner__close', 'aria-label': 'Dismiss', onclick: function () {
+				markNewsSeen();
+				render();
+			} }, '×' ) );
+	}
+
+	function newsItem( n ) {
+		return h( 'div', { class: 'ypt-news' },
+			h( 'div', { class: 'ypt-eyebrow' }, fmtDay( n.date ).replace( /^\w+, /, '' ) ),
+			h( 'b', null, n.title ),
+			h( 'p', { class: 'ypt-small' }, n.text ) );
+	}
+
+	function openWhatsNew() {
+		markNewsSeen();
+		openSheet( 'What’s new', 'Dose Tracker', [ h( 'div', { class: 'ypt-card ypt-list' }, newsList().map( newsItem ) ) ] );
 	}
 
 	function installBanner() {
@@ -2020,6 +2088,14 @@
 
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Reminders' ) );
 		wrap.appendChild( remindersCard( s ) );
+
+		if ( newsList().length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'What’s new' ) );
+			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
+				newsList().slice( 0, 2 ).map( newsItem ),
+				newsList().length > 2 ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openWhatsNew }, h( 'span', null, 'All updates' ), h( 'span', null, '›' ) ) : null
+			) );
+		}
 
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Your peptides & medications' ) );
 		var list = protocols();

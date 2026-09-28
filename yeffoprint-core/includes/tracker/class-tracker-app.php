@@ -170,6 +170,7 @@ class YeffoPrint_Tracker_App {
 			'calculatorUrl' => home_url( '/peptide-calculator/' ),
 			'compounds'     => self::compound_names(),
 			'medications'   => YeffoPrint_Tracker_Medications::all(),
+			'whatsNew'      => include YEFFOPRINT_CORE_PATH . 'includes/tracker/whats-new.php',
 		];
 
 		include YEFFOPRINT_CORE_PATH . 'includes/tracker/views/app.php';
