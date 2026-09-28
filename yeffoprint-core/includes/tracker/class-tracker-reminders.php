@@ -131,6 +131,12 @@ class YeffoPrint_Tracker_Reminders {
 		if ( $dose <= 0 ) {
 			return '';
 		}
-		return rtrim( rtrim( number_format( $dose, 3, '.', '' ), '0' ), '.' ) . ' ' . sanitize_text_field( (string) ( $protocol['unit'] ?? '' ) );
+		$unit = sanitize_text_field( (string) ( $protocol['unit'] ?? '' ) );
+		// Countable units read naturally: "2 tablets", "1 spray" (same words as the app's unitLabel()).
+		$plural = [ 'tablet' => 'tablets', 'capsule' => 'capsules', 'spray' => 'sprays', 'drop' => 'drops', 'puff' => 'puffs', 'patch' => 'patches', 'pump' => 'pumps', 'application' => 'applications', 'suppository' => 'suppositories', 'dose' => 'doses' ];
+		if ( 1.0 !== $dose && isset( $plural[ $unit ] ) ) {
+			$unit = $plural[ $unit ];
+		}
+		return rtrim( rtrim( number_format( $dose, 3, '.', '' ), '0' ), '.' ) . ' ' . $unit;
 	}
 }

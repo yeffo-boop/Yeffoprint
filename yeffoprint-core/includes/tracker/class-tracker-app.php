@@ -127,7 +127,7 @@ class YeffoPrint_Tracker_App {
 			'id'               => self::path(),
 			'name'             => 'YeffoDesign Dose Tracker',
 			'short_name'       => 'Dose Tracker',
-			'description'      => 'Track your peptide doses, vials and schedule.',
+			'description'      => 'Track your peptides and medications: doses, vials and schedule.',
 			'start_url'        => self::path(),
 			'scope'            => self::path(),
 			'display'          => 'standalone',
@@ -169,6 +169,7 @@ class YeffoPrint_Tracker_App {
 			'qtyPresets'    => function_exists( 'yeffoprint_core_quantity_presets' ) ? array_values( array_map( 'intval', yeffoprint_core_quantity_presets() ) ) : [ 10, 20, 30, 50, 100 ],
 			'calculatorUrl' => home_url( '/peptide-calculator/' ),
 			'compounds'     => self::compound_names(),
+			'medications'   => YeffoPrint_Tracker_Medications::all(),
 		];
 
 		include YEFFOPRINT_CORE_PATH . 'includes/tracker/views/app.php';
@@ -182,7 +183,7 @@ class YeffoPrint_Tracker_App {
 		];
 	}
 
-	/** Autocomplete for "Add a peptide" — the same Catalog > Compound List the label spell-check uses, whether or not spell-check is switched on. @return string[] */
+	/** Autocomplete for "Add a medication" (peptides and hormones; everyday medications come from YeffoPrint_Tracker_Medications) — the same Catalog > Compound List the label spell-check uses, whether or not spell-check is switched on. @return string[] */
 	private static function compound_names(): array {
 		if ( ! class_exists( 'YeffoPrint_Compound_List' ) ) {
 			return [];

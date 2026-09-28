@@ -34,8 +34,29 @@
 	}
 
 	var COLORS = [ '#00AEEF', '#EC008C', '#F5B400', '#7C4DFF', '#1F9D55', '#FF6B35', '#0078A4', '#C2007A' ];
-	var UNITS = [ 'mcg', 'mg', 'IU', 'units', 'mL' ];
-	var ROUTES = [ 'Subcutaneous', 'Intramuscular', 'Oral', 'Nasal', 'Topical', 'Other' ];
+	// Countable units are stored singular and shown plural when the dose isn't 1 ("2 tablets").
+	var UNITS = [ 'mcg', 'mg', 'g', 'IU', 'units', 'mL', 'tablet', 'capsule', 'spray', 'drop', 'puff', 'patch', 'pump', 'application', 'suppository', 'dose' ];
+	var UNIT_PLURAL = { tablet: 'tablets', capsule: 'capsules', spray: 'sprays', drop: 'drops', puff: 'puffs', patch: 'patches', pump: 'pumps', application: 'applications', suppository: 'suppositories', dose: 'doses' };
+	/*
+	 * How it's taken. `v` is what's stored on a protocol: the first six are
+	 * the original values, so older protocols keep working. `units` are the
+	 * choices shown for that route, first one the default.
+	 */
+	var ROUTES = [
+		{ v: 'Subcutaneous', label: 'Injection, under the skin (subcutaneous)', short: 'subcutaneous', units: [ 'mcg', 'mg', 'IU', 'units', 'mL' ] },
+		{ v: 'Intramuscular', label: 'Injection, into the muscle (intramuscular)', short: 'intramuscular', units: [ 'mg', 'mcg', 'IU', 'units', 'mL' ] },
+		{ v: 'Oral', label: 'By mouth (pill, capsule, liquid)', short: 'oral', units: [ 'tablet', 'capsule', 'mg', 'mcg', 'g', 'IU', 'mL', 'drop' ] },
+		{ v: 'Sublingual', label: 'Under the tongue (sublingual)', short: 'sublingual', units: [ 'mg', 'mcg', 'tablet', 'drop', 'mL', 'spray' ] },
+		{ v: 'Nasal', label: 'Nasal spray', short: 'nasal', units: [ 'spray', 'mcg', 'mg', 'mL' ] },
+		{ v: 'Inhaled', label: 'Inhaler or nebulizer', short: 'inhaled', units: [ 'puff', 'mcg', 'mg', 'mL' ] },
+		{ v: 'Topical', label: 'On the skin (cream, gel)', short: 'topical', units: [ 'pump', 'application', 'g', 'mL', 'mg' ] },
+		{ v: 'Transdermal', label: 'Patch', short: 'transdermal', units: [ 'patch', 'mg', 'mcg' ] },
+		{ v: 'Eye drops', label: 'Eye drops', short: 'eye drops', units: [ 'drop', 'mL' ] },
+		{ v: 'Ear drops', label: 'Ear drops', short: 'ear drops', units: [ 'drop', 'mL' ] },
+		{ v: 'Rectal', label: 'Rectal', short: 'rectal', units: [ 'suppository', 'mg', 'g', 'mL' ] },
+		{ v: 'Vaginal', label: 'Vaginal', short: 'vaginal', units: [ 'suppository', 'application', 'mg', 'g' ] },
+		{ v: 'Other', label: 'Other', short: '', units: UNITS },
+	];
 	var DOW = [ 'S', 'M', 'T', 'W', 'T', 'F', 'S' ];
 	var DOW_LONG = [ 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' ];
 	var MONTHS = [ 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December' ];
@@ -504,8 +525,11 @@
 		} );
 	}
 
-	/** The vial a protocol draws from: the newest open vial of the same compound. */
+	/** The vial a protocol draws from: the newest open vial of the same compound (injections only). */
 	function currentVial( p ) {
+		if ( ! isInjected( p.route ) ) {
+			return null;
+		}
 		var list = vials( false ).filter( function ( v ) {
 			return sameCompound( v.compound, p.compound );
 		} );
@@ -568,8 +592,42 @@
 		return p ? protocolColor( p ) : '#9A9A9E';
 	}
 
+	function unitLabel( unit, dose ) {
+		return UNIT_PLURAL[ unit ] && +dose !== 1 ? UNIT_PLURAL[ unit ] : unit || '';
+	}
+
 	function amountLabel( dose, unit ) {
-		return fmtNum( +dose, 3 ) + ' ' + ( unit || '' );
+		return fmtNum( +dose, 3 ) + ' ' + unitLabel( unit, dose );
+	}
+
+	function routeInfo( value ) {
+		return ROUTES.filter( function ( r ) {
+			return r.v === value;
+		} )[ 0 ] || ROUTES[ ROUTES.length - 1 ];
+	}
+
+	/** Injections are the only routes with a vial to mix and units to draw. */
+	function isInjected( route ) {
+		return ! route || route === 'Subcutaneous' || route === 'Intramuscular';
+	}
+
+	/** Unit choices: buttons when a few short ones fit on a phone, otherwise a dropdown. The current unit is always offered. */
+	function unitPicker( units, current, onPick ) {
+		var list = units.indexOf( current ) === -1 && current ? units.concat( [ current ] ) : units;
+		var opts = list.map( function ( u ) {
+			return [ u, UNIT_PLURAL[ u ] || u ];
+		} );
+		var chars = opts.reduce( function ( n, o ) {
+			return n + o[ 1 ].length;
+		}, 0 );
+		if ( list.length <= 5 && chars <= 16 ) {
+			return seg( opts, current, onPick );
+		}
+		return h( 'select', { class: 'ypt-select', 'aria-label': 'Unit', onchange: function ( e ) {
+			onPick( e.target.value );
+		} }, opts.map( function ( o ) {
+			return h( 'option', { value: o[ 0 ], selected: o[ 0 ] === current }, o[ 1 ] );
+		} ) );
 	}
 
 	/* =========================================================
@@ -931,8 +989,8 @@
 		if ( ! protocols().length ) {
 			var hasVial = vials( false ).length > 0;
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
-				h( 'h2', null, 'Let’s set up your first peptide' ),
-				h( 'p', null, 'Two quick steps. Once you’re set, each day shows what’s due, the units to draw, and a reminder when it’s time.' ),
+				h( 'h2', null, hasVial ? 'Let’s set up your first peptide' : 'Let’s add your first peptide or medication' ),
+				h( 'p', null, 'Once you’re set, each day shows what’s due and sends a reminder when it’s time. Peptides from a vial take two quick steps so you also see the units to draw.' ),
 				h( 'ol', { class: 'ypt-steps' },
 					h( 'li', { class: hasVial ? 'is-done' : null },
 						h( 'b', null, 'Mix your vial' ),
@@ -950,7 +1008,7 @@
 				} }, 'Mix your vial' ),
 				h( 'p', { style: { marginTop: '12px', marginBottom: '0' } }, h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
 					openProtocolSheet( null );
-				} }, hasVial ? 'Add a different peptide' : 'No vial to mix (pens, capsules)? Skip to your schedule' ) )
+				} }, hasVial ? 'Add something else' : 'Pills, sprays, pens or anything without a vial? Add it here' ) )
 			) );
 			return wrap;
 		}
@@ -1010,7 +1068,7 @@
 		var log = s.log;
 		var v = currentVial( p );
 		var units = log && log.units != null ? +log.units : ( v ? unitsForDose( p.dose, p.unit, v ) : null );
-		var sub = [ amountLabel( p.dose, p.unit ), p.route ? p.route.toLowerCase() : '', scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
+		var sub = [ amountLabel( p.dose, p.unit ), p.route ? routeInfo( p.route ).short || p.route.toLowerCase() : '', scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
 
 		var actions;
 		if ( log ) {
@@ -1106,10 +1164,10 @@
 		var filter = ui.historyFilter;
 		var list = protocols();
 
-		var select = h( 'select', { class: 'ypt-pill', 'aria-label': 'Filter by peptide', onchange: function ( e ) {
+		var select = h( 'select', { class: 'ypt-pill', 'aria-label': 'Filter by medication', onchange: function ( e ) {
 			ui.historyFilter = e.target.value;
 			render();
-		} }, h( 'option', { value: '' }, 'All peptides' ), list.map( function ( p ) {
+		} }, h( 'option', { value: '' }, 'All' ), list.map( function ( p ) {
 			return h( 'option', { value: p.id, selected: p.id === filter }, p.compound );
 		} ) );
 
@@ -1944,7 +2002,7 @@
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Reminders' ) );
 		wrap.appendChild( remindersCard( s ) );
 
-		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Your peptides' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Your peptides & medications' ) );
 		var list = protocols();
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
 			list.length ? list.map( function ( p ) {
@@ -1979,7 +2037,7 @@
 		) );
 
 		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '16px 4px 0' } },
-			'Dose Tracker is a personal log and reminder tool. It isn’t medical advice. Talk to a qualified provider about any peptide, dose or schedule.' ) );
+			'Dose Tracker is a personal log and reminder tool. It isn’t medical advice. Talk to a qualified provider about any peptide, medication, dose or schedule.' ) );
 
 		return wrap;
 	}
@@ -2174,17 +2232,35 @@
 		return node;
 	}
 
-	/** Text input with suggestions from the Compound List (plus anything the customer already uses). */
-	function compoundInput( id, value, onChange ) {
-		var input = h( 'input', { class: 'ypt-input', id: id, type: 'text', value: value || '', autocomplete: 'off', autocapitalize: 'words', spellcheck: 'false', placeholder: 'e.g. BPC-157', maxlength: '80' } );
+	/**
+	 * Free-text name with suggestions: the Compound List's peptides and
+	 * hormones, common medications and supplements, and anything the
+	 * customer already uses. Picking a medication passes its usual route
+	 * as onChange's second argument.
+	 */
+	function compoundInput( id, value, onChange, placeholder ) {
+		var input = h( 'input', { class: 'ypt-input', id: id, type: 'text', value: value || '', autocomplete: 'off', autocapitalize: 'words', spellcheck: 'false', placeholder: placeholder || 'e.g. BPC-157 or Metformin', maxlength: '80' } );
 		var box = h( 'div', { class: 'ypt-suggest', hidden: true } );
 		var names = ( CFG.compounds || [] ).slice();
-		protocols().concat( vials( true ) ).forEach( function ( x ) {
-			if ( x.compound && ! names.some( function ( n ) {
-				return sameCompound( n, x.compound );
+		var routes = {};
+		function add( name, route ) {
+			if ( name && ! names.some( function ( n ) {
+				return sameCompound( n, name );
 			} ) ) {
-				names.push( x.compound );
+				names.push( name );
+				if ( route ) {
+					routes[ name ] = route;
+				}
 			}
+		}
+		protocols().forEach( function ( x ) {
+			add( x.compound, x.route );
+		} );
+		vials( true ).forEach( function ( x ) {
+			add( x.compound );
+		} );
+		( CFG.medications || [] ).forEach( function ( m ) {
+			add( m.n, m.r );
 		} );
 
 		function norm( s ) {
@@ -2209,7 +2285,7 @@
 				}, onclick: function () {
 					input.value = n;
 					box.hidden = true;
-					onChange( n );
+					onChange( n, routes[ n ] );
 				} }, n ) );
 			} );
 			box.hidden = ! hits.length;
@@ -2227,10 +2303,10 @@
 		return h( 'div', null, input, box );
 	}
 
-	/* ---------- Add / edit a peptide ---------- */
+	/* ---------- Add / edit a peptide or medication ---------- */
 
 	/**
-	 * Add / edit a peptide. `draft` ({ p, id }) reopens the sheet with
+	 * Add / edit a peptide or medication. `draft` ({ p, id }) reopens the sheet with
 	 * what was already typed, after a detour to Mix a vial.
 	 */
 	function openProtocolSheet( existing, draft ) {
@@ -2258,6 +2334,36 @@
 		var schedDetail = h( 'div', null );
 		var timesBox = h( 'div', { class: 'ypt-times' } );
 		var drawBox = h( 'div', null );
+		var unitBox = h( 'div', { style: { flex: '1 1 auto', minWidth: '0' } } );
+		var routeSelect;
+		var vialField = h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Vial' ), vialBox );
+		var routeTouched = !! existing;
+		var unitTouched = !! existing || !! ( draft && draft.p && draft.p.unit );
+
+		function setRoute( route ) {
+			p.route = route;
+			var units = routeInfo( route ).units;
+			// Until a unit's been picked, follow the route's usual one (tablets for oral, sprays for nasal…).
+			if ( ! unitTouched || units.indexOf( p.unit ) === -1 ) {
+				p.unit = units[ 0 ];
+			}
+			if ( routeSelect ) {
+				routeSelect.value = route;
+			}
+			renderUnits();
+			renderVial();
+			renderDraw();
+		}
+
+		function renderUnits() {
+			unitBox.textContent = '';
+			unitBox.appendChild( unitPicker( routeInfo( p.route ).units, p.unit, function ( u ) {
+				p.unit = u;
+				unitTouched = true;
+				renderDraw();
+			} ) );
+			doseInput.placeholder = isInjected( p.route ) ? '250' : '1';
+		}
 
 		function renderSchedDetail() {
 			schedDetail.textContent = '';
@@ -2322,6 +2428,10 @@
 		// Step 1 of a new peptide: the vial, so the dose step can show units to draw.
 		function renderVial() {
 			vialBox.textContent = '';
+			vialField.hidden = ! isInjected( p.route );
+			if ( vialField.hidden ) {
+				return;
+			}
 			var v = p.compound ? currentVial( p ) : null;
 			if ( v ) {
 				var c = vialConcentration( v );
@@ -2370,7 +2480,7 @@
 		function saveProtocol() {
 			var dose = parseFloat( p.dose );
 			err.hidden = true;
-			var problem = ! p.compound ? 'Enter the peptide’s name.'
+			var problem = ! p.compound ? 'Enter what you’re taking.'
 				: ! ( dose > 0 ) ? 'Enter your dose.'
 				: p.schedule.type === 'weekdays' && ! p.schedule.days.length ? 'Pick at least one day.'
 				: ! p.start ? 'Pick a start date.'
@@ -2406,26 +2516,29 @@
 		} } );
 
 		var body = [
-			field( 'Peptide', compoundInput( 'ypt-p-compound', p.compound, function ( v ) {
+			field( 'Peptide or medication', compoundInput( 'ypt-p-compound', p.compound, function ( v, route ) {
 				p.compound = v;
+				if ( route && ! routeTouched && route !== p.route ) {
+					setRoute( route );
+					return;
+				}
 				renderVial();
 				renderDraw();
-			} ), null, 'ypt-p-compound' ),
-			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Vial' ), vialBox ),
+			} ), 'Pick a suggestion or type any name.', 'ypt-p-compound' ),
+			field( 'How you take it', routeSelect = h( 'select', { class: 'ypt-select', id: 'ypt-p-route', onchange: function ( e ) {
+				routeTouched = true;
+				setRoute( e.target.value );
+			} }, ROUTES.map( function ( r ) {
+				return h( 'option', { value: r.v, selected: r.v === p.route }, r.label );
+			} ).concat( ROUTES.some( function ( r ) {
+				return r.v === p.route;
+			} ) ? [] : [ h( 'option', { value: p.route, selected: true }, p.route ) ] ) ), null, 'ypt-p-route' ),
+			vialField,
 			h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: 'ypt-p-dose' }, 'Dose' ),
-				h( 'div', { class: 'ypt-row' }, h( 'div', { style: { flex: '0 0 34%' } }, doseInput ),
-					seg( UNITS, p.unit, function ( u ) {
-						p.unit = u;
-						renderDraw();
-					} ) ),
+				h( 'div', { class: 'ypt-row' }, h( 'div', { style: { flex: '0 0 34%' } }, doseInput ), unitBox ),
 				drawBox
 			),
-			field( 'Route', h( 'select', { class: 'ypt-select', id: 'ypt-p-route', onchange: function ( e ) {
-				p.route = e.target.value;
-			} }, ROUTES.map( function ( r ) {
-				return h( 'option', { value: r, selected: r === p.route }, r );
-			} ) ), null, 'ypt-p-route' ),
 			h( 'div', { class: 'ypt-field' },
 				h( 'span', { class: 'ypt-label' }, 'How often' ),
 				seg( [ [ 'daily', 'Daily' ], [ 'weekdays', 'Days' ], [ 'interval', 'Every N' ], [ 'cycle', 'On / off' ] ], p.schedule.type, function ( t ) {
@@ -2455,7 +2568,7 @@
 					} } );
 				} ) )
 			),
-			field( 'Notes', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-p-notes', maxlength: '500', placeholder: 'Injection site rotation, fasted, etc.', oninput: function ( e ) {
+			field( 'Notes', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-p-notes', maxlength: '500', placeholder: 'Injection site rotation, with food, fasted, etc.', oninput: function ( e ) {
 				p.notes = e.target.value;
 			} }, p.notes || '' ), null, 'ypt-p-notes' ),
 			existing ? h( 'div', { class: 'ypt-toggle' },
@@ -2474,16 +2587,17 @@
 					closeSheet();
 					del( 'protocol', id );
 				}
-			} }, 'Delete this peptide' ) : null,
+			} }, 'Delete ' + existing.compound ) : null,
 			err,
 		];
 
 		renderSchedDetail();
 		renderTimes();
+		renderUnits();
 		renderVial();
 		renderDraw();
 
-		openSheet( existing ? 'Edit peptide' : 'Add a peptide', existing ? existing.compound : 'New protocol', body,
+		openSheet( existing ? 'Edit' : 'Add a peptide or medication', existing ? existing.compound : 'New protocol', body,
 			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
 				saveProtocol();
 			} }, existing ? 'Save changes' : 'Save' ) );
@@ -2806,26 +2920,27 @@
 		function renderBox() {
 			box.textContent = '';
 			if ( custom ) {
-				box.appendChild( field( 'Peptide', compoundInput( 'ypt-x-compound', d.compound, function ( v ) {
+				box.appendChild( field( 'Peptide or medication', compoundInput( 'ypt-x-compound', d.compound, function ( v ) {
 					d.compound = v;
 					d.protocolId = '';
 				} ), null, 'ypt-x-compound' ) );
 			}
+			var picked = ! custom && d.protocolId ? state.records.protocol[ d.protocolId ] : null;
 			box.appendChild( h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: 'ypt-x-dose' }, 'Dose' ),
 				h( 'div', { class: 'ypt-row' },
 					h( 'div', { style: { flex: '0 0 34%' } }, h( 'input', { class: 'ypt-input', id: 'ypt-x-dose', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: d.dose, oninput: function ( e ) {
 						d.dose = e.target.value;
 					} } ) ),
-					seg( UNITS, d.unit, function ( u ) {
+					h( 'div', { style: { flex: '1 1 auto', minWidth: '0' } }, unitPicker( picked ? routeInfo( picked.route ).units : UNITS, d.unit, function ( u ) {
 						d.unit = u;
-					} )
+					} ) )
 				)
 			) );
 		}
 
 		var picker = list.length ? h( 'div', { class: 'ypt-field' },
-			h( 'label', { for: 'ypt-x-which' }, 'Which peptide' ),
+			h( 'label', { for: 'ypt-x-which' }, 'Which one' ),
 			h( 'select', { class: 'ypt-select', id: 'ypt-x-which', onchange: function ( e ) {
 				if ( e.target.value === '__other' ) {
 					custom = true;
@@ -2858,7 +2973,7 @@
 			err,
 		], h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
 			if ( ! d.compound || ! ( parseFloat( d.dose ) > 0 ) ) {
-				err.textContent = ! d.compound ? 'Enter the peptide’s name.' : 'Enter the dose.';
+				err.textContent = ! d.compound ? 'Enter what you took.' : 'Enter the dose.';
 				err.hidden = false;
 				return;
 			}
@@ -2908,7 +3023,7 @@
 			} );
 		} }, 'Delete everything' );
 		openSheet( 'Delete my data', 'This can’t be undone', [
-			h( 'p', null, 'This permanently erases every peptide, dose, vial and note in your tracker, plus your encryption key. Your YeffoDesign account and orders aren’t affected.' ),
+			h( 'p', null, 'This permanently erases every peptide, medication, dose, vial and note in your tracker, plus your encryption key. Your YeffoDesign account and orders aren’t affected.' ),
 			field( 'Type DELETE to confirm', h( 'input', { class: 'ypt-input', id: 'ypt-del', type: 'text', autocapitalize: 'characters', autocomplete: 'off', oninput: function ( e ) {
 				typed = e.target.value.trim().toUpperCase();
 				btn.disabled = typed !== 'DELETE';
@@ -2942,7 +3057,7 @@
 			h( 'a', { class: 'ypt-brand', href: CFG.homeUrl }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), 'YeffoDesign' ),
 			h( 'div', { class: 'ypt-eyebrow', style: { marginTop: '28px' } }, 'Free for customers' ),
 			h( 'h1', null, 'Dose Tracker' ),
-			h( 'p', null, 'Log every peptide dose, see exactly how many units to draw, and get a reminder when it’s time.' )
+			h( 'p', null, 'Log every peptide and medication dose, see exactly how many units to draw, and get a reminder when it’s time.' )
 		) );
 		root.appendChild( h( 'ul', { class: 'ypt-features' },
 			feature( 'check', 'Today’s doses at a glance', 'Tap Take or Skip. Daily, weekly, every few days, or on/off cycles.' ),
