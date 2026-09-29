@@ -14,6 +14,7 @@
  *   DELETE /tracker/all                   "Delete my data" — rows plus the customer's key
  *   GET    /tracker/label-templates       designs offered by "Order labels" (public storefront data)
  *   POST   /tracker/shares                a share link for one protocol (class-tracker-shares.php)
+ *   DELETE /tracker/shares/{code}         stop sharing one of the customer's own links
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -82,6 +83,12 @@ class YeffoPrint_Tracker_Controller {
 			'permission_callback' => $perm,
 		] );
 
+		register_rest_route( self::NAMESPACE, '/tracker/shares/(?P<code>[A-Za-z0-9]{10})', [
+			'methods'             => \WP_REST_Server::DELETABLE,
+			'callback'            => [ $this, 'delete_share' ],
+			'permission_callback' => $perm,
+		] );
+
 		register_rest_route( self::NAMESPACE, '/tracker/label-templates', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'label_templates' ],
@@ -122,6 +129,7 @@ class YeffoPrint_Tracker_Controller {
 				'publicKey' => YeffoPrint_Tracker_Push::public_key(),
 				'devices'   => count( YeffoPrint_Tracker_Store::all( $user_id, 'push' ) ),
 			],
+			'shares'     => YeffoPrint_Tracker_Shares::list_for_user( $user_id ),
 			'serverTime' => time(),
 		] );
 	}
@@ -242,6 +250,14 @@ class YeffoPrint_Tracker_Controller {
 			return $code;
 		}
 		return self::no_store( [ 'ok' => true, 'code' => $code, 'url' => YeffoPrint_Tracker_Shares::url( $code ) ] );
+	}
+
+	/** Scoped to the owner: someone else's code (or one already stopped) is a 404, not a way to probe codes. @return \WP_REST_Response|\WP_Error */
+	public function delete_share( \WP_REST_Request $request ) {
+		if ( ! YeffoPrint_Tracker_Shares::delete( get_current_user_id(), (string) $request['code'] ) ) {
+			return new \WP_Error( 'yeffoprint_tracker_share_missing', __( 'That link was already stopped.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+		return self::no_store( [ 'ok' => true ] );
 	}
 
 	public function delete_all(): \WP_REST_Response {

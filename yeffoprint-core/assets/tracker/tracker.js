@@ -74,6 +74,7 @@
 	var state = {
 		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {} },
 		push: { publicKey: '', devices: 0 },
+		shares: [],
 		loaded: false,
 		offline: ! navigator.onLine,
 		syncing: false,
@@ -776,7 +777,7 @@
 	 * ======================================================= */
 
 	function persist() {
-		saveJSON( STORE_KEY, { records: state.records, push: state.push, savedAt: Date.now() } );
+		saveJSON( STORE_KEY, { records: state.records, push: state.push, shares: state.shares, savedAt: Date.now() } );
 		saveJSON( QUEUE_KEY, queue );
 	}
 
@@ -900,6 +901,7 @@
 		if ( cached && cached.records ) {
 			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {} }, cached.records );
 			state.push = cached.push || state.push;
+			state.shares = cached.shares || [];
 			state.loaded = true;
 			render();
 		}
@@ -918,6 +920,7 @@
 				}
 			} );
 			state.push = json.push || state.push;
+			state.shares = Array.isArray( json.shares ) ? json.shares : [];
 			state.loaded = true;
 			setOffline( false );
 			persist();
@@ -1420,6 +1423,8 @@
 				btn.textContent = 'Creating link…';
 				api( 'POST', 'tracker/shares', { protocol: payload() } ).then( function ( res ) {
 					link = { key: key, url: res.url };
+					state.shares.unshift( { code: res.code, url: res.url, compound: p.compound, created: new Date().toISOString().slice( 0, 10 ) } );
+					persist();
 					refresh();
 				} ).catch( function ( e ) {
 					btn.disabled = false;
@@ -1448,9 +1453,46 @@
 				p.notes ? check( 'notes', 'My note', '“' + p.notes.slice( 0, 40 ) + ( p.notes.length > 40 ? '…' : '' ) + '”' ) : null,
 				! v && ! +p.weeks && ! p.notes ? h( 'p', { class: 'ypt-list-row ypt-muted ypt-small' }, 'The dose and schedule above.' ) : null
 			),
-			h( 'p', { class: 'ypt-hint ypt-share-privacy' }, icon( 'lock' ), 'Never shared: your name, your history, your vials. The link only holds what’s on the card above, and anyone with it can see that.' ),
+			h( 'p', { class: 'ypt-hint ypt-share-privacy' }, icon( 'lock' ), 'Never shared: your name, your history, your vials. The link only holds what’s on the card above, and anyone with it can see that. You can stop sharing it any time from Me › Shared links.' ),
 			linkBox,
 		], foot );
+	}
+
+	/** Me › Shared links: copy a link again, or stop it so it no longer opens for anyone. */
+	function openSharedLinkSheet( sh ) {
+		var stop = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--danger ypt-btn--block', onclick: function () {
+			if ( state.offline ) {
+				toast( 'Connect to the internet to stop sharing.' );
+				return;
+			}
+			stop.disabled = true;
+			api( 'DELETE', 'tracker/shares/' + encodeURIComponent( sh.code ) ).catch( function ( e ) {
+				// Already gone on the server (404) is what they wanted anyway.
+				if ( ! e || e.status !== 404 ) {
+					throw e;
+				}
+			} ).then( function () {
+				state.shares = state.shares.filter( function ( x ) {
+					return x.code !== sh.code;
+				} );
+				persist();
+				closeSheet();
+				render();
+				toast( 'Link stopped' );
+			} ).catch( function ( e ) {
+				stop.disabled = false;
+				toast( e.message || 'Couldn’t stop the link. Check your connection.' );
+			} );
+		} }, 'Stop sharing' );
+		openSheet( sh.compound || 'Shared link', 'Shared ' + fmtDay( sh.created, true ), [
+			h( 'div', { class: 'ypt-linkbox' }, sh.url.replace( /^https?:\/\//, '' ) ),
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', style: { marginTop: '10px' }, onclick: function () {
+				copyText( sh.url ).then( function () {
+					toast( 'Link copied' );
+				} );
+			} }, 'Copy link' ),
+			h( 'p', { class: 'ypt-hint' }, 'Anyone with this link can see the protocol. Stopping it means the link won’t open for anyone, including people who already have it. Anyone who already added it keeps their copy.' ),
+		], stop );
 	}
 
 	function copyText( text ) {
@@ -1477,7 +1519,7 @@
 	/** Someone opened /tracker/p/{code} (or signed up after opening one): offer to add it. */
 	function openReceivedShare( share ) {
 		if ( ! share.protocol ) {
-			openSheet( 'This link doesn’t work', 'Shared protocol', [ h( 'p', null, 'It may have been deleted. Ask the person who sent it for a new link.' ) ],
+			openSheet( 'This link doesn’t work', 'Shared protocol', [ h( 'p', null, 'The person who sent it may have stopped sharing it. Ask them for a new link.' ) ],
 				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: closeSheet }, 'OK' ) );
 			return;
 		}
@@ -3497,6 +3539,17 @@
 			} ) : h( 'p', { class: 'ypt-list-row ypt-muted' }, 'None yet.' )
 		) );
 
+		if ( state.shares.length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Shared links' ) );
+			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
+				state.shares.map( function ( sh ) {
+					return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+						openSharedLinkSheet( sh );
+					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, MONTHS[ parseDate( sh.created ).getMonth() ].slice( 0, 3 ) + ' ' + parseDate( sh.created ).getDate() + ' ›' ) );
+				} )
+			) );
+		}
+
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Tools' ) );
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
 			! isStandalone() && installPrompt ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: promptInstall }, h( 'span', null, 'Install the app' ), h( 'span', null, '›' ) ) : null,
@@ -4766,6 +4819,7 @@
 				return disablePush().catch( function () {} );
 			} ).then( function () {
 				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {} };
+				state.shares = [];
 				queue = [];
 				removeKey( STORE_KEY );
 				removeKey( QUEUE_KEY );
@@ -4814,7 +4868,7 @@
 				h( 'a', { class: 'ypt-brand', href: CFG.homeUrl }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), 'YeffoDesign' ),
 				h( 'div', { class: 'ypt-eyebrow', style: { marginTop: '24px' } }, 'Shared with you' ),
 				h( 'h1', null, share.protocol ? 'A friend sent you a protocol' : 'This link doesn’t work' ),
-				share.protocol ? null : h( 'p', null, 'It may have been deleted. Ask the person who sent it for a new link.' )
+				share.protocol ? null : h( 'p', null, 'The person who sent it may have stopped sharing it. Ask them for a new link.' )
 			) );
 			if ( share.protocol ) {
 				root.appendChild( protoCard( share.protocol ) );

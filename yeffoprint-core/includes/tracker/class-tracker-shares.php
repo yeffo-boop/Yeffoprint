@@ -14,6 +14,7 @@
  *
  *   /tracker/p/{code}   the page someone opens (class-tracker-app.php)
  *   POST tracker/shares (class-tracker-controller.php) creates one
+ *   DELETE tracker/shares/{code} stops one (its owner only), from Me > Shared links
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -109,6 +110,39 @@ class YeffoPrint_Tracker_Shares {
 		}
 		$data = json_decode( YeffoPrint_Tracker_Crypto::open( (string) $payload, self::context( $code ) ), true );
 		return is_array( $data ) ? self::sanitize( $data ) : null;
+	}
+
+	/**
+	 * The customer's own links for Me > Shared links, newest first: code,
+	 * url, compound and the day it was made. Only ever called for the
+	 * signed-in customer. @return array<int, array{code: string, url: string, compound: string, created: string}>
+	 */
+	public static function list_for_user( int $user_id ): array {
+		global $wpdb;
+		$table = self::table_name();
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT code, payload, created_at FROM {$table} WHERE user_id = %d ORDER BY created_at DESC LIMIT %d", $user_id, self::MAX_PER_USER ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$out = [];
+		foreach ( (array) $rows as $row ) {
+			$code = (string) $row['code'];
+			$data = json_decode( YeffoPrint_Tracker_Crypto::open( (string) $row['payload'], self::context( $code ) ), true );
+			$out[] = [
+				'code'     => $code,
+				'url'      => self::url( $code ),
+				'compound' => is_array( $data ) ? mb_substr( (string) ( $data['compound'] ?? '' ), 0, 80 ) : '',
+				'created'  => substr( (string) $row['created_at'], 0, 10 ),
+			];
+		}
+		return $out;
+	}
+
+	/** Stops one link, only if it's this customer's. @return bool true when a row was removed. */
+	public static function delete( int $user_id, string $code ): bool {
+		if ( ! self::valid_code( $code ) ) {
+			return false;
+		}
+		global $wpdb;
+		return (bool) $wpdb->delete( self::table_name(), [ 'code' => $code, 'user_id' => $user_id ], [ '%s', '%d' ] );
 	}
 
 	public static function delete_for_user( int $user_id ): void {

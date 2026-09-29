@@ -90,8 +90,11 @@ evening before a mix day).
 mix it, cycle length and notes. Stored in `wp_yeffoprint_tracker_shares`,
 sealed with the master key; no name or history. Whoever opens it gets an
 **Add to my tracker** sheet (signed-out visitors see the protocol and a
-sign-in button). Link previews in texts stay generic. "Delete my data"
-removes the customer's links too.
+sign-in button). Link previews in texts stay generic. **Me › Shared
+links** lists the customer's own links (from `GET /tracker/state`'s
+`shares`) with **Stop sharing** (`DELETE /tracker/shares/{code}`, owner
+only), after which the link shows "This link doesn't work". Copies already
+added to someone's tracker stay. "Delete my data" removes all their links.
 
 ## Travel mode
 

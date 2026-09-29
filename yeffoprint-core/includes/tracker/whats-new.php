@@ -24,7 +24,7 @@ return [
 		'id'    => '2026-09-29b',
 		'date'  => '2026-09-29',
 		'title' => 'Share a protocol',
-		'text'  => 'Open any peptide or medication and tap "Share this protocol" to send a link with the dose and schedule (and how to mix it, if you like). Whoever opens it can add it to their own tracker in one tap. Your name and history are never included.',
+		'text'  => 'Open any peptide or medication and tap "Share this protocol" to send a link with the dose and schedule (and how to mix it, if you like). Whoever opens it can add it to their own tracker in one tap. Your name and history are never included, and you can stop any link from Me › Shared links.',
 	],
 	[
 		'id'    => '2026-09-29a',
