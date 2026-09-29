@@ -57,7 +57,8 @@
 		if ( req.mode === 'navigate' ) {
 			event.respondWith(
 				fetch( req ).then( function ( res ) {
-					if ( res.ok ) {
+					// Only the app's own page is the offline copy, never a /tracker/p/ share page.
+					if ( res.ok && url.pathname === new URL( cfg.appUrl ).pathname ) {
 						var copy = res.clone();
 						caches.open( CACHE ).then( function ( c ) {
 							c.put( cfg.appUrl, copy );

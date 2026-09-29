@@ -72,8 +72,9 @@
 	var UI_KEY = 'ypt-ui';
 
 	var state = {
-		records: { protocol: {}, dose: {}, vial: {}, settings: {} },
+		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {} },
 		push: { publicKey: '', devices: 0 },
+		shares: [],
 		loaded: false,
 		offline: ! navigator.onLine,
 		syncing: false,
@@ -181,7 +182,7 @@
 	}
 
 	function todayStr() {
-		return dateStr( new Date() );
+		return dateStr( effDate() );
 	}
 
 	function parseDate( s ) {
@@ -203,8 +204,92 @@
 	}
 
 	function nowTime() {
-		var d = new Date();
+		var d = effDate();
 		return pad( d.getHours() ) + ':' + pad( d.getMinutes() );
+	}
+
+	/*
+	 * Travel mode. Dose times follow one clock: the customer's home zone
+	 * (settings.baseTz), or, while they ease into a new zone, a fixed
+	 * offset that moves `step` minutes a day (settings.travel). The
+	 * reminder sweep uses the same rule (YeffoPrint_Tracker_Schedule::timezone()),
+	 * so keep the two in step. effDate() is "now" on that clock: a Date
+	 * whose local getters read the schedule's wall time.
+	 */
+
+	/** Minutes east of UTC for an IANA zone at an instant, or null if the browser doesn't know it. */
+	function tzOffset( tz, ms ) {
+		try {
+			var o = {};
+			new Intl.DateTimeFormat( 'en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' } ).formatToParts( new Date( ms ) ).forEach( function ( x ) {
+				o[ x.type ] = x.value;
+			} );
+			var asUtc = Date.UTC( +o.year, +o.month - 1, +o.day, +o.hour % 24, +o.minute, +o.second );
+			return Math.round( ( asUtc - Math.floor( ms / 1000 ) * 1000 ) / 60000 );
+		} catch ( e ) {
+			return null;
+		}
+	}
+
+	function deviceTz() {
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+		} catch ( e ) {
+			return '';
+		}
+	}
+
+	// Assigned on first use: todayStr() runs while the app's state is still being set up.
+	var offsetMemo;
+
+	function effectiveOffset( ms ) {
+		var s = ( state && state.records.settings.me ) || {};
+		var key = Math.floor( ms / 60000 ) + '|' + JSON.stringify( [ s.baseTz, s.tz, s.travel ] );
+		if ( offsetMemo && offsetMemo.key === key ) {
+			return offsetMemo.val;
+		}
+		var val = null;
+		var t = s.travel;
+		if ( t && t.from != null && t.to != null && t.at ) {
+			var diff = t.to - t.from;
+			var moved = Math.min( Math.abs( diff ), Math.max( 15, +t.step || 120 ) * Math.max( 0, Math.floor( ( ms / 1000 - t.at ) / 86400 ) ) );
+			val = moved < Math.abs( diff ) ? t.from + ( diff < 0 ? -moved : moved ) : tzOffset( t.tz, ms );
+		} else if ( s.baseTz || s.tz ) {
+			val = tzOffset( s.baseTz || s.tz, ms );
+		}
+		offsetMemo = { key: key, val: val == null ? -new Date( ms ).getTimezoneOffset() : val };
+		return offsetMemo.val;
+	}
+
+	/** Minutes the schedule's clock is ahead of this device's clock (0 unless traveling). */
+	function clockShift( ms ) {
+		return effectiveOffset( ms ) + new Date( ms ).getTimezoneOffset();
+	}
+
+	function effDate( ms ) {
+		ms = ms == null ? Date.now() : ms;
+		return new Date( ms + clockShift( ms ) * 60000 );
+	}
+
+	/** A date + "HH:MM" on the schedule's clock, as an ISO instant. */
+	function wallToIso( date, time ) {
+		var d = parseDate( date );
+		var t = String( time || '00:00' ).split( ':' );
+		d.setHours( +t[ 0 ], +t[ 1 ] );
+		return new Date( d.getTime() - clockShift( d.getTime() ) * 60000 ).toISOString();
+	}
+
+	/** "HH:MM" on the schedule's clock, as this device's clock shows it. */
+	function localTimeOf( time ) {
+		var d = effDate();
+		var t = String( time ).split( ':' );
+		d.setHours( +t[ 0 ], +t[ 1 ], 0, 0 );
+		var real = new Date( d.getTime() - clockShift( Date.now() ) * 60000 );
+		return pad( real.getHours() ) + ':' + pad( real.getMinutes() );
+	}
+
+	function tzCity( tz ) {
+		return String( tz || '' ).split( '/' ).pop().replace( /_/g, ' ' );
 	}
 
 	function fmtTime( t ) {
@@ -217,7 +302,7 @@
 	}
 
 	function fmtIsoTime( iso ) {
-		var d = new Date( iso );
+		var d = effDate( Date.parse( iso ) );
 		return isNaN( d ) ? '' : fmtTime( pad( d.getHours() ) + ':' + pad( d.getMinutes() ) );
 	}
 
@@ -692,7 +777,7 @@
 	 * ======================================================= */
 
 	function persist() {
-		saveJSON( STORE_KEY, { records: state.records, push: state.push, savedAt: Date.now() } );
+		saveJSON( STORE_KEY, { records: state.records, push: state.push, shares: state.shares, savedAt: Date.now() } );
 		saveJSON( QUEUE_KEY, queue );
 	}
 
@@ -814,15 +899,16 @@
 		var cached = loadJSON( STORE_KEY, null );
 		queue = loadJSON( QUEUE_KEY, [] ) || [];
 		if ( cached && cached.records ) {
-			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, settings: {} }, cached.records );
+			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {} }, cached.records );
 			state.push = cached.push || state.push;
+			state.shares = cached.shares || [];
 			state.loaded = true;
 			render();
 		}
 
 		return api( 'GET', 'tracker/state' ).then( function ( json ) {
 			var fresh = json.records || {};
-			[ 'protocol', 'dose', 'vial', 'settings' ].forEach( function ( k ) {
+			[ 'protocol', 'dose', 'vial', 'stock', 'settings' ].forEach( function ( k ) {
 				state.records[ k ] = fresh[ k ] && ! Array.isArray( fresh[ k ] ) ? fresh[ k ] : {};
 			} );
 			// Re-apply anything still waiting to upload on top.
@@ -834,6 +920,7 @@
 				}
 			} );
 			state.push = json.push || state.push;
+			state.shares = Array.isArray( json.shares ) ? json.shares : [];
 			state.loaded = true;
 			setOffline( false );
 			persist();
@@ -854,13 +941,30 @@
 	}
 
 	function ensureSettings() {
-		var tz = '';
-		try {
-			tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-		} catch ( e ) {}
+		var tz = deviceTz();
 		var s = state.records.settings.me || {};
-		if ( tz && s.tz !== tz ) {
-			put( 'settings', 'me', Object.assign( { reminders: true }, s, { tz: tz } ) );
+		var next = Object.assign( { reminders: true }, s );
+		if ( tz ) {
+			next.tz = tz;
+		}
+		// Home zone: where the schedule's times are kept. Before travel mode it was simply the device's zone.
+		if ( ! next.baseTz ) {
+			next.baseTz = s.tz || tz;
+		}
+		// Back home, or somewhere on the same clock: nothing to ask about.
+		if ( tz && next.baseTz !== tz && ! next.travel && tzOffset( next.baseTz, Date.now() ) === tzOffset( tz, Date.now() ) ) {
+			next.baseTz = tz;
+		}
+		if ( next.skipTz && next.skipTz !== tz ) {
+			delete next.skipTz;
+		}
+		// Finished easing into the new zone: it's the home clock now.
+		if ( next.travel && effectiveOffset( Date.now() ) === tzOffset( next.travel.tz, Date.now() ) && Date.now() / 1000 - next.travel.at > 86400 * Math.ceil( Math.abs( next.travel.to - next.travel.from ) / ( next.travel.step || 120 ) ) ) {
+			next.baseTz = next.travel.tz;
+			delete next.travel;
+		}
+		if ( JSON.stringify( next ) !== JSON.stringify( s ) ) {
+			put( 'settings', 'me', next );
 		}
 	}
 
@@ -896,21 +1000,15 @@
 		var p = slot.protocol;
 		var v = status === 'taken' ? currentVial( p ) : null;
 		var units = v ? unitsForDose( p.dose, p.unit, v, p.doseOf ) : ( p.unit === 'units' ? +p.dose : null );
-		var at = new Date();
 		// Logging a past day's dose: stamp it at its scheduled time.
-		if ( slot.date !== todayStr() ) {
-			var d = parseDate( slot.date );
-			var t = slot.time.split( ':' );
-			d.setHours( +t[ 0 ], +t[ 1 ] );
-			at = d;
-		}
+		var at = slot.date !== todayStr() ? wallToIso( slot.date, slot.time ) : new Date().toISOString();
 		put( 'dose', slot.id, {
 			protocolId: p.id,
 			compound: p.compound,
 			date: slot.date,
 			time: slot.time,
 			status: status,
-			at: at.toISOString(),
+			at: at,
 			dose: +p.dose,
 			unit: p.unit,
 			vialId: v ? v.id : '',
@@ -956,7 +1054,7 @@
 		if ( state.offline ) {
 			root.appendChild( h( 'div', { class: 'ypt-offline' }, queue.length ? 'Offline · ' + queue.length + ' change' + ( queue.length === 1 ? '' : 's' ) + ' will sync' : 'Offline · showing your saved copy' ) );
 		}
-		var screens = { today: renderToday, history: renderHistory, vials: renderVials, me: renderMe };
+		var screens = { today: renderToday, history: renderHistory, vials: renderSupply, me: renderMe };
 		root.appendChild( ( screens[ ui.tab ] || renderToday )() );
 		root.appendChild( lockLine() );
 		root.appendChild( renderTabs() );
@@ -964,6 +1062,7 @@
 			root.appendChild( ui.sheet.node );
 		}
 		window.scrollTo( 0, scrollY );
+		syncAlerts();
 		if ( focusedId && document.getElementById( focusedId ) && ! ui.sheet ) {
 			document.getElementById( focusedId ).focus();
 		}
@@ -993,7 +1092,7 @@
 				h( 'button', { type: 'button', class: 'ypt-tab ypt-tab--add', onclick: function () {
 					openProtocolSheet( null );
 				} }, h( 'span', { class: 'ypt-tab__plus' }, icon( 'plus' ) ), 'Add' ),
-				tab( 'vials', 'Vials', 'vials' ),
+				tab( 'vials', 'Supply', 'vials' ),
 				tab( 'me', 'Me', 'me' )
 			)
 		);
@@ -1045,6 +1144,18 @@
 			if ( news ) {
 				wrap.appendChild( news );
 			}
+			var travel = travelCard();
+			if ( travel ) {
+				wrap.appendChild( travel );
+			}
+			var low = lowBanner();
+			if ( low ) {
+				wrap.appendChild( low );
+			}
+		}
+		var clockNote = travelNote();
+		if ( clockNote ) {
+			wrap.appendChild( clockNote );
 		}
 
 		if ( ! protocols().length ) {
@@ -1091,7 +1202,8 @@
 		var lastGroup = null;
 		slots.forEach( function ( s ) {
 			var group = s.time < '12:00' ? 'Morning' : s.time < '17:00' ? 'Afternoon' : 'Evening';
-			var label = group + ' · ' + fmtTime( s.time );
+			var here = localTimeOf( s.time );
+			var label = group + ' · ' + fmtTime( s.time ) + ( here !== s.time ? ' · ' + fmtTime( here ) + ' here' : '' );
 			if ( label !== lastGroup ) {
 				wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, label ) );
 				lastGroup = label;
@@ -1166,13 +1278,53 @@
 			)
 		);
 
+		var vi = v ? vialInfo( v ) : null;
+		var what = p.device === 'pen' ? 'pen' : 'vial';
+		// Mix day: the vial in use has nothing left for this dose (or there's none yet but some on hand).
+		if ( ! log && s.date === todayStr() && usesVial( p ) && ( vi ? vi.dosesLeft === 0 : stockFor( p ).some( function ( x ) {
+			return stockLeft( x ) > 0;
+		} ) ) ) {
+			var have = stockFor( p ).reduce( function ( n, x ) {
+				return n + stockLeft( x );
+			}, 0 );
+			var plan = supplyPlan( p );
+			var nth = plan.segments.filter( function ( sg ) {
+				return sg.status === 'use';
+			} ).length + 1;
+			var total = plan.end && plan.known ? plan.segments.length + ( v ? 0 : 1 ) : 0;
+			card.appendChild( h( 'div', { class: 'ypt-mixday' },
+				h( 'b', null, 'Mix day. ' ), v ? 'This ' + what + ' is used up.' : 'Mix a ' + what + ' to see the units for this dose.',
+				have ? ' You have ' + have + ' on hand.' : ' You have none on hand.',
+				h( 'div', { class: 'ypt-mixday__actions' },
+					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent', onclick: function () {
+						var src = stockFor( p ).filter( function ( x ) {
+							return stockLeft( x ) > 0;
+						} )[ 0 ];
+						var preset = v ? { kind: v.kind, mode: v.mode, amount: v.amount, water: v.water, conc: v.conc, volume: v.volume, parts: v.parts, blend: v.blend, syringe: v.syringe } : {};
+						if ( src && src.form === 'premixed' ) {
+							preset = Object.assign( preset, { mode: 'conc', conc: src.conc, volume: src.volume } );
+						} else if ( src && ! ( v && isBlend( v ) ) ) {
+							preset = Object.assign( preset, { mode: src.amountUnit === 'IU' ? 'iu' : 'mg', amount: src.amount } );
+						}
+						openVialSheet( null, { compound: p.compound, kind: what, preset: preset, replaces: v ? v.id : '' } );
+					} }, total > 1 && nth <= total ? 'Mix ' + what + ' ' + nth + ' of ' + total : 'Mix a new ' + what ),
+					have ? null : h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--white', onclick: function () {
+						var mine = stockFor( p )[ 0 ];
+						openStockSheet( mine || null, mine ? { bought: true } : { compound: p.compound, form: p.device === 'pen' ? 'pen' : 'powder' } );
+					} }, 'I bought more' )
+				)
+			) );
+			return card;
+		}
+
 		if ( ! log || log.status === 'taken' ) {
 			if ( units != null && isFinite( units ) ) {
-				var info = v ? vialInfo( v ) : null;
+				var info = vi;
 				card.appendChild( h( 'div', { class: 'ypt-draw' + ( info && info.age > VIAL_WARN_DAYS ? ' ypt-draw--warn' : '' ) },
 					isPen( v ) ? [ log ? 'Dialed ' : 'Dial ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on your pen' ] : [ log ? 'Drew ' : 'Draw ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on a U-100 syringe' ],
 					v ? ' · ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) : '',
 					info && info.age > VIAL_WARN_DAYS ? ' · ' + info.age + ' days old' : '',
+					! log && info && info.dosesLeft === 1 && s.date === todayStr() ? ' · last dose in this ' + what : '',
 					isBlend( v ) ? h( 'span', { class: 'ypt-draw__blend' }, 'Each dose: ' + blendDoseLine( v, units ) ) : null
 				) );
 			} else if ( ! log && ( p.unit === 'mcg' || p.unit === 'mg' || p.unit === 'IU' ) && usesVial( p ) ) {
@@ -1182,6 +1334,390 @@
 			}
 		}
 		return card;
+	}
+
+	/* ---------- Shared protocols ---------- */
+
+	/*
+	 * A share link carries only what's on the card (includes/tracker/class-tracker-shares.php):
+	 * { compound, dose, unit, route, device, doseOf, schedule, times, weeks, notes, mix? }.
+	 */
+
+	/** "5 mg vial + 2 mL water · 10 units" for a shared mix and dose. */
+	function mixLine( pr ) {
+		var m = pr.mix;
+		if ( ! m ) {
+			return '';
+		}
+		var what = m.kind === 'pen' ? 'pen' : 'vial';
+		var v = Object.assign( {}, m, { parts: m.parts || [] } );
+		var line = m.mode === 'conc' ? fmtNum( +m.conc ) + ' mg/mL premixed' : m.mode === 'blend' ? blendSummary( v ) + ' + ' + fmtNum( +m.water ) + ' mL water' : fmtNum( +m.amount ) + ( m.mode === 'iu' ? ' IU ' : ' mg ' ) + what + ' + ' + fmtNum( +m.water ) + ' mL water';
+		var u = unitsForDose( pr.dose, pr.unit, v, pr.doseOf );
+		return line + ( u != null && isFinite( u ) ? ' · ' + fmtNum( u, 1 ) + ' units' : '' );
+	}
+
+	function protoCard( pr ) {
+		var how = pr.device === 'pen' ? 'multi-dose pen' : pr.device === 'single' ? 'single-use injector' : pr.route ? routeInfo( pr.route ).short || String( pr.route ).toLowerCase() : '';
+		var rows = [
+			[ 'Dose', amountLabel( pr.dose, pr.unit ) + ( pr.doseOf ? ' ' + pr.doseOf : '' ) + ( how ? ', ' + how : '' ) ],
+			[ 'Schedule', ( scheduleLabel( pr ) === 'daily' ? 'Every day' : scheduleLabel( pr ).charAt( 0 ).toUpperCase() + scheduleLabel( pr ).slice( 1 ) ) + ', ' + timesOf( pr ).map( fmtTime ).join( ' & ' ) ],
+			+pr.weeks ? [ 'Length', pr.weeks + ' week' + ( +pr.weeks === 1 ? '' : 's' ) ] : null,
+			pr.mix ? [ 'Mixing', mixLine( pr ) ] : null,
+			pr.notes ? [ 'Notes', pr.notes ] : null,
+		].filter( Boolean );
+		return h( 'div', { class: 'ypt-proto' },
+			h( 'div', { class: 'ypt-eyebrow' }, 'Protocol' ),
+			h( 'h2', null, pr.compound ),
+			h( 'dl', null, rows.map( function ( r ) {
+				return [ h( 'dt', null, r[ 0 ] ), h( 'dd', null, r[ 1 ] ) ];
+			} ) )
+		);
+	}
+
+	function openShareSheet( p ) {
+		var v = currentVial( p );
+		var inc = { mix: !! v, weeks: !! +p.weeks, notes: false };
+		var link = { key: '', url: '' };
+		var preview = h( 'div', null );
+		var linkBox = h( 'div', null );
+		var foot = h( 'div', { style: { display: 'flex', gap: '8px', flex: '1' } } );
+
+		function payload() {
+			var out = { compound: p.compound, dose: p.dose, unit: p.unit, route: p.route, device: p.device || '', doseOf: p.doseOf || '', schedule: p.schedule, times: timesOf( p ), weeks: inc.weeks ? +p.weeks || 0 : 0, notes: inc.notes ? p.notes || '' : '' };
+			if ( inc.mix && v ) {
+				out.mix = { kind: v.kind || 'vial', mode: v.mode, amount: +v.amount || 0, water: +v.water || 0, conc: +v.conc || 0, volume: +v.volume || 0 };
+				if ( isBlend( v ) ) {
+					out.mix.parts = v.parts;
+				}
+			}
+			return out;
+		}
+
+		function refresh() {
+			preview.textContent = '';
+			preview.appendChild( protoCard( payload() ) );
+			var key = JSON.stringify( payload() );
+			linkBox.textContent = '';
+			foot.textContent = '';
+			if ( link.key === key && link.url ) {
+				linkBox.appendChild( h( 'div', { class: 'ypt-linkbox' }, link.url.replace( /^https?:\/\//, '' ) ) );
+				foot.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', onclick: function () {
+					copyText( link.url ).then( function () {
+						toast( 'Link copied' );
+					} );
+				} }, 'Copy link' ) );
+				if ( navigator.share ) {
+					foot.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block ypt-btn--accent', onclick: function () {
+						navigator.share( { title: p.compound + ' protocol', text: 'Here’s my ' + p.compound + ' schedule. Add it to your Dose Tracker:', url: link.url } ).catch( function () {} );
+					} }, 'Share…' ) );
+				}
+				return;
+			}
+			foot.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block ypt-btn--accent', onclick: function () {
+				var btn = this;
+				if ( state.offline ) {
+					toast( 'Connect to the internet to share.' );
+					return;
+				}
+				btn.disabled = true;
+				btn.textContent = 'Creating link…';
+				api( 'POST', 'tracker/shares', { protocol: payload() } ).then( function ( res ) {
+					link = { key: key, url: res.url };
+					state.shares.unshift( { code: res.code, url: res.url, compound: p.compound, created: new Date().toISOString().slice( 0, 10 ) } );
+					persist();
+					refresh();
+				} ).catch( function ( e ) {
+					btn.disabled = false;
+					btn.textContent = 'Create link';
+					toast( e.message || 'Couldn’t create the link.' );
+				} );
+			} }, 'Create link' ) );
+		}
+
+		function check( key, label, extra ) {
+			var box = h( 'button', { type: 'button', class: 'ypt-check', role: 'checkbox', 'aria-checked': inc[ key ] ? 'true' : 'false', onclick: function () {
+				inc[ key ] = ! inc[ key ];
+				box.setAttribute( 'aria-checked', inc[ key ] ? 'true' : 'false' );
+				refresh();
+			} }, h( 'i', { 'aria-hidden': 'true' } ), h( 'span', null, label, extra ? h( 'small', null, ' ' + extra ) : null ) );
+			return box;
+		}
+
+		refresh();
+		openSheet( 'Share this protocol', p.compound, [
+			preview,
+			h( 'div', { class: 'ypt-label', style: { marginTop: '16px' } }, 'Include' ),
+			h( 'div', { class: 'ypt-card ypt-list', style: { marginTop: '6px' } },
+				v ? check( 'mix', 'How to mix it' ) : null,
+				+p.weeks ? check( 'weeks', 'Cycle length' ) : null,
+				p.notes ? check( 'notes', 'My note', '“' + p.notes.slice( 0, 40 ) + ( p.notes.length > 40 ? '…' : '' ) + '”' ) : null,
+				! v && ! +p.weeks && ! p.notes ? h( 'p', { class: 'ypt-list-row ypt-muted ypt-small' }, 'The dose and schedule above.' ) : null
+			),
+			h( 'p', { class: 'ypt-hint ypt-share-privacy' }, icon( 'lock' ), 'Never shared: your name, your history, your vials. The link only holds what’s on the card above, and anyone with it can see that. You can stop sharing it any time from Me › Shared links.' ),
+			linkBox,
+		], foot );
+	}
+
+	/** Me › Shared links: copy a link again, or stop it so it no longer opens for anyone. */
+	function openSharedLinkSheet( sh ) {
+		var stop = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--danger ypt-btn--block', onclick: function () {
+			if ( state.offline ) {
+				toast( 'Connect to the internet to stop sharing.' );
+				return;
+			}
+			stop.disabled = true;
+			api( 'DELETE', 'tracker/shares/' + encodeURIComponent( sh.code ) ).catch( function ( e ) {
+				// Already gone on the server (404) is what they wanted anyway.
+				if ( ! e || e.status !== 404 ) {
+					throw e;
+				}
+			} ).then( function () {
+				state.shares = state.shares.filter( function ( x ) {
+					return x.code !== sh.code;
+				} );
+				persist();
+				closeSheet();
+				render();
+				toast( 'Link stopped' );
+			} ).catch( function ( e ) {
+				stop.disabled = false;
+				toast( e.message || 'Couldn’t stop the link. Check your connection.' );
+			} );
+		} }, 'Stop sharing' );
+		openSheet( sh.compound || 'Shared link', 'Shared ' + fmtDay( sh.created, true ), [
+			h( 'div', { class: 'ypt-linkbox' }, sh.url.replace( /^https?:\/\//, '' ) ),
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', style: { marginTop: '10px' }, onclick: function () {
+				copyText( sh.url ).then( function () {
+					toast( 'Link copied' );
+				} );
+			} }, 'Copy link' ),
+			h( 'p', { class: 'ypt-hint' }, 'Anyone with this link can see the protocol. Stopping it means the link won’t open for anyone, including people who already have it. Anyone who already added it keeps their copy.' ),
+		], stop );
+	}
+
+	function copyText( text ) {
+		if ( navigator.clipboard && navigator.clipboard.writeText ) {
+			return navigator.clipboard.writeText( text ).catch( function () {
+				return fallback();
+			} );
+		}
+		return fallback();
+		function fallback() {
+			var ta = h( 'textarea', { style: { position: 'fixed', opacity: '0' } }, text );
+			document.body.appendChild( ta );
+			ta.select();
+			try {
+				document.execCommand( 'copy' );
+			} catch ( e ) {}
+			ta.remove();
+			return Promise.resolve();
+		}
+	}
+
+	var PENDING_SHARE_KEY = 'ypt-pending-share';
+
+	/** Someone opened /tracker/p/{code} (or signed up after opening one): offer to add it. */
+	function openReceivedShare( share ) {
+		if ( ! share.protocol ) {
+			openSheet( 'This link doesn’t work', 'Shared protocol', [ h( 'p', null, 'The person who sent it may have stopped sharing it. Ask them for a new link.' ) ],
+				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: closeSheet }, 'OK' ) );
+			return;
+		}
+		var pr = share.protocol;
+		var start = todayStr();
+		var dateInput = h( 'input', { class: 'ypt-input', type: 'date', value: start, 'aria-label': 'Start date', hidden: true, onchange: function ( e ) {
+			start = e.target.value || todayStr();
+		} } );
+		var already = protocols().some( function ( x ) {
+			return sameCompound( x.compound, pr.compound ) && ! x.paused;
+		} );
+		openSheet( 'A protocol for you', 'Shared with you', [
+			protoCard( pr ),
+			h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'Start on' ),
+				seg( [ [ 'today', 'Today' ], [ 'tomorrow', 'Tomorrow' ], [ 'pick', 'Pick a date' ] ], 'today', function ( w ) {
+					dateInput.hidden = w !== 'pick';
+					start = w === 'tomorrow' ? addDays( todayStr(), 1 ) : w === 'pick' ? dateInput.value || todayStr() : todayStr();
+				} ),
+				dateInput
+			),
+			already ? h( 'div', { class: 'ypt-draw ypt-draw--warn' }, 'You already track ' + pr.compound + '. Adding this makes a second schedule; you can pause the old one after.' ) : null,
+			h( 'div', { class: 'ypt-banner ypt-banner--info', style: { marginTop: '14px' } }, h( 'div', null, 'Doses here come from another person, not from YeffoDesign. Check them with your provider. You can change anything after adding it.' ) ),
+		], h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent ypt-btn--block', onclick: function () {
+			var id = uid( 'p' );
+			var data = {
+				compound: pr.compound,
+				dose: +pr.dose,
+				unit: pr.unit || 'mcg',
+				route: pr.route || 'Subcutaneous',
+				device: pr.device || '',
+				schedule: Object.assign( { type: 'daily', days: [], every: 2, on: 5, off: 0 }, pr.schedule || {} ),
+				times: timesOf( pr ),
+				start: start,
+				weeks: +pr.weeks || 0,
+				color: COLORS[ protocols().length % COLORS.length ],
+				notes: pr.notes || '',
+				paused: false,
+				doseOf: pr.doseOf || '',
+			};
+			closeSheet();
+			removeKey( PENDING_SHARE_KEY );
+			put( 'protocol', id, data );
+			go( 'today' );
+			if ( pr.mix && usesVial( data ) && ! currentVial( data ) ) {
+				toast( pr.compound + ' added. Now mix your ' + ( pr.mix.kind === 'pen' ? 'pen' : 'vial' ) + '.' );
+				openVialSheet( null, { compound: pr.compound, dose: data.dose, unit: data.unit, kind: pr.mix.kind, preset: pr.mix } );
+			} else {
+				toast( pr.compound + ' added' );
+			}
+		} }, 'Add to my tracker' ) );
+	}
+
+	/* ---------- Running low (Today) ---------- */
+
+	var LOW_KEY = 'ypt-low-dismissed';
+
+	/** One banner for everything running low; dismissing it hides those items until tomorrow. */
+	function lowBanner() {
+		var dismissed = loadJSON( LOW_KEY, {} ) || {};
+		var today = todayStr();
+		var list = lowSupplies().filter( function ( x ) {
+			return dismissed[ labelKey( x.s.compound ) ] !== today;
+		} );
+		if ( ! list.length ) {
+			return null;
+		}
+		var first = list[ 0 ];
+		return h( 'div', { class: 'ypt-banner ypt-banner--warn' },
+			h( 'div', null, h( 'b', null, first.s.compound + ' is running low. ' ), lowLine( first ),
+				list.length > 1 ? ' Plus ' + ( list.length - 1 ) + ' more.' : '',
+				h( 'div', { style: { marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--white', onclick: function () {
+						openStockSheet( first.s, { bought: true } );
+					} }, 'I bought more' ),
+					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--white', onclick: function () {
+						ui.supplyView = 'plan';
+						go( 'vials' );
+					} }, 'See my supply' )
+				) ),
+			h( 'button', { type: 'button', class: 'ypt-banner__close', 'aria-label': 'Dismiss for today', onclick: function () {
+				list.forEach( function ( x ) {
+					dismissed[ labelKey( x.s.compound ) ] = today;
+				} );
+				saveJSON( LOW_KEY, dismissed );
+				render();
+			} }, '×' ) );
+	}
+
+	/* ---------- Travel mode (Today) ---------- */
+
+	var EASE_STEP = 120;
+
+	/** The zone the schedule is headed for: the one being eased into, or home. */
+	function travelTarget( s ) {
+		return s.travel ? s.travel.tz : s.baseTz || s.tz;
+	}
+
+	function hoursLabel( min ) {
+		var hrs = Math.abs( min ) / 60;
+		return fmtNum( hrs, 1 ) + ' hour' + ( hrs === 1 ? '' : 's' );
+	}
+
+	/** Asks what to do with reminder times when the phone's time zone no longer matches the schedule's. */
+	function travelCard() {
+		var s = state.records.settings.me || {};
+		var here = deviceTz();
+		var now = Date.now();
+		if ( ! here || ! protocols().length || here === travelTarget( s ) || here === s.skipTz ) {
+			return null;
+		}
+		var from = effectiveOffset( now );
+		var to = tzOffset( here, now );
+		if ( to == null || to === from ) {
+			return null;
+		}
+		var diff = to - from;
+		var first = protocols().filter( function ( p ) {
+			return ! p.paused;
+		} ).map( function ( p ) {
+			return timesOf( p )[ 0 ];
+		} ).sort()[ 0 ] || '09:00';
+		var homeName = tzCity( s.travel ? s.travel.tz : s.baseTz );
+		var city = tzCity( here );
+		var steps = Math.ceil( Math.abs( diff ) / EASE_STEP );
+		var choice = Math.abs( diff ) > EASE_STEP ? 'ease' : 'switch';
+		var atHere = localTimeOf( first );
+
+		function option( id, title, text ) {
+			return h( 'button', { type: 'button', class: 'ypt-opt', 'aria-pressed': choice === id ? 'true' : 'false', onclick: function () {
+				choice = id;
+				[].forEach.call( this.parentNode.querySelectorAll( '.ypt-opt' ), function ( b ) {
+					b.setAttribute( 'aria-pressed', 'false' );
+				} );
+				this.setAttribute( 'aria-pressed', 'true' );
+			} }, h( 'i', { 'aria-hidden': 'true' } ), h( 'span', null, h( 'b', null, title ), text ) );
+		}
+
+		var opts = h( 'div', null );
+		if ( Math.abs( diff ) > EASE_STEP ) {
+			opts.appendChild( option( 'ease', 'Ease into ' + city + ' time', 'Shift ' + EASE_STEP / 60 + ' hours a day. On ' + city + ' time by ' + fmtDay( addDays( todayStr(), steps ) ).replace( /^\w+, /, '' ) + '.' ) );
+		}
+		opts.appendChild( option( 'switch', 'Switch now', 'Your ' + fmtTime( first ) + ' dose moves to ' + fmtTime( first ) + ' ' + city + ' time, ' + hoursLabel( diff ) + ' ' + ( diff > 0 ? 'earlier' : 'later' ) + ', once.' ) );
+		opts.appendChild( option( 'home', 'Keep ' + homeName + ' time', 'Doses stay at ' + fmtTime( atHere ) + ' here. Good for short trips.' ) );
+
+		return h( 'div', { class: 'ypt-card ypt-travel' },
+			h( 'div', { class: 'ypt-travel__head' }, h( 'span', { 'aria-hidden': 'true' }, '✈️' ),
+				h( 'div', null, h( 'b', null, 'Looks like you’re on ' + city + ' time' ), h( 'span', null, hoursLabel( diff ) + ' ' + ( diff > 0 ? 'ahead of' : 'behind' ) + ' ' + homeName ) ) ),
+			h( 'div', { class: 'ypt-stats' },
+				h( 'div', { class: 'ypt-stat' }, h( 'b', null, fmtTime( first ) ), h( 'span', null, 'your dose, ' + homeName + ' time' ) ),
+				h( 'div', { class: 'ypt-stat' }, h( 'b', null, fmtTime( atHere ) ), h( 'span', null, 'same moment here' ) )
+			),
+			h( 'div', { class: 'ypt-label', style: { marginTop: '14px' } }, 'How should your reminders work?' ),
+			opts,
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', style: { marginTop: '12px' }, onclick: function () {
+				setTravel( choice, here, from, to );
+			} }, 'Use this' ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { textAlign: 'center', marginTop: '8px' } }, 'Weekly doses keep their day. We’ll ask again when you’re home.' )
+		);
+	}
+
+	function setTravel( choice, here, from, to ) {
+		var s = Object.assign( {}, state.records.settings.me || {} );
+		delete s.skipTz;
+		if ( choice === 'switch' ) {
+			delete s.travel;
+			s.baseTz = here;
+			toast( 'Reminders now follow ' + tzCity( here ) + ' time' );
+		} else if ( choice === 'ease' ) {
+			s.travel = { tz: here, from: from, to: to, at: Math.floor( Date.now() / 1000 ), step: EASE_STEP };
+			toast( 'Easing into ' + tzCity( here ) + ' time' );
+		} else {
+			// Keep the clock they're on now: home, or wherever the ease has got to.
+			if ( s.travel ) {
+				s.baseTz = effectiveOffset( Date.now() ) === tzOffset( s.baseTz, Date.now() ) ? s.baseTz : s.travel.tz;
+				delete s.travel;
+			}
+			s.skipTz = here;
+			toast( 'Keeping ' + tzCity( s.baseTz ) + ' time' );
+		}
+		put( 'settings', 'me', s );
+	}
+
+	/** A line under the date while the schedule isn't on this phone's clock. */
+	function travelNote() {
+		var s = state.records.settings.me || {};
+		var here = deviceTz();
+		if ( ! protocols().length || ! clockShift( Date.now() ) || ( here !== s.skipTz && here !== travelTarget( s ) ) ) {
+			return null;
+		}
+		var text = s.travel ? 'Easing into ' + tzCity( s.travel.tz ) + ' time. Times below are today’s.' : 'Following ' + tzCity( s.baseTz ) + ' time while you’re away.';
+		// Change: back on the home clock, and the card asks again.
+		return h( 'p', { class: 'ypt-travel-note' }, text, ' ', h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
+			var next = Object.assign( {}, s );
+			delete next.skipTz;
+			delete next.travel;
+			put( 'settings', 'me', next );
+		} }, 'Change' ) );
 	}
 
 	/* ---------- What's new (entries come from includes/tracker/whats-new.php) ---------- */
@@ -1435,17 +1971,417 @@
 		}, 1000 );
 	}
 
-	/* ---------- Vials ---------- */
+	/* =========================================================
+	 * Supply: what's on hand, how long it lasts, when to mix next
+	 * ======================================================= */
 
-	function renderVials() {
+	/*
+	 * A stock record is what the customer has at home that isn't in use yet:
+	 *   form 'powder'   unmixed vials (amount + amountUnit mg|IU each)
+	 *        'pen'      pen cartridges to mix (amount + amountUnit)
+	 *        'premixed' ready-to-use vials (conc mg/mL, volume mL)
+	 *        'count'    pills, sprays, patches… (count is how many of them)
+	 * count is how many vials/pens (or pills) there were at countedAt;
+	 * mixing a vial from supply takes one off, and pills count down with
+	 * each dose taken after countedAt. warn: days of supply left that
+	 * counts as running low (0 = never warn).
+	 */
+	var STOCK_FORMS = [ [ 'powder', 'Powder vial' ], [ 'pen', 'Pen cartridge' ], [ 'premixed', 'Premixed vial' ], [ 'count', 'Pills & other' ] ];
+	var WARN_CHOICES = [ [ 7, '1 week' ], [ 14, '2 weeks' ], [ 30, '1 month' ], [ 0, 'Off' ] ];
+	var PLAN_DAYS = 730;
+	var BUY_AHEAD_DAYS = 7;
+
+	function stocks() {
+		return values( state.records.stock ).sort( function ( a, b ) {
+			return String( a.compound ).localeCompare( String( b.compound ) );
+		} );
+	}
+
+	function isVialStock( s ) {
+		return s.form !== 'count';
+	}
+
+	/** Whether a stock item feeds this protocol: same name, and the same kind of thing (pen cartridges for pen doses, vials for syringe doses, pills for anything without a vial). */
+	function stockFits( s, p ) {
+		if ( ! sameCompound( s.compound, p.compound ) ) {
+			return false;
+		}
+		if ( ! isVialStock( s ) ) {
+			return ! usesVial( p );
+		}
+		return usesVial( p ) && ( s.form === 'pen' ) === ( p.device === 'pen' );
+	}
+
+	/** Every stock item that fits a protocol (a customer might have 5 mg and 10 mg vials of the same peptide). */
+	function stockFor( p ) {
+		return stocks().filter( function ( s ) {
+			return stockFits( s, p );
+		} );
+	}
+
+	function stockProtocol( s ) {
+		return protocols().filter( function ( p ) {
+			return ! p.paused && stockFits( s, p );
+		} )[ 0 ] || null;
+	}
+
+	/** Whether a stock item can be mixed into this vial / pen. */
+	function stockMatchesVial( s, v ) {
+		return isVialStock( s ) && sameCompound( s.compound, v.compound ) && ( s.form === 'pen' ) === ( v.kind === 'pen' );
+	}
+
+	/** How many of one pill/spray/patch a dose uses: the dose itself for countable units ("2 tablets"), otherwise one. */
+	function perDoseCount( p ) {
+		return UNIT_PLURAL[ p.unit ] ? Math.max( 0, +p.dose || 0 ) : 1;
+	}
+
+	/** What's left of a stock item: vials/pens as counted, pills minus every dose taken since they were counted. */
+	function stockLeft( s ) {
+		var count = Math.max( 0, +s.count || 0 );
+		if ( isVialStock( s ) ) {
+			return count;
+		}
+		var since = s.countedAt || '';
+		var used = values( state.records.dose ).reduce( function ( sum, d ) {
+			if ( d.status !== 'taken' || ! sameCompound( d.compound, s.compound ) || ! d.at || d.at <= since ) {
+				return sum;
+			}
+			return sum + ( UNIT_PLURAL[ d.unit ] ? Math.max( 0, +d.dose || 0 ) : 1 );
+		}, 0 );
+		return Math.max( 0, count - used );
+	}
+
+	function countUnit( s, n ) {
+		var u = s.countUnit || 'tablet';
+		return n === 1 ? u : UNIT_PLURAL[ u ] || u;
+	}
+
+	/** "10 mg powder vials", "5 mg pen cartridges", "2.5 mg/mL · 10 mL vials", "500 mg tablets" */
+	function stockSummary( s, n ) {
+		var many = n !== 1;
+		if ( s.form === 'premixed' ) {
+			return ( +s.conc > 0 ? fmtNum( +s.conc ) + ' mg/mL · ' : '' ) + ( +s.volume > 0 ? fmtNum( +s.volume ) + ' mL ' : '' ) + ( many ? 'vials' : 'vial' );
+		}
+		if ( s.form === 'count' ) {
+			return ( s.strength ? s.strength + ' ' : '' ) + countUnit( s, n );
+		}
+		var amt = +s.amount > 0 ? fmtNum( +s.amount ) + ' ' + ( s.amountUnit === 'IU' ? 'IU' : 'mg' ) + ' ' : '';
+		return amt + ( s.form === 'pen' ? ( many ? 'pen cartridges' : 'pen cartridge' ) : ( many ? 'powder vials' : 'powder vial' ) );
+	}
+
+	/** Doses one unmixed vial or pen will give on this protocol, or null when we can't tell. */
+	function dosesPerStockVial( s, p ) {
+		var cur = currentVial( p );
+		var per = cur ? unitsForDose( p.dose, p.unit, cur, p.doseOf ) : null;
+		// Same strength as the vial in use: the customer will most likely mix it the same way.
+		if ( cur && per && ! isBlend( cur ) && ( s.form === 'premixed' ? +s.conc === +cur.conc || ! +s.conc : +s.amount === +cur.amount || ! +s.amount ) ) {
+			var total = s.form === 'premixed' && +s.volume > 0 ? +s.volume * 100 : vialTotalUnits( cur );
+			return total ? Math.floor( ( total + 0.0001 ) / per ) : null;
+		}
+		if ( cur && isBlend( cur ) && per ) {
+			return Math.floor( ( vialTotalUnits( cur ) + 0.0001 ) / per );
+		}
+		var dose = +p.dose;
+		if ( ! ( dose > 0 ) ) {
+			return null;
+		}
+		var inVial = s.form === 'premixed' ? ( +s.conc > 0 && +s.volume > 0 ? +s.conc * +s.volume : 0 ) : +s.amount;
+		var vialUnit = s.form === 'premixed' ? 'mg' : ( s.amountUnit === 'IU' ? 'IU' : 'mg' );
+		var doseAmt = p.unit === 'mcg' && vialUnit === 'mg' ? dose / 1000 : p.unit === vialUnit ? dose : null;
+		if ( ! ( inVial > 0 ) || ! doseAmt ) {
+			return null;
+		}
+		return Math.floor( inVial / doseAmt + 0.0001 );
+	}
+
+	/** One date per dose still to take, from today (minus today's logged ones), until the protocol ends or PLAN_DAYS. */
+	function upcomingDoseDates( p ) {
+		var out = [];
+		var today = todayStr();
+		var perDay = timesOf( p ).length;
+		var logged = slotsOn( today ).filter( function ( sl ) {
+			return sl.protocol.id === p.id && sl.log;
+		} ).length;
+		var weeks = parseInt( p.weeks, 10 ) || 0;
+		var end = weeks && p.start ? addDays( p.start, weeks * 7 - 1 ) : null;
+		for ( var i = 0, d = today; i < PLAN_DAYS; i++, d = addDays( d, 1 ) ) {
+			if ( end && d > end ) {
+				break;
+			}
+			if ( isDueOn( p, d ) ) {
+				for ( var k = i === 0 ? logged : 0; k < perDay; k++ ) {
+					out.push( d );
+				}
+			}
+		}
+		return { dates: out, end: end };
+	}
+
+	/**
+	 * How a protocol's supply plays out: the vial in use, then each vial
+	 * on hand in turn, then (for a set-length cycle) the ones still to buy.
+	 * Pills and other countables are just "enough until…".
+	 */
+	function supplyPlan( p ) {
+		var list = stockFor( p );
+		var up = upcomingDoseDates( p );
+		var dates = up.dates;
+		var plan = { protocol: p, stocks: list, end: up.end, dates: dates, segments: [], covered: 0, perVial: null, onHand: 0, needBuy: 0, buyBy: null, nextNeeded: null, known: true };
+
+		if ( ! usesVial( p ) ) {
+			var pills = list.reduce( function ( n, s ) {
+				return n + stockLeft( s );
+			}, 0 );
+			var per = perDoseCount( p );
+			plan.onHand = pills;
+			plan.covered = per > 0 ? Math.floor( pills / per + 0.0001 ) : 0;
+		} else {
+			var cur = currentVial( p );
+			var info = cur ? vialInfo( cur ) : null;
+			var curLeft = info && info.dosesLeft != null ? info.dosesLeft : 0;
+			var perVial = null;
+			list.some( function ( s ) {
+				perVial = dosesPerStockVial( s, p );
+				return perVial;
+			} );
+			if ( ! perVial && info && info.perDose && info.total ) {
+				perVial = Math.floor( ( info.total + 0.0001 ) / info.perDose );
+			}
+			plan.perVial = perVial;
+			plan.known = !! perVial || ( ! list.length && !! cur );
+			plan.onHand = list.reduce( function ( n, s ) {
+				return n + stockLeft( s );
+			}, 0 );
+			var idx = 0;
+			if ( cur ) {
+				plan.segments.push( { status: 'use', vial: cur, mixOn: cur.mixed, to: curLeft ? dates[ Math.min( curLeft, dates.length ) - 1 ] : null, doses: curLeft } );
+				idx = curLeft;
+			}
+			for ( var i = 0; perVial && i < plan.onHand && idx < dates.length; i++ ) {
+				plan.segments.push( { status: 'stock', mixOn: dates[ idx ], to: dates[ Math.min( idx + perVial, dates.length ) - 1 ], doses: Math.min( perVial, dates.length - idx ) } );
+				idx += perVial;
+			}
+			plan.covered = idx;
+			if ( perVial && up.end ) {
+				while ( idx < dates.length && plan.segments.length < 40 ) {
+					plan.segments.push( { status: 'buy', mixOn: dates[ idx ], to: dates[ Math.min( idx + perVial, dates.length ) - 1 ], doses: Math.min( perVial, dates.length - idx ) } );
+					plan.needBuy++;
+					idx += perVial;
+				}
+			}
+			var firstBuy = plan.segments.filter( function ( sg ) {
+				return sg.status === 'buy';
+			} )[ 0 ];
+			if ( firstBuy ) {
+				var by = addDays( firstBuy.mixOn, -BUY_AHEAD_DAYS );
+				plan.buyBy = by < todayStr() ? todayStr() : by;
+			}
+		}
+		plan.all = plan.covered >= dates.length;
+		plan.coveredUntil = plan.all ? ( dates.length ? dates[ dates.length - 1 ] : null ) : plan.covered ? dates[ plan.covered - 1 ] : null;
+		plan.nextNeeded = plan.all ? null : dates[ plan.covered ];
+		return plan;
+	}
+
+	/** Running low: the stock item's plan runs out within its warning window (and before the cycle ends). */
+	function stockStatus( s ) {
+		var p = stockProtocol( s );
+		var left = stockLeft( s );
+		if ( ! p ) {
+			return { protocol: null, left: left, plan: null, tone: 'mute', text: 'Not in a schedule', low: false };
+		}
+		var plan = supplyPlan( p );
+		var warn = s.warn == null ? 14 : +s.warn;
+		if ( ! plan.known ) {
+			return { protocol: p, left: left, plan: plan, tone: 'mute', text: 'Add your dose to see how long it lasts', low: false };
+		}
+		if ( plan.all ) {
+			return { protocol: p, left: left, plan: plan, tone: 'ok', text: plan.end ? 'Enough for this cycle' : 'Covered 2+ years', low: false };
+		}
+		var daysLeft = plan.coveredUntil ? daysBetween( todayStr(), plan.coveredUntil ) : -1;
+		var low = warn > 0 && daysLeft < warn;
+		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) : '';
+		if ( ! plan.covered ) {
+			return { protocol: p, left: left, plan: plan, tone: 'bad', text: 'Out', low: warn > 0 };
+		}
+		if ( ! left ) {
+			return { protocol: p, left: left, plan: plan, tone: low ? 'warn' : 'mute', text: 'Out · last dose ' + until, low: low };
+		}
+		return { protocol: p, left: left, plan: plan, tone: low ? 'warn' : 'ok', text: ( low ? 'Low · runs out ' : 'Covered to ' ) + until, low: low };
+	}
+
+	/** Compounds running low right now, one entry each. */
+	function lowSupplies() {
+		var seen = {};
+		return stocks().map( function ( s ) {
+			return { s: s, st: stockStatus( s ) };
+		} ).filter( function ( x ) {
+			var key = String( x.s.compound ).toLowerCase();
+			if ( ! x.st.low || seen[ key ] ) {
+				return false;
+			}
+			seen[ key ] = true;
+			return true;
+		} );
+	}
+
+	function lowLine( x ) {
+		var plan = x.st.plan;
+		if ( ! plan || ! plan.covered ) {
+			return 'You’ve run out.';
+		}
+		var until = fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' );
+		return usesVial( x.st.protocol )
+			? ( x.st.left ? 'You have enough until ' + until + '.' : 'Your ' + ( x.s.form === 'pen' ? 'pen' : 'vial' ) + ' runs out ' + until + ' and you have none on hand.' )
+			: fmtNum( x.st.left, 0 ) + ' ' + countUnit( x.s, x.st.left ) + ' left, enough until ' + until + '.';
+	}
+
+	/* ---------- Supply alerts for the reminder sweep ---------- */
+
+	/**
+	 * Upcoming running-low and mix-day notifications, saved as the
+	 * `alerts` settings record for class-tracker-reminders.php to send
+	 * when each one's time comes (the server doesn't do vial math).
+	 * Worked out again whenever anything changes; only saved when the
+	 * list differs and reminders are on somewhere.
+	 */
+	function supplyAlerts() {
+		var s = state.records.settings.me || {};
+		var out = [];
+		var today = todayStr();
+		stocks().forEach( function ( st ) {
+			var warn = st.warn == null ? 14 : +st.warn;
+			var status = stockStatus( st );
+			var plan = status.plan;
+			if ( ! warn || ! plan || ! plan.known || plan.all || ! plan.coveredUntil ) {
+				return;
+			}
+			var day = addDays( plan.coveredUntil, -warn );
+			// Already low: the banner in the app says so. (Re-dating it to today would repeat it every day.)
+			if ( day < today ) {
+				return;
+			}
+			out.push( {
+				id: 'low-' + labelKey( st.compound ).slice( 0, 30 ) + '-' + plan.coveredUntil.replace( /-/g, '' ),
+				date: day,
+				time: '10:00',
+				title: st.compound + ' is running low',
+				body: 'You have enough until ' + fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) + '. Time to reorder.',
+			} );
+		} );
+		if ( s.mixReminders !== false ) {
+			protocols().forEach( function ( p ) {
+				if ( p.paused || ! usesVial( p ) ) {
+					return;
+				}
+				var cur = currentVial( p );
+				var info = cur ? vialInfo( cur ) : null;
+				if ( ! info || ! info.lastDose ) {
+					return;
+				}
+				var up = upcomingDoseDates( p ).dates;
+				var next = up[ info.dosesLeft ];
+				if ( ! next || next <= today ) {
+					return;
+				}
+				var have = stockFor( p ).reduce( function ( n, x ) {
+					return n + stockLeft( x );
+				}, 0 );
+				var what = p.device === 'pen' ? 'pen' : 'vial';
+				out.push( {
+					id: 'mix-' + labelKey( p.compound ).slice( 0, 30 ) + '-' + next.replace( /-/g, '' ),
+					date: addDays( next, -1 ),
+					time: '19:00',
+					title: 'Mix a new ' + p.compound + ' ' + what + ' tomorrow',
+					body: 'Your next dose needs a new ' + what + '.' + ( have ? ' You have ' + have + ' on hand.' : ' You have none on hand.' ),
+				} );
+			} );
+		}
+		return out.filter( function ( a ) {
+			return a.date >= today;
+		} ).sort( function ( a, b ) {
+			return ( a.date + a.time ).localeCompare( b.date + b.time );
+		} ).slice( 0, 20 );
+	}
+
+	var alertsTimer = null;
+	function syncAlerts() {
+		if ( ! state.loaded || ! ( state.push.devices > 0 ) ) {
+			return;
+		}
+		clearTimeout( alertsTimer );
+		alertsTimer = setTimeout( function () {
+			var list = supplyAlerts();
+			var old = state.records.settings.alerts;
+			if ( JSON.stringify( ( old && old.list ) || [] ) !== JSON.stringify( list ) ) {
+				put( 'settings', 'alerts', { list: list } );
+			}
+		}, 400 );
+	}
+
+	/* ---------- Supply tab ---------- */
+
+	function renderSupply() {
 		var wrap = h( 'div', null );
+		var view = ui.supplyView || 'mixed';
 		wrap.appendChild( h( 'header', { class: 'ypt-top' },
-			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Inventory' ), h( 'h1', null, 'Vials & pens' ) ),
-			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
-				openVialSheet( null, null );
-			} }, '+ Mix' )
+			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Inventory' ), h( 'h1', null, 'Supply' ) ),
+			h( 'div', { class: 'ypt-top__actions' },
+				h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+					openStockSheet( null, null );
+				} }, '+ Add stock' ),
+				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+					openVialSheet( null, null );
+				} }, '+ Mix' )
+			)
 		) );
 
+		lowSupplies().slice( 0, 2 ).forEach( function ( x ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-banner ypt-banner--warn' },
+				h( 'div', null, h( 'b', null, x.s.compound + ' is running low. ' ), lowLine( x ),
+					h( 'div', { style: { marginTop: '8px' } }, h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--white', onclick: function () {
+						openStockSheet( x.s, { bought: true } );
+					} }, 'I bought more' ) ) )
+			) );
+		} );
+
+		var mixedCount = vials( false ).length;
+		var onHand = stocks().length;
+		wrap.appendChild( h( 'div', { class: 'ypt-views', role: 'tablist' }, [ [ 'mixed', 'Mixed · ' + mixedCount ], [ 'onhand', 'On hand · ' + onHand ], [ 'plan', 'Plan' ] ].map( function ( v ) {
+			return h( 'button', { type: 'button', role: 'tab', 'aria-selected': view === v[ 0 ] ? 'true' : 'false', onclick: function () {
+				ui.supplyView = v[ 0 ];
+				saveJSON( UI_KEY, { tab: ui.tab, supplyView: v[ 0 ] } );
+				render();
+			} }, v[ 1 ] );
+		} ) ) );
+
+		wrap.appendChild( view === 'onhand' ? renderOnHand() : view === 'plan' ? renderPlan() : renderMixed() );
+		return wrap;
+	}
+
+	/** "3 more on hand · covered to Dec 8" under a vial in use. */
+	function vialSupplyTag( v ) {
+		var p = protocols().filter( function ( x ) {
+			return ! x.paused && usesVial( x ) && currentVial( x ) && currentVial( x ).id === v.id;
+		} )[ 0 ];
+		if ( ! p || ! stockFor( p ).length ) {
+			return null;
+		}
+		var plan = supplyPlan( p );
+		var have = plan.onHand;
+		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) : '';
+		var low = lowSupplies().some( function ( x ) {
+			return sameCompound( x.s.compound, p.compound );
+		} );
+		var text = have ? have + ' more on hand' : 'None on hand';
+		if ( plan.known && have ) {
+			text += plan.all ? ( plan.end ? ' · enough for this cycle' : '' ) : until ? ' · covered to ' + until : '';
+		}
+		return h( 'div', { style: { marginTop: '8px' } }, h( 'span', { class: 'ypt-tag ypt-tag--' + ( low ? 'warn' : have ? 'ok' : 'mute' ) }, text ) );
+	}
+
+	function renderMixed() {
+		var wrap = h( 'div', null );
 		var list = vials( false );
 		if ( ! list.length ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
@@ -1504,6 +2440,7 @@
 					h( 'div', { class: 'ypt-muted ypt-small', style: { marginTop: '2px' } }, detail.join( ' · ' ) ),
 					h( 'div', { class: 'ypt-bar' }, h( 'i', { style: { width: info.pct + '%', background: color } } ) ),
 					h( 'div', { class: 'ypt-small' }, status ),
+					vialSupplyTag( v ),
 					info.age > VIAL_WARN_DAYS ? h( 'div', { class: 'ypt-small', style: { color: 'var(--ypt-warn)', marginTop: '4px' } }, 'Mixed ' + info.age + ' days ago. Check the storage guidance for this peptide.' ) : null,
 					h( 'div', { class: 'ypt-vial__actions' },
 						h( 'button', { type: 'button', class: 'ypt-pill', onclick: function () {
@@ -1531,8 +2468,442 @@
 				} }, h( 'span', null, v.compound ), h( 'span', null, 'Mixed ' + fmtDay( v.mixed, true ).replace( /^\w+, /, '' ) ) );
 			} ) ) );
 		}
-
 		return wrap;
+	}
+
+	function stepper( value, label, onChange ) {
+		return h( 'div', { class: 'ypt-stepper', role: 'group', 'aria-label': label },
+			h( 'button', { type: 'button', 'aria-label': 'One less', disabled: value <= 0, onclick: function () {
+				onChange( Math.max( 0, value - 1 ) );
+			} }, '−' ),
+			h( 'b', null, String( value ) ),
+			h( 'button', { type: 'button', 'aria-label': 'One more', onclick: function () {
+				onChange( value + 1 );
+			} }, '+' )
+		);
+	}
+
+	function stockIcon( s ) {
+		return h( 'span', { class: 'ypt-mini ypt-mini--' + ( s.form === 'count' ? 'bottle' : s.form === 'pen' ? 'pen' : 'vial' ), 'aria-hidden': 'true' } );
+	}
+
+	function renderOnHand() {
+		var wrap = h( 'div', null );
+		var list = stocks();
+		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '2px 4px 10px' } }, 'Unmixed vials, pens and pills you have at home. Mixing one takes it off this list.' ) );
+		if ( ! list.length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
+				h( 'h2', null, 'Keep track of what you have' ),
+				h( 'p', null, 'Add the vials, pens or pills you have at home. We’ll show how long they’ll last on your schedule and remind you before you run out.' ),
+				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+					openStockSheet( null, null );
+				} }, 'Add stock' )
+			) );
+			return wrap;
+		}
+		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list ypt-stock' }, list.map( function ( s ) {
+			var st = stockStatus( s );
+			var left = st.left;
+			var expires = s.expires ? daysBetween( todayStr(), s.expires ) : null;
+			var sub = [ stockSummary( s, 2 ) ];
+			if ( s.expires ) {
+				sub.push( ( expires < 0 ? 'expired ' : 'exp. ' ) + MONTHS[ parseDate( s.expires ).getMonth() ].slice( 0, 3 ) + ' ' + parseDate( s.expires ).getFullYear() );
+			}
+			return h( 'div', { class: 'ypt-stock__row' },
+				stockIcon( s ),
+				h( 'button', { type: 'button', class: 'ypt-stock__main', onclick: function () {
+					openStockSheet( s, null );
+				} },
+					h( 'b', null, s.compound ),
+					h( 'span', null, sub.join( ' · ' ) ),
+					h( 'span', { class: 'ypt-stock__tags' },
+						h( 'span', { class: 'ypt-tag ypt-tag--' + st.tone }, st.text ),
+						expires != null && expires < 30 ? h( 'span', { class: 'ypt-tag ypt-tag--warn' }, expires < 0 ? 'Expired' : 'Expires soon' ) : null
+					)
+				),
+				isVialStock( s ) ? stepper( left, s.compound + ' on hand', function ( n ) {
+					put( 'stock', s.id, Object.assign( {}, s, { count: n, countedAt: new Date().toISOString() } ) );
+				} ) : h( 'div', { class: 'ypt-stock__count' }, h( 'b', null, fmtNum( left, 0 ) ), h( 'span', null, countUnit( s, left ) ) )
+			);
+		} ) ) );
+		var warnsOn = list.some( function ( s ) {
+			return s.warn == null || +s.warn > 0;
+		} );
+		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-note' }, icon( 'bell' ),
+			h( 'div', null, warnsOn
+				? 'We’ll warn you here and on Today before anything runs out' + ( state.pushOnHere ? ', with a notification too.' : '. Turn on reminders on the Me tab to get a notification too.' )
+				: 'Running-low warnings are off for everything here.',
+			list.some( function ( s ) {
+				return ! isVialStock( s );
+			} ) ? ' Pills count down each time you tap Take.' : '' ) ) );
+		return wrap;
+	}
+
+	function renderPlan() {
+		var wrap = h( 'div', null );
+		var list = protocols().filter( function ( p ) {
+			return ! p.paused && ( usesVial( p ) ? currentVial( p ) || stockFor( p ).length : stockFor( p ).length );
+		} );
+		if ( ! list.length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
+				h( 'h2', null, 'Plan your supply' ),
+				h( 'p', null, 'Once you’ve mixed a vial or added what you have on hand, this shows when to mix each new vial and how many more you need to finish your cycle.' ),
+				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+					openStockSheet( null, null );
+				} }, 'Add stock' )
+			) );
+			return wrap;
+		}
+		var p = list.filter( function ( x ) {
+			return x.id === ui.planId;
+		} )[ 0 ] || list[ 0 ];
+		if ( list.length > 1 ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-chips', style: { margin: '4px 0 12px' } }, list.map( function ( x ) {
+				return h( 'button', { type: 'button', class: 'ypt-chip', 'aria-pressed': x.id === p.id ? 'true' : 'false', onclick: function () {
+					ui.planId = x.id;
+					render();
+				} }, x.compound );
+			} ) ) );
+		}
+
+		var plan = supplyPlan( p );
+		var what = p.device === 'pen' ? 'pen' : 'vial';
+		var card = h( 'div', { class: 'ypt-card' } );
+		card.appendChild( h( 'div', { class: 'ypt-eyebrow' }, plan.end ? 'This cycle · ' + fmtDay( p.start ).replace( /^\w+, /, '' ) + ' to ' + fmtDay( plan.end ).replace( /^\w+, /, '' ) : 'Ongoing · ' + scheduleLabel( p ) ) );
+		var headline;
+		if ( ! plan.known ) {
+			headline = usesVial( p ) ? 'Add the strength of your ' + what + 's on hand to see how long they last.' : 'Add your dose to see how long this lasts.';
+		} else if ( plan.all ) {
+			headline = plan.end ? [ 'You have enough to finish this cycle.' ] : [ 'You’re covered for 2+ years.' ];
+		} else if ( plan.needBuy ) {
+			headline = [ 'You need ', h( 'span', { class: 'ypt-hl' }, plan.needBuy + ' more ' + what + ( plan.needBuy === 1 ? '' : 's' ) ), ' to finish. Buy by ' + fmtDay( plan.buyBy ).replace( /^\w+, /, '' ) + '.' ];
+		} else if ( plan.coveredUntil ) {
+			headline = [ 'Covered to ', h( 'span', { class: 'ypt-hl' }, fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ];
+		} else {
+			headline = [ h( 'span', { class: 'ypt-hl' }, 'You’re out.' ), ' Add what you have to plan ahead.' ];
+		}
+		card.appendChild( h( 'div', { class: 'ypt-plan__head' }, headline ) );
+		if ( usesVial( p ) && plan.known && plan.end ) {
+			var needed = plan.segments.length;
+			var have = needed - plan.needBuy;
+			card.appendChild( h( 'div', { class: 'ypt-summary', style: { marginTop: '14px' } },
+				h( 'div', null, h( 'b', null, String( needed ) ), h( 'span', null, what + 's needed' ) ),
+				h( 'div', null, h( 'b', null, String( have ) ), h( 'span', null, 'you have' ) ),
+				h( 'div', null, h( 'b', null, String( plan.needBuy ) ), h( 'span', null, 'to buy' ) )
+			) );
+		} else if ( ! usesVial( p ) && plan.known ) {
+			var st = stockFor( p )[ 0 ];
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, fmtNum( plan.onHand, 0 ) + ' ' + ( st ? countUnit( st, plan.onHand ) : 'left' ) + ' on hand · ' + fmtNum( perDoseCount( p ), 2 ) + ' per dose · ' + scheduleLabel( p ) ) );
+		}
+		wrap.appendChild( card );
+
+		if ( usesVial( p ) && plan.segments.length ) {
+			var n = 0;
+			var tl = h( 'div', { class: 'ypt-tl' } );
+			plan.segments.slice( 0, 12 ).forEach( function ( sg ) {
+				n++;
+				var label = what.charAt( 0 ).toUpperCase() + what.slice( 1 ) + ' ' + n;
+				var title;
+				var sub;
+				if ( sg.status === 'use' ) {
+					title = label + ' · in use';
+					sub = 'Mixed ' + fmtDay( sg.mixOn ).replace( /^\w+, /, '' ) + ( sg.to ? ' · runs out ' + fmtDay( sg.to ).replace( /^\w+, /, '' ) : ' · used up' );
+				} else {
+					title = 'Mix ' + what + ' ' + n + ' · ' + fmtDay( sg.mixOn ).replace( /^\w+, /, '' );
+					sub = sg.status === 'buy'
+						? 'You don’t have this one yet' + ( sg.doses < plan.perVial ? ' · ' + sg.doses + ' dose' + ( sg.doses === 1 ? '' : 's' ) + ' needed' : '' )
+						: 'From your supply · lasts to ' + fmtDay( sg.to ).replace( /^\w+, /, '' );
+				}
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--' + sg.status }, h( 'b', null, title ), h( 'span', null, sub ) ) );
+			} );
+			if ( plan.segments.length > 12 ) {
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item' }, h( 'span', null, '+ ' + ( plan.segments.length - 12 ) + ' more' ) ) );
+			}
+			if ( plan.end ) {
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--end' }, h( 'b', null, 'Cycle ends ' + fmtDay( plan.end ).replace( /^\w+, /, '' ) ),
+					h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
+						openProtocolSheet( p );
+					} }, 'Change length' ) ) );
+			} else if ( plan.nextNeeded && plan.known ) {
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--buy' }, h( 'b', null, 'Next ' + what + ' needed ' + fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' ) ),
+					h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
+						openProtocolSheet( p );
+					} }, 'Set a cycle length' ) ) );
+			}
+			wrap.appendChild( h( 'div', { class: 'ypt-card' }, tl ) );
+		}
+
+		var s = state.records.settings.me || {};
+		if ( usesVial( p ) ) {
+			var on = s.mixReminders !== false;
+			var sw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': 'Remind me on mix days' } );
+			sw.addEventListener( 'click', function () {
+				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { mixReminders: ! on } ) );
+			} );
+			wrap.appendChild( h( 'div', { class: 'ypt-card', style: { padding: '2px 14px' } }, h( 'div', { class: 'ypt-toggle' },
+				h( 'div', null, h( 'b', null, 'Remind me on mix days' ), h( 'div', { class: 'ypt-muted ypt-small' }, state.pushOnHere ? 'A notification the evening before.' : 'A notification the evening before, once reminders are on (Me tab).' ) ),
+				sw ) ) );
+		}
+		wrap.appendChild( h( 'p', { style: { textAlign: 'center', marginTop: '10px' } }, h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
+			var mine = stockFor( p )[ 0 ];
+			openStockSheet( mine || null, mine ? { bought: true } : { compound: p.compound, form: usesVial( p ) ? ( p.device === 'pen' ? 'pen' : 'powder' ) : 'count' } );
+		} }, stockFor( p ).length ? 'Update what you have' : 'Add what you have on hand' ) ) );
+		return wrap;
+	}
+
+	/* ---------- Add / edit stock ---------- */
+
+	/**
+	 * `opts`: { compound, form } to prefill a new item, or { bought: true }
+	 * on an existing one to jump straight to adding more.
+	 */
+	function openStockSheet( existing, opts ) {
+		opts = opts || {};
+		var cur = protocols().filter( function ( p ) {
+			return opts.compound && sameCompound( p.compound, opts.compound );
+		} )[ 0 ];
+		var curVial = cur ? currentVial( cur ) : null;
+		var s = existing ? JSON.parse( JSON.stringify( existing ) ) : {
+			compound: opts.compound || '',
+			form: opts.form || 'powder',
+			amount: curVial && curVial.mode !== 'conc' && ! isBlend( curVial ) ? curVial.amount : '',
+			amountUnit: curVial && curVial.mode === 'iu' ? 'IU' : 'mg',
+			conc: curVial && curVial.mode === 'conc' ? curVial.conc : '',
+			volume: curVial && curVial.mode === 'conc' ? curVial.volume : '',
+			count: 1,
+			countUnit: cur && UNIT_PLURAL[ cur.unit ] ? cur.unit : 'tablet',
+			strength: '',
+			bought: todayStr(),
+			expires: '',
+			warn: 14,
+		};
+		var id = existing ? existing.id : uid( 's' );
+		var left = existing ? stockLeft( existing ) : 0;
+		var adding = existing && opts.bought ? 1 : 0;
+		var err = h( 'p', { class: 'ypt-error', hidden: true } );
+		var formBox = h( 'div', null );
+		var preview = h( 'div', { 'aria-live': 'polite' } );
+
+		function total() {
+			return existing ? left + adding : +s.count || 0;
+		}
+
+		var saveBtn;
+
+		function saveLabel() {
+			return existing ? ( adding ? 'Add ' + adding : 'Save' ) : 'Add ' + ( +s.count || 0 );
+		}
+
+		function renderPreview() {
+			if ( saveBtn ) {
+				saveBtn.textContent = saveLabel();
+			}
+			preview.textContent = '';
+			if ( ! s.compound ) {
+				return;
+			}
+			var probe = Object.assign( {}, s, { id: id, count: total(), countedAt: new Date().toISOString() } );
+			var p = protocols().filter( function ( x ) {
+				return ! x.paused && stockFits( probe, x );
+			} )[ 0 ];
+			if ( ! p ) {
+				return;
+			}
+			var saved = state.records.stock[ id ];
+			state.records.stock[ id ] = probe;
+			var plan = supplyPlan( p );
+			if ( saved ) {
+				state.records.stock[ id ] = saved;
+			} else {
+				delete state.records.stock[ id ];
+			}
+			if ( ! plan.known ) {
+				return;
+			}
+			var n = total();
+			var doses = isVialStock( s ) ? ( plan.perVial || 0 ) * n : Math.floor( n / ( perDoseCount( p ) || 1 ) );
+			preview.appendChild( h( 'div', { class: 'ypt-calc-result ypt-plan__preview' },
+				n + ' ' + ( isVialStock( s ) ? ( s.form === 'pen' ? 'pen' : 'vial' ) + ( n === 1 ? '' : 's' ) : countUnit( s, n ) ) + ' = ', h( 'b', null, doses + ' dose' + ( doses === 1 ? '' : 's' ) ), ' on your ' + p.compound + ' schedule. ',
+				plan.all ? ( plan.end ? 'That’s enough to finish this cycle.' : 'That covers you for 2+ years.' ) : plan.coveredUntil ? [ 'With these you’re covered to ', h( 'b', null, fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ] : ''
+			) );
+		}
+
+		function numField( label, key, placeholder, idAttr ) {
+			return field( label, h( 'input', { class: 'ypt-input', id: idAttr, type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: placeholder, value: s[ key ], oninput: function ( e ) {
+				s[ key ] = e.target.value;
+				renderPreview();
+			} } ), null, idAttr );
+		}
+
+		function renderForm() {
+			formBox.textContent = '';
+			if ( s.form === 'powder' || s.form === 'pen' ) {
+				formBox.appendChild( h( 'div', { class: 'ypt-field' },
+					h( 'label', { for: 'ypt-s-amount' }, s.form === 'pen' ? 'In each pen' : 'In each vial' ),
+					h( 'div', { class: 'ypt-row' },
+						h( 'input', { class: 'ypt-input', id: 'ypt-s-amount', type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: '10', value: s.amount, oninput: function ( e ) {
+							s.amount = e.target.value;
+							renderPreview();
+						} } ),
+						h( 'div', { class: 'ypt-shrink' }, seg( [ 'mg', 'IU' ], s.amountUnit === 'IU' ? 'IU' : 'mg', function ( u ) {
+							s.amountUnit = u;
+							renderPreview();
+						} ) )
+					)
+				) );
+			} else if ( s.form === 'premixed' ) {
+				formBox.appendChild( h( 'div', { class: 'ypt-row' },
+					numField( 'Strength (mg/mL)', 'conc', '200', 'ypt-s-conc' ),
+					numField( 'Vial size (mL)', 'volume', '10', 'ypt-s-volume' )
+				) );
+			} else {
+				formBox.appendChild( h( 'div', { class: 'ypt-row' },
+					field( 'Strength (optional)', h( 'input', { class: 'ypt-input', id: 'ypt-s-strength', type: 'text', maxlength: '30', placeholder: '500 mg', value: s.strength || '', oninput: function ( e ) {
+						s.strength = e.target.value;
+					} } ), null, 'ypt-s-strength' ),
+					field( 'Counted in', h( 'select', { class: 'ypt-select', id: 'ypt-s-unit', onchange: function ( e ) {
+						s.countUnit = e.target.value;
+						renderPreview();
+					} }, Object.keys( UNIT_PLURAL ).map( function ( u ) {
+						return h( 'option', { value: u, selected: u === ( s.countUnit || 'tablet' ) }, UNIT_PLURAL[ u ] );
+					} ) ), null, 'ypt-s-unit' )
+				) );
+			}
+
+			if ( existing ) {
+				formBox.appendChild( h( 'div', { class: 'ypt-field' },
+					h( 'span', { class: 'ypt-label' }, 'Just bought more?' ),
+					isVialStock( s ) ? h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+						h( 'span', { class: 'ypt-small' }, 'You have ' + left + ' now. Adding' ),
+						h( 'div', { class: 'ypt-shrink' }, stepper( adding, 'Adding', function ( n ) {
+							adding = n;
+							renderForm();
+							renderPreview();
+						} ) )
+					) : h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+						h( 'span', { class: 'ypt-small ypt-shrink' }, fmtNum( left, 0 ) + ' left now, plus' ),
+						h( 'input', { class: 'ypt-input', type: 'number', inputmode: 'numeric', min: '0', 'aria-label': 'How many you bought', value: adding || '', placeholder: '0', oninput: function ( e ) {
+							adding = Math.max( 0, parseInt( e.target.value, 10 ) || 0 );
+							renderPreview();
+						} } )
+					),
+					h( 'p', { class: 'ypt-hint' }, 'Miscounted? Use − and + on the On hand list to set the exact number.' )
+				) );
+			} else {
+				formBox.appendChild( isVialStock( s ) ? h( 'div', { class: 'ypt-field' },
+					h( 'span', { class: 'ypt-label' }, 'How many' ),
+					stepper( +s.count || 0, 'How many', function ( n ) {
+						s.count = n;
+						renderForm();
+						renderPreview();
+					} )
+				) : field( 'How many ' + ( UNIT_PLURAL[ s.countUnit || 'tablet' ] || 'you have' ), h( 'input', { class: 'ypt-input', id: 'ypt-s-count', type: 'number', inputmode: 'numeric', min: '0', value: s.count, oninput: function ( e ) {
+					s.count = Math.max( 0, parseInt( e.target.value, 10 ) || 0 );
+					renderPreview();
+				} } ), null, 'ypt-s-count' ) );
+			}
+		}
+
+		var body = [
+			field( 'Name', compoundInput( 'ypt-s-compound', s.compound, function ( v ) {
+				s.compound = v;
+				renderPreview();
+			} ), null, 'ypt-s-compound' ),
+			h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'What is it?' ),
+				seg( STOCK_FORMS, s.form, function ( f ) {
+					s.form = f;
+					renderForm();
+					renderPreview();
+				}, 'ypt-seg--wrap' )
+			),
+			formBox,
+			h( 'div', { class: 'ypt-row' },
+				field( 'Bought', h( 'input', { class: 'ypt-input', id: 'ypt-s-bought', type: 'date', value: s.bought || '', max: todayStr(), onchange: function ( e ) {
+					s.bought = e.target.value;
+				} } ), null, 'ypt-s-bought' ),
+				field( 'Expires (optional)', h( 'input', { class: 'ypt-input', id: 'ypt-s-expires', type: 'date', value: s.expires || '', onchange: function ( e ) {
+					s.expires = e.target.value;
+				} } ), null, 'ypt-s-expires' )
+			),
+			h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'Warn me when I have' ),
+				h( 'div', { class: 'ypt-chips' }, WARN_CHOICES.map( function ( w ) {
+					return h( 'button', { type: 'button', class: 'ypt-chip', 'aria-pressed': +( s.warn == null ? 14 : s.warn ) === w[ 0 ] ? 'true' : 'false', onclick: function () {
+						s.warn = w[ 0 ];
+						[].forEach.call( this.parentNode.children, function ( b ) {
+							b.setAttribute( 'aria-pressed', 'false' );
+						} );
+						this.setAttribute( 'aria-pressed', 'true' );
+					} }, w[ 1 ] );
+				} ) ),
+				h( 'p', { class: 'ypt-hint' }, 'left, based on your schedule. You’ll see it here and on Today, plus a notification if reminders are on.' )
+			),
+			preview,
+			existing ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px' }, onclick: function () {
+				if ( window.confirm( 'Remove ' + existing.compound + ' from your supply?' ) ) {
+					closeSheet();
+					del( 'stock', id );
+				}
+			} }, 'Remove from supply' ) : null,
+			err,
+		];
+
+		renderForm();
+		renderPreview();
+
+		openSheet( existing ? 'Edit supply' : 'Add to your supply', existing ? existing.compound : 'Supply', body,
+			saveBtn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+				err.hidden = true;
+				var problem = ! String( s.compound || '' ).trim() ? 'Enter what it is.'
+					: s.form === 'premixed' && ! ( +s.conc > 0 && +s.volume > 0 ) ? 'Enter the strength and vial size.'
+					: ( s.form === 'powder' || s.form === 'pen' ) && ! ( +s.amount > 0 ) ? 'Enter how much is in each ' + ( s.form === 'pen' ? 'pen.' : 'vial.' )
+					: '';
+				if ( problem ) {
+					err.textContent = problem;
+					err.hidden = false;
+					return;
+				}
+				var data = {
+					compound: String( s.compound ).trim(),
+					form: s.form,
+					amount: s.form === 'powder' || s.form === 'pen' ? +s.amount : 0,
+					amountUnit: s.amountUnit === 'IU' ? 'IU' : 'mg',
+					conc: s.form === 'premixed' ? +s.conc : 0,
+					volume: s.form === 'premixed' ? +s.volume : 0,
+					strength: s.form === 'count' ? String( s.strength || '' ).trim() : '',
+					countUnit: s.form === 'count' ? s.countUnit || 'tablet' : '',
+					count: total(),
+					countedAt: new Date().toISOString(),
+					bought: s.bought || '',
+					expires: s.expires || '',
+					warn: s.warn == null ? 14 : +s.warn,
+				};
+				// Same thing added again (another order of the same vials): add to that line instead of a second one.
+				var twin = existing ? null : stocks().filter( function ( x ) {
+					return sameCompound( x.compound, data.compound ) && x.form === data.form && +x.amount === data.amount && +x.conc === data.conc && ( x.countUnit || '' ) === data.countUnit;
+				} )[ 0 ];
+				closeSheet();
+				if ( twin ) {
+					put( 'stock', twin.id, Object.assign( {}, twin, { count: stockLeft( twin ) + data.count, countedAt: data.countedAt, bought: data.bought || twin.bought, expires: data.expires || twin.expires, warn: data.warn } ) );
+				} else {
+					put( 'stock', id, data );
+				}
+				ui.tab = 'vials';
+				ui.supplyView = 'onhand';
+				render();
+				toast( existing ? 'Supply updated' : data.compound + ' added to your supply' );
+			} }, saveLabel() ) );
+	}
+
+	/** A stock item to take a vial or pen from when mixing, if there is one. */
+	function stockToMix( v ) {
+		var list = stocks().filter( function ( s ) {
+			return stockMatchesVial( s, v ) && stockLeft( s ) > 0;
+		} );
+		return list.filter( function ( s ) {
+			return v.mode === 'conc' ? +s.conc === +v.conc : +s.amount === +v.amount;
+		} )[ 0 ] || list[ 0 ] || null;
 	}
 
 	/* ---------- Order labels: one design for every vial ---------- */
@@ -2169,6 +3540,17 @@
 			} ) : h( 'p', { class: 'ypt-list-row ypt-muted' }, 'None yet.' )
 		) );
 
+		if ( state.shares.length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Shared links' ) );
+			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
+				state.shares.map( function ( sh ) {
+					return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+						openSharedLinkSheet( sh );
+					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, MONTHS[ parseDate( sh.created ).getMonth() ].slice( 0, 3 ) + ' ' + parseDate( sh.created ).getDate() + ' ›' ) );
+				} )
+			) );
+		}
+
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Tools' ) );
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
 			! isStandalone() && installPrompt ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: promptInstall }, h( 'span', null, 'Install the app' ), h( 'span', null, '›' ) ) : null,
@@ -2238,8 +3620,10 @@
 		if ( state.push.devices > ( on ? 1 : 0 ) ) {
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, 'Also on for ' + ( state.push.devices - ( on ? 1 : 0 ) ) + ' other device' + ( state.push.devices - ( on ? 1 : 0 ) === 1 ? '' : 's' ) + '.' ) );
 		}
-		if ( s.tz ) {
-			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, 'Times are in ' + s.tz.replace( /_/g, ' ' ) + '.' ) );
+		if ( s.baseTz || s.tz ) {
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, s.travel
+				? 'Easing from ' + tzCity( s.baseTz ) + ' to ' + tzCity( s.travel.tz ) + ' time.'
+				: 'Times are in ' + String( s.baseTz || s.tz ).replace( /_/g, ' ' ) + ' time. When you travel, we’ll ask whether to move them.' ) );
 		}
 		card.appendChild( errBox );
 		return card;
@@ -2469,7 +3853,7 @@
 			dose: '',
 			unit: 'mcg',
 			route: 'Subcutaneous',
-			schedule: { type: 'daily', days: [ new Date().getDay() ], every: 2, on: 5, off: 2 },
+			schedule: { type: 'daily', days: [ parseDate( todayStr() ).getDay() ], every: 2, on: 5, off: 2 },
 			times: [ '09:00' ],
 			start: todayStr(),
 			weeks: '',
@@ -2481,7 +3865,7 @@
 		if ( draft && draft.p ) {
 			p = Object.assign( {}, p, draft.p );
 		}
-		p.schedule = Object.assign( { type: 'daily', days: [ new Date().getDay() ], every: 2, on: 5, off: 2 }, p.schedule || {} );
+		p.schedule = Object.assign( { type: 'daily', days: [ parseDate( todayStr() ).getDay() ], every: 2, on: 5, off: 2 }, p.schedule || {} );
 		var id = draft && draft.id ? draft.id : existing ? existing.id : uid( 'p' );
 		var err = h( 'p', { class: 'ypt-error', hidden: true } );
 		var vialBox = h( 'div', null );
@@ -2773,6 +4157,10 @@
 			field( 'Notes', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-p-notes', maxlength: '500', placeholder: 'Injection site rotation, with food, fasted, etc.', oninput: function ( e ) {
 				p.notes = e.target.value;
 			} }, p.notes || '' ), null, 'ypt-p-notes' ),
+			existing ? h( 'button', { type: 'button', class: 'ypt-btn', style: { marginTop: '14px' }, onclick: function () {
+				closeSheet();
+				openShareSheet( Object.assign( { id: existing.id }, state.records.protocol[ existing.id ] || existing ) );
+			} }, 'Share this protocol' ) : null,
 			existing ? h( 'div', { class: 'ypt-toggle' },
 				h( 'div', null, h( 'b', null, 'Pause' ), h( 'div', { class: 'ypt-muted ypt-small' }, 'Hide from Today and stop reminders. History is kept.' ) ),
 				( function () {
@@ -2813,8 +4201,11 @@
 	 * same way, so it's a vial record with kind 'pen': the water (or
 	 * premixed volume) defaults to 3 mL, there's no syringe to pick, and
 	 * doses read as units to dial. `opts` (all optional): kind, compound, dose + unit to preview,
-	 * and onSaved(vial) — set when Add a peptide sent the customer here
-	 * first, so saving goes straight back to it.
+	 * onSaved(vial) — set when Add a peptide sent the customer here
+	 * first, so saving goes straight back to it — preset (mode, amount,
+	 * water, conc, volume, parts, blend: a mix to start from, e.g. the
+	 * vial being replaced or a shared protocol's), and replaces (the id of
+	 * a used-up vial to mark finished once this one's saved).
 	 */
 	function openVialSheet( existing, opts ) {
 		opts = opts || {};
@@ -2830,6 +4221,13 @@
 			syringe: 50,
 			finished: false,
 		};
+		if ( ! existing && opts.preset ) {
+			[ 'kind', 'mode', 'amount', 'water', 'conc', 'volume', 'parts', 'blend', 'syringe' ].forEach( function ( k ) {
+				if ( opts.preset[ k ] != null && opts.preset[ k ] !== '' ) {
+					v[ k ] = JSON.parse( JSON.stringify( opts.preset[ k ] ) );
+				}
+			} );
+		}
 		v.kind = v.kind === 'pen' ? 'pen' : 'vial';
 		v.parts = Array.isArray( v.parts ) && v.parts.length ? v.parts : [ { name: '', amount: '' }, { name: '', amount: '' } ];
 		v.blend = v.blend === 'mixed' ? 'mixed' : 'bought';
@@ -2852,6 +4250,26 @@
 		var strength = h( 'div', { 'aria-live': 'polite' } );
 		var result = h( 'div', { class: 'ypt-calc-result', 'aria-live': 'polite' } );
 		var calcOfBox = h( 'div', null );
+		// New vials only: take one from the Supply tab's on-hand count.
+		var stockBox = h( 'div', null );
+		var takeStock = true;
+
+		function renderStockBox() {
+			stockBox.textContent = '';
+			var st = existing ? null : stockToMix( v );
+			if ( ! st ) {
+				return;
+			}
+			var on = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': takeStock ? 'true' : 'false', 'aria-label': 'Take it from your supply' } );
+			on.addEventListener( 'click', function () {
+				takeStock = ! takeStock;
+				on.setAttribute( 'aria-checked', takeStock ? 'true' : 'false' );
+			} );
+			var n = stockLeft( st );
+			stockBox.appendChild( h( 'div', { class: 'ypt-toggle ypt-field' },
+				h( 'div', null, h( 'b', null, 'Take it from your supply' ), h( 'div', { class: 'ypt-muted ypt-small' }, n + ' ' + stockSummary( st, n ) + ' on hand' ) ),
+				on ) );
+		}
 
 		function numInput( id2, key, placeholder, target, onInput ) {
 			return h( 'input', { class: 'ypt-input', id: id2, type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: placeholder, value: ( target || v )[ key ], oninput: function ( e ) {
@@ -3069,6 +4487,7 @@
 		function renderResult() {
 			renderStrength();
 			renderCalcOf();
+			renderStockBox();
 			result.textContent = '';
 			var blendV = v.mode === 'blend' ? Object.assign( {}, v, { parts: blendParts() } ) : v;
 			var units = unitsForDose( calc.dose, calc.unit, blendV, calc.doseOf );
@@ -3140,6 +4559,7 @@
 				var f = field( v.mode === 'blend' ? 'Blend name' : 'Peptide', compoundInput( 'ypt-v-compound', v.compound, function ( name ) {
 					v.compound = name;
 					nameTouched = !! name;
+					renderStockBox();
 					var match = protocols().filter( function ( x ) {
 						return sameCompound( x.compound, name );
 					} )[ 0 ];
@@ -3157,6 +4577,7 @@
 			}() ),
 			inputs,
 			result,
+			stockBox,
 			h( 'p', { class: 'ypt-hint' }, 'Same math as the ', h( 'a', { href: CFG.calculatorUrl }, 'Peptide & Hormone Calculator' ), '. Always double-check against your vial’s label.' ),
 			existing ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px' }, onclick: function () {
 				if ( window.confirm( 'Delete this ' + ( isPen( v ) ? 'pen' : 'vial' ) + '?' ) ) {
@@ -3199,7 +4620,14 @@
 					saved.parts = blendParts();
 					saved.blend = v.blend;
 				}
+				var fromStock = ! existing && takeStock ? stockToMix( saved ) : null;
 				put( 'vial', id, saved );
+				if ( fromStock ) {
+					put( 'stock', fromStock.id, Object.assign( {}, fromStock, { count: Math.max( 0, stockLeft( fromStock ) - 1 ) } ) );
+				}
+				if ( opts.replaces && state.records.vial[ opts.replaces ] && ! state.records.vial[ opts.replaces ].finished ) {
+					put( 'vial', opts.replaces, Object.assign( {}, state.records.vial[ opts.replaces ], { finished: true } ) );
+				}
 				if ( opts.onSaved ) {
 					opts.onSaved( saved );
 					toast( saved.kind === 'pen' ? 'Pen saved' : 'Vial saved' );
@@ -3258,7 +4686,7 @@
 	function openLogSheet( log ) {
 		var d = JSON.parse( JSON.stringify( log ) );
 		var id = log.id;
-		var at = new Date( d.at || Date.now() );
+		var at = effDate( d.at ? Date.parse( d.at ) : Date.now() );
 		var timeVal = pad( at.getHours() ) + ':' + pad( at.getMinutes() );
 		var body = [
 			h( 'p', { class: 'ypt-muted' }, amountLabel( d.dose, d.unit ) + ' · ' + fmtDay( d.date ) ),
@@ -3281,10 +4709,7 @@
 		];
 		openSheet( d.compound, 'Logged dose', body,
 			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
-				var t = timeVal.split( ':' );
-				var when = parseDate( d.date );
-				when.setHours( +t[ 0 ], +t[ 1 ] );
-				d.at = when.toISOString();
+				d.at = wallToIso( d.date, timeVal );
 				delete d.id;
 				if ( d.status === 'skipped' ) {
 					d.units = null;
@@ -3367,9 +4792,6 @@
 			var p = d.protocolId ? state.records.protocol[ d.protocolId ] : null;
 			var v = currentVial( { compound: d.compound } );
 			var units = v ? unitsForDose( d.dose, d.unit, v, p ? p.doseOf : '' ) : null;
-			var t = timeVal.split( ':' );
-			var when = parseDate( date );
-			when.setHours( +t[ 0 ], +t[ 1 ] );
 			closeSheet();
 			put( 'dose', uid( 'x-' ), {
 				protocolId: p ? d.protocolId : '',
@@ -3377,7 +4799,7 @@
 				date: date,
 				time: timeVal,
 				status: 'taken',
-				at: when.toISOString(),
+				at: wallToIso( date, timeVal ),
 				dose: parseFloat( d.dose ),
 				unit: d.unit,
 				vialId: v ? v.id : '',
@@ -3397,7 +4819,8 @@
 			api( 'DELETE', 'tracker/all' ).then( function () {
 				return disablePush().catch( function () {} );
 			} ).then( function () {
-				state.records = { protocol: {}, dose: {}, vial: {}, settings: {} };
+				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {} };
+				state.shares = [];
 				queue = [];
 				removeKey( STORE_KEY );
 				removeKey( QUEUE_KEY );
@@ -3440,21 +4863,42 @@
 		function feature( ic, title, text ) {
 			return h( 'li', null, icon( ic ), h( 'div', null, h( 'b', null, title ), text ) );
 		}
-		root.appendChild( h( 'div', { class: 'ypt-hero' },
+		var share = CFG.share;
+		if ( share ) {
+			root.appendChild( h( 'div', { class: 'ypt-hero ypt-hero--share' },
+				h( 'a', { class: 'ypt-brand', href: CFG.homeUrl }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), 'YeffoDesign' ),
+				h( 'div', { class: 'ypt-eyebrow', style: { marginTop: '24px' } }, 'Shared with you' ),
+				h( 'h1', null, share.protocol ? 'A friend sent you a protocol' : 'This link doesn’t work' ),
+				share.protocol ? null : h( 'p', null, 'The person who sent it may have stopped sharing it. Ask them for a new link.' )
+			) );
+			if ( share.protocol ) {
+				root.appendChild( protoCard( share.protocol ) );
+				root.appendChild( h( 'a', { class: 'ypt-btn ypt-btn--accent ypt-btn--block', style: { marginTop: '16px' }, href: CFG.loginUrl }, 'Sign in to add it' ) );
+				root.appendChild( h( 'p', { class: 'ypt-muted', style: { textAlign: 'center', marginTop: '14px' } },
+					'New here? ', h( 'a', { href: CFG.registerUrl }, 'Create a free account' ), ', then open the Dose Tracker and it’ll be waiting.' ) );
+				root.appendChild( h( 'div', { class: 'ypt-banner ypt-banner--info', style: { marginTop: '16px' } }, h( 'div', null, 'Doses here come from another person, not from YeffoDesign. Check them with your provider.' ) ) );
+			}
+			root.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label', style: { marginTop: '28px' } }, 'About the Dose Tracker' ) );
+		} else {
+			root.appendChild( h( 'div', { class: 'ypt-hero' },
 			h( 'a', { class: 'ypt-brand', href: CFG.homeUrl }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), 'YeffoDesign' ),
 			h( 'div', { class: 'ypt-eyebrow', style: { marginTop: '28px' } }, 'Free for customers' ),
 			h( 'h1', null, 'Dose Tracker' ),
 			h( 'p', null, 'Log every peptide and medication dose, see exactly how many units to draw, and get a reminder when it’s time.' )
 		) );
+		}
 		root.appendChild( h( 'ul', { class: 'ypt-features' },
 			feature( 'check', 'Today’s doses at a glance', 'Tap Take or Skip. Daily, weekly, every few days, or on/off cycles.' ),
 			feature( 'calc', 'Built-in vial calculator', 'Enter your vial and water once; every dose shows the units to draw.' ),
-			feature( 'bell', 'Reminders', 'A notification on your phone when a dose is due.' ),
+			feature( 'bell', 'Reminders', 'A notification on your phone when a dose is due, and before you run low.' ),
+			feature( 'vials', 'Your whole supply', 'Track vials and pills on hand, see when to mix the next one and when to reorder.' ),
 			feature( 'lock', 'Private and encrypted', 'Your entries are encrypted with a key only your account unlocks.' )
 		) );
-		root.appendChild( h( 'a', { class: 'ypt-btn ypt-btn--primary ypt-btn--block', href: CFG.loginUrl }, 'Sign in to start' ) );
-		root.appendChild( h( 'p', { class: 'ypt-muted', style: { textAlign: 'center', marginTop: '14px' } },
-			'New here? ', h( 'a', { href: CFG.registerUrl }, 'Create a free account' ) ) );
+		if ( ! share || ! share.protocol ) {
+			root.appendChild( h( 'a', { class: 'ypt-btn ypt-btn--primary ypt-btn--block', href: CFG.loginUrl }, 'Sign in to start' ) );
+			root.appendChild( h( 'p', { class: 'ypt-muted', style: { textAlign: 'center', marginTop: '14px' } },
+				'New here? ', h( 'a', { href: CFG.registerUrl }, 'Create a free account' ) ) );
+		}
 		root.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { textAlign: 'center', marginTop: '24px' } },
 			'A personal log and reminder tool, not medical advice.' ) );
 	}
@@ -3485,6 +4929,10 @@
 	}
 
 	if ( ! CFG.signedIn ) {
+		if ( CFG.share && CFG.share.protocol ) {
+			// Signing up goes through My Account, not back here: remember the link so the tracker offers it next time.
+			saveJSON( PENDING_SHARE_KEY, CFG.share );
+		}
 		renderSignedOut();
 		return;
 	}
@@ -3507,5 +4955,21 @@
 	if ( savedUi && savedUi.tab && savedUi.tab !== 'today' ) {
 		ui.tab = savedUi.tab;
 	}
-	load();
+	if ( savedUi && savedUi.supplyView ) {
+		ui.supplyView = savedUi.supplyView;
+	}
+	var incoming = CFG.share || loadJSON( PENDING_SHARE_KEY, null );
+	if ( CFG.share ) {
+		ui.tab = 'today';
+		// The address bar goes back to the app, so a refresh or Home Screen install isn't the share page.
+		try {
+			window.history.replaceState( null, '', CFG.appUrl );
+		} catch ( e ) {}
+	}
+	load().then( function () {
+		if ( incoming && state.loaded ) {
+			removeKey( PENDING_SHARE_KEY );
+			openReceivedShare( incoming );
+		}
+	} );
 }() );
