@@ -143,6 +143,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-processing-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-secret-box.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-login-throttle.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-retired-plugins.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-project-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-credential-purge.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-web-design-controller.php';
@@ -287,6 +288,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Webhook_Controller();
 		new YeffoPrint_Web_Chat_Controller();
 		new YeffoPrint_Login_Throttle();
+		new YeffoPrint_Retired_Plugins();
 		new YeffoPrint_Tracker_Store();
 		new YeffoPrint_Tracker_Usage();
 		new YeffoPrint_Tracker_Reminders();

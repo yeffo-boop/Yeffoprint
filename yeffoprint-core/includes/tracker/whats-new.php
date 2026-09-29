@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-09-29t',
+		'date'  => '2026-09-29',
+		'title' => 'Private reminders',
+		'text'  => 'Don\'t want medication names on your lock screen? On the Me tab, turn off "Show names in reminders" and reminders will just say a dose is due.',
+	],
+	[
 		'id'    => '2026-09-29s',
 		'date'  => '2026-09-29',
 		'title' => 'Extra privacy on shared devices',

@@ -70,6 +70,13 @@ class YeffoPrint_Tracker_Reminders {
 				'tag'   => 'yp-dose-' . $slot['key'],
 				'url'   => home_url( '/tracker/' ),
 			];
+			if ( ! self::show_names( $settings ) ) {
+				$message['title'] = __( 'Dose reminder', 'yeffoprint-core' );
+				$message['body']  = 1 === count( $slot['lines'] )
+					? __( 'You have a dose due. Open your tracker to see it.', 'yeffoprint-core' )
+					/* translators: %d: number of doses */
+					: sprintf( __( 'You have %d doses due. Open your tracker to see them.', 'yeffoprint-core' ), count( $slot['lines'] ) );
+			}
 			foreach ( $subs as $sub_id => $sub ) {
 				$status = YeffoPrint_Tracker_Push::send( $sub, $message );
 				if ( 404 === $status || 410 === $status ) {
@@ -78,6 +85,15 @@ class YeffoPrint_Tracker_Reminders {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Names on the lock screen are on by default (Jeff); the Me tab's
+	 * "Show names in reminders" switch turns them off. Every reminder
+	 * that names a medication checks this.
+	 */
+	public static function show_names( array $settings ): bool {
+		return ! ( isset( $settings['reminderNames'] ) && false === $settings['reminderNames'] );
 	}
 
 	/** @return array<int,array{key:string,names:string[],lines:string[]}> One entry per local time slot with something still to take. */
