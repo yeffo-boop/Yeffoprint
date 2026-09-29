@@ -1417,11 +1417,12 @@
 		var csv = rows.map( function ( r ) {
 			return r.map( function ( c ) {
 				var s = String( c == null ? '' : c );
-				// Spreadsheet formula injection guard.
-				if ( /^[=+\-@]/.test( s ) ) {
+				// Spreadsheet formula injection guard (tab and carriage
+				// return start a formula in some spreadsheet apps too).
+				if ( /^[=+\-@\t\r]/.test( s ) ) {
 					s = '\'' + s;
 				}
-				return /[",\n]/.test( s ) ? '"' + s.replace( /"/g, '""' ) + '"' : s;
+				return /[",\r\n]/.test( s ) ? '"' + s.replace( /"/g, '""' ) + '"' : s;
 			} ).join( ',' );
 		} ).join( '\n' );
 		var blob = new Blob( [ csv ], { type: 'text/csv' } );
@@ -3491,6 +3492,16 @@
 		renderMessage( 'Almost ready', 'The Dose Tracker is being set up on our end. Please check back soon.', false );
 		return;
 	}
+
+	// Only this account's copy stays on the device: another customer who
+	// signed in on this browser earlier shouldn't leave theirs behind.
+	try {
+		Object.keys( window.localStorage ).forEach( function ( k ) {
+			if ( ( k.indexOf( 'ypt:' ) === 0 && k !== STORE_KEY ) || ( k.indexOf( 'ypt-q:' ) === 0 && k !== QUEUE_KEY ) ) {
+				removeKey( k );
+			}
+		} );
+	} catch ( e ) {}
 
 	var savedUi = loadJSON( UI_KEY, null );
 	if ( savedUi && savedUi.tab && savedUi.tab !== 'today' ) {

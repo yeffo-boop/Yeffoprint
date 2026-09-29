@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-09-29s',
+		'date'  => '2026-09-29',
+		'title' => 'Extra privacy on shared devices',
+		'text'  => 'Signing out anywhere on YeffoDesign now also clears the tracker copy saved on that device, so the next person to use it can\'t see your entries.',
+	],
+	[
 		'id'    => '2026-09-28c',
 		'date'  => '2026-09-28',
 		'title' => 'Blends',
