@@ -1551,6 +1551,17 @@
 
 		var errorEl = panel.querySelector( '[data-yp-wd-agreement-error]' );
 
+		// Save Draft and Send also save the milestone rows on screen, so
+		// milestones typed in but not yet saved on their own aren't lost
+		// when the panel re-renders after sending.
+		function agreementPayload() {
+			var fields = readWebDesignAgreementForm( panel );
+			if ( panel.querySelector( '[data-yp-wd-milestones-panel] [data-wd-milestones]' ) ) {
+				fields.milestones = readWebDesignMilestonesForm( panel.querySelector( '[data-yp-wd-milestones-panel]' ) );
+			}
+			return fields;
+		}
+
 		var saveButton = panel.querySelector( '[data-yp-wd-save-agreement]' );
 		if ( saveButton ) {
 			saveButton.addEventListener( 'click', function () {
@@ -1559,7 +1570,7 @@
 				YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( readWebDesignAgreementForm( panel ) )
+					body: JSON.stringify( agreementPayload() )
 				} )
 					.then( function () { saveButton.disabled = false; } )
 					.catch( function ( error ) {
@@ -1577,7 +1588,7 @@
 				YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( readWebDesignAgreementForm( panel ) )
+					body: JSON.stringify( agreementPayload() )
 				} )
 					.then( function () {
 						return YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement/send', { method: 'POST' } );
