@@ -119,3 +119,29 @@ or keep home time. Easing is stored as `settings.travel` (from/to offsets,
 start time) and the reminder sweep follows the same clock
 (`YeffoPrint_Tracker_Schedule::timezone()`, mirrored by
 `effectiveOffset()` in tracker.js).
+
+## Android app
+
+`tracker-android/` is a Capacitor app that opens the live **/tracker/**
+page full screen (see `tracker-android/README.md` for building and
+publishing). It adds no second copy of the tracker: every change to the
+web app shows up in the Android app on the next open, with no app update.
+
+- **Reminders are scheduled on the phone.** An Android WebView can't
+  receive Web Push, so inside the app tracker.js (the "Android app"
+  section) works out the next 14 days of due doses plus running-low and
+  mix-day alerts and schedules them as local notifications. They're
+  replaced whenever anything changes or the app opens, so a dose logged
+  early cancels its reminder. Nothing goes through a push server, and the
+  Show names in reminders switch applies. Each open covers the next 14
+  days, so someone who never opens the app for two weeks stops getting
+  reminders until they do.
+- Android 14+ turns "Alarms & reminders" off for new apps; without it a
+  reminder can arrive late. Turning reminders on asks for it once, and the
+  Me tab keeps offering it while it's off.
+- Signing out (in the app or on any signed-out page) cancels the phone's
+  reminders along with the saved copy.
+- Inside the app, "Continue with Google" and "Continue with Telegram" are
+  hidden on sign-in pages: Google blocks sign-in from an app's built-in
+  browser, and Telegram's needs a pop-up. Email/password, Discord and
+  Apple work.
