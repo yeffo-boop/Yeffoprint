@@ -13,7 +13,7 @@
  *   vial      { kind:'vial'|'pen', compound, mode:'mg'|'iu'|'conc'|'blend', amount, water, conc, volume, mixed, syringe, finished, parts, blend }
  *             A blend has parts [{ name, amount (mg) }] and amount = their total; blend is 'bought' or 'mixed' (the customer combined vials).
  *             A pen is a 3 mL cartridge the customer mixes like a vial; its dial is read as U-100 units (0.01 mL each).
- *   settings  { tz, reminders }
+ *   settings  { tz, reminders, reminderNames }
  *
  * The Mix a vial calculator is the same math as the Peptide & Hormone
  * Calculator page (theme assets/js/peptide-calculator.js):
@@ -3616,6 +3616,18 @@
 					toast( e.message || 'Couldn’t send a test.' );
 				} );
 			} }, 'Send a test reminder' ) );
+		}
+		if ( on || state.push.devices > 0 ) {
+			// Lock-screen privacy: names show by default (Jeff), and can be hidden.
+			var names = s.reminderNames !== false;
+			var namesSw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': names ? 'true' : 'false', 'aria-label': 'Show names in reminders' } );
+			namesSw.addEventListener( 'click', function () {
+				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { reminderNames: ! names } ) );
+			} );
+			card.appendChild( h( 'div', { class: 'ypt-toggle', style: { marginTop: '12px' } },
+				h( 'div', null, h( 'b', null, 'Show names in reminders' ), h( 'div', { class: 'ypt-muted ypt-small' }, names ? 'Reminders say what’s due, like “Time for BPC-157”. Anyone who sees your lock screen can read them.' : 'Reminders just say a dose is due, without naming it.' ) ),
+				namesSw
+			) );
 		}
 		if ( state.push.devices > ( on ? 1 : 0 ) ) {
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, 'Also on for ' + ( state.push.devices - ( on ? 1 : 0 ) ) + ' other device' + ( state.push.devices - ( on ? 1 : 0 ) === 1 ? '' : 's' ) + '.' ) );

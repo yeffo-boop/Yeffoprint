@@ -66,8 +66,16 @@ class YeffoPrint_Tracker_Reminders {
 				'tag'   => 'yp-dose-' . $slot['key'],
 				'url'   => home_url( '/tracker/' ),
 			];
+			if ( ! self::show_names( $settings ) ) {
+				$i = count( $messages ) - 1;
+				$messages[ $i ]['title'] = __( 'Dose reminder', 'yeffoprint-core' );
+				$messages[ $i ]['body']  = 1 === count( $slot['lines'] )
+					? __( 'You have a dose due. Open your tracker to see it.', 'yeffoprint-core' )
+					/* translators: %d: number of doses */
+					: sprintf( __( 'You have %d doses due. Open your tracker to see them.', 'yeffoprint-core' ), count( $slot['lines'] ) );
+			}
 		}
-		foreach ( self::supply_alerts_between( $user_id, $tz, $since, $now ) as $alert ) {
+		foreach ( self::supply_alerts_between( $user_id, $tz, $since, $now, self::show_names( $settings ) ) as $alert ) {
 			$messages[] = $alert;
 		}
 		if ( ! $messages ) {
@@ -87,6 +95,15 @@ class YeffoPrint_Tracker_Reminders {
 	}
 
 	/**
+	 * Names on the lock screen are on by default (Jeff); the Me tab's
+	 * "Show names in reminders" switch turns them off. Every reminder
+	 * that names a medication checks this.
+	 */
+	public static function show_names( array $settings ): bool {
+		return ! ( isset( $settings['reminderNames'] ) && false === $settings['reminderNames'] );
+	}
+
+	/**
 	 * Running-low and mix-day notifications. The app works these out
 	 * (it has the vial math) and saves the upcoming ones as the `alerts`
 	 * settings record: [{ id, date, time, title, body }] in the customer's
@@ -94,7 +111,7 @@ class YeffoPrint_Tracker_Reminders {
 	 *
 	 * @return array<int,array{title:string,body:string,tag:string,url:string}>
 	 */
-	private static function supply_alerts_between( int $user_id, \DateTimeZone $tz, int $since, int $now ): array {
+	private static function supply_alerts_between( int $user_id, \DateTimeZone $tz, int $since, int $now, bool $show_names = true ): array {
 		$record = YeffoPrint_Tracker_Store::get( $user_id, 'settings', 'alerts' );
 		$out    = [];
 		foreach ( array_slice( (array) ( $record['list'] ?? [] ), 0, 40 ) as $alert ) {
@@ -110,10 +127,23 @@ class YeffoPrint_Tracker_Reminders {
 			if ( $at <= $since || $at > $now ) {
 				continue;
 			}
+			$id = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) ( $alert['id'] ?? '' ) );
+			if ( ! $show_names ) {
+				// Titles, bodies and ids (low-bpc157-…) all carry the name, so
+				// hidden-names alerts use fixed wording and a hashed tag.
+				$mix   = 0 === strpos( $id, 'mix-' );
+				$out[] = [
+					'title' => $mix ? __( 'Time to mix a new vial', 'yeffoprint-core' ) : __( 'Your supply is running low', 'yeffoprint-core' ),
+					'body'  => $mix ? __( 'Your next dose needs a new vial or pen.', 'yeffoprint-core' ) : __( 'Open the tracker to see what to reorder.', 'yeffoprint-core' ),
+					'tag'   => 'yp-supply-' . substr( md5( $id ), 0, 12 ),
+					'url'   => home_url( '/tracker/' ),
+				];
+				continue;
+			}
 			$out[] = [
 				'title' => wp_strip_all_tags( (string) ( $alert['title'] ?? '' ) ),
 				'body'  => wp_strip_all_tags( (string) ( $alert['body'] ?? '' ) ),
-				'tag'   => 'yp-supply-' . preg_replace( '/[^A-Za-z0-9_-]/', '', (string) ( $alert['id'] ?? '' ) ),
+				'tag'   => 'yp-supply-' . $id,
 				'url'   => home_url( '/tracker/' ),
 			];
 		}
