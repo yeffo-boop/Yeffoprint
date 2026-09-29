@@ -1981,12 +1981,15 @@
 	 *        'pen'      pen cartridges to mix (amount + amountUnit)
 	 *        'premixed' ready-to-use vials (conc mg/mL, volume mL)
 	 *        'count'    pills, sprays, patches… (count is how many of them)
+ *        'water'    bac water (volume mL per bottle, ml = mL left across
+ *                   every bottle; mixing a vial from supply takes its water off)
 	 * count is how many vials/pens (or pills) there were at countedAt;
 	 * mixing a vial from supply takes one off, and pills count down with
 	 * each dose taken after countedAt. warn: days of supply left that
 	 * counts as running low (0 = never warn).
 	 */
-	var STOCK_FORMS = [ [ 'powder', 'Powder vial' ], [ 'pen', 'Pen cartridge' ], [ 'premixed', 'Premixed vial' ], [ 'count', 'Pills & other' ] ];
+	var STOCK_FORMS = [ [ 'powder', 'Powder vial' ], [ 'pen', 'Pen cartridge' ], [ 'premixed', 'Premixed vial' ], [ 'count', 'Pills & other' ], [ 'water', 'Bac water' ] ];
+	var WATER_NAME = 'Bac water';
 	var WARN_CHOICES = [ [ 7, '1 week' ], [ 14, '2 weeks' ], [ 30, '1 month' ], [ 0, 'Off' ] ];
 	var PLAN_DAYS = 730;
 	var BUY_AHEAD_DAYS = 7;
@@ -1998,12 +2001,29 @@
 	}
 
 	function isVialStock( s ) {
-		return s.form !== 'count';
+		return s.form !== 'count' && s.form !== 'water';
+	}
+
+	function isWaterStock( s ) {
+		return s.form === 'water';
+	}
+
+	function waterStocks() {
+		return stocks().filter( isWaterStock );
+	}
+
+	/** The bac water line a mix takes from: the one with the most left. */
+	function waterToMix() {
+		return waterStocks().filter( function ( s ) {
+			return stockLeft( s ) > 0;
+		} ).sort( function ( a, b ) {
+			return stockLeft( b ) - stockLeft( a );
+		} )[ 0 ] || null;
 	}
 
 	/** Whether a stock item feeds this protocol: same name, and the same kind of thing (pen cartridges for pen doses, vials for syringe doses, pills for anything without a vial). */
 	function stockFits( s, p ) {
-		if ( ! sameCompound( s.compound, p.compound ) ) {
+		if ( isWaterStock( s ) || ! sameCompound( s.compound, p.compound ) ) {
 			return false;
 		}
 		if ( ! isVialStock( s ) ) {
@@ -2037,6 +2057,9 @@
 
 	/** What's left of a stock item: vials/pens as counted, pills minus every dose taken since they were counted. */
 	function stockLeft( s ) {
+		if ( isWaterStock( s ) ) {
+			return Math.max( 0, Math.round( ( +s.ml || 0 ) * 10 ) / 10 );
+		}
 		var count = Math.max( 0, +s.count || 0 );
 		if ( isVialStock( s ) ) {
 			return count;
@@ -2052,6 +2075,9 @@
 	}
 
 	function countUnit( s, n ) {
+		if ( isWaterStock( s ) ) {
+			return 'mL';
+		}
 		var u = s.countUnit || 'tablet';
 		return n === 1 ? u : UNIT_PLURAL[ u ] || u;
 	}
@@ -2061,6 +2087,9 @@
 		var many = n !== 1;
 		if ( s.form === 'premixed' ) {
 			return ( +s.conc > 0 ? fmtNum( +s.conc ) + ' mg/mL · ' : '' ) + ( +s.volume > 0 ? fmtNum( +s.volume ) + ' mL ' : '' ) + ( many ? 'vials' : 'vial' );
+		}
+		if ( isWaterStock( s ) ) {
+			return ( +s.volume > 0 ? fmtNum( +s.volume ) + ' mL ' : '' ) + ( many ? 'bottles' : 'bottle' );
 		}
 		if ( s.form === 'count' ) {
 			return ( s.strength ? s.strength + ' ' : '' ) + countUnit( s, n );
@@ -2183,8 +2212,77 @@
 		return plan;
 	}
 
+	/**
+	 * Bac water: every upcoming mix across all vial schedules (each new
+	 * vial mixed like the one in use, with the same water), paid for in
+	 * date order from the mL on hand. coveredUntil is the day before the
+	 * first mix there isn't enough water for.
+	 */
+	function waterPlan() {
+		var mixes = [];
+		protocols().forEach( function ( p ) {
+			if ( p.paused || ! usesVial( p ) ) {
+				return;
+			}
+			var cur = currentVial( p );
+			var water = cur && cur.mode !== 'conc' ? +cur.water || 0 : 0;
+			var per = supplyPlan( p ).perVial;
+			var info = cur ? vialInfo( cur ) : null;
+			if ( ! water || ! per || ! info || info.dosesLeft == null ) {
+				return;
+			}
+			var dates = upcomingDoseDates( p ).dates;
+			for ( var idx = info.dosesLeft; idx < dates.length && mixes.length < 300; idx += per ) {
+				mixes.push( { date: dates[ idx ], ml: water, protocol: p } );
+			}
+		} );
+		mixes.sort( function ( a, b ) {
+			return a.date.localeCompare( b.date );
+		} );
+		var left = waterStocks().reduce( function ( n, s ) {
+			return n + stockLeft( s );
+		}, 0 );
+		var covered = 0;
+		while ( covered < mixes.length && left + 0.0001 >= mixes[ covered ].ml ) {
+			left -= mixes[ covered ].ml;
+			covered++;
+		}
+		var next = mixes[ covered ] || null;
+		return {
+			water: true,
+			mixes: mixes,
+			covered: covered,
+			known: mixes.length > 0,
+			all: covered >= mixes.length,
+			nextNeeded: next ? next.date : null,
+			coveredUntil: next ? addDays( next.date, -1 ) : mixes.length ? mixes[ mixes.length - 1 ].date : null,
+		};
+	}
+
+	function waterStatus( s ) {
+		var left = stockLeft( s );
+		var plan = waterPlan();
+		var warn = s.warn == null ? 14 : +s.warn;
+		if ( ! plan.known ) {
+			return { protocol: null, left: left, plan: plan, tone: 'mute', text: 'No mixes coming up', low: false };
+		}
+		if ( plan.all ) {
+			return { protocol: null, left: left, plan: plan, tone: 'ok', text: 'Enough for ' + plan.mixes.length + ' mix' + ( plan.mixes.length === 1 ? '' : 'es' ), low: false };
+		}
+		var until = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+		if ( ! plan.covered ) {
+			var soon = daysBetween( todayStr(), plan.nextNeeded ) < warn;
+			return { protocol: null, left: left, plan: plan, tone: soon ? 'bad' : 'warn', text: 'Not enough for your next mix', low: warn > 0 && soon };
+		}
+		var low = warn > 0 && daysBetween( todayStr(), plan.coveredUntil ) < warn;
+		return { protocol: null, left: left, plan: plan, tone: low ? 'warn' : 'ok', text: ( low ? 'Low · short on ' : 'Covered to ' ) + until, low: low };
+	}
+
 	/** Running low: the stock item's plan runs out within its warning window (and before the cycle ends). */
 	function stockStatus( s ) {
+		if ( isWaterStock( s ) ) {
+			return waterStatus( s );
+		}
 		var p = stockProtocol( s );
 		var left = stockLeft( s );
 		if ( ! p ) {
@@ -2227,6 +2325,11 @@
 
 	function lowLine( x ) {
 		var plan = x.st.plan;
+		if ( isWaterStock( x.s ) ) {
+			var mixDay = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+			return ! x.st.left ? 'You’re out, and you mix next on ' + mixDay + '.'
+				: fmtNum( x.st.left, 1 ) + ' mL left' + ( plan.covered ? ', enough for your mixes until ' + mixDay + '.' : ', not enough for your mix on ' + mixDay + '.' );
+		}
 		if ( ! plan || ! plan.covered ) {
 			return 'You’ve run out.';
 		}
@@ -2484,17 +2587,17 @@
 	}
 
 	function stockIcon( s ) {
-		return h( 'span', { class: 'ypt-mini ypt-mini--' + ( s.form === 'count' ? 'bottle' : s.form === 'pen' ? 'pen' : 'vial' ), 'aria-hidden': 'true' } );
+		return h( 'span', { class: 'ypt-mini ypt-mini--' + ( s.form === 'count' || isWaterStock( s ) ? 'bottle' : s.form === 'pen' ? 'pen' : 'vial' ), 'aria-hidden': 'true' } );
 	}
 
 	function renderOnHand() {
 		var wrap = h( 'div', null );
 		var list = stocks();
-		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '2px 4px 10px' } }, 'Unmixed vials, pens and pills you have at home. Mixing one takes it off this list.' ) );
+		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '2px 4px 10px' } }, 'Unmixed vials, pens, bac water and pills you have at home. Mixing one takes it off this list.' ) );
 		if ( ! list.length ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
 				h( 'h2', null, 'Keep track of what you have' ),
-				h( 'p', null, 'Add the vials, pens or pills you have at home. We’ll show how long they’ll last on your schedule and remind you before you run out.' ),
+				h( 'p', null, 'Add the vials, pens, bac water or pills you have at home. We’ll show how long they’ll last on your schedule and remind you before you run out.' ),
 				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
 					openStockSheet( null, null );
 				} }, 'Add stock' )
@@ -2523,7 +2626,7 @@
 				),
 				isVialStock( s ) ? stepper( left, s.compound + ' on hand', function ( n ) {
 					put( 'stock', s.id, Object.assign( {}, s, { count: n, countedAt: new Date().toISOString() } ) );
-				} ) : h( 'div', { class: 'ypt-stock__count' }, h( 'b', null, fmtNum( left, 0 ) ), h( 'span', null, countUnit( s, left ) ) )
+				} ) : h( 'div', { class: 'ypt-stock__count' }, h( 'b', null, fmtNum( left, isWaterStock( s ) ? 1 : 0 ) ), h( 'span', null, countUnit( s, left ) ) )
 			);
 		} ) ) );
 		var warnsOn = list.some( function ( s ) {
@@ -2534,8 +2637,9 @@
 				? 'We’ll warn you here and on Today before anything runs out' + ( state.pushOnHere ? ', with a notification too.' : '. Turn on reminders on the Me tab to get a notification too.' )
 				: 'Running-low warnings are off for everything here.',
 			list.some( function ( s ) {
-				return ! isVialStock( s );
-			} ) ? ' Pills count down each time you tap Take.' : '' ) ) );
+				return s.form === 'count';
+			} ) ? ' Pills count down each time you tap Take.' : '',
+			list.some( isWaterStock ) ? ' Bac water counts down each time you mix a vial.' : '' ) ) );
 		return wrap;
 	}
 
@@ -2633,6 +2737,20 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-card' }, tl ) );
 		}
 
+		var waters = waterStocks();
+		if ( usesVial( p ) && waters.length ) {
+			var wst = waterStatus( waters[ 0 ] );
+			var wLeft = waters.reduce( function ( n, x ) {
+				return n + stockLeft( x );
+			}, 0 );
+			wrap.appendChild( h( 'button', { type: 'button', class: 'ypt-card ypt-note ypt-note--btn', onclick: function () {
+				openStockSheet( waters[ 0 ], null );
+			} }, stockIcon( waters[ 0 ] ),
+				h( 'div', null,
+					h( 'div', { class: 'ypt-note__title' }, WATER_NAME + ': ' + fmtNum( wLeft, 1 ) + ' mL left ', h( 'span', { class: 'ypt-tag ypt-tag--' + wst.tone }, wst.text ) ),
+					wst.plan.known ? 'Covers ' + wst.plan.covered + ' of your next ' + wst.plan.mixes.length + ' mix' + ( wst.plan.mixes.length === 1 ? '' : 'es' ) + ', across all your vials.' : 'No mixes coming up yet.' ) ) );
+		}
+
 		var s = state.records.settings.me || {};
 		if ( usesVial( p ) ) {
 			var on = s.mixReminders !== false;
@@ -2664,7 +2782,7 @@
 		} )[ 0 ];
 		var curVial = cur ? currentVial( cur ) : null;
 		var s = existing ? JSON.parse( JSON.stringify( existing ) ) : {
-			compound: opts.compound || '',
+			compound: opts.compound || ( opts.form === 'water' ? WATER_NAME : '' ),
 			form: opts.form || 'powder',
 			amount: curVial && curVial.mode !== 'conc' && ! isBlend( curVial ) ? curVial.amount : '',
 			amountUnit: curVial && curVial.mode === 'iu' ? 'IU' : 'mg',
@@ -2685,13 +2803,18 @@
 		var preview = h( 'div', { 'aria-live': 'polite' } );
 
 		function total() {
+			if ( isWaterStock( s ) ) {
+				return Math.round( ( existing ? left + adding * ( +s.volume || 0 ) : ( +s.count || 0 ) * ( +s.volume || 0 ) ) * 10 ) / 10;
+			}
 			return existing ? left + adding : +s.count || 0;
 		}
 
 		var saveBtn;
 
 		function saveLabel() {
-			return existing ? ( adding ? 'Add ' + adding : 'Save' ) : 'Add ' + ( +s.count || 0 );
+			var n = existing ? adding : +s.count || 0;
+			var what = isWaterStock( s ) ? ' bottle' + ( n === 1 ? '' : 's' ) : '';
+			return existing ? ( adding ? 'Add ' + adding + what : 'Save' ) : 'Add ' + n + what;
 		}
 
 		function renderPreview() {
@@ -2700,6 +2823,23 @@
 			}
 			preview.textContent = '';
 			if ( ! s.compound ) {
+				return;
+			}
+			if ( isWaterStock( s ) ) {
+				var saved0 = state.records.stock[ id ];
+				state.records.stock[ id ] = Object.assign( {}, s, { id: id, ml: total() } );
+				var wp = waterPlan();
+				if ( saved0 ) {
+					state.records.stock[ id ] = saved0;
+				} else {
+					delete state.records.stock[ id ];
+				}
+				if ( wp.known && total() > 0 ) {
+					preview.appendChild( h( 'div', { class: 'ypt-calc-result ypt-plan__preview' },
+						fmtNum( total(), 1 ) + ' mL = ', h( 'b', null, wp.covered + ' of your next ' + wp.mixes.length + ' mix' + ( wp.mixes.length === 1 ? '' : 'es' ) ), '. ',
+						wp.all ? 'That’s enough for every vial you have planned.' : [ 'You’re covered to ', h( 'b', null, fmtDay( wp.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ]
+					) );
+				}
 				return;
 			}
 			var probe = Object.assign( {}, s, { id: id, count: total(), countedAt: new Date().toISOString() } );
@@ -2737,6 +2877,10 @@
 
 		function renderForm() {
 			formBox.textContent = '';
+			if ( isWaterStock( s ) ) {
+				renderWaterForm();
+				return;
+			}
 			if ( s.form === 'powder' || s.form === 'pen' ) {
 				formBox.appendChild( h( 'div', { class: 'ypt-field' },
 					h( 'label', { for: 'ypt-s-amount' }, s.form === 'pen' ? 'In each pen' : 'In each vial' ),
@@ -2804,14 +2948,55 @@
 			}
 		}
 
+		// Bac water: bottles of a set size, tracked in mL.
+		function renderWaterForm() {
+			formBox.appendChild( numField( 'Bottle size (mL)', 'volume', '30', 'ypt-s-volume' ) );
+			if ( existing ) {
+				formBox.appendChild( field( 'mL left now', h( 'input', { class: 'ypt-input', id: 'ypt-s-ml', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: left, oninput: function ( e ) {
+					left = Math.max( 0, parseFloat( e.target.value ) || 0 );
+					renderPreview();
+				} } ), 'A rough guess is fine. It counts down each time you mix a vial.', 'ypt-s-ml' ) );
+				formBox.appendChild( h( 'div', { class: 'ypt-field' },
+					h( 'span', { class: 'ypt-label' }, 'Just bought more?' ),
+					h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+						h( 'span', { class: 'ypt-small' }, 'Bottles to add' ),
+						h( 'div', { class: 'ypt-shrink' }, stepper( adding, 'Bottles to add', function ( n ) {
+							adding = n;
+							renderForm();
+							renderPreview();
+						} ) )
+					)
+				) );
+				return;
+			}
+			formBox.appendChild( h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'How many bottles' ),
+				stepper( +s.count || 0, 'How many bottles', function ( n ) {
+					s.count = n;
+					renderForm();
+					renderPreview();
+				} ),
+				h( 'p', { class: 'ypt-hint' }, 'Already opened one? Save, then tap it to set the mL left.' )
+			) );
+		}
+
+		var nameInput = compoundInput( 'ypt-s-compound', s.compound, function ( v ) {
+			s.compound = v;
+			renderPreview();
+		} );
 		var body = [
-			field( 'Name', compoundInput( 'ypt-s-compound', s.compound, function ( v ) {
-				s.compound = v;
-				renderPreview();
-			} ), null, 'ypt-s-compound' ),
+			field( 'Name', nameInput, null, 'ypt-s-compound' ),
 			h( 'div', { class: 'ypt-field' },
 				h( 'span', { class: 'ypt-label' }, 'What is it?' ),
 				seg( STOCK_FORMS, s.form, function ( f ) {
+					if ( f === 'water' && s.form !== 'water' ) {
+						s.volume = '';
+						if ( ! String( s.compound || '' ).trim() ) {
+							s.compound = WATER_NAME;
+							var el = nameInput.querySelector ? nameInput.querySelector( 'input' ) || nameInput : nameInput;
+							el.value = WATER_NAME;
+						}
+					}
 					s.form = f;
 					renderForm();
 					renderPreview();
@@ -2858,6 +3043,7 @@
 				var problem = ! String( s.compound || '' ).trim() ? 'Enter what it is.'
 					: s.form === 'premixed' && ! ( +s.conc > 0 && +s.volume > 0 ) ? 'Enter the strength and vial size.'
 					: ( s.form === 'powder' || s.form === 'pen' ) && ! ( +s.amount > 0 ) ? 'Enter how much is in each ' + ( s.form === 'pen' ? 'pen.' : 'vial.' )
+					: isWaterStock( s ) && ! ( +s.volume > 0 ) ? 'Enter the bottle size.'
 					: '';
 				if ( problem ) {
 					err.textContent = problem;
@@ -2879,12 +3065,19 @@
 					expires: s.expires || '',
 					warn: s.warn == null ? 14 : +s.warn,
 				};
+				if ( isWaterStock( s ) ) {
+					data.volume = +s.volume;
+					data.ml = total();
+					data.count = 0;
+				}
 				// Same thing added again (another order of the same vials): add to that line instead of a second one.
 				var twin = existing ? null : stocks().filter( function ( x ) {
 					return sameCompound( x.compound, data.compound ) && x.form === data.form && +x.amount === data.amount && +x.conc === data.conc && ( x.countUnit || '' ) === data.countUnit;
 				} )[ 0 ];
 				closeSheet();
-				if ( twin ) {
+				if ( twin && isWaterStock( twin ) ) {
+					put( 'stock', twin.id, Object.assign( {}, twin, { ml: stockLeft( twin ) + data.ml, volume: data.volume, countedAt: data.countedAt, bought: data.bought || twin.bought, expires: data.expires || twin.expires, warn: data.warn } ) );
+				} else if ( twin ) {
 					put( 'stock', twin.id, Object.assign( {}, twin, { count: stockLeft( twin ) + data.count, countedAt: data.countedAt, bought: data.bought || twin.bought, expires: data.expires || twin.expires, warn: data.warn } ) );
 				} else {
 					put( 'stock', id, data );
@@ -4265,11 +4458,13 @@
 		// New vials only: take one from the Supply tab's on-hand count.
 		var stockBox = h( 'div', null );
 		var takeStock = true;
+		var takeWater = true;
 
 		function renderStockBox() {
 			stockBox.textContent = '';
 			var st = existing ? null : stockToMix( v );
 			if ( ! st ) {
+				renderWaterBox();
 				return;
 			}
 			var on = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': takeStock ? 'true' : 'false', 'aria-label': 'Take it from your supply' } );
@@ -4281,6 +4476,23 @@
 			stockBox.appendChild( h( 'div', { class: 'ypt-toggle ypt-field' },
 				h( 'div', null, h( 'b', null, 'Take it from your supply' ), h( 'div', { class: 'ypt-muted ypt-small' }, n + ' ' + stockSummary( st, n ) + ' on hand' ) ),
 				on ) );
+			renderWaterBox();
+		}
+
+		// New vials mixed with water: take the water off the bac water line too.
+		function renderWaterBox() {
+			var w = existing || v.mode === 'conc' ? null : waterToMix();
+			if ( ! w ) {
+				return;
+			}
+			var sw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': takeWater ? 'true' : 'false', 'aria-label': 'Use bac water from your supply' } );
+			sw.addEventListener( 'click', function () {
+				takeWater = ! takeWater;
+				sw.setAttribute( 'aria-checked', takeWater ? 'true' : 'false' );
+			} );
+			stockBox.appendChild( h( 'div', { class: 'ypt-toggle ypt-field' },
+				h( 'div', null, h( 'b', null, 'Use bac water from your supply' ), h( 'div', { class: 'ypt-muted ypt-small' }, fmtNum( stockLeft( w ), 1 ) + ' mL left' + ( +v.water > 0 ? ', ' + fmtNum( Math.max( 0, stockLeft( w ) - +v.water ), 1 ) + ' mL after this' : '' ) ) ),
+				sw ) );
 		}
 
 		function numInput( id2, key, placeholder, target, onInput ) {
@@ -4636,6 +4848,10 @@
 				put( 'vial', id, saved );
 				if ( fromStock ) {
 					put( 'stock', fromStock.id, Object.assign( {}, fromStock, { count: Math.max( 0, stockLeft( fromStock ) - 1 ) } ) );
+				}
+				var water = ! existing && takeWater && saved.water > 0 ? waterToMix() : null;
+				if ( water ) {
+					put( 'stock', water.id, Object.assign( {}, water, { ml: Math.max( 0, Math.round( ( stockLeft( water ) - saved.water ) * 10 ) / 10 ), countedAt: new Date().toISOString() } ) );
 				}
 				if ( opts.replaces && state.records.vial[ opts.replaces ] && ! state.records.vial[ opts.replaces ].finished ) {
 					put( 'vial', opts.replaces, Object.assign( {}, state.records.vial[ opts.replaces ], { finished: true } ) );
