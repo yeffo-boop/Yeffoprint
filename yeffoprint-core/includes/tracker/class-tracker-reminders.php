@@ -55,14 +55,10 @@ class YeffoPrint_Tracker_Reminders {
 			return;
 		}
 
-		$due = self::due_between( $user_id, $settings, $since, $now );
-		if ( ! $due ) {
-			return;
-		}
-
-		$subs = YeffoPrint_Tracker_Store::all( $user_id, 'push' );
-		foreach ( $due as $slot ) {
-			$message = [
+		$tz       = YeffoPrint_Tracker_Schedule::timezone( $settings, $now );
+		$messages = [];
+		foreach ( self::due_between( $user_id, $tz, $since, $now ) as $slot ) {
+			$messages[] = [
 				'title' => 1 === count( $slot['lines'] )
 					? sprintf( /* translators: %s: compound */ __( 'Time for %s', 'yeffoprint-core' ), $slot['names'][0] )
 					: __( 'Time for your doses', 'yeffoprint-core' ),
@@ -70,6 +66,16 @@ class YeffoPrint_Tracker_Reminders {
 				'tag'   => 'yp-dose-' . $slot['key'],
 				'url'   => home_url( '/tracker/' ),
 			];
+		}
+		foreach ( self::supply_alerts_between( $user_id, $tz, $since, $now ) as $alert ) {
+			$messages[] = $alert;
+		}
+		if ( ! $messages ) {
+			return;
+		}
+
+		$subs = YeffoPrint_Tracker_Store::all( $user_id, 'push' );
+		foreach ( $messages as $message ) {
 			foreach ( $subs as $sub_id => $sub ) {
 				$status = YeffoPrint_Tracker_Push::send( $sub, $message );
 				if ( 404 === $status || 410 === $status ) {
@@ -80,14 +86,42 @@ class YeffoPrint_Tracker_Reminders {
 		}
 	}
 
-	/** @return array<int,array{key:string,names:string[],lines:string[]}> One entry per local time slot with something still to take. */
-	private static function due_between( int $user_id, array $settings, int $since, int $now ): array {
-		try {
-			$tz = new \DateTimeZone( (string) ( $settings['tz'] ?? '' ) ?: wp_timezone_string() );
-		} catch ( \Exception $e ) {
-			$tz = wp_timezone();
+	/**
+	 * Running-low and mix-day notifications. The app works these out
+	 * (it has the vial math) and saves the upcoming ones as the `alerts`
+	 * settings record: [{ id, date, time, title, body }] in the customer's
+	 * own clock. Each one goes out once, as its time passes.
+	 *
+	 * @return array<int,array{title:string,body:string,tag:string,url:string}>
+	 */
+	private static function supply_alerts_between( int $user_id, \DateTimeZone $tz, int $since, int $now ): array {
+		$record = YeffoPrint_Tracker_Store::get( $user_id, 'settings', 'alerts' );
+		$out    = [];
+		foreach ( array_slice( (array) ( $record['list'] ?? [] ), 0, 40 ) as $alert ) {
+			if ( ! is_array( $alert ) ) {
+				continue;
+			}
+			$date = (string) ( $alert['date'] ?? '' );
+			$time = (string) ( $alert['time'] ?? '' );
+			if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) || ! preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $time ) ) {
+				continue;
+			}
+			$at = ( new \DateTimeImmutable( $date . ' ' . $time, $tz ) )->getTimestamp();
+			if ( $at <= $since || $at > $now ) {
+				continue;
+			}
+			$out[] = [
+				'title' => wp_strip_all_tags( (string) ( $alert['title'] ?? '' ) ),
+				'body'  => wp_strip_all_tags( (string) ( $alert['body'] ?? '' ) ),
+				'tag'   => 'yp-supply-' . preg_replace( '/[^A-Za-z0-9_-]/', '', (string) ( $alert['id'] ?? '' ) ),
+				'url'   => home_url( '/tracker/' ),
+			];
 		}
+		return $out;
+	}
 
+	/** @return array<int,array{key:string,names:string[],lines:string[]}> One entry per local time slot with something still to take. */
+	private static function due_between( int $user_id, \DateTimeZone $tz, int $since, int $now ): array {
 		$protocols = YeffoPrint_Tracker_Store::all( $user_id, 'protocol' );
 		if ( ! $protocols ) {
 			return [];

@@ -53,15 +53,18 @@ class YeffoPrint_Tracker_Push {
 		}
 
 		$response = wp_remote_post( $endpoint, [
-			'timeout' => 10,
-			'headers' => [
+			'timeout'     => 10,
+			// The endpoint was checked against real push services above; a
+			// redirect would send the request somewhere that wasn't.
+			'redirection' => 0,
+			'headers'     => [
 				'Content-Type'     => 'application/octet-stream',
 				'Content-Encoding' => 'aes128gcm',
 				'TTL'              => (string) $ttl,
 				'Urgency'          => 'high',
 				'Authorization'    => 'vapid t=' . $jwt . ', k=' . self::b64url( $keys['public'] ),
 			],
-			'body'    => $body,
+			'body'        => $body,
 		] );
 
 		return is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );

@@ -16,6 +16,21 @@ account.
   WordPress account, or Tools → Erase Personal Data removes the rows and
   that key, so old backups can't be read either.
 - There is no admin screen that shows a customer's entries, by design.
+- The app keeps a copy in the customer's browser so it opens offline. It
+  is cleared by the app's Sign out button, on any signed-out page of the
+  site (so signing out from the header or My Account clears it too), and
+  when a different account opens the tracker on that browser.
+- The app page sends a strict Content-Security-Policy (only this site's
+  tracker.js plus its nonce'd config script may run; no framing).
+- Sign-in is rate limited for the whole site (`security/class-login-throttle.php`):
+  10 failed tries per IP in 15 minutes, 30 per account in an hour. The
+  account password is what unlocks a customer's entries, so this matters.
+
+**What the encryption does and doesn't cover.** It protects a copied
+database or backup. It does not protect against someone who can run code
+on the server (a WordPress admin account, a plugin, or server access):
+the site has to decrypt entries to show them, so it can. Keep admin
+accounts few and strongly protected, and only install plugins you trust.
 
 ## The master key (back this up)
 
@@ -59,6 +74,51 @@ as the product page's "Add another label", so pricing, validation and
 "Edit customization" work unchanged, and then opens the cart. Custom
 sizes (typed inches) stay on the product page. Nothing from this flow is
 saved in the tracker.
+
+## Supply (inventory and planner)
+
+The Vials tab is now **Supply**, with three views:
+
+- **Mixed**: vials and pens in use, as before, plus how many more are on
+  hand and the date that covers them to.
+- **On hand**: `stock` records (encrypted like everything else): unmixed
+  powder vials, pen cartridges, premixed vials, or pills/sprays/patches
+  counted one by one. Mixing a vial offers "Take it from your supply",
+  which takes one off; pills count down with every dose taken after they
+  were counted.
+- **Plan**: for each protocol, the vial in use, then each vial on hand
+  (mix dates), then any still to buy before the cycle ends, with a
+  "buy by" date a week ahead.
+
+Running low (each item's "Warn me when I have" window, default 2 weeks)
+shows on Supply and Today. On the day a vial is used up, Today's dose card
+shows a **Mix vial N of M** button that pre-fills the new vial and marks
+the old one finished. The app works out upcoming running-low and mix-day
+notifications and saves them as the `alerts` settings record; the reminder
+sweep sends each one when its time comes (10 AM for running low, 7 PM the
+evening before a mix day).
+
+## Shared protocols
+
+**Share this protocol** (in a protocol's edit sheet) makes a link
+`/tracker/p/{code}` holding only the dose, schedule and, if ticked, how to
+mix it, cycle length and notes. Stored in `wp_yeffoprint_tracker_shares`,
+sealed with the master key; no name or history. Whoever opens it gets an
+**Add to my tracker** sheet (signed-out visitors see the protocol and a
+sign-in button). Link previews in texts stay generic. **Me › Shared
+links** lists the customer's own links (from `GET /tracker/state`'s
+`shares`) with **Stop sharing** (`DELETE /tracker/shares/{code}`, owner
+only), after which the link shows "This link doesn't work". Copies already
+added to someone's tracker stay. "Delete my data" removes all their links.
+
+## Travel mode
+
+The schedule follows the customer's home zone (`settings.baseTz`). When
+the phone's zone changes, Today asks: ease in 2 hours a day, switch now,
+or keep home time. Easing is stored as `settings.travel` (from/to offsets,
+start time) and the reminder sweep follows the same clock
+(`YeffoPrint_Tracker_Schedule::timezone()`, mirrored by
+`effectiveOffset()` in tracker.js).
 
 ## Injection site rotation
 

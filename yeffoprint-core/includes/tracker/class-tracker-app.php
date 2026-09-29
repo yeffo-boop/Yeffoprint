@@ -16,6 +16,7 @@
  *   /tracker/sw.js                   service worker (must be served from inside /tracker/ to control it)
  *   /tracker/manifest.webmanifest    Home Screen install metadata
  *   /tracker/session                 a fresh REST nonce for the signed-in customer
+ *   /tracker/p/{code}                a shared protocol (class-tracker-shares.php): the app, opened on "Add to my tracker"
  *
  * Nothing about a customer's doses is printed into the page — the app
  * fetches them from the nonce-checked REST API
@@ -31,10 +32,31 @@ class YeffoPrint_Tracker_App {
 
 	private const QUERY_VAR = 'yeffoprint_tracker';
 
+	private const SHARE_VAR = 'yeffoprint_tracker_share';
+
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_rewrite' ] );
 		add_filter( 'query_vars', [ $this, 'register_query_var' ] );
 		add_action( 'template_redirect', [ $this, 'maybe_serve' ], 0 );
+		add_action( 'wp_footer', [ $this, 'forget_device_copy' ] );
+		add_action( 'login_footer', [ $this, 'forget_device_copy' ] );
+	}
+
+	/**
+	 * The app keeps a copy of the customer's entries in the browser so it
+	 * opens offline. Its own Sign out button clears that copy, but signing
+	 * out anywhere else on the site (the header, My Account, wp-login.php)
+	 * didn't, which left the entries readable on a shared computer. Every
+	 * signed-out page now clears it: the saved copy and unsynced changes
+	 * (localStorage ypt:* / ypt-q:*) and the offline copy of the app page.
+	 */
+	public function forget_device_copy(): void {
+		if ( is_user_logged_in() ) {
+			return;
+		}
+		?>
+<script>(function(){try{var s=window.localStorage,k=[];for(var i=0;i<s.length;i++){var n=s.key(i);if(n&&(n.indexOf('ypt:')===0||n.indexOf('ypt-q:')===0)){k.push(n);}}k.forEach(function(n){s.removeItem(n);});}catch(e){}try{if(window.caches){caches.keys().then(function(ks){ks.forEach(function(c){if(c.indexOf('yp-tracker-')===0){caches.delete(c);}});});}}catch(e){}})();</script>
+		<?php
 	}
 
 	public static function url(): string {
@@ -51,10 +73,12 @@ class YeffoPrint_Tracker_App {
 		add_rewrite_rule( '^' . self::SLUG . '/sw\.js$', 'index.php?' . self::QUERY_VAR . '=sw', 'top' );
 		add_rewrite_rule( '^' . self::SLUG . '/manifest\.webmanifest$', 'index.php?' . self::QUERY_VAR . '=manifest', 'top' );
 		add_rewrite_rule( '^' . self::SLUG . '/session$', 'index.php?' . self::QUERY_VAR . '=session', 'top' );
+		add_rewrite_rule( '^' . self::SLUG . '/p/([A-Za-z0-9]{10})/?$', 'index.php?' . self::QUERY_VAR . '=app&' . self::SHARE_VAR . '=$matches[1]', 'top' );
 	}
 
 	public function register_query_var( array $vars ): array {
 		$vars[] = self::QUERY_VAR;
+		$vars[] = self::SHARE_VAR;
 		return $vars;
 	}
 
@@ -147,10 +171,17 @@ class YeffoPrint_Tracker_App {
 		header( 'Cache-Control: no-store, private' );
 		header( 'X-Robots-Tag: noindex' );
 		header( 'Referrer-Policy: same-origin' );
+		$script_nonce = self::send_security_headers();
 		status_header( 200 );
 
 		$user   = wp_get_current_user();
 		$assets = self::asset_urls();
+
+		// A shared protocol link: the app opens on it. Nothing in it identifies whoever shared it.
+		$share_code = (string) get_query_var( self::SHARE_VAR );
+		$share      = '' !== $share_code ? YeffoPrint_Tracker_Shares::get( $share_code ) : null;
+		$here       = '' !== $share_code ? YeffoPrint_Tracker_Shares::url( $share_code ) : self::url();
+
 		$config = [
 			'signedIn'      => is_user_logged_in(),
 			'ready'         => YeffoPrint_Tracker_Crypto::is_ready(),
@@ -160,7 +191,7 @@ class YeffoPrint_Tracker_App {
 			'nonce'         => $user->ID ? wp_create_nonce( 'wp_rest' ) : '',
 			'appUrl'        => self::url(),
 			'swUrl'         => home_url( '/' . self::SLUG . '/sw.js' ),
-			'loginUrl'      => wp_login_url( self::url() ),
+			'loginUrl'      => wp_login_url( $here ),
 			'registerUrl'   => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_registration_url(),
 			'logoutUrl'     => $user->ID ? wp_logout_url( self::url() ) : '',
 			'homeUrl'       => home_url( '/' ),
@@ -171,9 +202,41 @@ class YeffoPrint_Tracker_App {
 			'compounds'     => self::compound_names(),
 			'medications'   => YeffoPrint_Tracker_Medications::all(),
 			'whatsNew'      => include YEFFOPRINT_CORE_PATH . 'includes/tracker/whats-new.php',
+			'share'         => '' !== $share_code ? [ 'code' => $share_code, 'protocol' => $share ] : null,
 		];
 
 		include YEFFOPRINT_CORE_PATH . 'includes/tracker/views/app.php';
+	}
+
+	/**
+	 * The app page is its own document (no wp_head), so it can lock down
+	 * what a browser will run in it: only this site's own tracker.js and
+	 * the one inline config script (by nonce), data sent only back to this
+	 * site, and no framing by other sites. If anything ever slipped a
+	 * script into customer text, the browser would refuse to run it.
+	 *
+	 * @return string The inline-script nonce.
+	 */
+	private static function send_security_headers(): string {
+		$nonce = base64_encode( random_bytes( 16 ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$csp   = [
+			"default-src 'self'",
+			"script-src 'self' 'nonce-{$nonce}'",
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+			"font-src 'self' https://fonts.gstatic.com data:",
+			"img-src 'self' data: blob: https:",
+			"connect-src 'self'",
+			"worker-src 'self'",
+			"manifest-src 'self'",
+			"object-src 'none'",
+			"base-uri 'none'",
+			"form-action 'self'",
+			"frame-ancestors 'none'",
+		];
+		header( 'Content-Security-Policy: ' . implode( '; ', $csp ) );
+		header( 'X-Frame-Options: DENY' );
+		header( 'X-Content-Type-Options: nosniff' );
+		return $nonce;
 	}
 
 	/** @return array{css:string,js:string} Content-hashed, so a deploy busts every cache (browser and service worker). */

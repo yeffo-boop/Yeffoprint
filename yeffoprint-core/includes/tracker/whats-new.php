@@ -15,10 +15,34 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
-		'id'    => '2026-09-28d',
-		'date'  => '2026-09-28',
+		'id'    => '2026-09-29w',
+		'date'  => '2026-09-29',
 		'title' => 'Injection site rotation',
 		'text'  => 'Each injection now shows the next spot to use, picked from the one that has rested longest. Tap "Change" to choose a different spot on the body map, and see where you\'ve injected lately on the History tab. Choose the spots you use when you edit a peptide.',
+	],
+	[
+		'id'    => '2026-09-29v',
+		'date'  => '2026-09-29',
+		'title' => 'Travel mode',
+		'text'  => 'Flying somewhere with a different time zone? Today asks how to handle your reminders: ease into local time a couple of hours a day, switch right away, or keep your home time.',
+	],
+	[
+		'id'    => '2026-09-29u',
+		'date'  => '2026-09-29',
+		'title' => 'Share a protocol',
+		'text'  => 'Open any peptide or medication and tap "Share this protocol" to send a link with the dose and schedule (and how to mix it, if you like). Whoever opens it can add it to their own tracker in one tap. Your name and history are never included, and you can stop any link from Me › Shared links.',
+	],
+	[
+		'id'    => '2026-09-29t',
+		'date'  => '2026-09-29',
+		'title' => 'Your whole supply',
+		'text'  => 'The Vials tab is now Supply. Add the vials, pens and pills you have at home to see how long they\'ll last, plan when to mix each new vial, and get a heads-up before you run low.',
+	],
+	[
+		'id'    => '2026-09-29s',
+		'date'  => '2026-09-29',
+		'title' => 'Extra privacy on shared devices',
+		'text'  => 'Signing out anywhere on YeffoDesign now also clears the tracker copy saved on that device, so the next person to use it can\'t see your entries.',
 	],
 	[
 		'id'    => '2026-09-28c',

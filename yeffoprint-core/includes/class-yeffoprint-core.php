@@ -142,6 +142,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-completed-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-processing-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-secret-box.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-login-throttle.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-project-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-credential-purge.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-web-design-controller.php';
@@ -188,6 +189,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-medications.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-schedule.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-push.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-shares.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-reminders.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-app.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-tracker-controller.php';
@@ -285,8 +287,10 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Webhook_Sync();
 		new YeffoPrint_Telegram_Webhook_Controller();
 		new YeffoPrint_Web_Chat_Controller();
+		new YeffoPrint_Login_Throttle();
 		new YeffoPrint_Tracker_Store();
 		new YeffoPrint_Tracker_Usage();
+		new YeffoPrint_Tracker_Shares();
 		new YeffoPrint_Tracker_Reminders();
 		new YeffoPrint_Tracker_App();
 		new YeffoPrint_Tracker_Controller();
