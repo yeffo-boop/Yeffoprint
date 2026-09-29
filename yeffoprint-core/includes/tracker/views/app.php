@@ -5,6 +5,7 @@
  *
  * @var array $config
  * @var array $assets
+ * @var string $script_nonce
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -39,7 +40,7 @@ defined( 'ABSPATH' ) || exit;
 		<div class="ypt-boot"><?php esc_html_e( 'Loading your tracker…', 'yeffoprint-core' ); ?></div>
 	</main>
 	<noscript><p style="padding:24px"><?php esc_html_e( 'The Dose Tracker needs JavaScript turned on.', 'yeffoprint-core' ); ?></p></noscript>
-	<script>window.YP_TRACKER = <?php echo wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES ); ?>;</script>
+	<script nonce="<?php echo esc_attr( $script_nonce ); ?>">window.YP_TRACKER = <?php echo wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES ); ?>;</script>
 	<script src="<?php echo esc_url( $assets['js'] ); ?>" defer></script>
 </body>
 </html>

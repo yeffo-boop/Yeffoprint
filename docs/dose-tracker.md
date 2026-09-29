@@ -16,6 +16,21 @@ account.
   WordPress account, or Tools → Erase Personal Data removes the rows and
   that key, so old backups can't be read either.
 - There is no admin screen that shows a customer's entries, by design.
+- The app keeps a copy in the customer's browser so it opens offline. It
+  is cleared by the app's Sign out button, on any signed-out page of the
+  site (so signing out from the header or My Account clears it too), and
+  when a different account opens the tracker on that browser.
+- The app page sends a strict Content-Security-Policy (only this site's
+  tracker.js plus its nonce'd config script may run; no framing).
+- Sign-in is rate limited for the whole site (`security/class-login-throttle.php`):
+  10 failed tries per IP in 15 minutes, 30 per account in an hour. The
+  account password is what unlocks a customer's entries, so this matters.
+
+**What the encryption does and doesn't cover.** It protects a copied
+database or backup. It does not protect against someone who can run code
+on the server (a WordPress admin account, a plugin, or server access):
+the site has to decrypt entries to show them, so it can. Keep admin
+accounts few and strongly protected, and only install plugins you trust.
 
 ## The master key (back this up)
 

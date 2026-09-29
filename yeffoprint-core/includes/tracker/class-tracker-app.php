@@ -38,6 +38,25 @@ class YeffoPrint_Tracker_App {
 		add_action( 'init', [ $this, 'register_rewrite' ] );
 		add_filter( 'query_vars', [ $this, 'register_query_var' ] );
 		add_action( 'template_redirect', [ $this, 'maybe_serve' ], 0 );
+		add_action( 'wp_footer', [ $this, 'forget_device_copy' ] );
+		add_action( 'login_footer', [ $this, 'forget_device_copy' ] );
+	}
+
+	/**
+	 * The app keeps a copy of the customer's entries in the browser so it
+	 * opens offline. Its own Sign out button clears that copy, but signing
+	 * out anywhere else on the site (the header, My Account, wp-login.php)
+	 * didn't, which left the entries readable on a shared computer. Every
+	 * signed-out page now clears it: the saved copy and unsynced changes
+	 * (localStorage ypt:* / ypt-q:*) and the offline copy of the app page.
+	 */
+	public function forget_device_copy(): void {
+		if ( is_user_logged_in() ) {
+			return;
+		}
+		?>
+<script>(function(){try{var s=window.localStorage,k=[];for(var i=0;i<s.length;i++){var n=s.key(i);if(n&&(n.indexOf('ypt:')===0||n.indexOf('ypt-q:')===0)){k.push(n);}}k.forEach(function(n){s.removeItem(n);});}catch(e){}try{if(window.caches){caches.keys().then(function(ks){ks.forEach(function(c){if(c.indexOf('yp-tracker-')===0){caches.delete(c);}});});}}catch(e){}})();</script>
+		<?php
 	}
 
 	public static function url(): string {
@@ -152,6 +171,7 @@ class YeffoPrint_Tracker_App {
 		header( 'Cache-Control: no-store, private' );
 		header( 'X-Robots-Tag: noindex' );
 		header( 'Referrer-Policy: same-origin' );
+		$script_nonce = self::send_security_headers();
 		status_header( 200 );
 
 		$user   = wp_get_current_user();
@@ -186,6 +206,37 @@ class YeffoPrint_Tracker_App {
 		];
 
 		include YEFFOPRINT_CORE_PATH . 'includes/tracker/views/app.php';
+	}
+
+	/**
+	 * The app page is its own document (no wp_head), so it can lock down
+	 * what a browser will run in it: only this site's own tracker.js and
+	 * the one inline config script (by nonce), data sent only back to this
+	 * site, and no framing by other sites. If anything ever slipped a
+	 * script into customer text, the browser would refuse to run it.
+	 *
+	 * @return string The inline-script nonce.
+	 */
+	private static function send_security_headers(): string {
+		$nonce = base64_encode( random_bytes( 16 ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$csp   = [
+			"default-src 'self'",
+			"script-src 'self' 'nonce-{$nonce}'",
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+			"font-src 'self' https://fonts.gstatic.com data:",
+			"img-src 'self' data: blob: https:",
+			"connect-src 'self'",
+			"worker-src 'self'",
+			"manifest-src 'self'",
+			"object-src 'none'",
+			"base-uri 'none'",
+			"form-action 'self'",
+			"frame-ancestors 'none'",
+		];
+		header( 'Content-Security-Policy: ' . implode( '; ', $csp ) );
+		header( 'X-Frame-Options: DENY' );
+		header( 'X-Content-Type-Options: nosniff' );
+		return $nonce;
 	}
 
 	/** @return array{css:string,js:string} Content-hashed, so a deploy busts every cache (browser and service worker). */
