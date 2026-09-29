@@ -13,6 +13,7 @@
  *   POST   /tracker/push/test             send a test reminder to this customer's devices
  *   DELETE /tracker/all                   "Delete my data" — rows plus the customer's key
  *   GET    /tracker/label-templates       designs offered by "Order labels" (public storefront data)
+ *   POST   /tracker/shares                a share link for one protocol (class-tracker-shares.php)
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -22,7 +23,7 @@ class YeffoPrint_Tracker_Controller {
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
 	/** Kinds the app writes directly; `push` only goes through /tracker/push. */
-	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'settings' ];
+	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings' ];
 
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
@@ -72,6 +73,12 @@ class YeffoPrint_Tracker_Controller {
 		register_rest_route( self::NAMESPACE, '/tracker/all', [
 			'methods'             => \WP_REST_Server::DELETABLE,
 			'callback'            => [ $this, 'delete_all' ],
+			'permission_callback' => $perm,
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/shares', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'create_share' ],
 			'permission_callback' => $perm,
 		] );
 
@@ -220,6 +227,21 @@ class YeffoPrint_Tracker_Controller {
 			return new \WP_Error( 'yeffoprint_tracker_push_failed', __( 'The test reminder couldn’t be sent. Try turning reminders off and on again.', 'yeffoprint-core' ), [ 'status' => 502 ] );
 		}
 		return self::no_store( [ 'ok' => true, 'sent' => $sent ] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function create_share( \WP_REST_Request $request ) {
+		$params   = $request->get_json_params();
+		$protocol = is_array( $params['protocol'] ?? null ) ? YeffoPrint_Tracker_Shares::sanitize( $params['protocol'] ) : null;
+		if ( ! $protocol ) {
+			return new \WP_Error( 'yeffoprint_tracker_bad_share', __( 'Add a name and dose before sharing.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$code = YeffoPrint_Tracker_Shares::create( get_current_user_id(), $protocol );
+		if ( is_wp_error( $code ) ) {
+			return $code;
+		}
+		return self::no_store( [ 'ok' => true, 'code' => $code, 'url' => YeffoPrint_Tracker_Shares::url( $code ) ] );
 	}
 
 	public function delete_all(): \WP_REST_Response {

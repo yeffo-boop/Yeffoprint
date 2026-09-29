@@ -59,3 +59,45 @@ as the product page's "Add another label", so pricing, validation and
 "Edit customization" work unchanged, and then opens the cart. Custom
 sizes (typed inches) stay on the product page. Nothing from this flow is
 saved in the tracker.
+
+## Supply (inventory and planner)
+
+The Vials tab is now **Supply**, with three views:
+
+- **Mixed**: vials and pens in use, as before, plus how many more are on
+  hand and the date that covers them to.
+- **On hand**: `stock` records (encrypted like everything else): unmixed
+  powder vials, pen cartridges, premixed vials, or pills/sprays/patches
+  counted one by one. Mixing a vial offers "Take it from your supply",
+  which takes one off; pills count down with every dose taken after they
+  were counted.
+- **Plan**: for each protocol, the vial in use, then each vial on hand
+  (mix dates), then any still to buy before the cycle ends, with a
+  "buy by" date a week ahead.
+
+Running low (each item's "Warn me when I have" window, default 2 weeks)
+shows on Supply and Today. On the day a vial is used up, Today's dose card
+shows a **Mix vial N of M** button that pre-fills the new vial and marks
+the old one finished. The app works out upcoming running-low and mix-day
+notifications and saves them as the `alerts` settings record; the reminder
+sweep sends each one when its time comes (10 AM for running low, 7 PM the
+evening before a mix day).
+
+## Shared protocols
+
+**Share this protocol** (in a protocol's edit sheet) makes a link
+`/tracker/p/{code}` holding only the dose, schedule and, if ticked, how to
+mix it, cycle length and notes. Stored in `wp_yeffoprint_tracker_shares`,
+sealed with the master key; no name or history. Whoever opens it gets an
+**Add to my tracker** sheet (signed-out visitors see the protocol and a
+sign-in button). Link previews in texts stay generic. "Delete my data"
+removes the customer's links too.
+
+## Travel mode
+
+The schedule follows the customer's home zone (`settings.baseTz`). When
+the phone's zone changes, Today asks: ease in 2 hours a day, switch now,
+or keep home time. Easing is stored as `settings.travel` (from/to offsets,
+start time) and the reminder sweep follows the same clock
+(`YeffoPrint_Tracker_Schedule::timezone()`, mirrored by
+`effectiveOffset()` in tracker.js).

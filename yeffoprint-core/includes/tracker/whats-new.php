@@ -15,6 +15,24 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-09-29c',
+		'date'  => '2026-09-29',
+		'title' => 'Travel mode',
+		'text'  => 'Flying somewhere with a different time zone? Today asks how to handle your reminders: ease into local time a couple of hours a day, switch right away, or keep your home time.',
+	],
+	[
+		'id'    => '2026-09-29b',
+		'date'  => '2026-09-29',
+		'title' => 'Share a protocol',
+		'text'  => 'Open any peptide or medication and tap "Share this protocol" to send a link with the dose and schedule (and how to mix it, if you like). Whoever opens it can add it to their own tracker in one tap. Your name and history are never included.',
+	],
+	[
+		'id'    => '2026-09-29a',
+		'date'  => '2026-09-29',
+		'title' => 'Your whole supply',
+		'text'  => 'The Vials tab is now Supply. Add the vials, pens and pills you have at home to see how long they\'ll last, plan when to mix each new vial, and get a heads-up before you run low.',
+	],
+	[
 		'id'    => '2026-09-28c',
 		'date'  => '2026-09-28',
 		'title' => 'Blends',

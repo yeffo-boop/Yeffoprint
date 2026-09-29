@@ -16,6 +16,7 @@
  *   /tracker/sw.js                   service worker (must be served from inside /tracker/ to control it)
  *   /tracker/manifest.webmanifest    Home Screen install metadata
  *   /tracker/session                 a fresh REST nonce for the signed-in customer
+ *   /tracker/p/{code}                a shared protocol (class-tracker-shares.php): the app, opened on "Add to my tracker"
  *
  * Nothing about a customer's doses is printed into the page — the app
  * fetches them from the nonce-checked REST API
@@ -30,6 +31,8 @@ class YeffoPrint_Tracker_App {
 	public const SLUG = 'tracker';
 
 	private const QUERY_VAR = 'yeffoprint_tracker';
+
+	private const SHARE_VAR = 'yeffoprint_tracker_share';
 
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_rewrite' ] );
@@ -51,10 +54,12 @@ class YeffoPrint_Tracker_App {
 		add_rewrite_rule( '^' . self::SLUG . '/sw\.js$', 'index.php?' . self::QUERY_VAR . '=sw', 'top' );
 		add_rewrite_rule( '^' . self::SLUG . '/manifest\.webmanifest$', 'index.php?' . self::QUERY_VAR . '=manifest', 'top' );
 		add_rewrite_rule( '^' . self::SLUG . '/session$', 'index.php?' . self::QUERY_VAR . '=session', 'top' );
+		add_rewrite_rule( '^' . self::SLUG . '/p/([A-Za-z0-9]{10})/?$', 'index.php?' . self::QUERY_VAR . '=app&' . self::SHARE_VAR . '=$matches[1]', 'top' );
 	}
 
 	public function register_query_var( array $vars ): array {
 		$vars[] = self::QUERY_VAR;
+		$vars[] = self::SHARE_VAR;
 		return $vars;
 	}
 
@@ -151,6 +156,12 @@ class YeffoPrint_Tracker_App {
 
 		$user   = wp_get_current_user();
 		$assets = self::asset_urls();
+
+		// A shared protocol link: the app opens on it. Nothing in it identifies whoever shared it.
+		$share_code = (string) get_query_var( self::SHARE_VAR );
+		$share      = '' !== $share_code ? YeffoPrint_Tracker_Shares::get( $share_code ) : null;
+		$here       = '' !== $share_code ? YeffoPrint_Tracker_Shares::url( $share_code ) : self::url();
+
 		$config = [
 			'signedIn'      => is_user_logged_in(),
 			'ready'         => YeffoPrint_Tracker_Crypto::is_ready(),
@@ -160,7 +171,7 @@ class YeffoPrint_Tracker_App {
 			'nonce'         => $user->ID ? wp_create_nonce( 'wp_rest' ) : '',
 			'appUrl'        => self::url(),
 			'swUrl'         => home_url( '/' . self::SLUG . '/sw.js' ),
-			'loginUrl'      => wp_login_url( self::url() ),
+			'loginUrl'      => wp_login_url( $here ),
 			'registerUrl'   => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_registration_url(),
 			'logoutUrl'     => $user->ID ? wp_logout_url( self::url() ) : '',
 			'homeUrl'       => home_url( '/' ),
@@ -171,6 +182,7 @@ class YeffoPrint_Tracker_App {
 			'compounds'     => self::compound_names(),
 			'medications'   => YeffoPrint_Tracker_Medications::all(),
 			'whatsNew'      => include YEFFOPRINT_CORE_PATH . 'includes/tracker/whats-new.php',
+			'share'         => '' !== $share_code ? [ 'code' => $share_code, 'protocol' => $share ] : null,
 		];
 
 		include YEFFOPRINT_CORE_PATH . 'includes/tracker/views/app.php';
