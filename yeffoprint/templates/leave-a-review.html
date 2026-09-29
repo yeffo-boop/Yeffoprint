@@ -1,0 +1,64 @@
+<!-- wp:template-part {"slug":"header","tagName":"header"} /-->
+
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"680px"}} -->
+<main class="wp-block-group">
+
+	<!-- wp:html -->
+	<div id="yp-leave-review" class="yp-leave-review yp-section">
+
+		<p class="yp-eyebrow">Your Review</p>
+		<h1 data-yp-lr-title>How did we do?</h1>
+
+		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
+
+		<div data-yp-lr-content hidden>
+
+			<div class="yp-leave-review__order" data-yp-lr-order></div>
+
+			<form class="yp-leave-review__form" data-yp-lr-form novalidate>
+
+				<fieldset class="yp-leave-review__rating">
+					<legend>Your rating</legend>
+					<div class="yp-leave-review__stars" role="radiogroup" aria-label="Star rating" data-yp-lr-stars></div>
+					<p class="yp-leave-review__rating-word" data-yp-lr-rating-word aria-live="polite">Tap a star</p>
+				</fieldset>
+
+				<div class="yp-field">
+					<label for="yp-lr-text">Tell us about it <span class="description">(optional)</span></label>
+					<textarea id="yp-lr-text" rows="5" class="widefat" placeholder="How do the labels look? How was the quality, the fit, the shipping?"></textarea>
+					<p class="description yp-leave-review__count" data-yp-lr-count></p>
+				</div>
+
+				<div class="yp-field">
+					<span class="yp-leave-review__label">Add photos <span class="description">(optional, up to <span data-yp-lr-max-photos>5</span>)</span></span>
+					<div class="yp-leave-review__photos" data-yp-lr-photos>
+						<label class="yp-leave-review__add-photo" data-yp-lr-add-photo>
+							<input type="file" accept="image/*" multiple data-yp-lr-file />
+							<span aria-hidden="true">+</span>
+							<span class="yp-leave-review__add-photo-text">Add photo</span>
+						</label>
+					</div>
+					<p class="description">Show off your labels on your products. Photos may appear with your review on the site.</p>
+				</div>
+
+				<div class="yp-field">
+					<label for="yp-lr-name">Name shown with your review</label>
+					<input type="text" id="yp-lr-name" maxlength="40" class="widefat" />
+				</div>
+
+				<p class="yp-form__error" data-yp-lr-error hidden></p>
+
+				<button type="submit" class="wp-block-button__link is-style-accent yp-leave-review__submit" data-yp-lr-submit>Submit review</button>
+			</form>
+
+			<div class="yp-leave-review__done" data-yp-lr-done hidden></div>
+
+		</div>
+
+	</div>
+	<!-- /wp:html -->
+
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

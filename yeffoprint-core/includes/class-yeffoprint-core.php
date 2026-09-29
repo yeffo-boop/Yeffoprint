@@ -194,6 +194,9 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-reminders.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-app.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-tracker-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-order-reviews.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-review-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-review-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -308,6 +311,9 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Express_Alerts();
 		new YeffoPrint_Abandoned_Carts();
 		new YeffoPrint_Admin_Abandoned_Cart_Controller();
+		new YeffoPrint_Order_Reviews();
+		new YeffoPrint_Review_Controller();
+		new YeffoPrint_Admin_Review_Controller();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)

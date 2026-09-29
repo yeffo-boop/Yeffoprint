@@ -1,0 +1,322 @@
+/*
+ * Leave a Review page (templates/leave-a-review.html,
+ * assets/js/leave-review.js). Reuses .yp-configurator__status and
+ * .yp-field from configurator.css (enqueued alongside) — same pattern
+ * as track-order.css.
+ */
+
+.yp-leave-review {
+	padding-block: var(--wp--preset--spacing--md) var(--wp--preset--spacing--xl);
+}
+
+.yp-leave-review h1 {
+	margin-bottom: 1.25rem;
+}
+
+/* ---- What they ordered ---- */
+
+.yp-leave-review__order {
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--warm-white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	padding: 1rem 1.25rem;
+	margin-bottom: 1.75rem;
+}
+
+.yp-leave-review__order-number {
+	margin: 0;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}
+
+.yp-leave-review__delivered {
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #16875a;
+	background: #e6f5ee;
+	border-radius: 999px;
+	padding: 0.2rem 0.6rem;
+}
+
+.yp-leave-review__items {
+	list-style: none;
+	margin: 0.85rem 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.yp-leave-review__items li {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-leave-review__items img,
+.yp-leave-review__item-ph {
+	width: 44px;
+	height: 44px;
+	border-radius: 8px;
+	object-fit: cover;
+	flex-shrink: 0;
+	background: var(--wp--preset--color--light-gray);
+}
+
+.yp-leave-review__more {
+	color: var(--wp--preset--color--charcoal);
+	padding-left: calc(44px + 0.75rem);
+}
+
+/* ---- Stars ---- */
+
+.yp-leave-review__rating {
+	border: 0;
+	margin: 0 0 1.5rem;
+	padding: 0;
+}
+
+.yp-leave-review__rating legend,
+.yp-leave-review__label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+.yp-leave-review__stars {
+	display: flex;
+	gap: 0.35rem;
+}
+
+.yp-leave-review__star {
+	appearance: none;
+	background: none;
+	border: 0;
+	padding: 0.15rem;
+	margin: 0;
+	cursor: pointer;
+	line-height: 0;
+	border-radius: 8px;
+	transition: transform 0.12s ease;
+}
+
+.yp-leave-review__star svg {
+	width: 44px;
+	height: 44px;
+	fill: var(--wp--preset--color--light-gray);
+	transition: fill 0.12s ease;
+}
+
+.yp-leave-review__star.is-on svg {
+	fill: #f5b300;
+}
+
+.yp-leave-review__star:hover {
+	transform: scale(1.08);
+}
+
+.yp-leave-review__star:focus-visible {
+	outline: 2px solid var(--wp--preset--color--near-black);
+	outline-offset: 2px;
+}
+
+.yp-leave-review__rating-word {
+	margin: 0.35rem 0 0;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal);
+	min-height: 1.4em;
+}
+
+.yp-leave-review__count {
+	min-height: 1em;
+}
+
+/* ---- Photos ---- */
+
+.yp-leave-review__photos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	margin-bottom: 0.5rem;
+}
+
+.yp-leave-review__photo,
+.yp-leave-review__add-photo {
+	position: relative;
+	width: 96px;
+	height: 96px;
+	border-radius: 12px;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.yp-leave-review__photo {
+	background: var(--wp--preset--color--light-gray);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.yp-leave-review__photo img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.yp-leave-review__photo-name {
+	font-size: 0.7rem;
+	padding: 0.4rem;
+	word-break: break-all;
+	text-align: center;
+}
+
+.yp-leave-review__photo-remove {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: 0;
+	background: rgba(20, 20, 20, 0.75);
+	color: #fff;
+	font-size: 18px;
+	line-height: 26px;
+	padding: 0;
+	cursor: pointer;
+}
+
+.yp-leave-review__add-photo {
+	border: 2px dashed var(--wp--preset--color--light-gray);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.1rem;
+	cursor: pointer;
+	color: var(--wp--preset--color--charcoal);
+	transition: border-color 0.15s ease;
+}
+
+.yp-leave-review__add-photo:hover,
+.yp-leave-review__add-photo:focus-within {
+	border-color: var(--wp--preset--color--near-black);
+}
+
+.yp-leave-review__add-photo[hidden] {
+	display: none;
+}
+
+.yp-leave-review__add-photo.is-busy {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+.yp-leave-review__add-photo input {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+
+.yp-leave-review__add-photo span[aria-hidden] {
+	font-size: 1.8rem;
+	line-height: 1;
+}
+
+.yp-leave-review__add-photo-text {
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.yp-leave-review__submit {
+	width: 100%;
+	margin-top: 0.5rem;
+}
+
+/* ---- Done ---- */
+
+.yp-leave-review__done-card {
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-top: 3px solid var(--wp--preset--color--magenta);
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-leave-review__mini-stars {
+	display: inline-flex;
+	gap: 2px;
+	font-size: 1.25rem;
+	color: var(--wp--preset--color--light-gray);
+}
+
+.yp-leave-review__mini-star.is-on {
+	color: #f5b300;
+}
+
+.yp-leave-review__done-text {
+	margin: 0.75rem 0;
+	white-space: pre-line;
+}
+
+.yp-leave-review__done-photos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.75rem 0;
+}
+
+.yp-leave-review__done-photos img {
+	width: 72px;
+	height: 72px;
+	border-radius: 8px;
+	object-fit: cover;
+}
+
+.yp-leave-review__done-name {
+	margin: 0;
+	font-size: 0.85rem;
+	color: var(--wp--preset--color--charcoal);
+	font-family: var(--wp--preset--font-family--mono);
+}
+
+@media (max-width: 480px) {
+	.yp-leave-review__star svg {
+		width: 40px;
+		height: 40px;
+	}
+
+	.yp-leave-review__photo,
+	.yp-leave-review__add-photo {
+		width: 84px;
+		height: 84px;
+	}
+}
+
+.yp-leave-review .yp-form__error {
+	margin: 0 0 0.75rem;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-leave-review .description {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	font-weight: 400;
+}
+
+.yp-leave-review p.description {
+	margin: 0.35rem 0 0;
+}
