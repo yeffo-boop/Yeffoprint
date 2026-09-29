@@ -85,7 +85,11 @@ The Vials tab is now **Supply**, with three views:
   powder vials, pen cartridges, premixed vials, or pills/sprays/patches
   counted one by one. Mixing a vial offers "Take it from your supply",
   which takes one off; pills count down with every dose taken after they
-  were counted.
+  were counted. **Bac water** is a `stock` with `form: 'water'`: bottle
+  size in `volume`, mL left in `ml`. Mixing a new vial offers "Use bac
+  water from your supply", which takes that vial's water off. It runs low
+  when there isn't enough for the upcoming mixes across every vial schedule
+  (each new vial mixed like the one in use; `waterPlan()` in tracker.js).
 - **Plan**: for each protocol, the vial in use, then each vial on hand
   (mix dates), then any still to buy before the cycle ends, with a
   "buy by" date a week ahead.

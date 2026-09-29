@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-09-29x',
+		'date'  => '2026-09-29',
+		'title' => 'Bac water in your supply',
+		'text'  => 'Add your bac water on Supply > On hand. It counts down by the water you use each time you mix a vial, and you\'ll get a heads-up before you run short for your next mix.',
+	],
+	[
 		'id'    => '2026-09-29w',
 		'date'  => '2026-09-29',
 		'title' => 'Private reminders',

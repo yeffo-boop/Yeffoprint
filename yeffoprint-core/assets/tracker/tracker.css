@@ -1258,3 +1258,8 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 
 .ypt-hero--share h1 { font-size: 30px; }
 .ypt-hero--share { padding-bottom: 14px; }
+
+/* Bac water line on the Plan view */
+.ypt-note--btn { width: 100%; text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
+.ypt-note__title { color: var(--ypt-ink); font-weight: 600; margin-bottom: 2px; }
+.ypt-note__title .ypt-tag { margin-left: 4px; vertical-align: 1px; }
