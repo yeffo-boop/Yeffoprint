@@ -15,10 +15,28 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
-		'id'    => '2026-09-29t',
+		'id'    => '2026-09-29w',
 		'date'  => '2026-09-29',
 		'title' => 'Private reminders',
-		'text'  => 'Don\'t want medication names on your lock screen? On the Me tab, turn off "Show names in reminders" and reminders will just say a dose is due.',
+		'text'  => 'Don\'t want medication names on your lock screen? On the Me tab, turn off "Show names in reminders" and dose and supply notifications will just say something is due.',
+	],
+	[
+		'id'    => '2026-09-29v',
+		'date'  => '2026-09-29',
+		'title' => 'Travel mode',
+		'text'  => 'Flying somewhere with a different time zone? Today asks how to handle your reminders: ease into local time a couple of hours a day, switch right away, or keep your home time.',
+	],
+	[
+		'id'    => '2026-09-29u',
+		'date'  => '2026-09-29',
+		'title' => 'Share a protocol',
+		'text'  => 'Open any peptide or medication and tap "Share this protocol" to send a link with the dose and schedule (and how to mix it, if you like). Whoever opens it can add it to their own tracker in one tap. Your name and history are never included, and you can stop any link from Me › Shared links.',
+	],
+	[
+		'id'    => '2026-09-29t',
+		'date'  => '2026-09-29',
+		'title' => 'Your whole supply',
+		'text'  => 'The Vials tab is now Supply. Add the vials, pens and pills you have at home to see how long they\'ll last, plan when to mix each new vial, and get a heads-up before you run low.',
 	],
 	[
 		'id'    => '2026-09-29s',

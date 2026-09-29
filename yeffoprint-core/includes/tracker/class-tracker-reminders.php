@@ -55,14 +55,10 @@ class YeffoPrint_Tracker_Reminders {
 			return;
 		}
 
-		$due = self::due_between( $user_id, $settings, $since, $now );
-		if ( ! $due ) {
-			return;
-		}
-
-		$subs = YeffoPrint_Tracker_Store::all( $user_id, 'push' );
-		foreach ( $due as $slot ) {
-			$message = [
+		$tz       = YeffoPrint_Tracker_Schedule::timezone( $settings, $now );
+		$messages = [];
+		foreach ( self::due_between( $user_id, $tz, $since, $now ) as $slot ) {
+			$messages[] = [
 				'title' => 1 === count( $slot['lines'] )
 					? sprintf( /* translators: %s: compound */ __( 'Time for %s', 'yeffoprint-core' ), $slot['names'][0] )
 					: __( 'Time for your doses', 'yeffoprint-core' ),
@@ -71,12 +67,23 @@ class YeffoPrint_Tracker_Reminders {
 				'url'   => home_url( '/tracker/' ),
 			];
 			if ( ! self::show_names( $settings ) ) {
-				$message['title'] = __( 'Dose reminder', 'yeffoprint-core' );
-				$message['body']  = 1 === count( $slot['lines'] )
+				$i = count( $messages ) - 1;
+				$messages[ $i ]['title'] = __( 'Dose reminder', 'yeffoprint-core' );
+				$messages[ $i ]['body']  = 1 === count( $slot['lines'] )
 					? __( 'You have a dose due. Open your tracker to see it.', 'yeffoprint-core' )
 					/* translators: %d: number of doses */
 					: sprintf( __( 'You have %d doses due. Open your tracker to see them.', 'yeffoprint-core' ), count( $slot['lines'] ) );
 			}
+		}
+		foreach ( self::supply_alerts_between( $user_id, $tz, $since, $now, self::show_names( $settings ) ) as $alert ) {
+			$messages[] = $alert;
+		}
+		if ( ! $messages ) {
+			return;
+		}
+
+		$subs = YeffoPrint_Tracker_Store::all( $user_id, 'push' );
+		foreach ( $messages as $message ) {
 			foreach ( $subs as $sub_id => $sub ) {
 				$status = YeffoPrint_Tracker_Push::send( $sub, $message );
 				if ( 404 === $status || 410 === $status ) {
@@ -96,14 +103,55 @@ class YeffoPrint_Tracker_Reminders {
 		return ! ( isset( $settings['reminderNames'] ) && false === $settings['reminderNames'] );
 	}
 
-	/** @return array<int,array{key:string,names:string[],lines:string[]}> One entry per local time slot with something still to take. */
-	private static function due_between( int $user_id, array $settings, int $since, int $now ): array {
-		try {
-			$tz = new \DateTimeZone( (string) ( $settings['tz'] ?? '' ) ?: wp_timezone_string() );
-		} catch ( \Exception $e ) {
-			$tz = wp_timezone();
+	/**
+	 * Running-low and mix-day notifications. The app works these out
+	 * (it has the vial math) and saves the upcoming ones as the `alerts`
+	 * settings record: [{ id, date, time, title, body }] in the customer's
+	 * own clock. Each one goes out once, as its time passes.
+	 *
+	 * @return array<int,array{title:string,body:string,tag:string,url:string}>
+	 */
+	private static function supply_alerts_between( int $user_id, \DateTimeZone $tz, int $since, int $now, bool $show_names = true ): array {
+		$record = YeffoPrint_Tracker_Store::get( $user_id, 'settings', 'alerts' );
+		$out    = [];
+		foreach ( array_slice( (array) ( $record['list'] ?? [] ), 0, 40 ) as $alert ) {
+			if ( ! is_array( $alert ) ) {
+				continue;
+			}
+			$date = (string) ( $alert['date'] ?? '' );
+			$time = (string) ( $alert['time'] ?? '' );
+			if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) || ! preg_match( '/^([01]\d|2[0-3]):[0-5]\d$/', $time ) ) {
+				continue;
+			}
+			$at = ( new \DateTimeImmutable( $date . ' ' . $time, $tz ) )->getTimestamp();
+			if ( $at <= $since || $at > $now ) {
+				continue;
+			}
+			$id = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) ( $alert['id'] ?? '' ) );
+			if ( ! $show_names ) {
+				// Titles, bodies and ids (low-bpc157-…) all carry the name, so
+				// hidden-names alerts use fixed wording and a hashed tag.
+				$mix   = 0 === strpos( $id, 'mix-' );
+				$out[] = [
+					'title' => $mix ? __( 'Time to mix a new vial', 'yeffoprint-core' ) : __( 'Your supply is running low', 'yeffoprint-core' ),
+					'body'  => $mix ? __( 'Your next dose needs a new vial or pen.', 'yeffoprint-core' ) : __( 'Open the tracker to see what to reorder.', 'yeffoprint-core' ),
+					'tag'   => 'yp-supply-' . substr( md5( $id ), 0, 12 ),
+					'url'   => home_url( '/tracker/' ),
+				];
+				continue;
+			}
+			$out[] = [
+				'title' => wp_strip_all_tags( (string) ( $alert['title'] ?? '' ) ),
+				'body'  => wp_strip_all_tags( (string) ( $alert['body'] ?? '' ) ),
+				'tag'   => 'yp-supply-' . $id,
+				'url'   => home_url( '/tracker/' ),
+			];
 		}
+		return $out;
+	}
 
+	/** @return array<int,array{key:string,names:string[],lines:string[]}> One entry per local time slot with something still to take. */
+	private static function due_between( int $user_id, \DateTimeZone $tz, int $since, int $now ): array {
 		$protocols = YeffoPrint_Tracker_Store::all( $user_id, 'protocol' );
 		if ( ! $protocols ) {
 			return [];

@@ -52,6 +52,36 @@ class YeffoPrint_Tracker_Schedule {
 		}
 	}
 
+	/**
+	 * The clock a customer's dose times follow — the PHP twin of
+	 * effectiveOffset() in tracker.js (travel mode). Normally their home
+	 * zone (`baseTz`, falling back to the device's `tz`). While they're
+	 * easing into a new time zone it's a fixed offset that moves `step`
+	 * minutes a day from `from` to `to`, counted in whole days since they
+	 * chose it (`at`, unix seconds); once there, the new zone itself.
+	 */
+	public static function timezone( array $settings, int $now ): \DateTimeZone {
+		$travel = is_array( $settings['travel'] ?? null ) ? $settings['travel'] : null;
+		if ( $travel && isset( $travel['from'], $travel['to'], $travel['at'] ) ) {
+			$diff  = (int) $travel['to'] - (int) $travel['from'];
+			$step  = max( 15, (int) ( $travel['step'] ?? 120 ) );
+			$days  = max( 0, (int) floor( ( $now - (int) $travel['at'] ) / DAY_IN_SECONDS ) );
+			$moved = min( abs( $diff ), $step * $days );
+			if ( $moved < abs( $diff ) ) {
+				$offset = (int) $travel['from'] + ( $diff < 0 ? -$moved : $moved );
+				return new \DateTimeZone( sprintf( '%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv( abs( $offset ), 60 ), abs( $offset ) % 60 ) );
+			}
+			$name = (string) ( $travel['tz'] ?? '' );
+		} else {
+			$name = (string) ( ( $settings['baseTz'] ?? '' ) ?: ( $settings['tz'] ?? '' ) );
+		}
+		try {
+			return new \DateTimeZone( $name ?: wp_timezone_string() );
+		} catch ( \Exception $e ) {
+			return wp_timezone();
+		}
+	}
+
 	/** @return string[] "HH:MM" times, sorted; defaults to 09:00 so a protocol always has a slot. */
 	public static function times( array $protocol ): array {
 		$times = array_values( array_filter( (array) ( $protocol['times'] ?? [] ), static function ( $t ) {

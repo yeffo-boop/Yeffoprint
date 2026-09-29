@@ -10,7 +10,9 @@
  *   protocol — a peptide the customer takes on a schedule
  *   dose     — one taken/skipped dose (id is deterministic per scheduled slot, so an offline retry never double-logs)
  *   vial     — a mixed/opened vial, for units-to-draw and doses-left
- *   settings — a single "me" record (timezone, reminders)
+ *   stock    — unmixed vials, pens or pills on hand (the Supply tab)
+ *   settings — the "me" record (timezone, reminders, travel) and "alerts"
+ *              (upcoming running-low / mix-day notifications the app works out)
  *   push     — this customer's browser push subscriptions
  *
  * Created lazily with the same stored-version + dbDelta pattern as
@@ -21,7 +23,7 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Tracker_Store {
 
-	public const KINDS = [ 'protocol', 'dose', 'vial', 'settings', 'push' ];
+	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push' ];
 
 	/** Per-record plaintext ceiling — a dose note or protocol is a few hundred bytes; this only stops abuse. */
 	public const MAX_RECORD_BYTES = 8192;
@@ -150,6 +152,7 @@ class YeffoPrint_Tracker_Store {
 		$wpdb->delete( self::table_name(), [ 'user_id' => $user_id ], [ '%d' ] );
 		YeffoPrint_Tracker_Crypto::forget_user( $user_id );
 		YeffoPrint_Tracker_Usage::forget_user( $user_id );
+		YeffoPrint_Tracker_Shares::delete_for_user( $user_id );
 		delete_user_meta( $user_id, YeffoPrint_Tracker_Reminders::LAST_SWEEP_META );
 	}
 

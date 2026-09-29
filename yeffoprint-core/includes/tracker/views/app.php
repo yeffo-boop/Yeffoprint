@@ -21,6 +21,12 @@ defined( 'ABSPATH' ) || exit;
 	<meta name="apple-mobile-web-app-status-bar-style" content="default">
 	<meta name="apple-mobile-web-app-title" content="Dose Tracker">
 	<title><?php esc_html_e( 'Dose Tracker · YeffoDesign', 'yeffoprint-core' ); ?></title>
+	<?php if ( ! empty( $config['share'] ) ) : ?>
+		<?php // Link previews in texts stay generic: the protocol itself only shows once the page is open. ?>
+		<meta property="og:title" content="<?php esc_attr_e( 'Someone shared a dose schedule with you', 'yeffoprint-core' ); ?>">
+		<meta property="og:description" content="<?php esc_attr_e( 'Open it to add it to your free YeffoDesign Dose Tracker.', 'yeffoprint-core' ); ?>">
+		<meta property="og:image" content="<?php echo esc_url( YEFFOPRINT_CORE_URL . 'assets/tracker/icons/icon-512.png' ); ?>">
+	<?php endif; ?>
 	<link rel="manifest" href="<?php echo esc_url( home_url( '/' . YeffoPrint_Tracker_App::SLUG . '/manifest.webmanifest' ) ); ?>">
 	<link rel="apple-touch-icon" href="<?php echo esc_url( YEFFOPRINT_CORE_URL . 'assets/tracker/icons/apple-touch-icon.png' ); ?>">
 	<link rel="icon" type="image/png" sizes="192x192" href="<?php echo esc_url( YEFFOPRINT_CORE_URL . 'assets/tracker/icons/icon-192.png' ); ?>">
