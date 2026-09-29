@@ -172,6 +172,11 @@
 			"name": "peptide-calculator",
 			"title": "Peptide & Hormone Calculator",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "leave-a-review",
+			"title": "Leave a Review",
+			"postTypes": [ "page" ]
 		}
 	]
 }

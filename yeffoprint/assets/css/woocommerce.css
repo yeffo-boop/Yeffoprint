@@ -1299,3 +1299,30 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* My Account → View order: review nudge / "you reviewed this"
+   (class-order-reviews.php's render_account_prompt()). */
+.yp-account-review {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1rem;
+	padding: 1rem 1.25rem;
+	margin: 0 0 1.5rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: #fff8e6;
+	border: 1px solid #f6df9e;
+	font-weight: 600;
+}
+
+.yp-account-review--done {
+	background: var(--wp--preset--color--warm-white);
+	border-color: var(--wp--preset--color--light-gray);
+	justify-content: flex-start;
+}
+
+.yp-account-review--done span {
+	color: #f5b300;
+	letter-spacing: 2px;
+}
