@@ -385,6 +385,11 @@
 								'<input type="text" data-yp-slot-field="hint" placeholder="Short hint, e.g. Bottom platform" value="' + YP.escapeAttr( slot.hint ) + '" aria-label="Hint" />' +
 								'<button type="button" class="yp-print-where' + ( placed ? ' is-set' : '' ) + '" data-yp-slot-place>' + ( placed ? '&#10003; Dot placed' : 'Place dot' ) + '</button>' +
 							'</div>' +
+							'<div class="yp-print-chips__bar">' +
+								'<span>Offered: ' + slot.colors.length + ' of ' + filaments.length + '</span>' +
+								'<button type="button" class="yp-link-button" data-yp-chips-all' + ( slot.colors.length === filaments.length ? ' disabled' : '' ) + '>Select all</button>' +
+								'<button type="button" class="yp-link-button" data-yp-chips-none' + ( slot.colors.length ? '' : ' disabled' ) + '>Clear</button>' +
+							'</div>' +
 							'<div class="yp-print-chips">' +
 								filaments.map( function ( f ) {
 									var on = slot.colors.indexOf( f.id ) !== -1;
@@ -470,6 +475,16 @@
 				var slot = slots[ index ];
 				var chip = event.target.closest( '[data-yp-chip]' );
 				activeSlot = index;
+
+				// Direct request: "a select all button when I'm ticking filaments".
+				if ( event.target.closest( '[data-yp-chips-all]' ) || event.target.closest( '[data-yp-chips-none]' ) ) {
+					slot.colors = event.target.closest( '[data-yp-chips-all]' ) ? filaments.map( function ( f ) { return f.id; } ) : [];
+					if ( slot.colors.indexOf( slot.default_id ) === -1 ) {
+						slot.default_id = slot.colors[ 0 ] || 0;
+					}
+					render();
+					return;
+				}
 
 				if ( chip ) {
 					var id = parseInt( chip.getAttribute( 'data-yp-chip' ), 10 );

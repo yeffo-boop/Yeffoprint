@@ -1814,6 +1814,21 @@
 	color: #1e7b3a;
 }
 
+.yp-print-chips__bar {
+	display: flex;
+	align-items: center;
+	gap: 0.9rem;
+	margin-bottom: 0.4rem;
+	font-size: 0.8rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-print-chips__bar .yp-link-button:disabled {
+	color: var(--wp--preset--color--light-gray);
+	text-decoration: none;
+	cursor: default;
+}
+
 .yp-print-chips {
 	display: flex;
 	flex-wrap: wrap;
