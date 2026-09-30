@@ -53,6 +53,10 @@ class YeffoPrint_Print_Controller {
 			return new \WP_Error( 'yeffoprint_cart_unavailable', __( 'The cart is unavailable right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 
+		// Load the saved cart before adding, or the add is lost (see
+		// YeffoPrint_Cart_Controller::ensure_cart_loaded()).
+		WC()->cart->get_cart();
+
 		$print_id = (int) $request->get_param( 'print_id' );
 		$quantity = max( 1, min( 100, (int) $request->get_param( 'quantity' ) ) );
 

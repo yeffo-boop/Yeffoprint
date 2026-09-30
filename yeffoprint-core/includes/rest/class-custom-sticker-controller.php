@@ -97,6 +97,12 @@ class YeffoPrint_Custom_Sticker_Controller {
 			wc_load_cart();
 		}
 
+		// Load the saved cart before adding, or the add is lost (see
+		// YeffoPrint_Cart_Controller::ensure_cart_loaded()).
+		if ( function_exists( 'WC' ) && WC()->cart ) {
+			WC()->cart->get_cart();
+		}
+
 		$size_id = absint( $request->get_param( 'size_id' ) );
 		if ( ! $size_id || ! $this->is_published( 'yp_sticker_size', $size_id ) ) {
 			return new \WP_Error( 'yeffoprint_invalid_size', __( 'Please choose a valid size.', 'yeffoprint-core' ), [ 'status' => 400 ] );
