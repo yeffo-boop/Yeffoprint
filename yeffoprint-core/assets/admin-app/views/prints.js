@@ -44,7 +44,7 @@
 	function swatch( color, size ) {
 		var meta = color.meta || {};
 		return YP.filamentSwatch
-			? YP.filamentSwatch( meta._yp_filament_hex, meta._yp_filament_finish, size )
+			? YP.filamentSwatch( meta._yp_filament_hex, meta._yp_filament_finish, size, color.filament_image_url, meta._yp_filament_focus )
 			: '';
 	}
 
@@ -53,7 +53,7 @@
 		var filaments = [];
 
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Items in the 3D Prints section of the shop. Each one sets how many colors the customer picks and where each color goes on the print. Colors come from <a href="#/filament-colors">Filament Colors</a>.</p>' +
+			'<p class="yp-app__intro">Items in the 3D Prints section of the shop. Each one sets how many colors the customer picks and where each color goes on the print. Colors come from <a href="#/filament-colors">Filaments</a>.</p>' +
 			'<div class="yp-list-toolbar">' +
 				'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search 3D prints&hellip;" />' +
 				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-add>+ Add 3D Print</button>' +
@@ -371,7 +371,7 @@
 				countEl.textContent = slots.length;
 
 				if ( ! filaments.length ) {
-					slotsEl.innerHTML = '<p class="yp-form__error">No active Filament Colors yet. <a href="#/filament-colors">Add your colors</a> first, then come back.</p>';
+					slotsEl.innerHTML = '<p class="yp-form__error">No active Filaments yet. <a href="#/filament-colors">Add your filaments</a> first, then come back.</p>';
 					return;
 				}
 

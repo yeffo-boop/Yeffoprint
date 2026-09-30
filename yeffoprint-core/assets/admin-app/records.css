@@ -2114,3 +2114,134 @@
 	padding: 0.45rem 1rem;
 	font-size: 0.85rem;
 }
+
+/* Filament photos (views/filament-colors.js): the photo zoomed into its
+   focus point, same math as the product page's picker tile. */
+.yp-filament-tile {
+	display: inline-block;
+	position: relative;
+	width: 40px;
+	height: 40px;
+	border-radius: 8px;
+	overflow: hidden;
+	flex-shrink: 0;
+	border: 1px solid rgba(0, 0, 0, 0.1);
+	vertical-align: middle;
+}
+
+.yp-filament-tile img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.yp-filament-nophoto {
+	display: inline-block;
+	margin-left: 0.35rem;
+	padding: 0 0.4rem;
+	border-radius: 999px;
+	background: var(--wp--preset--color--warm-white, #f5f3ef);
+	font-size: 0.75em;
+}
+
+.yp-filament-photo__row {
+	display: flex;
+	gap: 1rem;
+	align-items: flex-start;
+}
+
+.yp-filament-photo__full {
+	position: relative;
+	flex: 1;
+	max-width: 260px;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control, 8px);
+	background: var(--wp--preset--color--white);
+	overflow: hidden;
+	cursor: crosshair;
+}
+
+.yp-filament-photo__full img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.yp-filament-photo__full.is-empty {
+	aspect-ratio: 1;
+	display: grid;
+	place-items: center;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.85rem;
+	cursor: default;
+}
+
+.yp-filament-photo__marker {
+	position: absolute;
+	width: 22px;
+	height: 22px;
+	margin: -11px 0 0 -11px;
+	border-radius: 50%;
+	border: 3px solid #fff;
+	box-shadow: 0 0 0 2px #141414, 0 2px 6px rgba(0, 0, 0, 0.35);
+	pointer-events: none;
+}
+
+.yp-filament-photo__side {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	align-items: flex-start;
+}
+
+.yp-filament-photo__preview-label {
+	font-size: 0.8rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-filament-photo__preview .yp-filament-tile,
+.yp-filament-photo__preview .yp-filament-dot {
+	width: 96px;
+	height: 96px;
+	border-radius: 12px;
+}
+
+.yp-filament-photo__zoom {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.8rem;
+}
+
+.yp-filament-photo__zoom input {
+	width: 120px;
+}
+
+.yp-filament-photo__link {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+}
+
+.yp-filament-photo__link input {
+	flex: 1;
+	min-width: 0;
+}
+
+.yp-link-button {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--wp--preset--color--cyan-deep, #0a6f9e);
+	font: inherit;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+@media (max-width: 600px) {
+	.yp-filament-photo__row {
+		flex-direction: column;
+	}
+}
