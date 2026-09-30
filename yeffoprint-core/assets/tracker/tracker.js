@@ -366,7 +366,8 @@
 	}
 
 	function isStandalone() {
-		return window.matchMedia( '(display-mode: standalone)' ).matches || window.navigator.standalone === true;
+		// The Android app counts as installed (NATIVE is set further down, before anything renders).
+		return NATIVE || window.matchMedia( '(display-mode: standalone)' ).matches || window.navigator.standalone === true;
 	}
 
 	function isIOS() {
@@ -1063,6 +1064,7 @@
 		}
 		window.scrollTo( 0, scrollY );
 		syncAlerts();
+		syncNativeReminders();
 		if ( focusedId && document.getElementById( focusedId ) && ! ui.sheet ) {
 			document.getElementById( focusedId ).focus();
 		}
@@ -3760,6 +3762,7 @@
 				h( 'a', { class: 'ypt-btn', href: CFG.logoutUrl, onclick: function () {
 					removeKey( STORE_KEY );
 					removeKey( QUEUE_KEY );
+					forgetNative();
 				} }, 'Sign out' ),
 				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--danger', onclick: confirmDeleteAll }, 'Delete my data' )
 			)
@@ -3772,7 +3775,7 @@
 	}
 
 	function remindersCard( s ) {
-		var supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+		var supported = NATIVE || ( 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window );
 		var card = h( 'div', { class: 'ypt-card' } );
 		var errBox = h( 'p', { class: 'ypt-error', hidden: true } );
 
@@ -3788,7 +3791,7 @@
 		sw.addEventListener( 'click', function () {
 			sw.disabled = true;
 			errBox.hidden = true;
-			( on ? disablePush() : enablePush() ).then( function () {
+			( NATIVE ? ( on ? disableNative() : enableNative() ) : ( on ? disablePush() : enablePush() ) ).then( function () {
 				render();
 			} ).catch( function ( e ) {
 				sw.disabled = false;
@@ -3801,9 +3804,17 @@
 			h( 'div', null, h( 'b', null, 'Remind me on this device' ), h( 'div', { class: 'ypt-muted ypt-small' }, on ? 'You’ll get a notification when each dose is due.' : 'Get a notification when each dose is due.' ) ),
 			sw
 		) );
+		if ( on && NATIVE && ! state.exactHere ) {
+			card.appendChild( h( 'div', { class: 'ypt-banner ypt-banner--warn', style: { marginTop: '12px' } },
+				h( 'div', null, h( 'b', null, 'Reminders may come late.' ), ' Allow “Alarms & reminders” for Dose Tracker so each one arrives right on time.',
+					h( 'div', { style: { marginTop: '8px' } }, h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+						allowExactNative().catch( function () {} );
+					} }, 'Allow' ) ) )
+			) );
+		}
 		if ( on ) {
 			card.appendChild( h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
-				api( 'POST', 'tracker/push/test' ).then( function () {
+				( NATIVE ? testNative() : api( 'POST', 'tracker/push/test' ) ).then( function () {
 					toast( 'Test reminder sent' );
 				} ).catch( function ( e ) {
 					toast( e.message || 'Couldn’t send a test.' );
@@ -3822,8 +3833,10 @@
 				namesSw
 			) );
 		}
-		if ( state.push.devices > ( on ? 1 : 0 ) ) {
-			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, 'Also on for ' + ( state.push.devices - ( on ? 1 : 0 ) ) + ' other device' + ( state.push.devices - ( on ? 1 : 0 ) === 1 ? '' : 's' ) + '.' ) );
+		// The app's reminders live on the phone, so they aren't one of the server's push devices.
+		var mine = on && ! NATIVE ? 1 : 0;
+		if ( state.push.devices > mine ) {
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, 'Also on for ' + ( state.push.devices - mine ) + ' other device' + ( state.push.devices - mine === 1 ? '' : 's' ) + '.' ) );
 		}
 		if ( s.baseTz || s.tz ) {
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, s.travel
@@ -3854,7 +3867,7 @@
 	}
 
 	function checkPushHere() {
-		if ( ! ( 'serviceWorker' in navigator ) || ! ( 'PushManager' in window ) ) {
+		if ( NATIVE || ! ( 'serviceWorker' in navigator ) || ! ( 'PushManager' in window ) ) {
 			return;
 		}
 		swReady().then( function ( reg ) {
@@ -3908,6 +3921,231 @@
 		} ).then( function () {
 			state.pushOnHere = false;
 			state.push.devices = Math.max( 0, ( state.push.devices || 1 ) - 1 );
+		} );
+	}
+
+	/* =========================================================
+	 * Android app (tracker-android/ in the repo, built with Capacitor)
+	 *
+	 * The app is this same page in an Android WebView with Capacitor's
+	 * bridge added. A WebView can't do Web Push, so in the app reminders
+	 * are scheduled on the phone itself: the next NATIVE_DAYS of doses
+	 * and supply alerts, worked out here (same wording as
+	 * class-tracker-reminders.php) and replaced whenever anything
+	 * changes or the app opens. Nothing goes through a push server.
+	 * Plain bridge calls, no @capacitor/core bundle, so this file stays
+	 * build-free.
+	 * ======================================================= */
+
+	var NATIVE = !! ( window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform() && typeof window.Capacitor.nativePromise === 'function' );
+	var NATIVE_KEY = 'ypt-native-reminders:' + ( CFG.userKey || 'anon' );
+	var NATIVE_DAYS = 14;
+	// Android limits how many alarms one app can have waiting (about 500).
+	var NATIVE_MAX = 150;
+	var NATIVE_CHANNEL = 'yp-reminders';
+	var nativeChecked = false;
+	var nativeLast = '';
+	var nativeTimer = null;
+
+	function nativeCall( method, options ) {
+		return window.Capacitor.nativePromise( 'LocalNotifications', method, options || {} );
+	}
+
+	/** A stable positive 31-bit id per reminder tag (Android notification ids are ints). */
+	function nativeId( tag ) {
+		var n = 0;
+		for ( var i = 0; i < tag.length; i++ ) {
+			n = ( ( n * 31 ) + tag.charCodeAt( i ) ) | 0;
+		}
+		return ( n & 0x7fffffff ) || 1;
+	}
+
+	function nativeChannel() {
+		return nativeCall( 'createChannel', { id: NATIVE_CHANNEL, name: 'Dose reminders', description: 'When a dose is due, and before you run low', importance: 4, vibration: true } );
+	}
+
+	/** @return {Array<{tag:string,at:number,title:string,body:string}>} Upcoming reminders, soonest first. */
+	function nativeReminderList() {
+		var s = state.records.settings.me || {};
+		if ( s.reminders === false ) {
+			return [];
+		}
+		var names = s.reminderNames !== false;
+		var now = Date.now();
+		var today = todayStr();
+		var out = [];
+		for ( var i = 0; i < NATIVE_DAYS; i++ ) {
+			var date = addDays( today, i );
+			var slots = {};
+			slotsOn( date ).forEach( function ( sl ) {
+				if ( sl.log ) {
+					return;
+				}
+				var key = date + 'T' + sl.time;
+				var p = sl.protocol;
+				var slot = slots[ key ] || ( slots[ key ] = { at: Date.parse( wallToIso( date, sl.time ) ), key: key.replace( /[-:]/g, '' ), names: [], lines: [] } );
+				slot.names.push( p.compound );
+				slot.lines.push( ( p.compound + ' ' + ( +p.dose > 0 ? amountLabel( p.dose, p.unit ) + ( p.doseOf ? ' ' + p.doseOf : '' ) : '' ) ).trim() );
+			} );
+			Object.keys( slots ).forEach( function ( key ) {
+				var slot = slots[ key ];
+				if ( slot.at <= now ) {
+					return;
+				}
+				var one = slot.lines.length === 1;
+				out.push( {
+					tag: 'yp-dose-' + slot.key,
+					at: slot.at,
+					title: names ? ( one ? 'Time for ' + slot.names[ 0 ] : 'Time for your doses' ) : 'Dose reminder',
+					body: names ? slot.lines.join( ' + ' ) : ( one ? 'You have a dose due. Open your tracker to see it.' : 'You have ' + slot.lines.length + ' doses due. Open your tracker to see them.' ),
+				} );
+			} );
+		}
+		supplyAlerts().forEach( function ( a ) {
+			var at = Date.parse( wallToIso( a.date, a.time ) );
+			if ( at <= now ) {
+				return;
+			}
+			var mix = a.id.indexOf( 'mix-' ) === 0;
+			out.push( {
+				tag: 'yp-supply-' + a.id,
+				at: at,
+				title: names ? a.title : ( mix ? 'Time to mix a new vial' : 'Your supply is running low' ),
+				body: names ? a.body : ( mix ? 'Your next dose needs a new vial or pen.' : 'Open the tracker to see what to reorder.' ),
+			} );
+		} );
+		return out.sort( function ( a, b ) {
+			return a.at - b.at;
+		} ).slice( 0, NATIVE_MAX );
+	}
+
+	/** Swaps every waiting reminder for `list`. Exact times only when the phone allows them, so a reschedule never opens Settings. */
+	function nativeReplace( list ) {
+		var exact = false;
+		return nativeCall( 'checkExactNotificationSetting' ).then( function ( r ) {
+			exact = !! r && r.exact_alarm === 'granted';
+			return nativeCall( 'cancelAll' );
+		} ).then( function () {
+			if ( ! list.length ) {
+				return null;
+			}
+			return nativeCall( 'schedule', { notifications: list.map( function ( r ) {
+				return {
+					id: nativeId( r.tag ),
+					title: r.title,
+					body: r.body,
+					channelId: NATIVE_CHANNEL,
+					smallIcon: 'ic_stat_reminder',
+					iconColor: '#EC008C',
+					isExactNotification: exact,
+					schedule: { at: new Date( r.at ).toISOString(), allowWhileIdle: true },
+				};
+			} ) } );
+		} );
+	}
+
+	function syncNativeReminders() {
+		if ( ! NATIVE || ! nativeChecked || ! state.loaded ) {
+			return;
+		}
+		clearTimeout( nativeTimer );
+		nativeTimer = setTimeout( function () {
+			var list = state.pushOnHere ? nativeReminderList() : [];
+			var sig = JSON.stringify( list );
+			if ( sig === nativeLast ) {
+				return;
+			}
+			nativeLast = sig;
+			nativeReplace( list ).catch( function () {
+				nativeLast = '';
+			} );
+		}, 600 );
+	}
+
+	function checkNativeHere() {
+		if ( ! loadJSON( NATIVE_KEY, false ) ) {
+			state.pushOnHere = false;
+			nativeChecked = true;
+			syncNativeReminders();
+			return;
+		}
+		Promise.all( [ nativeCall( 'checkPermissions' ), nativeCall( 'checkExactNotificationSetting' ), nativeChannel() ] ).then( function ( r ) {
+			state.pushOnHere = !! r[ 0 ] && r[ 0 ].display === 'granted';
+			state.exactHere = !! r[ 1 ] && r[ 1 ].exact_alarm === 'granted';
+		} ).catch( function () {
+			state.pushOnHere = false;
+		} ).then( function () {
+			nativeChecked = true;
+			nativeLast = '';
+			render();
+			syncNativeReminders();
+		} );
+	}
+
+	function enableNative() {
+		return nativeCall( 'requestPermissions' ).then( function ( p ) {
+			if ( ! p || p.display !== 'granted' ) {
+				throw new Error( 'Notifications are off for Dose Tracker. Turn them on in your phone’s Settings under Apps, then try again.' );
+			}
+			return Promise.all( [ nativeChannel(), nativeCall( 'checkExactNotificationSetting' ) ] );
+		} ).then( function ( r ) {
+			// Android 12+ may need "Alarms & reminders" allowed too, or a
+			// reminder can arrive long after its time. Asked once here; the
+			// Me tab keeps offering it while it's off.
+			return r[ 1 ] && r[ 1 ].exact_alarm === 'granted' ? r[ 1 ] : nativeCall( 'changeExactNotificationSetting' ).catch( function () {
+				return null;
+			} );
+		} ).then( function ( exact ) {
+			saveJSON( NATIVE_KEY, true );
+			state.pushOnHere = true;
+			state.exactHere = !! exact && exact.exact_alarm === 'granted';
+			nativeChecked = true;
+			nativeLast = '';
+			var s = state.records.settings.me || {};
+			if ( s.reminders === false ) {
+				put( 'settings', 'me', Object.assign( {}, s, { reminders: true } ) );
+			}
+			toast( 'Reminders are on' );
+		} );
+	}
+
+	function disableNative() {
+		removeKey( NATIVE_KEY );
+		state.pushOnHere = false;
+		nativeLast = '';
+		return nativeReplace( [] );
+	}
+
+	/** Signing out: this account's reminders leave the phone with its saved copy. */
+	function forgetNative() {
+		if ( ! NATIVE ) {
+			return;
+		}
+		removeKey( NATIVE_KEY );
+		state.pushOnHere = false;
+		nativeLast = '';
+		nativeCall( 'cancelAll' ).catch( function () {} );
+	}
+
+	function testNative() {
+		return nativeCall( 'schedule', { notifications: [ {
+			id: nativeId( 'yp-test' ),
+			title: 'Test reminder',
+			body: 'Reminders are working on this phone.',
+			channelId: NATIVE_CHANNEL,
+			smallIcon: 'ic_stat_reminder',
+			iconColor: '#EC008C',
+			isExactNotification: false,
+			schedule: { at: new Date( Date.now() + 3000 ).toISOString(), allowWhileIdle: true },
+		} ] } );
+	}
+
+	/** Without "Alarms & reminders" allowed (off by default from Android 14), Android can hold a reminder back well past its time. */
+	function allowExactNative() {
+		return nativeCall( 'changeExactNotificationSetting' ).then( function ( r ) {
+			state.exactHere = !! r && r.exact_alarm === 'granted';
+			nativeLast = '';
+			render();
 		} );
 	}
 
@@ -5045,7 +5283,7 @@
 		var btn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--danger ypt-btn--block', disabled: true, onclick: function () {
 			btn.disabled = true;
 			api( 'DELETE', 'tracker/all' ).then( function () {
-				return disablePush().catch( function () {} );
+				return ( NATIVE ? disableNative() : disablePush() ).catch( function () {} );
 			} ).then( function () {
 				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {} };
 				state.shares = [];
@@ -5087,6 +5325,7 @@
 	function renderSignedOut() {
 		removeKey( STORE_KEY );
 		removeKey( QUEUE_KEY );
+		forgetNative();
 		root.textContent = '';
 		function feature( ic, title, text ) {
 			return h( 'li', null, icon( ic ), h( 'div', null, h( 'b', null, title ), text ) );
@@ -5173,11 +5412,15 @@
 	// signed in on this browser earlier shouldn't leave theirs behind.
 	try {
 		Object.keys( window.localStorage ).forEach( function ( k ) {
-			if ( ( k.indexOf( 'ypt:' ) === 0 && k !== STORE_KEY ) || ( k.indexOf( 'ypt-q:' ) === 0 && k !== QUEUE_KEY ) ) {
+			if ( ( k.indexOf( 'ypt:' ) === 0 && k !== STORE_KEY ) || ( k.indexOf( 'ypt-q:' ) === 0 && k !== QUEUE_KEY ) || ( k.indexOf( 'ypt-native-reminders:' ) === 0 && k !== NATIVE_KEY ) ) {
 				removeKey( k );
 			}
 		} );
 	} catch ( e ) {}
+
+	if ( NATIVE ) {
+		checkNativeHere();
+	}
 
 	var savedUi = loadJSON( UI_KEY, null );
 	if ( savedUi && savedUi.tab && savedUi.tab !== 'today' ) {
