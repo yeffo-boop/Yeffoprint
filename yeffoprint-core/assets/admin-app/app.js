@@ -277,7 +277,7 @@
 			{ id: 'label-colors', label: 'Label Colors' },
 			{ id: 'compound-list', label: 'Compound List' },
 			{ id: 'prints', label: '3D Prints' },
-			{ id: 'filament-colors', label: 'Filament Colors' }
+			{ id: 'filament-colors', label: 'Filaments' }
 		] },
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },

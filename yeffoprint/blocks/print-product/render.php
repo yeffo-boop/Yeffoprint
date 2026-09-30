@@ -2,11 +2,19 @@
 /**
  * A 3D print's product page (direct request: a 3D Prints section where
  * the customer picks a color for each part of the print). Fully
- * server-rendered — title, price, photo, dots and every color option
- * are real HTML a crawler can read, and the color pickers are plain
- * radio buttons that work before any script runs. assets/js/print-
- * product.js only layers on the live bits: the picked color's name,
- * the dot's color badge, the running total, and Add to Cart.
+ * server-rendered — title, price, photo, dots and every filament option
+ * are real HTML a crawler can read, and the filament pickers are plain
+ * radio buttons inside <details> that work before any script runs.
+ * assets/js/print-product.js only layers on the live bits: the picked
+ * filament's row, search and group filters, the bigger photo on hover
+ * or press-and-hold, the dot's badge, the running total, and Add to Cart.
+ *
+ * Filament picker (direct request: "change that to a filament selector",
+ * then "the list can get kind of long ... I don't want to keep the user
+ * endlessly scrolling"): each part shows its picked filament as one row;
+ * Change opens small photo cards in two columns inside a panel that
+ * scrolls on its own, grouped Solid / Matte / Silk / Specialty, with a
+ * search box and group chips once the list is long enough to need them.
  *
  * Each color choice's number matches the numbered dot on the photo,
  * placed by the admin in the 3D Prints editor (x/y as percentages).
@@ -70,27 +78,131 @@ $money = static function ( float $amount ): string {
 
 $archive_url = get_post_type_archive_link( 'yp_print' );
 
+$groups = class_exists( 'YeffoPrint_Print_Meta' ) ? YeffoPrint_Print_Meta::FINISHES : [ 'solid' => 'Solid', 'matte' => 'Matte', 'silk' => 'Silk', 'specialty' => 'Specialty' ];
+
+/** A filament's photo zoomed into its focus point, or its hex swatch. */
+$filament_tile = static function ( array $color, string $class = 'yp-fil__tile' ): string {
+	$html = '<span class="' . esc_attr( $class ) . ( ! $color['image_url'] && 'silk' === $color['finish'] ? ' is-silk' : '' ) . '" style="background-color:' . esc_attr( $color['hex'] ) . '">';
+	if ( $color['image_url'] ) {
+		$focus  = $color['focus'];
+		$origin = $focus['x'] . '% ' . $focus['y'] . '%';
+		$html  .= '<img src="' . esc_url( $color['image_url'] ) . '" alt="" loading="lazy" decoding="async" style="' . esc_attr( 'object-position:' . $origin . ';transform-origin:' . $origin . ';transform:scale(' . ( $focus['zoom'] / 100 ) . ')' ) . '" />';
+	}
+	return $html . '</span>';
+};
+
+/** Search / filter / pinned-group chrome only once a list is long enough to need it. */
+$picker_tools_from = 8;
+
 /**
- * Swatches for a lid add-on's color (text or image). Nothing starts
- * picked: text in the lid's own color would vanish, so the customer
- * chooses on purpose.
+ * One filament picker: the picked filament as a row (the <summary>),
+ * and every offered filament as a small photo card grouped by type.
+ * $picked_id 0 means nothing starts picked (lid text / image color),
+ * so the panel starts open with "Pick a filament".
  */
-$addon_swatches = static function ( string $name, string $label ) use ( $print ): void {
+$filament_picker = static function ( string $name, array $colors, int $picked_id ) use ( $groups, $filament_tile, $money, $picker_tools_from ): void {
+	$picked  = null;
+	$grouped = [];
+	foreach ( $colors as $color ) {
+		if ( $color['id'] === $picked_id ) {
+			$picked = $color;
+		}
+		$grouped[ isset( $groups[ $color['finish'] ] ) ? $color['finish'] : 'solid' ][] = $color;
+	}
+	$grouped    = array_filter( array_replace( array_fill_keys( array_keys( $groups ), [] ), $grouped ) );
+	$with_tools = count( $colors ) >= $picker_tools_from;
+	?>
+	<details class="yp-fil-picker<?php echo $with_tools ? ' has-tools' : ''; ?>" data-yp-fil-picker<?php echo $picked ? '' : ' open'; ?>>
+		<summary class="yp-fil-picker__chosen" data-yp-fil-chosen>
+			<?php if ( $picked ) : ?>
+				<?php echo $filament_tile( $picked ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped inside. ?>
+				<span class="yp-fil__text">
+					<b><?php echo esc_html( $picked['name'] ); ?></b>
+					<small><?php echo esc_html( implode( ' · ', array_filter( [ $picked['brand'], $picked['extra_charge'] > 0 ? '+' . $money( $picked['extra_charge'] ) : '' ] ) ) ); ?></small>
+				</span>
+			<?php else : ?>
+				<span class="yp-fil__tile is-empty" aria-hidden="true"></span>
+				<span class="yp-fil__text"><b class="is-missing"><?php esc_html_e( 'Pick a filament', 'yeffoprint' ); ?></b></span>
+			<?php endif; ?>
+			<span class="yp-fil-picker__toggle" aria-hidden="true">
+				<span class="yp-fil-picker__open-label"><?php esc_html_e( 'Change', 'yeffoprint' ); ?></span>
+				<span class="yp-fil-picker__close-label"><?php esc_html_e( 'Close', 'yeffoprint' ); ?></span>
+			</span>
+		</summary>
+		<div class="yp-fil-picker__panel">
+			<?php if ( $with_tools ) : ?>
+				<div class="yp-fil-picker__tools" data-yp-fil-tools hidden>
+					<label class="yp-fil-picker__search">
+						<span class="screen-reader-text"><?php esc_html_e( 'Search filaments', 'yeffoprint' ); ?></span>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+						<input type="search" placeholder="<?php esc_attr_e( 'Search blue, silk, Bambu…', 'yeffoprint' ); ?>" autocomplete="off" data-yp-fil-search />
+					</label>
+					<?php if ( count( $grouped ) > 1 ) : ?>
+						<div class="yp-fil-picker__chips" role="group" aria-label="<?php esc_attr_e( 'Filament type', 'yeffoprint' ); ?>">
+							<button type="button" class="is-on" aria-pressed="true" data-yp-fil-chip=""><?php esc_html_e( 'All', 'yeffoprint' ); ?> <em><?php echo (int) count( $colors ); ?></em></button>
+							<?php foreach ( $grouped as $key => $group_colors ) : ?>
+								<button type="button" aria-pressed="false" data-yp-fil-chip="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $groups[ $key ] ); ?> <em><?php echo (int) count( $group_colors ); ?></em></button>
+							<?php endforeach; ?>
+						</div>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+			<div class="yp-fil-picker__list" data-yp-fil-list>
+				<?php foreach ( $grouped as $key => $group_colors ) : ?>
+					<div class="yp-fil-picker__group" data-yp-fil-group="<?php echo esc_attr( $key ); ?>">
+						<?php if ( count( $grouped ) > 1 ) : ?>
+							<p class="yp-fil-picker__group-title"><?php echo esc_html( $groups[ $key ] ); ?></p>
+						<?php endif; ?>
+						<div class="yp-fil-picker__grid">
+							<?php foreach ( $group_colors as $color ) : ?>
+								<?php $out = ! $color['in_stock']; ?>
+								<label class="yp-fil<?php echo $out ? ' is-out' : ''; ?>" data-yp-fil data-search="<?php echo esc_attr( strtolower( implode( ' ', [ $color['name'], $color['brand'], $color['line'], $groups[ $key ] ] ) ) ); ?>">
+									<input
+										type="radio"
+										class="screen-reader-text"
+										name="<?php echo esc_attr( $name ); ?>"
+										value="<?php echo (int) $color['id']; ?>"
+										data-name="<?php echo esc_attr( $color['name'] ); ?>"
+										data-brand="<?php echo esc_attr( $color['brand'] ); ?>"
+										data-line="<?php echo esc_attr( $color['line'] ); ?>"
+										data-hex="<?php echo esc_attr( $color['hex'] ); ?>"
+										data-finish="<?php echo esc_attr( $color['finish'] ); ?>"
+										data-image="<?php echo esc_attr( $color['image_url'] ); ?>"
+										data-extra="<?php echo esc_attr( (string) $color['extra_charge'] ); ?>"
+										<?php checked( $color['id'], $picked_id ); ?>
+										<?php disabled( $out ); ?>
+									/>
+									<?php echo $filament_tile( $color ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped inside. ?>
+									<span class="yp-fil__text">
+										<b><?php echo esc_html( $color['name'] ); ?></b>
+										<small><?php echo esc_html( $out ? __( 'Out of stock', 'yeffoprint' ) : ( '' !== $color['brand'] ? $color['brand'] : $color['line'] ) ); ?></small>
+									</span>
+									<?php if ( $color['extra_charge'] > 0 ) : ?>
+										<span class="yp-fil__extra">+<?php echo esc_html( $money( $color['extra_charge'] ) ); ?></span>
+									<?php endif; ?>
+								</label>
+							<?php endforeach; ?>
+						</div>
+					</div>
+				<?php endforeach; ?>
+				<p class="yp-fil-picker__empty" data-yp-fil-empty hidden><?php esc_html_e( 'No filaments match. Try another word.', 'yeffoprint' ); ?></p>
+			</div>
+		</div>
+	</details>
+	<?php
+};
+
+/**
+ * A lid add-on's filament (text or image). Nothing starts picked: text
+ * in the lid's own color would vanish, so the customer chooses on purpose.
+ */
+$addon_swatches = static function ( string $name, string $label ) use ( $print, $filament_picker ): void {
 	?>
 	<div class="yp-print-addon__colors" data-yp-addon-colors>
 		<p class="yp-print-addon__colors-head">
 			<strong><?php echo esc_html( $label ); ?></strong>
-			<span class="yp-print-slot__picked is-missing" data-yp-picked><?php esc_html_e( 'Pick a color', 'yeffoprint' ); ?></span>
 		</p>
-		<div class="yp-print-slot__swatches">
-			<?php foreach ( $print['addon_colors'] as $color ) : ?>
-				<label class="yp-print-swatch<?php echo $color['in_stock'] ? '' : ' is-out'; ?>" title="<?php echo esc_attr( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?>">
-					<input type="radio" name="<?php echo esc_attr( $name ); ?>" value="<?php echo (int) $color['id']; ?>" data-name="<?php echo esc_attr( $color['name'] ); ?>"<?php disabled( ! $color['in_stock'] ); ?> />
-					<span class="yp-print-swatch__dot<?php echo 'silk' === $color['finish'] ? ' is-silk' : ''; ?>" style="background-color:<?php echo esc_attr( $color['hex'] ); ?>"></span>
-					<span class="screen-reader-text"><?php echo esc_html( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?></span>
-				</label>
-			<?php endforeach; ?>
-		</div>
+		<?php $filament_picker( $name, $print['addon_colors'], 0 ); ?>
 	</div>
 	<?php
 };
@@ -140,12 +252,12 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print )
 					?>
 					<span class="yp-print__dot" style="left:<?php echo esc_attr( (string) $slot['x'] ); ?>%;top:<?php echo esc_attr( (string) $slot['y'] ); ?>%" title="<?php echo esc_attr( $slot['name'] ); ?>" data-yp-dot="<?php echo (int) $index; ?>">
 						<?php echo (int) $index + 1; ?>
-						<i class="yp-print__dot-color<?php echo $picked && 'silk' === $picked['finish'] ? ' is-silk' : ''; ?>" style="background-color:<?php echo esc_attr( $picked ? $picked['hex'] : 'transparent' ); ?>"></i>
+						<i class="yp-print__dot-color<?php echo $picked && ! $picked['image_url'] && 'silk' === $picked['finish'] ? ' is-silk' : ''; ?>" style="background-color:<?php echo esc_attr( $picked ? $picked['hex'] : 'transparent' ); ?><?php echo $picked && $picked['image_url'] ? esc_attr( ';background-image:url(' . esc_url( $picked['image_url'] ) . ');background-size:' . $picked['focus']['zoom'] . '%;background-position:' . $picked['focus']['x'] . '% ' . $picked['focus']['y'] . '%' ) : ''; ?>"></i>
 					</span>
 				<?php endforeach; ?>
 			</div>
 			<?php if ( $slots && $print['image_url'] ) : ?>
-				<p class="yp-print__caption"><?php esc_html_e( 'Numbered dots show where each color goes. They match the color steps.', 'yeffoprint' ); ?></p>
+				<p class="yp-print__caption"><?php esc_html_e( 'Numbered dots show which part each filament is for.', 'yeffoprint' ); ?></p>
 			<?php endif; ?>
 		</div>
 
@@ -160,7 +272,7 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print )
 					<?php echo esc_html( $money( $sizes ? $sizes[0]['price'] : $print['price'] ) ); ?>
 				<?php endif; ?>
 				<?php if ( $has_extras ) : ?>
-					<small><?php esc_html_e( '+ color upgrades', 'yeffoprint' ); ?></small>
+					<small><?php esc_html_e( '+ filament upgrades', 'yeffoprint' ); ?></small>
 				<?php endif; ?>
 			</p>
 
@@ -168,8 +280,8 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print )
 				<li>
 					<?php
 					echo esc_html( $slots
-						/* translators: %d: number of color choices */
-						? sprintf( _n( '%d color choice', '%d color choices', count( $slots ), 'yeffoprint' ), count( $slots ) )
+						/* translators: %d: number of filament choices */
+						? sprintf( _n( '%d filament choice', '%d filament choices', count( $slots ), 'yeffoprint' ), count( $slots ) )
 						: __( 'One color', 'yeffoprint' ) );
 					?>
 				</li>
@@ -209,11 +321,10 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print )
 
 				<?php if ( $slots ) : ?>
 					<p class="yp-print__section-title">
-						<?php esc_html_e( 'Choose your colors', 'yeffoprint' ); ?>
+						<?php esc_html_e( 'Choose your filament', 'yeffoprint' ); ?>
 					</p>
 
 					<?php foreach ( $slots as $index => $slot ) : ?>
-						<?php $picked_id = $pick_for( $slot ); ?>
 						<fieldset class="yp-print-slot" data-yp-slot="<?php echo (int) $index; ?>">
 							<legend class="yp-print-slot__head">
 								<span class="yp-print-slot__num" aria-hidden="true"><?php echo (int) $index + 1; ?></span>
@@ -223,34 +334,12 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print )
 										<span><?php echo esc_html( $slot['hint'] ); ?></span>
 									<?php endif; ?>
 								</span>
-								<span class="yp-print-slot__picked" data-yp-picked aria-live="polite"></span>
 							</legend>
-							<div class="yp-print-slot__swatches">
-								<?php foreach ( $slot['colors'] as $color ) : ?>
-									<label class="yp-print-swatch<?php echo $color['in_stock'] ? '' : ' is-out'; ?>" title="<?php echo esc_attr( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?>">
-										<input
-											type="radio"
-											name="color_<?php echo (int) $index; ?>"
-											value="<?php echo (int) $color['id']; ?>"
-											data-name="<?php echo esc_attr( $color['name'] ); ?>"
-											data-hex="<?php echo esc_attr( $color['hex'] ); ?>"
-											data-finish="<?php echo esc_attr( $color['finish'] ); ?>"
-											data-extra="<?php echo esc_attr( (string) $color['extra_charge'] ); ?>"
-											<?php checked( $color['id'], $picked_id ); ?>
-											<?php disabled( ! $color['in_stock'] ); ?>
-										/>
-										<span class="yp-print-swatch__dot<?php echo 'silk' === $color['finish'] ? ' is-silk' : ''; ?>" style="background-color:<?php echo esc_attr( $color['hex'] ); ?>"></span>
-										<span class="screen-reader-text"><?php echo esc_html( $color['name'] . ( $color['in_stock'] ? '' : ' (out of stock)' ) ); ?></span>
-										<?php if ( $color['extra_charge'] > 0 ) : ?>
-											<span class="yp-print-swatch__extra">+<?php echo esc_html( $money( $color['extra_charge'] ) ); ?></span>
-										<?php endif; ?>
-									</label>
-								<?php endforeach; ?>
-							</div>
+							<?php $filament_picker( 'color_' . $index, $slot['colors'], $pick_for( $slot ) ); ?>
 						</fieldset>
 					<?php endforeach; ?>
 
-					<p class="yp-print__note"><?php esc_html_e( 'Crossed-out colors are out of stock right now. Colors can look slightly different in person.', 'yeffoprint' ); ?></p>
+					<p class="yp-print__note"><?php esc_html_e( 'Photos come from each filament brand. Colors can look slightly different in person.', 'yeffoprint' ); ?></p>
 				<?php endif; ?>
 
 				<?php if ( $addons['text'] || $addons['image'] ) : ?>
