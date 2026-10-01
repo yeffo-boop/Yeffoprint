@@ -128,6 +128,7 @@
 			unpaidEl.hidden = false;
 			unpaidEl.innerHTML =
 				'<h3 class="yp-split__subhead">Custom design requests not checked out (' + requests.length + ')</h3>' +
+				'<p class="yp-field__hint">Open one to delete it if the customer changed their mind. To drop an unfinished checkout below, open it and press Cancel order.</p>' +
 				'<div class="yp-record-card" style="margin-bottom:var(--wp--preset--spacing--sm);"><table class="yp-record-table"><thead><tr>' +
 					'<th>Request</th><th>Customer</th><th>Submitted</th><th>Labels</th><th>Status</th>' +
 				'</tr></thead><tbody>' +

@@ -356,6 +356,8 @@ class YeffoPrint_Admin_Order_Controller {
 			'status_label'         => wc_get_order_status_name( $order->get_status() ),
 			'statuses'             => $this->status_options(),
 			'date'                 => $order->get_date_created() ? $order->get_date_created()->date( 'c' ) : null,
+			// Drives the drawer's Cancel order button (unpaid orders only).
+			'date_paid'            => $order->get_date_paid() ? $order->get_date_paid()->date( 'c' ) : null,
 			'customer_name'        => trim( $order->get_formatted_billing_full_name() ),
 			'customer_email'       => $order->get_billing_email(),
 			'customer_phone'       => $order->get_billing_phone(),

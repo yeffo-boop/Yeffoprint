@@ -38,6 +38,45 @@ class YeffoPrint_Custom_Order_Payment {
 		add_action( 'woocommerce_payment_complete', [ $this, 'link_paid_custom_orders' ] );
 		add_action( 'woocommerce_order_status_processing', [ $this, 'link_paid_custom_orders' ] );
 		add_action( 'woocommerce_order_status_completed', [ $this, 'link_paid_custom_orders' ] );
+
+		// Direct request: unpaid orders and their proofs were "stuck on
+		// awaiting payment" with no way to get rid of them. Cancelling or
+		// deleting the order now takes its still-unpaid proof records
+		// with it (trashed, so they can be restored from wp-admin).
+		add_action( 'woocommerce_order_status_cancelled', [ $this, 'trash_unpaid_custom_orders' ] );
+		add_action( 'woocommerce_trash_order', [ $this, 'trash_unpaid_custom_orders' ] );
+		add_action( 'woocommerce_before_delete_order', [ $this, 'trash_unpaid_custom_orders' ] );
+	}
+
+	/**
+	 * Trashes the unpaid (still 'draft') CustomOrders this order's line
+	 * items point at. Published ones are left alone: those were paid,
+	 * possibly on another order, and have real design work behind them.
+	 */
+	public function trash_unpaid_custom_orders( $order_id ): void {
+		$order = wc_get_order( (int) $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		foreach ( self::linked_custom_order_ids( $order ) as $custom_order_id ) {
+			$custom_order = get_post( $custom_order_id );
+			if ( $custom_order && 'yp_custom_order' === $custom_order->post_type && 'draft' === $custom_order->post_status ) {
+				wp_trash_post( $custom_order_id );
+			}
+		}
+	}
+
+	/** @return int[] Distinct CustomOrder ids referenced by $order's line items. */
+	private static function linked_custom_order_ids( \WC_Order $order ): array {
+		$ids = [];
+		foreach ( $order->get_items() as $item ) {
+			$id = (int) $item->get_meta( '_yp_custom_order_id' );
+			if ( $id ) {
+				$ids[ $id ] = $id;
+			}
+		}
+		return array_values( $ids );
 	}
 
 	public function link_paid_custom_orders( int $order_id ): void {
