@@ -81,21 +81,21 @@
 		row = row || { size_id: '', material_id: '', quantity: 100, compound_strength: '' };
 		return (
 			'<tr>' +
-				'<td data-label="Size" class="yp-tier-table__wide"><select data-row-size aria-label="Size">' +
+				'<td data-label="Size"><select data-row-size aria-label="Size">' +
 					'<option value="">Choose a size…</option>' +
 					options.sizes.map( function ( size ) {
 						return '<option value="' + size.id + '"' + ( String( row.size_id ) === String( size.id ) ? ' selected' : '' ) + '>' + YP.escapeHtml( size.name ) + '</option>';
 					} ).join( '' ) +
 				'</select>' + FILL_ALL_HTML + '</td>' +
-				'<td data-label="Material" class="yp-tier-table__wide"><select data-row-material aria-label="Material">' +
+				'<td data-label="Material"><select data-row-material aria-label="Material">' +
 					'<option value="">Choose a material…</option>' +
 					options.materials.map( function ( material ) {
 						return '<option value="' + material.id + '"' + ( String( row.material_id ) === String( material.id ) ? ' selected' : '' ) + ( material.in_stock ? '' : ' disabled' ) + '>' + YP.escapeHtml( material.name ) + ( material.in_stock ? '' : ' (out of stock)' ) + '</option>';
 					} ).join( '' ) +
 				'</select>' + FILL_ALL_HTML + '</td>' +
-				'<td data-label="Quantity" class="yp-tier-table__qty"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( row.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
-				'<td data-label="Compound/Strength"><input type="text" data-row-compound aria-label="Compound/Strength" placeholder="e.g. 10mg/mL" value="' + YP.escapeAttr( row.compound_strength ) + '" />' + FILL_ALL_HTML + '</td>' +
-				'<td class="yp-tier-table__remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
+				'<td data-label="Quantity" class="yp-tier-table__qty yp-stack-half"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( row.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
+				'<td data-label="Compound/Strength" class="yp-stack-half"><input type="text" data-row-compound aria-label="Compound/Strength" placeholder="e.g. 10mg/mL" value="' + YP.escapeAttr( row.compound_strength ) + '" />' + FILL_ALL_HTML + '</td>' +
+				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -380,7 +380,7 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Custom Design details</h2></div>' +
 					'<div class="yp-field"><label for="yp-mo-brand">Brand name</label><input type="text" id="yp-mo-brand" /></div>' +
-					'<table class="yp-tier-table yp-tier-table--items"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
+					'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
 						'<tbody data-yp-batch>' + batchRowHtml( null, state.options ) + '</tbody>' +
 					'</table>' +
 					'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-row>+ Add another label</button>' +
@@ -693,11 +693,11 @@
 			variant = variant || { quantity: 100, values: {} };
 			return (
 				'<tr>' +
-					'<td data-label="Quantity" class="yp-tier-table__qty"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( variant.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
+					'<td data-label="Quantity" class="yp-tier-table__qty yp-stack-half"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( variant.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
 					fieldSchema.map( function ( field ) {
-						return '<td data-label="' + YP.escapeAttr( field.label ) + '"' + ( 'textarea' === field.type ? ' class="yp-tier-table__wide"' : '' ) + '>' + templateFieldInputHtml( field, variant.values[ field.id ] ) + FILL_ALL_HTML + '</td>';
+						return '<td data-label="' + YP.escapeAttr( field.label ) + '"' + ( 'textarea' === field.type ? '' : ' class="yp-stack-half"' ) + '>' + templateFieldInputHtml( field, variant.values[ field.id ] ) + FILL_ALL_HTML + '</td>';
 					} ).join( '' ) +
-					'<td class="yp-tier-table__remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
+					'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
 				'</tr>'
 			);
 		}
@@ -833,7 +833,7 @@
 						} ).join( '' ) +
 					'</select></div>' +
 				'</div>' +
-				'<table class="yp-tier-table yp-tier-table--items"><thead><tr><th>Quantity</th>' +
+				'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Quantity</th>' +
 					data.field_schema.map( function ( field ) { return '<th>' + YP.escapeHtml( field.label ) + '</th>'; } ).join( '' ) +
 					'<th></th></tr></thead>' +
 					'<tbody data-yp-template-variants>' + templateVariantRowHtml( null, data.field_schema ) + '</tbody>' +

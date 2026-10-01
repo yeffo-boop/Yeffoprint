@@ -1255,9 +1255,10 @@ body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[typ
 	width: 6.5rem;
 }
 
-.yp-tier-table--items td.yp-tier-table__remove {
+.yp-tier-table--items td.yp-stack-remove {
 	min-width: 0;
 	width: 2.5rem;
+	padding-top: 0.75rem;
 	text-align: center;
 }
 
@@ -1296,45 +1297,118 @@ body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[typ
 	color: var(--wp--preset--color--charcoal);
 }
 
-/* Phones: a five-column table squeezed into a phone's width left every
-   dropdown a couple of letters wide. Each label row becomes its own
-   little card instead, with the column name above each field. */
+/* ---------- Editable rows that stack on phones (.yp-stack-rows) ----------
+   Direct report, with screenshots: on a phone, any table of editable
+   rows (Create Order's labels, a web design order's milestones and
+   add-ons, pricing tiers, shipping options…) squeezed every column
+   into the screen's width, so a text box ended up a sliver and a date
+   wrapped onto three lines. Below 640px each row becomes its own card:
+   every field gets the card's full width (or half, with
+   .yp-stack-half), the column name shows above it (from the cell's
+   data-label), and the remove button drops to the card's bottom as
+   "× Remove". Desktop keeps the normal table. */
+.yp-stack-rows td.yp-stack-grow {
+	width: 100%;
+}
+
+/* …without squeezing the short fields beside it to nothing. */
+@media (min-width: 641px) {
+	.yp-stack-rows td.yp-stack-half:not(.yp-stack-remove):not(.yp-wd-milestone-done) {
+		min-width: 8rem;
+	}
+
+	.yp-stack-rows td.yp-stack-wide-select {
+		min-width: 12rem;
+	}
+}
+
+.yp-stack-rows td.yp-stack-remove {
+	width: 1%;
+	white-space: nowrap;
+	text-align: right;
+}
+
+/* Web design order Milestones / Add-ons (app.js): a tidy edit grid on
+   desktop, with the text box taking the spare width. */
+.yp-edit-rows td {
+	padding: 0.35rem 0.4rem;
+	border-top: 0;
+}
+
+.yp-edit-rows th {
+	padding: 0.4rem 0.4rem 0.3rem;
+}
+
+.yp-edit-rows tr:hover td {
+	background: none;
+}
+
+.yp-edit-rows + .yp-row-action {
+	margin: 0.25rem 0 0.9rem;
+}
+
+.yp-edit-rows td.yp-wd-milestone-done {
+	width: 1%;
+	white-space: nowrap;
+}
+
+@media (min-width: 641px) {
+	.yp-edit-rows td.yp-wd-milestone-date {
+		min-width: 10.5rem;
+	}
+}
+
 @media (max-width: 640px) {
-	.yp-tier-table--items,
-	.yp-tier-table--items tbody {
+	.yp-stack-rows,
+	.yp-stack-rows tbody {
 		display: block;
 	}
 
-	.yp-tier-table--items thead {
+	.yp-stack-rows thead {
 		display: none;
 	}
 
-	.yp-tier-table--items tbody tr {
+	.yp-stack-rows tbody tr {
 		position: relative;
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 		gap: 0.6rem 0.75rem;
-		padding: 0.85rem 0.85rem 0.9rem;
+		padding: 0.85rem;
 		margin-bottom: 0.65rem;
 		border: 1.5px solid var(--wp--preset--color--light-gray);
 		border-radius: var(--wp--custom--radius--input);
 		background: var(--wp--preset--color--warm-white);
 	}
 
-	.yp-tier-table--items tbody td,
-	.yp-tier-table--items td.yp-tier-table__qty {
+	.yp-stack-rows tbody td,
+	.yp-stack-rows tbody td.yp-tier-table__qty,
+	.yp-stack-rows tbody td.yp-stack-grow,
+	.yp-stack-rows tbody td.yp-stack-remove {
 		display: flex;
 		flex-direction: column;
+		grid-column: 1 / -1;
 		min-width: 0;
 		width: auto;
 		padding: 0;
+		border: 0;
+		background: none;
+		text-align: left;
+		white-space: normal;
 	}
 
-	.yp-tier-table--items tbody td.yp-tier-table__wide {
-		grid-column: 1 / -1;
+	.yp-stack-rows tbody tr:hover td {
+		background: none;
 	}
 
-	.yp-tier-table--items tbody td[data-label]::before {
+	.yp-stack-rows tbody td.yp-stack-half {
+		grid-column: auto;
+	}
+
+	.yp-stack-rows tbody td.yp-stack-first {
+		order: -1;
+	}
+
+	.yp-stack-rows tbody td[data-label]::before {
 		content: attr(data-label);
 		margin-bottom: 0.3rem;
 		font-size: 0.7rem;
@@ -1344,8 +1418,40 @@ body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[typ
 		color: var(--wp--preset--color--charcoal);
 	}
 
-	/* The row number takes the top-left; the remove button sits in the
-	   card's top-right corner. */
+	/* Fixed desktop widths set inline on a few inputs (style="width:7rem"). */
+	.yp-stack-rows tbody td input:not([type="checkbox"]):not([type="radio"]),
+	.yp-stack-rows tbody td select,
+	.yp-stack-rows tbody td textarea {
+		width: 100% !important;
+	}
+
+	.yp-stack-rows tbody td.yp-stack-remove {
+		align-items: flex-end;
+		justify-content: flex-end;
+		order: 99;
+	}
+
+	.yp-stack-rows tbody td.yp-stack-remove .yp-row-action::after {
+		content: " Remove";
+	}
+
+	/* Milestones: "Done" sits on the bottom line, beside Remove. */
+	.yp-stack-rows tbody td.yp-wd-milestone-done {
+		order: 98;
+		justify-content: center;
+		min-width: 0;
+	}
+
+	.yp-stack-rows tbody td.yp-wd-milestone-date {
+		min-width: 0;
+	}
+
+	/* Create Order's label cards: a "Label 1, Label 2…" title, with the
+	   remove button in the card's top-right corner instead. */
+	.yp-tier-table--items tbody {
+		counter-reset: yp-item-row;
+	}
+
 	.yp-tier-table--items tbody tr::before {
 		content: "Label " counter(yp-item-row);
 		counter-increment: yp-item-row;
@@ -1356,16 +1462,21 @@ body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[typ
 		font-weight: 700;
 	}
 
-	.yp-tier-table--items tbody {
-		counter-reset: yp-item-row;
-	}
-
-	.yp-tier-table--items td.yp-tier-table__remove {
+	.yp-tier-table--items tbody td.yp-stack-remove {
 		position: absolute;
 		top: 0.45rem;
 		right: 0.45rem;
-		width: auto;
 	}
+
+	.yp-tier-table--items tbody td.yp-stack-remove .yp-row-action::after {
+		content: none;
+	}
+}
+
+/* iPhone Safari centres a date field's value; line it up with every
+   other field instead. */
+body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
+	text-align: left;
 }
 
 /* ---------- Order detail modal ----------
@@ -2287,6 +2398,27 @@ body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[typ
 	grid-template-columns: minmax(0, 1fr) 8rem auto auto auto;
 	gap: 0.5rem;
 	align-items: center;
+}
+
+/* Phones: the size name gets its own line instead of shrinking beside
+   the price, photo and buttons. */
+@media (max-width: 640px) {
+	.yp-print-size-row {
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		padding: 0.6rem;
+		border: 1.5px solid var(--wp--preset--color--light-gray);
+		border-radius: var(--wp--custom--radius--input);
+		background: var(--wp--preset--color--warm-white);
+	}
+
+	.yp-print-size-row > [data-yp-size-field="name"],
+	.yp-print-size-row > .yp-print-size-row__photo {
+		grid-column: 1 / -1;
+	}
+
+	.yp-print-size-row > .yp-print-size-row__photo {
+		order: 5;
+	}
 }
 
 /* Personalization: area, then text and image switches with their charges. */

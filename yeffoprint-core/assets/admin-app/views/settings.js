@@ -43,14 +43,14 @@
 		var regions = [ [ 'domestic', 'US only' ], [ 'international', 'International only' ], [ 'any', 'Everywhere' ] ];
 		return (
 			'<tr>' +
-				'<td><input type="text" data-shipping-option-label placeholder="e.g. USPS Ground Advantage" value="' + YP.escapeAttr( option.label ) + '" /></td>' +
-				'<td><input type="number" min="0" step="0.01" data-shipping-option-amount value="' + YP.escapeAttr( option.amount ) + '" /></td>' +
-				'<td><select data-shipping-option-region>' +
+				'<td data-label="Label" class="yp-stack-grow"><input type="text" data-shipping-option-label aria-label="Label" placeholder="e.g. USPS Ground Advantage" value="' + YP.escapeAttr( option.label ) + '" /></td>' +
+				'<td data-label="Price ($)" class="yp-stack-half"><input type="number" min="0" step="0.01" inputmode="decimal" data-shipping-option-amount aria-label="Price" value="' + YP.escapeAttr( option.amount ) + '" /></td>' +
+				'<td data-label="Ships to" class="yp-stack-half yp-stack-wide-select"><select data-shipping-option-region aria-label="Ships to">' +
 					regions.map( function ( region ) {
 						return '<option value="' + region[ 0 ] + '"' + ( region[ 0 ] === option.region ? ' selected' : '' ) + '>' + region[ 1 ] + '</option>';
 					} ).join( '' ) +
 				'</select></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove shipping option">&times;</button></td>' +
+				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove shipping option">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -129,14 +129,14 @@
 					'<div class="yp-panel__head"><h2>Homepage Promo</h2></div>' +
 					'<p class="yp-panel__hint">Themed banners between the header and the hero. Fill in an Offer and Promo code for any theme below to make it active — two or more active themes rotate automatically. 3D Prints Are Back needs no code: put the starting price (e.g. $14) in its Offer box. Shown exactly as typed, so make sure a matching active WooCommerce coupon exists for each code before turning this on.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-promo-enabled"' + ( settings.promo_enabled ? ' checked' : '' ) + ' /><label for="yp-set-promo-enabled">Show it on the homepage</label></div>' +
-					'<table class="yp-tier-table"><thead><tr><th>Theme</th><th>Offer</th><th>Promo code</th></tr></thead><tbody>' +
+					'<table class="yp-tier-table yp-stack-rows"><thead><tr><th>Theme</th><th>Offer</th><th>Promo code</th></tr></thead><tbody>' +
 						Object.keys( settings.promo_themes ).map( function ( slug ) {
 							var banner = settings.promo_banners[ slug ] || {};
 							var codeOptional = ( settings.promo_code_optional || [] ).indexOf( slug ) !== -1;
 							return '<tr>' +
-								'<td>' + YP.escapeHtml( settings.promo_themes[ slug ] ) + '</td>' +
-								'<td><input type="text" data-yp-promo-offer="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.offer || '' ) + '" placeholder="' + ( codeOptional ? '$14' : '15% off' ) + '" /></td>' +
-								'<td><input type="text" data-yp-promo-code="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.code || '' ) + '" placeholder="' + ( codeOptional ? 'Not needed' : 'SUMMERWEEN26' ) + '" /></td>' +
+								'<td><strong>' + YP.escapeHtml( settings.promo_themes[ slug ] ) + '</strong></td>' +
+								'<td data-label="Offer" class="yp-stack-half"><input type="text" aria-label="Offer" data-yp-promo-offer="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.offer || '' ) + '" placeholder="' + ( codeOptional ? '$14' : '15% off' ) + '" /></td>' +
+								'<td data-label="Promo code" class="yp-stack-half"><input type="text" aria-label="Promo code" data-yp-promo-code="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.code || '' ) + '" placeholder="' + ( codeOptional ? 'Not needed' : 'SUMMERWEEN26' ) + '" /></td>' +
 							'</tr>';
 						} ).join( '' ) +
 					'</tbody></table>' +
@@ -215,7 +215,7 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Manual order shipping options</h2></div>' +
 					'<p class="yp-panel__hint">Direct request: "I don’t need to rate shop to add shipping, just use my default shipping options." Staff pick one of these flat rates on the Manual Order screen instead of live rate-shopping — works whether or not Shippo above is configured. Customers also pick from these on their payment link when the order’s shipping is left on “Customer picks”. “Ships to” limits each one to US addresses or international ones.</p>' +
-					'<table class="yp-tier-table"><thead><tr><th>Label</th><th>Price</th><th>Ships to</th><th></th></tr></thead>' +
+					'<table class="yp-tier-table yp-stack-rows"><thead><tr><th>Label</th><th>Price</th><th>Ships to</th><th></th></tr></thead>' +
 						'<tbody data-yp-shipping-option-rows>' +
 							( settings.manual_order_shipping_options || [] ).map( manualOrderShippingOptionRowHtml ).join( '' ) +
 						'</tbody>' +

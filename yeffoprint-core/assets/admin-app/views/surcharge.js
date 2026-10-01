@@ -37,13 +37,13 @@
 				'<div data-yp-save-status></div>' +
 
 				( data.gateways.length
-					? '<div class="yp-record-card"><table class="yp-record-table"><thead><tr><th>Gateway</th><th>Rate (%)</th><th>Label</th></tr></thead><tbody data-yp-rows>' +
+					? '<div class="yp-record-card"><table class="yp-record-table yp-stack-rows"><thead><tr><th>Gateway</th><th>Rate (%)</th><th>Label</th></tr></thead><tbody data-yp-rows>' +
 						data.gateways.map( function ( gateway, index ) {
 							return (
 								'<tr data-index="' + index + '">' +
 									'<td>' + YP.escapeHtml( gateway.title ) + ' <span class="yp-pill ' + ( gateway.enabled ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( gateway.enabled ? 'Enabled' : 'Disabled' ) + '</span></td>' +
-									'<td><input type="number" step="0.01" min="0" max="10" data-yp-rate value="' + YP.escapeAttr( gateway.rate || '' ) + '" style="width:90px;" /></td>' +
-									'<td><input type="text" data-yp-label value="' + YP.escapeAttr( gateway.label ) + '" placeholder="' + YP.escapeAttr( data.label_default ) + '" style="width:100%;" /></td>' +
+									'<td data-label="Rate (%)" class="yp-stack-half"><input type="number" step="0.01" min="0" max="10" inputmode="decimal" aria-label="Rate (%)" data-yp-rate value="' + YP.escapeAttr( gateway.rate || '' ) + '" style="width:90px;" /></td>' +
+									'<td data-label="Label" class="yp-stack-grow"><input type="text" aria-label="Label" data-yp-label value="' + YP.escapeAttr( gateway.label ) + '" placeholder="' + YP.escapeAttr( data.label_default ) + '" style="width:100%;" /></td>' +
 								'</tr>'
 							);
 						} ).join( '' ) +
