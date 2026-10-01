@@ -126,13 +126,16 @@ class YeffoPrint_Admin_Order_Controller {
 			$args['post__in'] = $order_ids;
 		}
 
-		$result = wc_get_orders( $args );
+		$result          = wc_get_orders( $args );
+		$unpaid_requests = $this->unpaid_custom_requests();
 
 		return rest_ensure_response( [
-			'orders'        => array_map( [ $this, 'summary_payload' ], $result->orders ),
-			'total'         => $result->total,
-			'max_num_pages' => $result->max_num_pages,
-			'page'          => $page,
+			'orders'          => array_map( [ $this, 'summary_payload' ], $result->orders ),
+			'total'           => $result->total,
+			'max_num_pages'   => $result->max_num_pages,
+			'page'            => $page,
+			// Only sent with the Drafts tab, which lists them above its orders.
+			'unpaid_requests' => 'checkout-draft' === $status ? $unpaid_requests : [],
 			// Counts for Order History's quick tabs (direct request: "the
 			// ability to see draft orders"). Drafts never show under "All
 			// statuses" — WooCommerce registers checkout-draft as
@@ -140,9 +143,66 @@ class YeffoPrint_Admin_Order_Controller {
 			// tab count is how they get noticed.
 			'counts'        => [
 				'pending'        => wc_orders_count( 'pending' ),
-				'checkout-draft' => wc_orders_count( 'checkout-draft' ),
+				'checkout-draft' => wc_orders_count( 'checkout-draft' ) + count( $unpaid_requests ),
 			],
 		] );
+	}
+
+	/**
+	 * Custom design requests a customer submitted but never checked out
+	 * (direct request: "a custom proof showing 'awaiting payment', but I
+	 * don't see a matching draft order"). Submitting the custom design
+	 * form only creates the unpublished yp_custom_order and puts its
+	 * items in the customer's cart — no WooCommerce order exists until
+	 * they press Place order, so there's nothing for the Drafts tab's
+	 * order query to find. Unpaid records already on a WooCommerce order
+	 * (a manual order's proof, or a checkout that got as far as Place
+	 * order) are left out: that order is what shows up instead.
+	 */
+	private function unpaid_custom_requests(): array {
+		$ids = get_posts( [
+			'post_type'      => 'yp_custom_order',
+			'post_status'    => 'draft',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		] );
+
+		if ( ! $ids ) {
+			return [];
+		}
+
+		global $wpdb;
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders built above; WooCommerce has no API for "which order items carry this meta value".
+		$linked = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT meta_value FROM {$wpdb->prefix}woocommerce_order_itemmeta WHERE meta_key = '_yp_custom_order_id' AND meta_value IN ( {$placeholders} )", $ids ) );
+		$linked = array_map( 'intval', $linked );
+
+		$rows = [];
+		foreach ( $ids as $id ) {
+			if ( in_array( (int) $id, $linked, true ) ) {
+				continue;
+			}
+
+			$batch      = json_decode( (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::BATCH, true ), true );
+			$label_rows = is_array( $batch ) ? count( $batch ) : 0;
+			$quantity   = is_array( $batch ) ? array_sum( array_map( static fn( $row ) => (int) ( $row['quantity'] ?? 0 ), $batch ) ) : (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::QUANTITY, true );
+			$order_type = YeffoPrint_Custom_Order_Meta::get_order_type( (int) $id );
+
+			$rows[] = [
+				'id'               => (int) $id,
+				'title'            => get_the_title( $id ),
+				'order_type_label' => YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ $order_type ],
+				'date'             => get_post_datetime( $id ) ? get_post_datetime( $id )->format( 'c' ) : null,
+				'customer_name'    => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true ),
+				'customer_email'   => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, true ),
+				'label_rows'       => $label_rows,
+				'quantity'         => $quantity,
+			];
+		}
+
+		return $rows;
 	}
 
 	/** A lighter row shape for the Order History list — detail_payload() (full items/shipping/Shippo panel data) only loads once a row is actually clicked open. */

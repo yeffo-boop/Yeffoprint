@@ -506,16 +506,18 @@ class YeffoPrint_Custom_Order_Controller {
 		$first_row = $batch[0];
 
 		// Publishes once the $25 fee is paid (or immediately eligible once
-		// paid, for a fee-skipped order) — see class-custom-order-payment.php.
-		// Customer identity stays empty here, exactly as before this was
-		// extracted into create_shell() — filled in later from the WC
-		// order's billing details once payment completes.
+		// paid, for a fee-skipped order) — see class-custom-order-payment.php,
+		// which also overwrites customer identity from the WC order's
+		// billing details at that point. A logged-in customer's account is
+		// recorded now, so a request that's never checked out (Order
+		// History → Drafts) still says who it was; guests stay blank.
+		$submitter = wp_get_current_user();
 		$custom_order_id = YeffoPrint_Custom_Order_Meta::create_shell(
 			'label',
 			sprintf( '%s — %s', $brand_name, current_time( 'Y-m-d H:i' ) ),
-			0,
-			'',
-			''
+			(int) $submitter->ID,
+			$submitter->ID ? (string) $submitter->user_email : '',
+			$submitter->ID ? ( trim( $submitter->first_name . ' ' . $submitter->last_name ) ?: (string) $submitter->display_name ) : ''
 		);
 
 		if ( ! $custom_order_id ) {
