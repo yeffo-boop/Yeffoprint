@@ -519,12 +519,58 @@ class YeffoPrint_Order_Reviews {
 			if ( '' === trim( $row['text'] ) && ! $row['photos'] ) {
 				continue;
 			}
-			$rows[] = $row;
+			// Only the first name is shown publicly ("Jane D." -> "Jane").
+			$row['name'] = self::first_name( $row['name'] );
+			$rows[]      = $row;
 			if ( count( $rows ) >= $limit ) {
 				break;
 			}
 		}
 		return $rows;
+	}
+
+	public static function first_name( string $name ): string {
+		$parts = preg_split( '/\s+/', trim( $name ) );
+		return $parts && '' !== $parts[0] ? $parts[0] : __( 'Customer', 'yeffoprint-core' );
+	}
+
+	/**
+	 * Average and count for every template and print at once, keyed by
+	 * "template:12" / "print:34" — one query per page load, so the shop
+	 * grid's stars don't cost a query per card.
+	 *
+	 * @return array<string, array{average:float, count:int}>
+	 */
+	public static function all_summaries(): array {
+		static $cache = null;
+		if ( null !== $cache ) {
+			return $cache;
+		}
+
+		global $wpdb;
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT f.meta_value AS target, AVG( CAST( r.meta_value AS DECIMAL(3,2) ) ) AS avg_rating, COUNT(*) AS total
+			FROM {$wpdb->comments} c
+			INNER JOIN {$wpdb->commentmeta} r ON r.comment_id = c.comment_ID AND r.meta_key = 'rating'
+			INNER JOIN {$wpdb->commentmeta} f ON f.comment_id = c.comment_ID AND f.meta_key = %s
+			WHERE c.comment_type = 'review' AND c.comment_approved = '1' AND CAST( r.meta_value AS UNSIGNED ) BETWEEN 1 AND 5
+			GROUP BY f.meta_value",
+			self::META_FOR
+		) );
+
+		$cache = [];
+		foreach ( (array) $rows as $row ) {
+			$cache[ (string) $row->target ] = [
+				'average' => round( (float) $row->avg_rating, 1 ),
+				'count'   => (int) $row->total,
+			];
+		}
+		return $cache;
+	}
+
+	/** @return array{average:float, count:int} */
+	public static function summary_for( string $for ): array {
+		return self::all_summaries()[ $for ] ?? [ 'average' => 0.0, 'count' => 0 ];
 	}
 
 	/**
