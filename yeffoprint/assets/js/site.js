@@ -473,7 +473,25 @@
 		} );
 	}
 
+	/**
+	 * The rating button under a product title smooth-scrolls to the
+	 * Customer Reviews section instead of jumping.
+	 */
+	function initRatingJump() {
+		document.addEventListener( 'click', function ( event ) {
+			var link = event.target.closest && event.target.closest( '[data-yp-rating-jump]' );
+			var target = link && document.getElementById( 'reviews' );
+			if ( ! target ) {
+				return;
+			}
+			event.preventDefault();
+			var reduce = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+			target.scrollIntoView( { behavior: reduce ? 'auto' : 'smooth', block: 'start' } );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
+		initRatingJump();
 		initReviewPhotos();
 		initHeaderScroll();
 		initDrawers();

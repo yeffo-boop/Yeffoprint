@@ -3116,3 +3116,106 @@
 	padding: 0;
 	cursor: pointer;
 }
+
+/* Stars shared by the product-page rating button and shop cards
+   (functions.php yeffoprint_render_stars()). */
+.yp-stars {
+	display: inline-flex;
+	gap: 1px;
+	line-height: 0;
+}
+
+.yp-stars svg {
+	width: 17px;
+	height: 17px;
+	fill: #f5b300;
+}
+
+.yp-stars svg.is-off {
+	fill: #e2ded6;
+}
+
+/* Rating button under a product title — scrolls to #reviews
+   (yeffoprint_render_rating_jump(), site.js initRatingJump()). */
+.yp-rating-jump {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	margin: 0.75rem 0 0.25rem;
+	padding: 0.45rem 0.5rem 0.45rem 0.85rem;
+	border-radius: 999px;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	color: var(--wp--preset--color--near-black);
+	font-size: 0.92rem;
+	line-height: 1;
+	text-decoration: none !important;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.yp-rating-jump:hover,
+.yp-rating-jump:focus-visible {
+	color: var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.yp-rating-jump strong {
+	font-weight: 700;
+	font-size: 0.98rem;
+}
+
+.yp-rating-jump__count {
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rating-jump__go {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--warm-white);
+	transition: transform 0.15s ease;
+}
+
+.yp-rating-jump:hover .yp-rating-jump__go {
+	transform: translateY(2px);
+}
+
+.yp-rating-jump__go svg {
+	width: 12px;
+	height: 12px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* Clears the floating header when the button scrolls here. */
+.yp-product-reviews {
+	scroll-margin-top: 96px;
+}
+
+/* Shop card stars + count (blocks/template-card/render.php). */
+.yp-card-rating {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin: -0.3rem 0 0;
+	font-size: 0.8rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-card-rating .yp-stars svg {
+	width: 13px;
+	height: 13px;
+}
+
+.yp-card-rating strong {
+	color: var(--wp--preset--color--near-black);
+	font-weight: 700;
+}

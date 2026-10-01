@@ -1299,3 +1299,49 @@ function yeffoprint_render_review_summary( array $summary ): string {
 		) )
 	);
 }
+
+/**
+ * Five SVG stars, the average rounded to the nearest whole star.
+ * Shared by the product-page rating button and the shop cards.
+ */
+function yeffoprint_render_stars( float $average ): string {
+	$filled = (int) round( max( 0, min( 5, $average ) ) );
+	$path   = '<path d="M10 1.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.5L10 13.8 4.9 16.6l1.2-5.5L2 7.3l5.6-.6z"/>';
+	$out    = '';
+	for ( $i = 1; $i <= 5; $i++ ) {
+		$out .= '<svg viewBox="0 0 20 20" focusable="false"' . ( $i > $filled ? ' class="is-off"' : '' ) . '>' . $path . '</svg>';
+	}
+	return '<span class="yp-stars" aria-hidden="true">' . $out . '</span>';
+}
+
+/** @return array{average:float, count:int} Published review summary for a template or print, or zeros. */
+function yeffoprint_review_summary_for( string $for ): array {
+	return class_exists( 'YeffoPrint_Order_Reviews' ) && method_exists( 'YeffoPrint_Order_Reviews', 'summary_for' )
+		? YeffoPrint_Order_Reviews::summary_for( $for )
+		: [ 'average' => 0.0, 'count' => 0 ];
+}
+
+/**
+ * The rating button under a product page title: stars, the average and
+ * the review count, scrolling to the Customer Reviews section
+ * (patterns/product-reviews.php, id="reviews") when tapped. Nothing for
+ * a design with no published reviews yet.
+ */
+function yeffoprint_render_rating_jump( string $for ): string {
+	$summary = yeffoprint_review_summary_for( $for );
+	if ( ! $summary['count'] ) {
+		return '';
+	}
+	$average = number_format_i18n( $summary['average'], 1 );
+	/* translators: %s: number of reviews */
+	$count   = sprintf( _n( '%s review', '%s reviews', $summary['count'], 'yeffoprint' ), number_format_i18n( $summary['count'] ) );
+
+	return sprintf(
+		'<a class="yp-rating-jump" href="#reviews" data-yp-rating-jump aria-label="%1$s">%2$s<strong>%3$s</strong><span class="yp-rating-jump__count">%4$s</span><span class="yp-rating-jump__go" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></span></a>',
+		/* translators: 1: average rating, 2: review count text */
+		esc_attr( sprintf( __( 'Rated %1$s out of 5 from %2$s. See reviews', 'yeffoprint' ), $average, $count ) ),
+		yeffoprint_render_stars( $summary['average'] ),
+		esc_html( $average ),
+		esc_html( $count )
+	);
+}

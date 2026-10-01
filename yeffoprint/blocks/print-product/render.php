@@ -264,6 +264,7 @@ $addon_swatches = static function ( string $name, string $label ) use ( $print, 
 		<div class="yp-print__details">
 			<p class="yp-eyebrow"><?php esc_html_e( '3D Prints', 'yeffoprint' ); ?></p>
 			<h1 class="yp-print__title"><?php echo esc_html( $print['title'] ); ?></h1>
+			<?php echo function_exists( 'yeffoprint_render_rating_jump' ) ? yeffoprint_render_rating_jump( 'print:' . (int) get_the_ID() ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside the helper. ?>
 			<p class="yp-print__price">
 				<?php if ( $varied_sizes ) : ?>
 					<?php /* translators: %s: lowest price, e.g. "$18.00" */ ?>
