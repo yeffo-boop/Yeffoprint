@@ -1076,3 +1076,241 @@
 		transition: none;
 	}
 }
+
+/* ---------- Phones ---------- */
+
+/* Less intro above the fold, so the inputs start sooner. */
+@media (max-width: 640px) {
+	.yp-pcalc {
+		padding-block: 1.25rem 3rem;
+	}
+
+	.yp-pcalc__intro h1 {
+		font-size: 2rem;
+		max-width: none;
+	}
+
+	.yp-pcalc__lede {
+		margin-top: 0.6rem;
+		font-size: 0.95rem;
+	}
+
+	.yp-pcalc__modes-wrap {
+		margin-top: 1.1rem;
+	}
+
+	.yp-pcalc .yp-pcalc__mode-desc {
+		min-height: 0;
+		font-size: 0.86rem;
+	}
+
+	.yp-pcalc__grid {
+		margin-top: 1.1rem;
+	}
+
+	.yp-pcalc__card-head {
+		padding: 1.15rem 1.1rem 0;
+	}
+
+	.yp-pcalc__fields {
+		gap: 1.15rem;
+		padding: 1rem 1.1rem 1.25rem;
+	}
+
+	.yp-pcalc__results {
+		padding: 1.25rem 1.1rem 1.15rem;
+	}
+}
+
+/* "Draw to N units", pinned to the bottom while the result is off screen
+   (peptide-calculator.js shows/hides it). Phones and tablets only: on
+   wider screens the result sits beside the form. */
+.yp-pcalc__dock {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 40;
+	padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+	background: linear-gradient(180deg, rgba(250, 249, 246, 0), var(--wp--preset--color--warm-white) 35%);
+	pointer-events: none;
+}
+
+.yp-pcalc__dock[hidden] {
+	display: none;
+}
+
+@media (min-width: 900px) {
+	.yp-pcalc__dock {
+		display: none;
+	}
+}
+
+.yp-pcalc__dock-btn {
+	pointer-events: auto;
+	display: flex;
+	align-items: baseline;
+	gap: 0.6rem;
+	width: 100%;
+	max-width: 520px;
+	margin: 0 auto;
+	padding: 0.8rem 1rem;
+	border: 0;
+	border-radius: 16px;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	box-shadow: var(--wp--custom--shadow-elevation--high);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.yp-pcalc__dock-label {
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: #ff7cc6;
+}
+
+.yp-pcalc__dock-value {
+	font-size: 0.95rem;
+	font-weight: 600;
+}
+
+.yp-pcalc__dock-value b {
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 1.6rem;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
+}
+
+.yp-pcalc__dock-go {
+	margin-left: auto;
+	font-size: 0.82rem;
+	opacity: 0.8;
+	white-space: nowrap;
+}
+
+.yp-pcalc__dock.is-warn .yp-pcalc__dock-go {
+	color: var(--wp--preset--color--yellow);
+	opacity: 1;
+}
+
+/* Room so the bar never covers the last field. */
+@media (max-width: 899px) {
+	.yp-pcalc__grid {
+		scroll-margin-top: 1rem;
+	}
+
+	.yp-pcalc__card--brand {
+		scroll-margin-top: 1rem;
+	}
+}
+
+/* ---------- Add to Home Screen card ---------- */
+
+.yp-pcalc__install {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-top: 1rem;
+	padding: 0.7rem 0.6rem 0.7rem 0.7rem;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 16px;
+	box-shadow: var(--wp--custom--shadow-elevation--low);
+}
+
+.yp-pcalc__install[hidden] {
+	display: none;
+}
+
+.yp-pcalc__install-icon {
+	flex: 0 0 auto;
+	width: 44px;
+	height: 44px;
+	border-radius: 11px;
+}
+
+.yp-pcalc__install-text {
+	flex: 1;
+	min-width: 0;
+	font-size: 0.85rem;
+	line-height: 1.35;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-pcalc__install-text b {
+	display: block;
+	font-size: 0.92rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-pcalc__install-glyph {
+	vertical-align: -3px;
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-pcalc__install-btn {
+	flex: 0 0 auto;
+	padding: 0.55rem 0.95rem;
+	border: 0;
+	border-radius: 10px;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	font: inherit;
+	font-size: 0.88rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.yp-pcalc__install-btn[hidden] {
+	display: none;
+}
+
+.yp-pcalc__install-close {
+	flex: 0 0 auto;
+	align-self: flex-start;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 1.3rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+/* ---------- Opened from the Home Screen ---------- */
+
+/* Looks like its own app: no store header/footer or site-wide bars.
+   The media query covers it before the script runs; the class covers
+   older iPhones, which only report navigator.standalone. */
+@media (display-mode: standalone) {
+	body > .wp-site-blocks > header.wp-block-template-part,
+	body > .wp-site-blocks > footer.wp-block-template-part,
+	.yp-announcement-bar,
+	.yp-away-bar,
+	.yp-search-bar {
+		display: none !important;
+	}
+}
+
+.yp-pcalc-app body > .wp-site-blocks > header.wp-block-template-part,
+.yp-pcalc-app body > .wp-site-blocks > footer.wp-block-template-part,
+.yp-pcalc-app .yp-announcement-bar,
+.yp-pcalc-app .yp-away-bar,
+.yp-pcalc-app .yp-search-bar {
+	display: none !important;
+}
+
+.yp-pcalc-app .yp-pcalc {
+	padding-top: calc(1rem + env(safe-area-inset-top));
+}
+
+.yp-pcalc-app .yp-pcalc__intro .yp-eyebrow-label {
+	display: none;
+}

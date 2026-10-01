@@ -193,6 +193,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-shares.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-reminders.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-app.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/calculator/class-calculator-app.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-tracker-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-order-reviews.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-review-controller.php';
@@ -298,6 +299,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Tracker_Shares();
 		new YeffoPrint_Tracker_Reminders();
 		new YeffoPrint_Tracker_App();
+		new YeffoPrint_Calculator_App();
 		new YeffoPrint_Tracker_Controller();
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
