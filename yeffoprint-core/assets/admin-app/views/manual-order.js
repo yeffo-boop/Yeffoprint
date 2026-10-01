@@ -70,27 +70,78 @@
 		return yeffoprintAdminApp.restUrl + path;
 	}
 
+	// "Fill all" link under each field in the first label row — direct
+	// request: "if I create 10 items for an order, and they're all
+	// holographic, I should be able to put that in the top one then auto
+	// fill the rest." records.css only shows it on the first row, and only
+	// once there's more than one row; wireFillAll() does the copying.
+	var FILL_ALL_HTML = '<button type="button" class="yp-fill-all" data-yp-fill-all>&darr; Fill all</button>';
+
 	function batchRowHtml( row, options ) {
 		row = row || { size_id: '', material_id: '', quantity: 100, compound_strength: '' };
 		return (
 			'<tr>' +
-				'<td><select data-row-size>' +
+				'<td data-label="Size" class="yp-tier-table__wide"><select data-row-size aria-label="Size">' +
 					'<option value="">Choose a size…</option>' +
 					options.sizes.map( function ( size ) {
 						return '<option value="' + size.id + '"' + ( String( row.size_id ) === String( size.id ) ? ' selected' : '' ) + '>' + YP.escapeHtml( size.name ) + '</option>';
 					} ).join( '' ) +
-				'</select></td>' +
-				'<td><select data-row-material>' +
+				'</select>' + FILL_ALL_HTML + '</td>' +
+				'<td data-label="Material" class="yp-tier-table__wide"><select data-row-material aria-label="Material">' +
 					'<option value="">Choose a material…</option>' +
 					options.materials.map( function ( material ) {
 						return '<option value="' + material.id + '"' + ( String( row.material_id ) === String( material.id ) ? ' selected' : '' ) + ( material.in_stock ? '' : ' disabled' ) + '>' + YP.escapeHtml( material.name ) + ( material.in_stock ? '' : ' (out of stock)' ) + '</option>';
 					} ).join( '' ) +
-				'</select></td>' +
-				'<td><input type="number" min="1" step="1" data-row-quantity value="' + YP.escapeAttr( row.quantity ) + '" /></td>' +
-				'<td><input type="text" data-row-compound placeholder="e.g. 10mg/mL" value="' + YP.escapeAttr( row.compound_strength ) + '" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
+				'</select>' + FILL_ALL_HTML + '</td>' +
+				'<td data-label="Quantity" class="yp-tier-table__qty"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( row.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
+				'<td data-label="Compound/Strength"><input type="text" data-row-compound aria-label="Compound/Strength" placeholder="e.g. 10mg/mL" value="' + YP.escapeAttr( row.compound_strength ) + '" />' + FILL_ALL_HTML + '</td>' +
+				'<td class="yp-tier-table__remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
 			'</tr>'
 		);
+	}
+
+	// Copies the first row's value in the clicked column into every other
+	// row. One delegated listener per <tbody> (render() builds a fresh one
+	// each time), so rows added later are covered too.
+	function wireFillAll( tbody, onChange ) {
+		if ( ! tbody || tbody._fillAllWired ) {
+			return;
+		}
+		tbody._fillAllWired = true;
+		tbody.addEventListener( 'click', function ( event ) {
+			var button = event.target.closest( '[data-yp-fill-all]' );
+			if ( ! button || ! tbody.contains( button ) ) {
+				return;
+			}
+			var cell   = button.closest( 'td' );
+			var column = Array.prototype.indexOf.call( cell.parentNode.children, cell );
+			var source = cell.querySelector( 'input, select, textarea' );
+			if ( ! source ) {
+				return;
+			}
+			Array.prototype.forEach.call( tbody.querySelectorAll( 'tr' ), function ( row ) {
+				var target = row.children[ column ] && row.children[ column ].querySelector( 'input, select, textarea' );
+				if ( target && target !== source ) {
+					target.value = source.value;
+				}
+			} );
+			var label = button.innerHTML;
+			button.classList.add( 'is-done' );
+			button.textContent = '\u2713 Filled';
+			setTimeout( function () {
+				button.classList.remove( 'is-done' );
+				button.innerHTML = label;
+			}, 1400 );
+			onChange();
+		} );
+	}
+
+	// A new row starts as a copy of the last one's picks (size, material,
+	// quantity), so a run of identical labels only needs the text typed.
+	function lastBatchRow( tbody ) {
+		var rows = readBatchRows( tbody );
+		var last = rows[ rows.length - 1 ];
+		return last ? { size_id: last.size_id || '', material_id: last.material_id || '', quantity: last.quantity || 100, compound_strength: '' } : null;
 	}
 
 	function wireRemoveButtons( tbody, onChange ) {
@@ -284,9 +335,10 @@
 			if ( state.activeTypes.custom_design ) {
 				var batchBody = viewEl.querySelector( '[data-yp-batch]' );
 				wireRemoveButtons( batchBody, refreshPricePreview );
+				wireFillAll( batchBody, refreshPricePreview );
 
 				viewEl.querySelector( '[data-yp-add-row]' ).addEventListener( 'click', function () {
-					batchBody.insertAdjacentHTML( 'beforeend', batchRowHtml( null, state.options ) );
+					batchBody.insertAdjacentHTML( 'beforeend', batchRowHtml( lastBatchRow( batchBody ), state.options ) );
 					wireRemoveButtons( batchBody, refreshPricePreview );
 					bindBatchChangeListeners();
 					refreshPricePreview();
@@ -328,10 +380,10 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Custom Design details</h2></div>' +
 					'<div class="yp-field"><label for="yp-mo-brand">Brand name</label><input type="text" id="yp-mo-brand" /></div>' +
-					'<table class="yp-tier-table"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
+					'<table class="yp-tier-table yp-tier-table--items"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
 						'<tbody data-yp-batch>' + batchRowHtml( null, state.options ) + '</tbody>' +
 					'</table>' +
-					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-row>+ Add another label</button>' +
+					'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-row>+ Add another label</button>' +
 					'<div class="yp-form__row">' +
 						'<div class="yp-field"><label for="yp-mo-style-notes">Style notes</label><textarea id="yp-mo-style-notes" rows="2"></textarea></div>' +
 						'<div class="yp-field"><label for="yp-mo-instructions">Instructions</label><textarea id="yp-mo-instructions" rows="2"></textarea></div>' +
@@ -641,11 +693,11 @@
 			variant = variant || { quantity: 100, values: {} };
 			return (
 				'<tr>' +
-					'<td><input type="number" min="1" step="1" data-row-quantity value="' + YP.escapeAttr( variant.quantity ) + '" /></td>' +
+					'<td data-label="Quantity" class="yp-tier-table__qty"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( variant.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
 					fieldSchema.map( function ( field ) {
-						return '<td>' + templateFieldInputHtml( field, variant.values[ field.id ] ) + '</td>';
+						return '<td data-label="' + YP.escapeAttr( field.label ) + '"' + ( 'textarea' === field.type ? ' class="yp-tier-table__wide"' : '' ) + '>' + templateFieldInputHtml( field, variant.values[ field.id ] ) + FILL_ALL_HTML + '</td>';
 					} ).join( '' ) +
-					'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
+					'<td class="yp-tier-table__remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
 				'</tr>'
 			);
 		}
@@ -667,7 +719,7 @@
 		function bindTemplateVariantListeners() {
 			var tbody = viewEl.querySelector( '[data-yp-template-variants]' );
 			if ( tbody ) {
-				tbody.querySelectorAll( 'input, textarea' ).forEach( function ( field ) {
+				tbody.querySelectorAll( 'input, select, textarea' ).forEach( function ( field ) {
 					if ( field._wired ) {
 						return;
 					}
@@ -781,12 +833,12 @@
 						} ).join( '' ) +
 					'</select></div>' +
 				'</div>' +
-				'<table class="yp-tier-table"><thead><tr><th>Quantity</th>' +
+				'<table class="yp-tier-table yp-tier-table--items"><thead><tr><th>Quantity</th>' +
 					data.field_schema.map( function ( field ) { return '<th>' + YP.escapeHtml( field.label ) + '</th>'; } ).join( '' ) +
 					'<th></th></tr></thead>' +
 					'<tbody data-yp-template-variants>' + templateVariantRowHtml( null, data.field_schema ) + '</tbody>' +
 				'</table>' +
-				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-template-row>+ Add another label</button>' +
+				'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-template-row>+ Add another label</button>' +
 				'<div class="yp-field"><label for="yp-mo-template-instructions">Instructions</label><textarea id="yp-mo-template-instructions" rows="2"></textarea></div>';
 
 			el.querySelector( '[data-yp-change-template]' ).addEventListener( 'click', function () {
@@ -798,9 +850,14 @@
 
 			var tbody = el.querySelector( '[data-yp-template-variants]' );
 			wireRemoveButtons( tbody, refreshTemplatePricePreview );
+			wireFillAll( tbody, refreshTemplatePricePreview );
 
 			el.querySelector( '[data-yp-add-template-row]' ).addEventListener( 'click', function () {
-				tbody.insertAdjacentHTML( 'beforeend', templateVariantRowHtml( null, data.field_schema ) );
+				// Same as Custom Design's rows: carry the last row's quantity
+				// over; the label text itself starts blank.
+				var rows = readTemplateVariants( tbody, data.field_schema );
+				var last = rows[ rows.length - 1 ];
+				tbody.insertAdjacentHTML( 'beforeend', templateVariantRowHtml( { quantity: last && last.quantity ? last.quantity : 100, values: {} }, data.field_schema ) );
 				wireRemoveButtons( tbody, refreshTemplatePricePreview );
 				bindTemplateVariantListeners();
 				refreshTemplatePricePreview();
