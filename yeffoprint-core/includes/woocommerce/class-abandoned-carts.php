@@ -68,6 +68,7 @@ class YeffoPrint_Abandoned_Carts {
 	const STATUS_OPTED_OUT = 'opted_out';
 	const STATUS_STOPPED   = 'stopped';    // Owner tapped Don't send.
 	const STATUS_ORDERED   = 'ordered';    // Another order for this customer was placed after the cart was left.
+	const STATUS_MERGED    = 'merged';     // A second open cart for the same email, folded into the other one.
 
 	private const DB_VERSION        = '1.0';
 	private const DB_VERSION_OPTION = 'yeffoprint_abandoned_cart_db_version';
@@ -310,6 +311,16 @@ class YeffoPrint_Abandoned_Carts {
 		$row    = $row_id ? self::get_row( $row_id ) : null;
 		$now    = self::now();
 
+		// A new browser session (another device, signing in again, an
+		// expired session) picks up the cart already open for this email
+		// rather than starting a second one that alerts and emails again.
+		if ( ! $row || self::STATUS_OPEN !== $row['status'] ) {
+			$row = self::open_row_for_email( $email );
+			if ( $row ) {
+				WC()->session->set( self::SESSION_ROW_KEY, (int) $row['id'] );
+			}
+		}
+
 		$data = array_merge( self::snapshot_fields(), [
 			'email'      => $email,
 			'user_id'    => get_current_user_id(),
@@ -339,6 +350,57 @@ class YeffoPrint_Abandoned_Carts {
 
 		WC()->session->set( self::SESSION_ROW_KEY, (int) $wpdb->insert_id );
 		WC()->session->set( self::SESSION_HASH_KEY, md5( $data['cart'] ) );
+	}
+
+	/** The open row furthest along for this email, newest first. */
+	private static function open_row_for_email( string $email ): ?array {
+		global $wpdb;
+		$table = self::table_name();
+		$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s AND status = %s ORDER BY stage DESC, updated_at DESC, id DESC LIMIT 1", $email, self::STATUS_OPEN ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $row ?: null;
+	}
+
+	/**
+	 * Folds any extra open rows for one email into a single row, so a
+	 * customer who left carts in several sessions gets one owner alert
+	 * and one set of emails. The row furthest along is kept; it takes the
+	 * newest cart, and counts as alerted if any of them was.
+	 */
+	private static function merge_duplicates(): void {
+		global $wpdb;
+		$table  = self::table_name();
+		$emails = (array) $wpdb->get_col( $wpdb->prepare( "SELECT email FROM {$table} WHERE status = %s GROUP BY email HAVING COUNT(*) > 1", self::STATUS_OPEN ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		foreach ( $emails as $email ) {
+			$keep = self::open_row_for_email( (string) $email );
+			if ( ! $keep ) {
+				continue;
+			}
+			$others = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s AND status = %s AND id <> %d", $email, self::STATUS_OPEN, (int) $keep['id'] ), ARRAY_A ) ?: []; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+			$update = [];
+			$latest = $keep;
+			foreach ( $others as $other ) {
+				if ( self::ts( $other['updated_at'] ) > self::ts( $latest['updated_at'] ) ) {
+					$latest = $other;
+				}
+				if ( $other['owner_alerted_at'] && ! $keep['owner_alerted_at'] && empty( $update['owner_alerted_at'] ) ) {
+					$update['owner_alerted_at'] = $other['owner_alerted_at'];
+				}
+				if ( ! (int) $keep['order_id'] && (int) $other['order_id'] && empty( $update['order_id'] ) ) {
+					$update['order_id'] = (int) $other['order_id'];
+				}
+				self::update_row( (int) $other['id'], [ 'status' => self::STATUS_MERGED, 'closed_at' => self::now() ] );
+			}
+			if ( $latest !== $keep ) {
+				foreach ( [ 'cart', 'summary', 'total', 'updated_at' ] as $field ) {
+					$update[ $field ] = $latest[ $field ];
+				}
+			}
+			if ( $update ) {
+				self::update_row( (int) $keep['id'], $update );
+			}
+		}
 	}
 
 	/** Keeps a tracked row in step with the cart as the shopper keeps editing it. */
@@ -766,6 +828,8 @@ class YeffoPrint_Abandoned_Carts {
 
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE created_at < %s", gmdate( 'Y-m-d H:i:s', time() - self::RETENTION_DAYS * DAY_IN_SECONDS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
+		self::merge_duplicates();
+
 		if ( ! self::is_sending() ) {
 			return;
 		}
@@ -972,7 +1036,11 @@ class YeffoPrint_Abandoned_Carts {
 			/* translators: %s: cart total */
 			sprintf( __( 'Total: %s', 'yeffoprint-core' ), self::money( (float) $row['total'] ) ),
 			'',
-			__( 'The first reminder email goes out in about 5 minutes unless you stop it.', 'yeffoprint-core' ),
+			sprintf(
+				/* translators: %s: how long ago, e.g. "1 day" */
+				__( 'Left %s ago. The first reminder email goes out in about 5 minutes unless you stop it.', 'yeffoprint-core' ),
+				human_time_diff( self::ts( $row['updated_at'] ) )
+			),
 		], static function ( $line ) { return null !== $line; } ) );
 
 		$settings = self::settings();
@@ -1109,8 +1177,9 @@ class YeffoPrint_Abandoned_Carts {
 
 		// "Purchased" rows paid before any reminder — they were never
 		// really abandoned, so they're left out of the list and the stats.
-		// Same for "ordered" rows closed before any reminder went out.
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE created_at >= %s AND status <> %s AND NOT ( status = %s AND stage = 0 ) ORDER BY updated_at DESC LIMIT 200", $since, self::STATUS_PURCHASED, self::STATUS_ORDERED ), ARRAY_A ) ?: []; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// Same for "ordered" rows closed before any reminder went out, and
+		// duplicate rows merged into another one.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE created_at >= %s AND status NOT IN ( %s, %s ) AND NOT ( status = %s AND stage = 0 ) ORDER BY updated_at DESC LIMIT 200", $since, self::STATUS_PURCHASED, self::STATUS_MERGED, self::STATUS_ORDERED ), ARRAY_A ) ?: []; // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$left = array_values( array_filter( $rows, static function ( array $row ): bool {
 			// A cart touched in the last few minutes is still someone shopping.
