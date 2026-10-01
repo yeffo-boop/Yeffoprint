@@ -48,6 +48,11 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 				'callback'            => [ $this, 'save_status' ],
 				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 			],
+			[
+				'methods'             => \WP_REST_Server::DELETABLE,
+				'callback'            => [ $this, 'delete_unpaid' ],
+				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+			],
 		] );
 	}
 
@@ -104,6 +109,68 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 		update_post_meta( $post->ID, YeffoPrint_Custom_Order_Meta::STATUS, $status );
 
 		return rest_ensure_response( $this->detail_payload( $post ) );
+	}
+
+	/**
+	 * Direct request: unpaid requests were "stuck on awaiting payment"
+	 * with no way to remove one when the customer changes their mind.
+	 * Moves it to the trash (restorable from wp-admin) — only while it's
+	 * still unpaid. A request that's part of an unpaid WooCommerce order
+	 * is refused with that order's number instead: cancelling the order
+	 * removes the request too (class-custom-order-payment.php), and
+	 * deleting just the request would leave a pay link for labels with
+	 * no proof behind them.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function delete_unpaid( \WP_REST_Request $request ) {
+		$post = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		if ( 'draft' !== $post->post_status ) {
+			return new \WP_Error( 'yeffoprint_custom_order_paid', __( 'Only unpaid requests can be deleted.', 'yeffoprint-core' ), [ 'status' => 409 ] );
+		}
+
+		$open_order = $this->open_order_for( $post->ID );
+		if ( $open_order ) {
+			return new \WP_Error(
+				'yeffoprint_custom_order_on_open_order',
+				/* translators: %s: order number */
+				sprintf( __( 'This request is part of unpaid order #%s. Cancel that order instead and this request is removed with it.', 'yeffoprint-core' ), $open_order->get_order_number() ),
+				[ 'status' => 409 ]
+			);
+		}
+
+		wp_trash_post( $post->ID );
+
+		return rest_ensure_response( [ 'id' => $post->ID, 'deleted' => true ] );
+	}
+
+	/** The still-payable WooCommerce order (if any) with a line item pointing at this request. */
+	private function open_order_for( int $custom_order_id ): ?\WC_Order {
+		if ( ! function_exists( 'wc_get_order' ) ) {
+			return null;
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- WooCommerce has no API for "which orders carry this item meta value".
+		$order_ids = $wpdb->get_col( $wpdb->prepare(
+			"SELECT DISTINCT items.order_id FROM {$wpdb->prefix}woocommerce_order_items items
+			INNER JOIN {$wpdb->prefix}woocommerce_order_itemmeta meta ON meta.order_item_id = items.order_item_id
+			WHERE meta.meta_key = '_yp_custom_order_id' AND meta.meta_value = %d",
+			$custom_order_id
+		) );
+
+		foreach ( $order_ids as $order_id ) {
+			$order = wc_get_order( (int) $order_id );
+			if ( $order instanceof \WC_Order && $order->has_status( [ 'pending', 'failed', 'on-hold', 'checkout-draft' ] ) ) {
+				return $order;
+			}
+		}
+
+		return null;
 	}
 
 	/** @return \WP_Post|\WP_Error */
@@ -173,6 +240,9 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			'customer_email'      => (string) $m( YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL ),
 			'wc_order_id'         => $wc_order_id,
 			'wc_order_edit_url'   => $wc_order_id ? admin_url( 'post.php?post=' . $wc_order_id . '&action=edit' ) : '',
+			// Unpaid only: the pay-link/checkout order this request is
+			// waiting on, if any — cancelling that order is how it's removed.
+			'unpaid_order_id'     => 'draft' === $post->post_status && ( $open_order = $this->open_order_for( $post->ID ) ) ? $open_order->get_id() : 0,
 			'change_request_notes' => (string) $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES ),
 			'customer_provided_design' => $customer_provided_design,
 			'source_custom_order_id'  => $source_custom_order_id,

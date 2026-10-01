@@ -277,7 +277,7 @@
 									return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
 								} ).join( '' ) +
 							'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-save-status>Save Status</button></div></div>'
-							: '<p class="yp-field__hint">Awaiting the design fee payment — status is set automatically once paid.</p>' ) +
+							: unpaidActionsHtml( order ) ) +
 						'<div data-yp-status-error></div>' +
 					'</div>' +
 
@@ -300,6 +300,15 @@
 				openWcOrderButton.addEventListener( 'click', function () {
 					YP.openWcOrderDrawer( parseInt( openWcOrderButton.getAttribute( 'data-yp-open-wc-order' ), 10 ) );
 				} );
+			}
+
+			var deleteButton = detailEl.querySelector( '[data-yp-delete-request]' );
+			if ( deleteButton ) {
+				deleteButton.addEventListener( 'click', function () { deleteRequest( order ); } );
+			}
+			var unpaidOrderButton = detailEl.querySelector( '[data-yp-open-unpaid-order]' );
+			if ( unpaidOrderButton ) {
+				unpaidOrderButton.addEventListener( 'click', function () { YP.openWcOrderDrawer( order.unpaid_order_id ); } );
 			}
 
 			if ( order.paid ) {
@@ -328,6 +337,46 @@
 			return '<ul>' + proofs.map( function ( p ) {
 				return '<li>' + ( p.file_url ? '<a href="' + YP.escapeAttr( p.file_url ) + '" target="_blank" rel="noopener noreferrer">' + YP.escapeHtml( p.title ) + '</a>' : YP.escapeHtml( p.title ) ) + ' — ' + new Date( p.date ).toLocaleDateString() + '</li>';
 			} ).join( '' ) + '</ul>';
+		}
+
+		/**
+		 * Direct request: unpaid requests were "stuck on awaiting payment"
+		 * with no way out when the customer changes their mind. One on an
+		 * unpaid order is removed by cancelling that order (the order
+		 * drawer's Cancel order button); one that never reached checkout
+		 * can be deleted right here.
+		 */
+		function unpaidActionsHtml( order ) {
+			if ( order.unpaid_order_id ) {
+				return '<p class="yp-field__hint">Awaiting payment on order #' + order.unpaid_order_id + '. To drop it, cancel that order and this request is removed with it.</p>' +
+					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-open-unpaid-order>Open order #' + order.unpaid_order_id + '</button>';
+			}
+			return '<p class="yp-field__hint">Awaiting payment — the customer submitted this but never checked out. Status is set automatically once paid.</p>' +
+				'<button type="button" class="wp-block-button__link yp-button--danger" data-yp-delete-request>Delete request</button>';
+		}
+
+		function deleteRequest( order ) {
+			YP.confirmModal( {
+				title: 'Delete this request?',
+				message: 'Delete "' + order.title + '"? It moves to the trash and disappears from Custom Orders. If the customer still has it in their cart and pays later, it will not be linked to their order.',
+				confirmLabel: 'Delete request',
+				danger: true,
+				onConfirm: function () {
+					var errorEl = detailEl.querySelector( '[data-yp-status-error]' );
+					YP.request( endpoint( 'custom-order/' + order.id ), { method: 'DELETE' } )
+						.then( function () {
+							selectedId = 0;
+							splitEl.classList.remove( 'has-selection' );
+							detailEl.innerHTML = '<div class="yp-split__empty"><p class="yp-field__hint">Request deleted.</p></div>';
+							load();
+						} )
+						.catch( function ( error ) {
+							if ( errorEl ) {
+								errorEl.innerHTML = '<p class="yp-form__error">Couldn’t delete: ' + YP.escapeHtml( error.message ) + '</p>';
+							}
+						} );
+				}
+			} );
 		}
 
 		function saveStatus( order ) {

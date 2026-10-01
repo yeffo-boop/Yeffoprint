@@ -1192,6 +1192,9 @@
 						return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
 					} ).join( '' ) +
 				'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
+				( isUnpaidWcOrder( order )
+					? '<p class="yp-field__hint">Customer changed their mind? <button type="button" class="yp-row-action" style="color:#b3311c;" data-yp-wc-cancel-order>Cancel order</button></p>'
+					: '' ) +
 				'<div data-yp-wc-status-error></div>' +
 			'</div>' +
 
@@ -1225,6 +1228,22 @@
 			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
 
 		bodyEl.querySelector( '[data-yp-wc-save-status]' ).addEventListener( 'click', function () { saveWcOrderStatus( order, drawer, bodyEl ); } );
+
+		var cancelOrderButton = bodyEl.querySelector( '[data-yp-wc-cancel-order]' );
+		if ( cancelOrderButton ) {
+			cancelOrderButton.addEventListener( 'click', function () {
+				YP.confirmModal( {
+					title: 'Cancel order #' + order.number + '?',
+					message: 'The pay link stops working and any unpaid custom proof on this order is removed. Nothing has been charged, so there is nothing to refund.',
+					confirmLabel: 'Cancel order',
+					danger: true,
+					onConfirm: function () {
+						bodyEl.querySelector( '[data-yp-wc-status]' ).value = 'cancelled';
+						saveWcOrderStatus( order, drawer, bodyEl );
+					}
+				} );
+			} );
+		}
 
 		var printButton = bodyEl.querySelector( '[data-yp-print-label]' );
 		if ( printButton ) {
@@ -2867,6 +2886,16 @@
 				purchaseButton.textContent = 'Purchase Selected Label';
 				errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
 			} );
+	}
+
+	/**
+	 * Direct request: unpaid orders were "stuck on awaiting payment" with
+	 * no obvious way out when the customer changes their mind. Offered
+	 * only while nothing has been paid — a paid order needs a refund,
+	 * not a cancel.
+	 */
+	function isUnpaidWcOrder( order ) {
+		return [ 'pending', 'failed', 'checkout-draft' ].indexOf( order.status ) !== -1 && ! order.date_paid;
 	}
 
 	function saveWcOrderStatus( order, drawer, bodyEl ) {
