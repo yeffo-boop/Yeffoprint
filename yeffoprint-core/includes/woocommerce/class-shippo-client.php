@@ -269,7 +269,7 @@ class YeffoPrint_Shippo_Client {
 	 * pick from — so it's passed in here instead of re-derived from a
 	 * response that never reliably had it.
 	 *
-	 * @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string,transaction_id:string}|\WP_Error
+	 * @return array{tracking_number:string,carrier_id:string,carrier_label:string,label_url:string,transaction_id:string,customs:array}|\WP_Error
 	 */
 	public function purchase_label( string $rate_id, string $carrier_id = '', string $carrier_label = '' ) {
 		$response = $this->call( 'POST', '/transactions/', [
@@ -299,6 +299,51 @@ class YeffoPrint_Shippo_Client {
 			'carrier_label'   => '' !== $carrier_label ? $carrier_label : YeffoPrint_Order_Tracking::carrier_label( $carrier_id ),
 			'label_url'       => (string) ( $response['label_url'] ?? '' ),
 			'transaction_id'  => (string) ( $response['object_id'] ?? '' ),
+			'customs'         => self::customs_result( $response ),
+		];
+	}
+
+	/**
+	 * Re-reads an already purchased label, for labels bought before
+	 * customs_result() existed. Same fields as purchase_label()'s 'customs'.
+	 *
+	 * @return array{messages:array{source:string,text:string}[],commercial_invoice_url:string}|\WP_Error
+	 */
+	public function get_label_customs( string $transaction_id ) {
+		$response = $this->call( 'GET', '/transactions/' . rawurlencode( $transaction_id ) );
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		return self::customs_result( $response );
+	}
+
+	/**
+	 * Direct request: "a confirmation somewhere on our order screen saying
+	 * the invoice was sent electronically." Shippo has no paperless flag on
+	 * a transaction; the carrier says so in the transaction's messages
+	 * instead (UPS: "The commercial invoice has been submitted
+	 * electronically. You do not need to attach it to the parcel."), so
+	 * those are kept along with the invoice PDF Shippo makes for
+	 * international labels.
+	 *
+	 * @return array{messages:array{source:string,text:string}[],commercial_invoice_url:string}
+	 */
+	private static function customs_result( array $transaction ): array {
+		$messages = [];
+		foreach ( is_array( $transaction['messages'] ?? null ) ? $transaction['messages'] : [] as $message ) {
+			$text = trim( (string) ( $message['text'] ?? '' ) );
+			if ( '' !== $text ) {
+				$messages[] = [
+					'source' => (string) ( $message['source'] ?? '' ),
+					'text'   => $text,
+				];
+			}
+		}
+
+		return [
+			'messages'               => $messages,
+			'commercial_invoice_url' => (string) ( $transaction['commercial_invoice_url'] ?? '' ),
 		];
 	}
 

@@ -2333,11 +2333,44 @@
 									? '<span class="yp-pill yp-pill--crit">Voided</span>'
 									: '<button type="button" class="wp-block-button__link yp-button--danger" data-yp-shippo-void="' + YP.escapeAttr( label.tracking_number ) + '" data-yp-shippo-void-carrier="' + YP.escapeAttr( label.carrier_label ) + '">Void</button>' ) +
 							'</span>' +
+							shippoLabelCustomsHtml( label.customs ) +
 						'</li>'
 					);
 				} ).join( '' ) +
 			'</ul>'
 		);
+	}
+
+	/**
+	 * Direct request: "a confirmation somewhere on our order screen saying
+	 * the invoice was sent electronically." Built from the carrier's own
+	 * messages Shippo returns with an international label (UPS: "The
+	 * commercial invoice has been submitted electronically...") — see
+	 * YeffoPrint_Order_Tracking::label_customs_summary(). Nothing for
+	 * domestic labels.
+	 */
+	function shippoLabelCustomsHtml( customs ) {
+		if ( ! customs ) {
+			return '';
+		}
+		var status = customs.sent_electronically
+			? '<span class="yp-pill yp-pill--good">✓ Customs invoice sent electronically</span>' +
+				'<span class="yp-shippo-label-row__customs-note">No need to attach it to the parcel.</span>'
+			: ( customs.commercial_invoice_url
+				? '<span class="yp-pill yp-pill--warn">Paperless invoice not confirmed</span>' +
+					'<span class="yp-shippo-label-row__customs-note">Print the invoice and attach it to the parcel.</span>'
+				: '' );
+		var invoiceButton = customs.commercial_invoice_url
+			? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-print="' + YP.escapeAttr( customs.commercial_invoice_url ) + '">' + ( customs.sent_electronically ? 'View invoice' : 'Print invoice' ) + '</button>'
+			: '';
+		var notes = ( customs.messages || [] ).length
+			? '<details class="yp-shippo-label-row__customs-messages"><summary>Carrier messages</summary><ul>' +
+				customs.messages.map( function ( text ) {
+					return '<li>' + YP.escapeHtml( text ) + '</li>';
+				} ).join( '' ) +
+				'</ul></details>'
+			: '';
+		return '<div class="yp-shippo-label-row__customs">' + status + invoiceButton + notes + '</div>';
 	}
 
 	/**
@@ -2809,7 +2842,8 @@
 					tracking_number:  response.label.tracking_number,
 					label_url:        response.label.label_url,
 					transaction_id:   response.label.transaction_id,
-					voided:           false
+					voided:           false,
+					customs:          response.label.customs || null
 				} ] );
 				var labelsListEl = panel.querySelector( '[data-yp-shippo-labels]' );
 				if ( labelsListEl ) {
