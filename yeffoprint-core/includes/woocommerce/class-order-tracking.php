@@ -228,7 +228,7 @@ class YeffoPrint_Order_Tracking {
 	 * the auto-delivery sweep, the shipped-order count) is the one place
 	 * a voided label genuinely shouldn't count anymore.
 	 *
-	 * @return array{carrier_label:string,tracking_number:string,label_url:string,transaction_id:string,voided:bool}[]
+	 * @return array{carrier_label:string,tracking_number:string,label_url:string,transaction_id:string,voided:bool,customs:array|null}[]
 	 */
 	public static function get_shippo_labels( \WC_Order $order ): array {
 		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
@@ -255,6 +255,7 @@ class YeffoPrint_Order_Tracking {
 				'label_url'       => $label_url,
 				'transaction_id'  => (string) ( $label['transaction_id'] ?? '' ),
 				'voided'          => ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'],
+				'customs'         => self::label_customs_summary( $label['customs'] ?? null ),
 			];
 		}
 
@@ -331,7 +332,7 @@ class YeffoPrint_Order_Tracking {
 	 * single save() also carries the order-status auto-advance and any
 	 * other meta changes made in the same request.
 	 */
-	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '' ): void {
+	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '', ?array $customs = null ): void {
 		$labels   = $order->get_meta( self::SHIPPO_LABELS_META, true );
 		$labels   = is_array( $labels ) ? $labels : [];
 		$labels[] = [
@@ -340,9 +341,81 @@ class YeffoPrint_Order_Tracking {
 			'label_url'      => $label_url,
 			'transaction_id' => $transaction_id,
 			'refund'         => [],
+			'customs'        => $customs,
 		];
 
 		$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );
+	}
+
+	/**
+	 * Fills in Shippo's carrier messages + invoice link on labels bought
+	 * before those were saved, one Shippo lookup per label, ever: a label
+	 * that comes back with nothing still gets an empty record so it isn't
+	 * asked about again. Only for international orders, the only ones with
+	 * a customs invoice to confirm. Saves the order itself when anything
+	 * changed. A failed lookup is skipped and retried on a later view.
+	 */
+	public static function backfill_shippo_label_customs( \WC_Order $order, YeffoPrint_Shippo_Client $client ): void {
+		$labels = $order->get_meta( self::SHIPPO_LABELS_META, true );
+		if ( ! is_array( $labels ) ) {
+			return;
+		}
+
+		$changed = false;
+		foreach ( $labels as &$label ) {
+			$transaction_id = (string) ( $label['transaction_id'] ?? '' );
+			if ( '' === $transaction_id || is_array( $label['customs'] ?? null ) ) {
+				continue;
+			}
+			$customs = $client->get_label_customs( $transaction_id );
+			if ( is_wp_error( $customs ) ) {
+				continue;
+			}
+			$label['customs'] = $customs;
+			$changed          = true;
+		}
+		unset( $label );
+
+		if ( $changed ) {
+			$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );
+			$order->save();
+		}
+	}
+
+	/**
+	 * What the order screen shows under a label: whether the carrier said
+	 * the commercial invoice went electronically (paperless), the invoice
+	 * PDF, and the carrier's other notes. Null when nothing was recorded
+	 * (domestic labels, or older ones not looked up yet).
+	 *
+	 * @return array{sent_electronically:bool,commercial_invoice_url:string,messages:string[]}|null
+	 */
+	private static function label_customs_summary( $customs ): ?array {
+		if ( ! is_array( $customs ) ) {
+			return null;
+		}
+
+		$sent_electronically = false;
+		$messages            = [];
+		foreach ( is_array( $customs['messages'] ?? null ) ? $customs['messages'] : [] as $message ) {
+			$text = (string) ( $message['text'] ?? '' );
+			if ( preg_match( '/(submitted|sent|transmitted|uploaded)\s+electronically|paperless|electronic trade document/i', $text ) ) {
+				$sent_electronically = true;
+			}
+			$source     = (string) ( $message['source'] ?? '' );
+			$messages[] = ( '' !== $source ? $source . ': ' : '' ) . $text;
+		}
+
+		$invoice_url = (string) ( $customs['commercial_invoice_url'] ?? '' );
+		if ( ! $sent_electronically && '' === $invoice_url && ! $messages ) {
+			return null;
+		}
+
+		return [
+			'sent_electronically'    => $sent_electronically,
+			'commercial_invoice_url' => $invoice_url,
+			'messages'               => $messages,
+		];
 	}
 
 	/**

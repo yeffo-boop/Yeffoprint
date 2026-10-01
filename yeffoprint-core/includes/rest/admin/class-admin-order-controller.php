@@ -364,7 +364,7 @@ class YeffoPrint_Admin_Order_Controller {
 			// Shippo label already purchased on this order, printable link included, so the panel
 			// can offer a reprint regardless of whether it was purchased in this drawer session or
 			// a previous one.
-			'shippo_labels'            => YeffoPrint_Order_Tracking::get_shippo_labels( $order ),
+			'shippo_labels'            => $this->shippo_labels_payload( $order ),
 			// Direct request: "can we add the rewards info to this screen... how many points this
 			// order will receive (or has received)?" Same processed-vs-pending distinction as the
 			// classic order screen's own "Rewards Points" meta box (class-rewards-order-box.php) —
@@ -406,6 +406,19 @@ class YeffoPrint_Admin_Order_Controller {
 				? [ 'package_id' => YeffoPrint_Web_Design_Project_Meta::get_package_id( $order ) ]
 				: null,
 		];
+	}
+
+	/**
+	 * Every Shippo label on the order. International labels bought before
+	 * the carrier's customs messages were saved get them looked up once
+	 * first, so "Customs invoice sent electronically" shows on those too.
+	 */
+	private function shippo_labels_payload( \WC_Order $order ): array {
+		if ( YeffoPrint_Shippo_Settings::is_configured() && YeffoPrint_Admin_Shippo_Controller::customs_payload( $order )['international'] ) {
+			YeffoPrint_Order_Tracking::backfill_shippo_label_customs( $order, new YeffoPrint_Shippo_Client( YeffoPrint_Shippo_Settings::get_api_key() ) );
+		}
+
+		return YeffoPrint_Order_Tracking::get_shippo_labels( $order );
 	}
 
 	private function refund_gateway_supported( \WC_Order $order ): bool {

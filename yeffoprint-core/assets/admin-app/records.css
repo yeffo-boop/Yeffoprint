@@ -427,6 +427,39 @@
 	font-size: 0.78rem;
 }
 
+/* Customs invoice status under an international label — sits on its own line inside the row. */
+.yp-shippo-label-row__customs {
+	flex-basis: 100%;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+	font-size: 0.8rem;
+}
+
+.yp-shippo-label-row__customs .wp-block-button__link {
+	padding: 0.3rem 0.75rem;
+	font-size: 0.75rem;
+}
+
+.yp-shippo-label-row__customs-note {
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-shippo-label-row__customs-messages {
+	flex-basis: 100%;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-shippo-label-row__customs-messages summary {
+	cursor: pointer;
+}
+
+.yp-shippo-label-row__customs-messages ul {
+	margin: 0.35rem 0 0;
+	padding-left: 1.1rem;
+}
+
 /**
  * The Shippo purchase/void confirm dialogs (YP.confirmModal(), app.js)
  * — direct request: "use modal windows that match the sites style when
