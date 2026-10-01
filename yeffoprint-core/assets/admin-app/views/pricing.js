@@ -31,14 +31,14 @@
 		tier = tier || { threshold: '', type: Object.keys( tierTypes )[ 0 ], value: '' };
 		return (
 			'<tr>' +
-				'<td><input type="number" min="1" step="1" data-tier-threshold value="' + YP.escapeAttr( tier.threshold ) + '" /></td>' +
-				'<td><select data-tier-type>' +
+				'<td data-label="Min. quantity" class="yp-stack-half"><input type="number" min="1" step="1" inputmode="numeric" data-tier-threshold aria-label="Min. quantity" value="' + YP.escapeAttr( tier.threshold ) + '" /></td>' +
+				'<td data-label="Discount type" class="yp-stack-half"><select data-tier-type aria-label="Discount type">' +
 					Object.keys( tierTypes ).map( function ( key ) {
 						return '<option value="' + key + '"' + ( tier.type === key ? ' selected' : '' ) + '>' + YP.escapeHtml( tierTypes[ key ] ) + '</option>';
 					} ).join( '' ) +
 				'</select></td>' +
-				'<td><input type="number" min="0" step="0.01" data-tier-value value="' + YP.escapeAttr( tier.value ) + '" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove tier">&times;</button></td>' +
+				'<td data-label="Value" class="yp-stack-half"><input type="number" min="0" step="0.01" inputmode="decimal" data-tier-value aria-label="Value" value="' + YP.escapeAttr( tier.value ) + '" /></td>' +
+				'<td class="yp-stack-remove yp-stack-half"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove tier">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -111,7 +111,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Bulk Discount Tiers</h2><button type="button" class="wp-block-button__link is-style-outline" data-yp-add-tier>+ Add tier</button></div>' +
-					'<table class="yp-tier-table"><thead><tr><th>Min. quantity</th><th>Discount type</th><th>Value</th><th></th></tr></thead>' +
+					'<table class="yp-tier-table yp-stack-rows"><thead><tr><th>Min. quantity</th><th>Discount type</th><th>Value</th><th></th></tr></thead>' +
 						'<tbody data-yp-label-tiers>' + schema.tiers.map( function ( t ) { return tierRowHtml( t, schema.tier_types ); } ).join( '' ) + '</tbody>' +
 					'</table>' +
 					'<p class="yp-panel__hint">The highest threshold at or below the customer’s combined label count applies to their whole order. The discount only ever applies to the base price — material/size upcharges are always added on top afterward, at full price.</p>' +
@@ -129,7 +129,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Sticker Bulk Discount Tiers</h2><button type="button" class="wp-block-button__link is-style-outline" data-yp-add-sticker-tier>+ Add tier</button></div>' +
-					'<table class="yp-tier-table"><thead><tr><th>Min. quantity</th><th>Discount type</th><th>Value</th><th></th></tr></thead>' +
+					'<table class="yp-tier-table yp-stack-rows"><thead><tr><th>Min. quantity</th><th>Discount type</th><th>Value</th><th></th></tr></thead>' +
 						'<tbody data-yp-sticker-tiers>' + schema.sticker.tiers.map( function ( t ) { return tierRowHtml( t, schema.tier_types ); } ).join( '' ) + '</tbody>' +
 					'</table>' +
 					'<p class="yp-panel__hint">Same rules as the label tiers above, evaluated separately against the customer’s combined sticker quantity — never mixed with label orders.</p>' +

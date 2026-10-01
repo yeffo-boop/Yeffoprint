@@ -1321,14 +1321,14 @@
 
 		viewEl.innerHTML =
 			'<p class="yp-panel__hint">Change a price or remove an item. To change a quantity, remove the item and use Add items to add it again. The customer’s payment link stays the same and charges the new total.</p>' +
-			'<table class="yp-record-table yp-record-table--top"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>' +
+			'<table class="yp-record-table yp-record-table--top yp-stack-rows"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>' +
 				order.items.map( function ( item ) {
 					return (
 						'<tr data-yp-edit-item="' + item.id + '">' +
-							'<td>' + YP.escapeHtml( item.name ) + '</td>' +
-							'<td>' + item.quantity + '</td>' +
-							'<td><input type="number" step="0.01" min="0" style="width:7rem;" data-yp-edit-total value="' + item.total.toFixed( 2 ) + '" /></td>' +
-							'<td><label style="white-space:nowrap;"><input type="checkbox" data-yp-edit-remove /> Remove</label></td>' +
+							'<td class="yp-stack-grow"><strong>' + YP.escapeHtml( item.name ) + '</strong></td>' +
+							'<td data-label="Qty" class="yp-stack-half">' + item.quantity + '</td>' +
+							'<td data-label="Price ($)" class="yp-stack-half"><input type="number" step="0.01" min="0" inputmode="decimal" style="width:7rem;" data-yp-edit-total aria-label="Price" value="' + item.total.toFixed( 2 ) + '" /></td>' +
+							'<td><label class="yp-field yp-field--checkbox" style="margin:0;white-space:nowrap;"><input type="checkbox" data-yp-edit-remove /><span>Remove</span></label></td>' +
 						'</tr>'
 					);
 				} ).join( '' ) +
@@ -1473,10 +1473,10 @@
 		row = row || { label: '', due_date: '', done: false };
 		return (
 			'<tr>' +
-				'<td><label class="yp-field--checkbox yp-field" style="margin:0;"><input type="checkbox" data-wd-milestone-done' + ( row.done ? ' checked' : '' ) + ' /></label></td>' +
-				'<td><input type="text" data-wd-milestone-label value="' + YP.escapeAttr( row.label ) + '" placeholder="Milestone" /></td>' +
-				'<td><input type="date" data-wd-milestone-date value="' + YP.escapeAttr( row.due_date ) + '" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove milestone">&times;</button></td>' +
+				'<td class="yp-stack-half yp-wd-milestone-done"><label class="yp-field--checkbox yp-field" style="margin:0;"><input type="checkbox" data-wd-milestone-done' + ( row.done ? ' checked' : '' ) + ' /><span>Done</span></label></td>' +
+				'<td data-label="Milestone" class="yp-stack-grow yp-stack-first"><input type="text" data-wd-milestone-label aria-label="Milestone" value="' + YP.escapeAttr( row.label ) + '" placeholder="Milestone" /></td>' +
+				'<td data-label="Due date" class="yp-wd-milestone-date"><input type="date" data-wd-milestone-date aria-label="Due date" value="' + YP.escapeAttr( row.due_date ) + '" /></td>' +
+				'<td class="yp-stack-remove yp-stack-half"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove milestone">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -1485,9 +1485,9 @@
 		row = row || { label: '', price: '' };
 		return (
 			'<tr>' +
-				'<td><input type="text" data-wd-addon-label value="' + YP.escapeAttr( row.label ) + '" placeholder="Add-on" /></td>' +
-				'<td><input type="number" step="0.01" min="0" data-wd-addon-price value="' + YP.escapeAttr( row.price ) + '" placeholder="0.00" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove add-on">&times;</button></td>' +
+				'<td data-label="Add-on" class="yp-stack-grow"><input type="text" data-wd-addon-label aria-label="Add-on" value="' + YP.escapeAttr( row.label ) + '" placeholder="Add-on" /></td>' +
+				'<td data-label="Price ($)" class="yp-stack-half yp-wd-addon-price"><input type="number" step="0.01" min="0" inputmode="decimal" data-wd-addon-price aria-label="Price" value="' + YP.escapeAttr( row.price ) + '" placeholder="0.00" /></td>' +
+				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove add-on">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -1523,7 +1523,7 @@
 					'<div class="yp-field"><label>Go-live due</label><input type="date" data-wd-golive-due value="' + YP.escapeAttr( a.golive_due ) + '"' + ( signed ? ' disabled' : '' ) + ' /></div>' +
 				'</div>' +
 				'<p class="yp-field__hint">Add-ons</p>' +
-				'<table class="yp-record-table"><tbody data-wd-addons>' + addons.map( addonRowHtml ).join( '' ) + '</tbody></table>' +
+				'<table class="yp-record-table yp-stack-rows yp-edit-rows"><thead><tr><th>Add-on</th><th>Price ($)</th><th></th></tr></thead><tbody data-wd-addons>' + addons.map( addonRowHtml ).join( '' ) + '</tbody></table>' +
 				( signed ? '' : '<button type="button" class="yp-row-action" data-yp-wd-add-addon>+ Add add-on</button>' ) +
 				'<div class="yp-field" style="margin-top:0.75rem;"><label>Scope &amp; expectations</label><textarea rows="4" data-wd-scope' + ( signed ? ' disabled' : '' ) + '>' + YP.escapeHtml( a.scope_text ) + '</textarea></div>' +
 				( signed
@@ -1643,7 +1643,7 @@
 			'<div class="yp-panel yp-panel--compact" data-yp-wd-milestones-panel>' +
 				'<div class="yp-panel__head"><h3>Milestones</h3></div>' +
 				'<p class="yp-panel__hint">Visible to the customer on their agreement page as the project progresses.</p>' +
-				'<table class="yp-record-table"><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
+				'<table class="yp-record-table yp-stack-rows yp-edit-rows"><thead><tr><th></th><th>Milestone</th><th>Due date</th><th></th></tr></thead><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
 				'<button type="button" class="yp-row-action" data-yp-wd-add-milestone>+ Add milestone</button>' +
 				'<div class="yp-form__row">' +
 					'<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-save-milestones>Save Milestones</button>' +

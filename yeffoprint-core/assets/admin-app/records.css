@@ -10,6 +10,136 @@
  * fields that go inside a drawer's `.yp-drawer__body`.
  */
 
+/* ---------- Form controls (every screen) ----------
+   Direct report: "the dropdowns and text boxes... On mobile I can't
+   see the text in any of them... On desktop, it just looks awful."
+   Three stylesheets were fighting over every control: wp-admin's own
+   forms.css (selects capped at 25rem, its arrow image, a 40px
+   line-height on phones), the theme's global.css (storefront-sized
+   padding), and this app's own per-screen rules. The `background:`
+   shorthand here used to wipe wp-admin's arrow image, so dropdowns
+   showed no arrow at all and read as plain text boxes.
+
+   One base look for every text box, number box, dropdown and textarea
+   in the app. The selector is body.wp-admin.wp-core-ui.yeffoprint-app
+   + :where() on purpose: that's exactly global.css's own specificity
+   (0,3,1), and this file loads after it, so the base wins over both
+   global.css and forms.css — while any later screen-specific rule at
+   that specificity or higher (Shippo dims, 3D print slots) still
+   tweaks its own compact controls. 16px text on phones also stops iOS
+   zooming the page in when a field is tapped. */
+body.wp-admin.wp-core-ui.yeffoprint-app :where(
+	input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="image"]),
+	select,
+	textarea
+) {
+	box-sizing: border-box;
+	max-width: 100%;
+	min-height: 2.6rem;
+	margin: 0;
+	padding: 0.5rem 0.8rem;
+	font-family: var(--wp--preset--font-family--body);
+	font-size: 0.92rem;
+	font-weight: 400;
+	line-height: 1.35;
+	color: var(--wp--preset--color--near-black);
+	/* iPhone Safari: keep typed text dark even in the phone's dark mode,
+	   and never let it inherit a faded fill colour. */
+	-webkit-text-fill-color: var(--wp--preset--color--near-black);
+	color-scheme: light;
+	background-color: var(--wp--preset--color--white);
+	border: 1.5px solid #d6d3ce;
+	border-radius: var(--wp--custom--radius--control);
+	box-shadow: none;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(select) {
+	-webkit-appearance: none;
+	appearance: none;
+	padding-right: 2.2rem;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%233A3A3C' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 0.8rem center;
+	background-size: 12px 8px;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(select[multiple]) {
+	padding-right: 0.8rem;
+	background-image: none;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(textarea) {
+	min-height: 4.5rem;
+	resize: vertical;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(input, select, textarea)::placeholder {
+	color: #8d8a85;
+	-webkit-text-fill-color: #8d8a85;
+	opacity: 1;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(
+	input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="image"]),
+	select,
+	textarea
+):hover {
+	border-color: #b9b5ae;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(
+	input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="image"]),
+	select,
+	textarea
+):focus {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 3px rgba(0, 174, 239, 0.18);
+	outline: none;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(input, select, textarea):disabled {
+	background-color: var(--wp--preset--color--warm-white);
+	color: #8d8a85;
+	-webkit-text-fill-color: #8d8a85;
+	cursor: not-allowed;
+}
+
+/* Checkboxes and radios: the browser's own control in the brand color
+   rather than wp-admin's hand-drawn one, whose tick image didn't show
+   up reliably, so checked boxes could look empty. */
+body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[type="radio"]) {
+	-webkit-appearance: auto;
+	appearance: auto;
+	flex-shrink: 0;
+	width: 1.1rem;
+	height: 1.1rem;
+	min-width: 0;
+	min-height: 0;
+	margin: 0;
+	border: 0;
+	box-shadow: none;
+	accent-color: var(--wp--preset--color--magenta);
+	cursor: pointer;
+}
+
+body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[type="radio"])::before {
+	content: none;
+}
+
+@media (max-width: 782px) {
+	body.wp-admin.wp-core-ui.yeffoprint-app :where(
+		input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="image"]),
+		select,
+		textarea
+	) {
+		min-height: 2.9rem;
+		font-size: 16px;
+	}
+}
+
 /* ---------- List toolbar + table ---------- */
 
 .yp-list-toolbar {
@@ -555,36 +685,6 @@
 	font-weight: 600;
 }
 
-.yp-field input[type="text"],
-.yp-field input[type="number"],
-.yp-field input[type="url"],
-.yp-field input[type="email"],
-.yp-field input[type="tel"],
-.yp-field input[type="password"],
-.yp-field input[type="date"],
-.yp-field select,
-.yp-field textarea {
-	font-family: var(--wp--preset--font-family--body);
-	font-size: 0.9rem;
-	padding: 0.6rem 0.8rem;
-	border: 1.5px solid var(--wp--preset--color--light-gray);
-	border-radius: var(--wp--custom--radius--input);
-	background: var(--wp--preset--color--white);
-	color: var(--wp--preset--color--near-black);
-}
-
-.yp-field textarea {
-	resize: vertical;
-	min-height: 4.5rem;
-}
-
-.yp-field input:focus,
-.yp-field select:focus,
-.yp-field textarea:focus {
-	border-color: var(--wp--preset--color--near-black);
-	outline: none;
-}
-
 .yp-field[hidden] {
 	display: none;
 }
@@ -770,6 +870,22 @@
 	font-size: 0.82rem;
 	color: var(--wp--preset--color--charcoal);
 	margin: 0.5rem 0 0;
+}
+
+/* Breathing room in long panels (Create Order's Shipping panel and its
+   checkbox list): a checkbox row no longer butts up against the hint
+   or button above it, and a second heading inside the same panel gets
+   a gap above it like a new section. */
+.yp-panel .yp-field--checkbox {
+	margin-top: 0.85rem;
+}
+
+.yp-panel > .yp-field--checkbox:first-child {
+	margin-top: 0;
+}
+
+.yp-panel > .yp-panel__head:not(:first-child) {
+	margin-top: var(--wp--preset--spacing--md);
 }
 
 /**
@@ -1120,23 +1236,247 @@
 .yp-tier-table input,
 .yp-tier-table select {
 	width: 100%;
-	font-family: var(--wp--preset--font-family--mono);
-	font-size: 0.85rem;
-	padding: 0.5rem 0.6rem;
-	border: 1.5px solid var(--wp--preset--color--light-gray);
-	border-radius: var(--wp--custom--radius--control);
-	background: var(--wp--preset--color--white);
-	color: var(--wp--preset--color--near-black);
 }
 
-.yp-tier-table select {
+/* Create Order's label rows (views/manual-order.js): give each column
+   enough room on desktop that a dropdown's chosen value stays readable
+   instead of shrinking to its first two letters. */
+.yp-tier-table--items {
+	margin-top: 0.75rem;
+}
+
+.yp-tier-table--items td {
+	min-width: 7rem;
+	vertical-align: top;
+}
+
+.yp-tier-table--items td.yp-tier-table__qty {
+	min-width: 5.5rem;
+	width: 6.5rem;
+}
+
+.yp-tier-table--items td.yp-stack-remove {
+	min-width: 0;
+	width: 2.5rem;
+	padding-top: 0.75rem;
+	text-align: center;
+}
+
+.yp-add-row-button {
+	margin-bottom: 1.25rem;
+}
+
+/* "Fill all": shown under each field in the first label row once
+   there's more than one row; copies that value into every row below. */
+.yp-fill-all {
+	display: none;
+	margin-top: 0.3rem;
+	padding: 0.15rem 0;
+	border: 0;
+	background: none;
+	color: var(--wp--preset--color--cyan-deep);
 	font-family: var(--wp--preset--font-family--body);
+	font-size: 0.76rem;
+	font-weight: 600;
+	cursor: pointer;
+	white-space: nowrap;
 }
 
-.yp-tier-table input:focus,
-.yp-tier-table select:focus {
-	border-color: var(--wp--preset--color--near-black);
-	outline: none;
+.yp-fill-all:hover,
+.yp-fill-all:focus-visible {
+	text-decoration: underline;
+}
+
+.yp-tier-table--items tbody tr:first-child:not(:only-child) .yp-fill-all {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.yp-fill-all.is-done {
+	color: var(--wp--preset--color--charcoal);
+}
+
+/* ---------- Editable rows that stack on phones (.yp-stack-rows) ----------
+   Direct report, with screenshots: on a phone, any table of editable
+   rows (Create Order's labels, a web design order's milestones and
+   add-ons, pricing tiers, shipping options…) squeezed every column
+   into the screen's width, so a text box ended up a sliver and a date
+   wrapped onto three lines. Below 640px each row becomes its own card:
+   every field gets the card's full width (or half, with
+   .yp-stack-half), the column name shows above it (from the cell's
+   data-label), and the remove button drops to the card's bottom as
+   "× Remove". Desktop keeps the normal table. */
+.yp-stack-rows td.yp-stack-grow {
+	width: 100%;
+}
+
+/* …without squeezing the short fields beside it to nothing. */
+@media (min-width: 641px) {
+	.yp-stack-rows td.yp-stack-half:not(.yp-stack-remove):not(.yp-wd-milestone-done) {
+		min-width: 8rem;
+	}
+
+	.yp-stack-rows td.yp-stack-wide-select {
+		min-width: 12rem;
+	}
+}
+
+.yp-stack-rows td.yp-stack-remove {
+	width: 1%;
+	white-space: nowrap;
+	text-align: right;
+}
+
+/* Web design order Milestones / Add-ons (app.js): a tidy edit grid on
+   desktop, with the text box taking the spare width. */
+.yp-edit-rows td {
+	padding: 0.35rem 0.4rem;
+	border-top: 0;
+}
+
+.yp-edit-rows th {
+	padding: 0.4rem 0.4rem 0.3rem;
+}
+
+.yp-edit-rows tr:hover td {
+	background: none;
+}
+
+.yp-edit-rows + .yp-row-action {
+	margin: 0.25rem 0 0.9rem;
+}
+
+.yp-edit-rows td.yp-wd-milestone-done {
+	width: 1%;
+	white-space: nowrap;
+}
+
+@media (min-width: 641px) {
+	.yp-edit-rows td.yp-wd-milestone-date {
+		min-width: 10.5rem;
+	}
+}
+
+@media (max-width: 640px) {
+	.yp-stack-rows,
+	.yp-stack-rows tbody {
+		display: block;
+	}
+
+	.yp-stack-rows thead {
+		display: none;
+	}
+
+	.yp-stack-rows tbody tr {
+		position: relative;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 0.6rem 0.75rem;
+		padding: 0.85rem;
+		margin-bottom: 0.65rem;
+		border: 1.5px solid var(--wp--preset--color--light-gray);
+		border-radius: var(--wp--custom--radius--input);
+		background: var(--wp--preset--color--warm-white);
+	}
+
+	.yp-stack-rows tbody td,
+	.yp-stack-rows tbody td.yp-tier-table__qty,
+	.yp-stack-rows tbody td.yp-stack-grow,
+	.yp-stack-rows tbody td.yp-stack-remove {
+		display: flex;
+		flex-direction: column;
+		grid-column: 1 / -1;
+		min-width: 0;
+		width: auto;
+		padding: 0;
+		border: 0;
+		background: none;
+		text-align: left;
+		white-space: normal;
+	}
+
+	.yp-stack-rows tbody tr:hover td {
+		background: none;
+	}
+
+	.yp-stack-rows tbody td.yp-stack-half {
+		grid-column: auto;
+	}
+
+	.yp-stack-rows tbody td.yp-stack-first {
+		order: -1;
+	}
+
+	.yp-stack-rows tbody td[data-label]::before {
+		content: attr(data-label);
+		margin-bottom: 0.3rem;
+		font-size: 0.7rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--wp--preset--color--charcoal);
+	}
+
+	/* Fixed desktop widths set inline on a few inputs (style="width:7rem"). */
+	.yp-stack-rows tbody td input:not([type="checkbox"]):not([type="radio"]),
+	.yp-stack-rows tbody td select,
+	.yp-stack-rows tbody td textarea {
+		width: 100% !important;
+	}
+
+	.yp-stack-rows tbody td.yp-stack-remove {
+		align-items: flex-end;
+		justify-content: flex-end;
+		order: 99;
+	}
+
+	.yp-stack-rows tbody td.yp-stack-remove .yp-row-action::after {
+		content: " Remove";
+	}
+
+	/* Milestones: "Done" sits on the bottom line, beside Remove. */
+	.yp-stack-rows tbody td.yp-wd-milestone-done {
+		order: 98;
+		justify-content: center;
+		min-width: 0;
+	}
+
+	.yp-stack-rows tbody td.yp-wd-milestone-date {
+		min-width: 0;
+	}
+
+	/* Create Order's label cards: a "Label 1, Label 2…" title, with the
+	   remove button in the card's top-right corner instead. */
+	.yp-tier-table--items tbody {
+		counter-reset: yp-item-row;
+	}
+
+	.yp-tier-table--items tbody tr::before {
+		content: "Label " counter(yp-item-row);
+		counter-increment: yp-item-row;
+		grid-column: 1 / -1;
+		padding-right: 2.5rem;
+		font-family: var(--wp--preset--font-family--heading);
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.yp-tier-table--items tbody td.yp-stack-remove {
+		position: absolute;
+		top: 0.45rem;
+		right: 0.45rem;
+	}
+
+	.yp-tier-table--items tbody td.yp-stack-remove .yp-row-action::after {
+		content: none;
+	}
+}
+
+/* iPhone Safari centres a date field's value; line it up with every
+   other field instead. */
+body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
+	text-align: left;
 }
 
 /* ---------- Order detail modal ----------
@@ -2058,6 +2398,27 @@
 	grid-template-columns: minmax(0, 1fr) 8rem auto auto auto;
 	gap: 0.5rem;
 	align-items: center;
+}
+
+/* Phones: the size name gets its own line instead of shrinking beside
+   the price, photo and buttons. */
+@media (max-width: 640px) {
+	.yp-print-size-row {
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		padding: 0.6rem;
+		border: 1.5px solid var(--wp--preset--color--light-gray);
+		border-radius: var(--wp--custom--radius--input);
+		background: var(--wp--preset--color--warm-white);
+	}
+
+	.yp-print-size-row > [data-yp-size-field="name"],
+	.yp-print-size-row > .yp-print-size-row__photo {
+		grid-column: 1 / -1;
+	}
+
+	.yp-print-size-row > .yp-print-size-row__photo {
+		order: 5;
+	}
 }
 
 /* Personalization: area, then text and image switches with their charges. */
