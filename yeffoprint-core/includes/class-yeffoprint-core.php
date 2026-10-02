@@ -113,6 +113,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-guest-saved-design.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-webhook-secret.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-partial-payments.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-payment-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-nowpayments-client.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-nowpayments-webhook-controller.php';

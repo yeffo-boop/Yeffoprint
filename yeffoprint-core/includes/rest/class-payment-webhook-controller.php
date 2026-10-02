@@ -19,6 +19,14 @@
  *      order paid (shipping unpaid product, leaving a real payment
  *      unmatched) is a worse failure than making the admin resolve a
  *      handful of same-amount collisions by hand.
+ *   3. Short payments (direct request: "alert a customer that they
+ *      accidentally underpaid if a zelle/venmo comes in that's slightly
+ *      short"): an order named in the note takes any amount below what's
+ *      owed; without one, exactly one open order owing a little more
+ *      (within SHORT_TOLERANCE) takes it. Either way the payment is
+ *      recorded and the customer is emailed the balance
+ *      (class-partial-payments.php). Every amount is compared against
+ *      what's still owed, so the follow-up payment matches too.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -26,6 +34,13 @@ defined( 'ABSPATH' ) || exit;
 class YeffoPrint_Payment_Webhook_Controller {
 
 	private const NAMESPACE = 'yeffoprint-core/v1';
+
+	/**
+	 * How short an unlabeled payment can be and still be matched to an
+	 * order: up to 10% of what's owed, and never more than $20.
+	 */
+	private const SHORT_TOLERANCE_RATIO = 0.10;
+	private const SHORT_TOLERANCE_MAX   = 20.00;
 
 	private const GATEWAY_IDS = [
 		'venmo' => 'yeffoprint_venmo',
@@ -85,15 +100,20 @@ class YeffoPrint_Payment_Webhook_Controller {
 
 		$order_from_note = $this->order_from_note( $note, $gateway_id, $amount );
 		if ( $order_from_note ) {
-			$this->mark_paid( $order_from_note, $amount, $method, __( 'order number found in payment note', 'yeffoprint-core' ) );
-			return rest_ensure_response( [ 'status' => 'matched', 'order_id' => $order_from_note->get_id() ] );
+			return $this->apply_payment( $order_from_note, $amount, $method, __( 'order number found in payment note', 'yeffoprint-core' ) );
 		}
 
-		$candidates = $this->on_hold_orders_by_amount( $gateway_id, $amount );
+		$candidates = $this->open_orders_by_amount( $gateway_id, $amount );
 
 		if ( 1 === count( $candidates ) ) {
-			$this->mark_paid( $candidates[0], $amount, $method, __( 'exact amount match, only one on-hold order at that total', 'yeffoprint-core' ) );
-			return rest_ensure_response( [ 'status' => 'matched', 'order_id' => $candidates[0]->get_id() ] );
+			return $this->apply_payment( $candidates[0], $amount, $method, __( 'exact amount match, only one open order owing that amount', 'yeffoprint-core' ) );
+		}
+
+		if ( empty( $candidates ) ) {
+			$short = $this->orders_slightly_over( $gateway_id, $amount );
+			if ( 1 === count( $short ) ) {
+				return $this->apply_payment( $short[0], $amount, $method, __( 'slightly short of the only open order near that amount', 'yeffoprint-core' ) );
+			}
 		}
 
 		if ( empty( $candidates ) ) {
@@ -101,7 +121,7 @@ class YeffoPrint_Payment_Webhook_Controller {
 				sprintf( /* translators: 1: Venmo/Zelle, 2: amount */ __( 'Unmatched %1$s payment: %2$s', 'yeffoprint-core' ), ucfirst( $method ), $this->plain_text_amount( $amount ) ),
 				sprintf(
 					/* translators: 1: Venmo/Zelle, 2: amount, 3: note text */
-					__( "A %1\$s payment notification for %2\$s came in, but no on-hold order for that exact amount was found.\n\nPayment note: %3\$s\n\nIf this is a real payment, find the order and update its status manually.", 'yeffoprint-core' ),
+					__( "A %1\$s payment notification for %2\$s came in, but no unpaid order owing that amount (or slightly more) was found.\n\nPayment note: %3\$s\n\nIf this is a real payment, open the order in the admin app and use Record payment (it emails the customer if it's short).", 'yeffoprint-core' ),
 					ucfirst( $method ),
 					$this->plain_text_amount( $amount ),
 					$note ?: __( '(none)', 'yeffoprint-core' )
@@ -114,7 +134,7 @@ class YeffoPrint_Payment_Webhook_Controller {
 			sprintf( /* translators: 1: Venmo/Zelle, 2: amount */ __( 'Multiple orders match a %1$s payment: %2$s', 'yeffoprint-core' ), ucfirst( $method ), $this->plain_text_amount( $amount ) ),
 			sprintf(
 				/* translators: 1: Venmo/Zelle, 2: amount, 3: candidate count, 4: order list, 5: note text */
-				__( "A %1\$s payment notification for %2\$s came in, but %3\$d on-hold orders share that exact total, so none were matched automatically (to avoid marking the wrong one paid). Please review and update the correct one manually:\n\n%4\$s\n\nPayment note: %5\$s", 'yeffoprint-core' ),
+				__( "A %1\$s payment notification for %2\$s came in, but %3\$d unpaid orders owe that exact amount, so none were matched automatically (to avoid marking the wrong one paid). Open the right one in the admin app and use Record payment:\n\n%4\$s\n\nPayment note: %5\$s", 'yeffoprint-core' ),
 				ucfirst( $method ),
 				$this->plain_text_amount( $amount ),
 				count( $candidates ),
@@ -138,51 +158,84 @@ class YeffoPrint_Payment_Webhook_Controller {
 
 		$order = wc_get_order( absint( $matches[1] ) );
 
-		if ( ! $order || ! $order->has_status( 'on-hold' ) || $order->get_payment_method() !== $gateway_id ) {
+		$open_ids = array_map( static function ( \WC_Order $open ): int {
+			return $open->get_id();
+		}, YeffoPrint_Partial_Payments::open_orders_for_gateway( $gateway_id ) );
+
+		if ( ! $order || ! in_array( $order->get_id(), $open_ids, true ) ) {
 			return null;
 		}
 
-		// A number that looks like an order id but the amount doesn't
-		// match isn't trustworthy enough to force — could be a
+		// A number that looks like an order id but the amount is more
+		// than what's owed isn't trustworthy enough to force — could be a
 		// coincidental number in the note (a phone digit, a date).
-		// Falls through to amount-only matching instead of erroring.
-		if ( abs( (float) $order->get_total() - $amount ) >= 0.01 ) {
+		// Falls through to amount-only matching instead of erroring. Less
+		// than what's owed is a short payment on that order.
+		if ( $amount - YeffoPrint_Partial_Payments::balance_due( $order ) >= 0.01 ) {
 			return null;
 		}
 
 		return $order;
 	}
 
-	/** @return \WC_Order[] */
-	private function on_hold_orders_by_amount( string $gateway_id, float $amount ): array {
-		$orders = wc_get_orders( [
-			'status'         => 'on-hold',
-			'payment_method' => $gateway_id,
-			'limit'          => -1,
-			'orderby'        => 'date',
-			'order'          => 'ASC',
-		] );
-
-		return array_values( array_filter( $orders, static function ( $order ) use ( $amount ) {
-			return $order instanceof \WC_Order && abs( (float) $order->get_total() - $amount ) < 0.01;
+	/** @return \WC_Order[] Open orders whose balance is exactly $amount. */
+	private function open_orders_by_amount( string $gateway_id, float $amount ): array {
+		return array_values( array_filter( YeffoPrint_Partial_Payments::open_orders_for_gateway( $gateway_id ), static function ( \WC_Order $order ) use ( $amount ) {
+			return abs( YeffoPrint_Partial_Payments::balance_due( $order ) - $amount ) < 0.01;
 		} ) );
 	}
 
-	private function mark_paid( \WC_Order $order, float $amount, string $method, string $reason ): void {
-		$order->add_order_note( sprintf(
-			/* translators: 1: Venmo/Zelle, 2: amount, 3: match reason */
-			__( 'Matched to an incoming %1$s payment of %2$s (%3$s) via the automated payment webhook.', 'yeffoprint-core' ),
-			ucfirst( $method ),
-			wp_strip_all_tags( wc_price( $amount ) ),
-			$reason
-		) );
+	/** @return \WC_Order[] Open orders owing a little more than $amount (see SHORT_TOLERANCE_*). */
+	private function orders_slightly_over( string $gateway_id, float $amount ): array {
+		return array_values( array_filter( YeffoPrint_Partial_Payments::open_orders_for_gateway( $gateway_id ), static function ( \WC_Order $order ) use ( $amount ) {
+			$balance   = YeffoPrint_Partial_Payments::balance_due( $order );
+			$shortfall = $balance - $amount;
+			return $shortfall >= 0.01
+				&& $shortfall <= min( self::SHORT_TOLERANCE_MAX, $balance * self::SHORT_TOLERANCE_RATIO ) + 0.001;
+		} ) );
+	}
 
-		// payment_complete() — not a direct update_status() call — is
-		// what fires woocommerce_payment_complete/the processing-status
-		// transition, which is what already links a paid Custom Order
-		// to its production workflow (class-custom-order-payment.php).
-		// An order placed through either flow resolves the same way here.
-		$order->payment_complete();
+	/**
+	 * Records the payment on the order: paid in full moves it to
+	 * Processing, short emails the customer the balance and the admin a
+	 * heads-up.
+	 */
+	private function apply_payment( \WC_Order $order, float $amount, string $method, string $reason ) {
+		$result = YeffoPrint_Partial_Payments::record(
+			$order,
+			$amount,
+			$method,
+			/* translators: %s: why the payment was matched to this order */
+			sprintf( __( 'automated payment webhook, %s', 'yeffoprint-core' ), $reason )
+		);
+
+		if ( 'short' === $result['status'] ) {
+			$this->notify_admin(
+				sprintf(
+					/* translators: 1: Venmo/Zelle, 2: order number, 3: amount still owed */
+					__( 'Short %1$s payment on order #%2$s: %3$s still due', 'yeffoprint-core' ),
+					ucfirst( $method ),
+					$order->get_order_number(),
+					$this->plain_text_amount( $result['balance'] )
+				),
+				sprintf(
+					/* translators: 1: Venmo/Zelle, 2: amount, 3: order number, 4: order total, 5: amount still owed, 6: admin link */
+					__( "A %1\$s payment of %2\$s was matched to order #%3\$s, but the order total is %4\$s. %5\$s is still due.\n\nThe customer has been emailed the remaining balance and how to pay it. The order stays unpaid until the rest comes in; the next payment for that amount will be matched automatically.\n\n%6\$s", 'yeffoprint-core' ),
+					ucfirst( $method ),
+					$this->plain_text_amount( $amount ),
+					$order->get_order_number(),
+					$this->plain_text_amount( (float) $order->get_total() ),
+					$this->plain_text_amount( $result['balance'] ),
+					$this->order_admin_line( $order )
+				)
+			);
+		}
+
+		return rest_ensure_response( [
+			'status'   => 'paid' === $result['status'] ? 'matched' : 'short',
+			'order_id' => $order->get_id(),
+			'balance'  => $result['balance'],
+		] );
 	}
 
 	private function order_admin_line( \WC_Order $order ): string {
@@ -199,7 +252,7 @@ class YeffoPrint_Payment_Webhook_Controller {
 	 * wp_strip_all_tags() only strips tags, not entities, and these
 	 * strings land in a plain-text wp_mail() body, not an HTML context
 	 * that would decode the entity for free the way an admin order note
-	 * (mark_paid() below, rendered as HTML in wp-admin) already does.
+	 * (rendered as HTML in wp-admin) already does.
 	 */
 	private function plain_text_amount( float $amount ): string {
 		return html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );

@@ -1219,6 +1219,8 @@
 				'</div>' +
 			'</div>' +
 
+			recordPaymentPanelHtml( order ) +
+
 			webDesignPanelHtml( order ) +
 
 			refundPanelHtml( order ) +
@@ -1258,6 +1260,7 @@
 		bindShippoPanel( order, bodyEl );
 		bindCustomerNotesPanel( order, bodyEl );
 		bindRefundPanel( order, bodyEl, drawer );
+		bindRecordPaymentPanel( order, bodyEl, drawer );
 		loadWebDesignPanel( order, bodyEl );
 	}
 
@@ -2128,6 +2131,120 @@
 		} );
 
 		bindDeleteButtons();
+	}
+
+	/**
+	 * Direct request: "alert a customer that they accidentally underpaid
+	 * if a zelle/venmo comes in that's slightly short." Unpaid orders
+	 * only. Staff enter what actually came in; the full balance marks the
+	 * order paid, less than that keeps it unpaid and (by default) emails
+	 * the customer what's still owed and where to send it. Payments the
+	 * Venmo/Zelle webhook matched show up in the same list.
+	 */
+	var RECORD_PAYMENT_METHODS = { venmo: 'Venmo', zelle: 'Zelle', cash: 'Cash', other: 'Other' };
+
+	function recordPaymentPanelHtml( order ) {
+		var received = order.payments_received || [];
+		if ( ! order.can_record_payment && ! received.length ) {
+			return '';
+		}
+
+		var listHtml = received.length
+			? '<div class="yp-list-rows">' + received.map( function ( payment ) {
+				return (
+					'<div class="yp-list-row">' +
+						'<div class="yp-list-row__text">' +
+							'<span class="t">$' + Number( payment.amount ).toFixed( 2 ) + ' ' + YP.escapeHtml( RECORD_PAYMENT_METHODS[ payment.method ] || payment.method ) + '</span>' +
+							'<span class="s">' + YP.escapeHtml( payment.source || '' ) + ( payment.date ? ' — ' + new Date( payment.date ).toLocaleString() : '' ) + '</span>' +
+						'</div>' +
+					'</div>'
+				);
+			} ).join( '' ) + '</div>'
+			: '';
+
+		var summary = order.amount_received > 0
+			? '<p class="yp-panel__hint">Received $' + order.amount_received.toFixed( 2 ) + ' of $' + order.total.toFixed( 2 ) +
+				( order.balance_due > 0 ? ' &nbsp;·&nbsp; <span class="yp-pill yp-pill--warn">$' + order.balance_due.toFixed( 2 ) + ' still due</span>' : '' ) + '</p>'
+			: '<p class="yp-panel__hint">Got a Venmo, Zelle or cash payment for this order? Enter what actually came in. If it’s short, the customer is emailed the balance.</p>';
+
+		var defaultMethod = order.payment_method === 'yeffoprint_zelle' ? 'zelle' : 'venmo';
+		var form = order.can_record_payment
+			? (
+				'<div class="yp-form__row">' +
+					'<div class="yp-field"><label for="yp-pay-amount">Amount received ($)</label><input type="number" step="0.01" min="0.01" inputmode="decimal" id="yp-pay-amount" data-yp-pay-amount value="' + ( order.balance_due || order.total ).toFixed( 2 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-pay-method">Paid with</label><select id="yp-pay-method" data-yp-pay-method>' +
+						Object.keys( RECORD_PAYMENT_METHODS ).map( function ( key ) {
+							return '<option value="' + key + '"' + ( key === defaultMethod ? ' selected' : '' ) + '>' + RECORD_PAYMENT_METHODS[ key ] + '</option>';
+						} ).join( '' ) +
+					'</select></div>' +
+				'</div>' +
+				'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-pay-email" data-yp-pay-email checked /><label for="yp-pay-email">If it’s short, email the customer the remaining balance</label></div>' +
+				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-pay-submit>Record payment</button>' +
+				'<div data-yp-pay-error></div>'
+			)
+			: '';
+
+		return (
+			'<div class="yp-panel yp-panel--compact" data-yp-pay-panel>' +
+				'<div class="yp-panel__head"><h2>Payment received</h2></div>' +
+				summary +
+				listHtml +
+				form +
+			'</div>'
+		);
+	}
+
+	function bindRecordPaymentPanel( order, bodyEl, drawer ) {
+		var panel = bodyEl.querySelector( '[data-yp-pay-panel]' );
+		var submitButton = panel ? panel.querySelector( '[data-yp-pay-submit]' ) : null;
+		if ( ! submitButton ) {
+			return;
+		}
+
+		submitButton.addEventListener( 'click', function () {
+			var amount = Math.round( ( parseFloat( panel.querySelector( '[data-yp-pay-amount]' ).value ) || 0 ) * 100 ) / 100;
+			var method = panel.querySelector( '[data-yp-pay-method]' ).value;
+			var emailCustomer = panel.querySelector( '[data-yp-pay-email]' ).checked;
+			var errorEl = panel.querySelector( '[data-yp-pay-error]' );
+			var owed = order.balance_due || order.total;
+
+			if ( amount <= 0 ) {
+				errorEl.innerHTML = '<p class="yp-form__error">Enter the amount you received.</p>';
+				return;
+			}
+
+			var short = owed - amount >= 0.01;
+			var message = short
+				? 'That’s $' + ( owed - amount ).toFixed( 2 ) + ' short of the $' + owed.toFixed( 2 ) + ' owed. The order stays unpaid' +
+					( emailCustomer ? ', and the customer gets an email asking for the remaining $' + ( owed - amount ).toFixed( 2 ) + '.' : '. The customer is not emailed.' )
+				: 'This covers the $' + owed.toFixed( 2 ) + ' owed, so the order is marked paid and moves to Processing.';
+
+			YP.confirmModal( {
+				title: 'Record $' + amount.toFixed( 2 ) + ' ' + RECORD_PAYMENT_METHODS[ method ] + ' payment?',
+				message: message,
+				confirmLabel: 'Record payment',
+				onConfirm: function () {
+					submitButton.disabled = true;
+					submitButton.textContent = 'Saving…';
+					errorEl.innerHTML = '';
+
+					YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/record-payment', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( { amount: amount, method: method, email_customer: emailCustomer } )
+					} )
+						.then( function ( updated ) {
+							renderWcOrderDetail( updated, drawer, bodyEl );
+							loadDashboard();
+						} )
+						.catch( function ( error ) {
+							submitButton.disabled = false;
+							submitButton.textContent = 'Record payment';
+							errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+						} );
+				}
+			} );
+		} );
 	}
 
 	/**
