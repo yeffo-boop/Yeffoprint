@@ -186,6 +186,8 @@ class YeffoPrint_Tracker_App {
 			'signedIn'      => is_user_logged_in(),
 			'ready'         => YeffoPrint_Tracker_Crypto::is_ready(),
 			'firstName'     => $user->ID ? ( $user->first_name ?: $user->display_name ) : '',
+			'email'         => $user->ID ? $user->user_email : '',
+			'version'       => YEFFOPRINT_CORE_VERSION,
 			'userKey'       => $user->ID ? substr( hash_hmac( 'sha256', (string) $user->ID, wp_salt( 'auth' ) ), 0, 16 ) : '',
 			'restUrl'       => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'nonce'         => $user->ID ? wp_create_nonce( 'wp_rest' ) : '',

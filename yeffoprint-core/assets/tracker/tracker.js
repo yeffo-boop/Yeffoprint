@@ -165,6 +165,9 @@
 		bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
 		calc: 'M6 3h12v18H6zM9 7h6M9 12h1M14 12h1M9 16h1M14 16h1',
 		check: 'M5 12l5 5L20 7',
+		help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01',
+		problem: 'M8 8a4 4 0 0 1 8 0v7a4 4 0 0 1-8 0zM12 11v6M4 13h4M16 13h4M5 7l3 2M19 7l-3 2M5 19l3-2M19 19l-3-2',
+		idea: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z',
 	};
 
 	function icon( name ) {
@@ -3712,6 +3715,17 @@
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Reminders' ) );
 		wrap.appendChild( remindersCard( s ) );
 
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Help & feedback' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list ypt-help' }, FEEDBACK_TYPES.map( function ( t ) {
+			return h( 'button', { type: 'button', class: 'ypt-help__row', onclick: function () {
+				openFeedbackSheet( t.v );
+			} },
+				h( 'span', { class: 'ypt-help__ic ypt-help__ic--' + t.v }, icon( t.v ) ),
+				h( 'span', { class: 'ypt-help__text' }, h( 'b', null, t.title ), h( 'span', null, t.sub ) ),
+				h( 'span', { class: 'ypt-help__chev', 'aria-hidden': 'true' }, '›' )
+			);
+		} ) ) );
+
 		if ( newsList().length ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'What’s new' ) );
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
@@ -3769,6 +3783,213 @@
 			'Dose Tracker is a personal log and reminder tool. It isn’t medical advice. Talk to a qualified provider about any peptide, medication, dose or schedule.' ) );
 
 		return wrap;
+	}
+
+	/* ---------- Help & feedback (includes/tracker/class-tracker-feedback.php) ---------- */
+
+	var FEEDBACK_TYPES = [
+		{ v: 'help', label: 'Help', title: 'Get help', sub: 'Ask a question about the tracker' },
+		{ v: 'problem', label: 'Problem', title: 'Report a problem', sub: 'Something broken or looks wrong' },
+		{ v: 'idea', label: 'Idea', title: 'Suggest an idea', sub: 'Tell us what would make it better' },
+	];
+	var MAX_SHOTS = 3;
+
+	/** Phone, browser and app version, so problem reports say where they happened. No tracker data. */
+	function deviceLine() {
+		var ua = navigator.userAgent || '';
+		var os = /iPhone/.test( ua ) ? 'iPhone' : /iPad/.test( ua ) || ( /Macintosh/.test( ua ) && navigator.maxTouchPoints > 1 ) ? 'iPad' : /Android/.test( ua ) ? 'Android' : /Mac OS X/.test( ua ) ? 'Mac' : /Windows/.test( ua ) ? 'Windows' : /Linux/.test( ua ) ? 'Linux' : 'Other';
+		var br = /EdgA?\//.test( ua ) ? 'Edge' : /SamsungBrowser/.test( ua ) ? 'Samsung Internet' : /FxiOS|Firefox/.test( ua ) ? 'Firefox' : /CriOS|Chrome/.test( ua ) ? 'Chrome' : /Safari/.test( ua ) ? 'Safari' : 'Browser';
+		if ( /; wv\)/.test( ua ) ) {
+			br = 'Android app';
+		}
+		return [ os, br + ( isStandalone() ? ' (Home Screen)' : '' ), 'tracker ' + ( CFG.version || '' ), 'reminders ' + ( state.pushOnHere ? 'on' : 'off' ) ].join( ' · ' );
+	}
+
+	/** The opt-in "tracker setup": medications/schedules and reminder settings only. Never doses, notes, vials, stock or injection spots. */
+	function setupLines() {
+		var s = state.records.settings.me || {};
+		var lines = protocols().map( function ( p ) {
+			return [ p.compound, amountLabel( p.dose, p.unit ), scheduleLabel( p ) + ' ' + timesOf( p ).map( fmtTime ).join( ', ' ), p.route || '' ].filter( Boolean ).join( ' · ' ) + ( p.paused ? ' (paused)' : '' );
+		} );
+		lines.push( 'Reminders on this device: ' + ( state.pushOnHere ? 'on' : 'off' ) );
+		lines.push( 'Show names in reminders: ' + ( s.reminderNames === false ? 'off' : 'on' ) );
+		lines.push( 'Time zone: ' + ( s.baseTz || s.tz || ( Intl.DateTimeFormat().resolvedOptions().timeZone || '' ) ) + ( s.travel ? ' (travel mode)' : '' ) );
+		return lines;
+	}
+
+	/** A picked image, shrunk to at most 1600px and re-encoded as JPEG (which also drops photo metadata). */
+	function shrinkImage( file ) {
+		return new Promise( function ( resolve, reject ) {
+			var url = URL.createObjectURL( file );
+			var img = new Image();
+			img.onload = function () {
+				var scale = Math.min( 1, 1600 / Math.max( img.naturalWidth, img.naturalHeight ) );
+				var c = document.createElement( 'canvas' );
+				c.width = Math.max( 1, Math.round( img.naturalWidth * scale ) );
+				c.height = Math.max( 1, Math.round( img.naturalHeight * scale ) );
+				var ctx = c.getContext( '2d' );
+				ctx.fillStyle = '#fff';
+				ctx.fillRect( 0, 0, c.width, c.height );
+				ctx.drawImage( img, 0, 0, c.width, c.height );
+				URL.revokeObjectURL( url );
+				resolve( c.toDataURL( 'image/jpeg', 0.82 ) );
+			};
+			img.onerror = function () {
+				URL.revokeObjectURL( url );
+				reject( new Error( 'That file isn’t an image we can read.' ) );
+			};
+			img.src = url;
+		} );
+	}
+
+	function openFeedbackSheet( type ) {
+		var f = { type: type || 'help', message: '', email: CFG.email || '', shots: [], setup: false };
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var shotsBox = h( 'div', { class: 'ypt-shots' } );
+		var setupBox = h( 'div', null );
+		var picker = h( 'input', { type: 'file', accept: 'image/*', hidden: true, onchange: function () {
+			var files = [].slice.call( picker.files || [], 0, MAX_SHOTS - f.shots.length );
+			picker.value = '';
+			Promise.all( files.map( shrinkImage ) ).then( function ( urls ) {
+				f.shots = f.shots.concat( urls ).slice( 0, MAX_SHOTS );
+				drawShots();
+			} ).catch( function ( e ) {
+				toast( e.message );
+			} );
+		} } );
+		if ( MAX_SHOTS > 1 ) {
+			picker.setAttribute( 'multiple', '' );
+		}
+		var hints = { help: 'What are you trying to do?', problem: 'What happened, and what did you expect to happen?', idea: 'What would make the tracker better for you?' };
+		var msg = h( 'textarea', { class: 'ypt-textarea', id: 'ypt-fb-msg', rows: '4', maxlength: '4000', placeholder: hints[ f.type ], oninput: function () {
+			f.message = msg.value;
+		} } );
+		var email = h( 'input', { class: 'ypt-input', id: 'ypt-fb-email', type: 'email', autocomplete: 'email', value: f.email, oninput: function () {
+			f.email = email.value.trim();
+		} } );
+
+		function drawShots() {
+			shotsBox.textContent = '';
+			f.shots.forEach( function ( url, i ) {
+				shotsBox.appendChild( h( 'div', { class: 'ypt-shot' },
+					h( 'img', { src: url, alt: 'Screenshot ' + ( i + 1 ) } ),
+					h( 'button', { type: 'button', class: 'ypt-shot__x', 'aria-label': 'Remove screenshot', onclick: function () {
+						f.shots.splice( i, 1 );
+						drawShots();
+					} }, '×' )
+				) );
+			} );
+			if ( f.shots.length < MAX_SHOTS ) {
+				shotsBox.appendChild( h( 'button', { type: 'button', class: 'ypt-shot ypt-shot--add', 'aria-label': 'Add a screenshot', onclick: function () {
+					picker.click();
+				} }, '+' ) );
+			}
+		}
+
+		function drawSetup() {
+			setupBox.textContent = '';
+			var sw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': f.setup ? 'true' : 'false', 'aria-label': 'Include my tracker setup', onclick: function () {
+				f.setup = ! f.setup;
+				drawSetup();
+			} } );
+			setupBox.appendChild( h( 'div', { class: 'ypt-toggle', style: { borderTop: '1px solid var(--ypt-line)', marginTop: '16px' } },
+				h( 'div', null, h( 'b', null, 'Include my tracker setup' ), h( 'div', { class: 'ypt-muted ypt-small' }, f.setup ? 'Helps us fix problems faster.' : 'Helps us fix problems faster. Off by default.' ) ),
+				sw
+			) );
+			if ( ! f.setup ) {
+				setupBox.appendChild( h( 'p', { class: 'ypt-fb-privacy' }, icon( 'lock' ), h( 'span', null, 'We only get what you type, any screenshots, and your device type (phone, browser, app version). Your doses, medications and vials stay encrypted and are not sent.' ) ) );
+				return;
+			}
+			var meds = setupLines();
+			var protoLines = meds.slice( 0, meds.length - 3 );
+			setupBox.appendChild( h( 'div', { class: 'ypt-label' }, 'This note will include' ) );
+			setupBox.appendChild( h( 'div', { class: 'ypt-fb-incl' },
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__y' }, '✓' ), h( 'span', null, 'Your medications and schedules', protoLines.length ? protoLines.map( function ( l ) {
+					return h( 'span', { class: 'ypt-muted', style: { display: 'block' } }, l );
+				} ) : h( 'span', { class: 'ypt-muted', style: { display: 'block' } }, 'None yet' ) ) ),
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__y' }, '✓' ), h( 'span', null, 'Reminder settings and time zone' ) ),
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__y' }, '✓' ), h( 'span', null, 'Device and app version' ) ),
+				h( 'div', { class: 'ypt-fb-incl__sep' }, h( 'span', { class: 'ypt-fb-incl__n' }, '✕' ), h( 'span', null, 'Dose history and notes' ) ),
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__n' }, '✕' ), h( 'span', null, 'Vials, stock and injection spots' ) )
+			) );
+			setupBox.appendChild( h( 'p', { class: 'ypt-hint' }, 'Only with this one note. It’s erased once we’ve sorted it out.' ) );
+		}
+
+		var send = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			err.hidden = true;
+			if ( ! f.message.trim() ) {
+				err.textContent = 'Write a message first.';
+				err.hidden = false;
+				msg.focus();
+				return;
+			}
+			if ( ! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test( f.email ) ) {
+				err.textContent = 'Enter an email address we can reply to.';
+				err.hidden = false;
+				email.focus();
+				return;
+			}
+			if ( state.offline ) {
+				err.textContent = 'You’re offline. Connect to the internet to send this.';
+				err.hidden = false;
+				return;
+			}
+			send.disabled = true;
+			send.textContent = 'Sending…';
+			api( 'POST', 'tracker/feedback', {
+				type: f.type,
+				message: f.message.trim(),
+				email: f.email,
+				device: deviceLine(),
+				setup: f.setup ? setupLines() : [],
+				screenshots: f.shots,
+			} ).then( function () {
+				openFeedbackSent( f );
+			} ).catch( function ( e ) {
+				send.disabled = false;
+				send.textContent = 'Send';
+				err.textContent = e.message || 'Your note couldn’t be sent. Please try again.';
+				err.hidden = false;
+			} );
+		} }, 'Send' );
+
+		drawShots();
+		drawSetup();
+		openSheet( 'Send us a note', 'Help & feedback', [
+			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'What’s this about?' ), seg( FEEDBACK_TYPES.map( function ( t ) {
+				return [ t.v, t.label ];
+			} ), f.type, function ( v ) {
+				f.type = v;
+				msg.setAttribute( 'placeholder', hints[ v ] );
+			} ) ),
+			field( 'Message', msg, null, 'ypt-fb-msg' ),
+			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Screenshot (optional)' ), shotsBox, picker ),
+			field( 'Reply to', email, 'We answer by email, usually within a day.', 'ypt-fb-email' ),
+			setupBox,
+			err,
+		], send );
+	}
+
+	function openFeedbackSent( f ) {
+		var label = FEEDBACK_TYPES.filter( function ( t ) {
+			return t.v === f.type;
+		} )[ 0 ].label;
+		var extras = [];
+		if ( f.shots.length ) {
+			extras.push( f.shots.length === 1 ? '1 screenshot' : f.shots.length + ' screenshots' );
+		}
+		extras.push( f.setup ? 'tracker setup included' : 'tracker setup not included' );
+		openSheet( 'Thanks, we got it', 'Help & feedback', [
+			h( 'div', { class: 'ypt-fb-sent' },
+				h( 'div', { class: 'ypt-fb-sent__check' }, icon( 'check' ) ),
+				h( 'p', { class: 'ypt-muted' }, 'We’ll reply to ', h( 'b', null, f.email ), ', usually within a day.' ),
+				h( 'div', { class: 'ypt-card', style: { textAlign: 'left', marginTop: '14px' } },
+					h( 'div', { class: 'ypt-eyebrow' }, label ),
+					h( 'p', { style: { margin: '4px 0 0', whiteSpace: 'pre-line' } }, f.message.trim() ),
+					h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } }, extras.join( ' · ' ) )
+				)
+			),
+		], h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', onclick: closeSheet }, 'Done' ) );
 	}
 
 	function remindersCard( s ) {

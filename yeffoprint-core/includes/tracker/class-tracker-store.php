@@ -153,6 +153,7 @@ class YeffoPrint_Tracker_Store {
 		YeffoPrint_Tracker_Crypto::forget_user( $user_id );
 		YeffoPrint_Tracker_Usage::forget_user( $user_id );
 		YeffoPrint_Tracker_Shares::delete_for_user( $user_id );
+		YeffoPrint_Tracker_Feedback::delete_for_user( $user_id );
 		delete_user_meta( $user_id, YeffoPrint_Tracker_Reminders::LAST_SWEEP_META );
 	}
 

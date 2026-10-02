@@ -286,6 +286,7 @@
 			{ id: 'web-design-orders', label: 'Web Design Orders' },
 			{ id: 'customers', label: 'Customers' },
 			{ id: 'reviews', label: 'Reviews' },
+			{ id: 'tracker-feedback', label: 'Tracker Feedback' },
 			{ id: 'pricing', label: 'Pricing Rules' },
 			{ id: 'orders', label: 'Custom Orders' },
 			{ id: 'proofs', label: 'Proofs' },

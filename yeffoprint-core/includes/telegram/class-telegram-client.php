@@ -78,6 +78,44 @@ class YeffoPrint_Telegram_Client {
 	}
 
 	/**
+	 * Uploads a photo from disk (multipart), for images Telegram can't
+	 * fetch itself because they aren't public — e.g. Dose Tracker
+	 * feedback screenshots (class-tracker-feedback.php).
+	 */
+	public function send_photo_file( int $chat_id, string $path, string $caption = '', ?array $inline_keyboard = null ): bool {
+		if ( '' === $this->token || ! is_readable( $path ) ) {
+			return false;
+		}
+
+		$fields = [
+			'chat_id' => (string) $chat_id,
+			'caption' => $caption,
+		];
+		if ( $inline_keyboard ) {
+			$fields['reply_markup'] = (string) wp_json_encode( [ 'inline_keyboard' => $inline_keyboard ] );
+		}
+
+		$boundary = 'yp' . wp_generate_password( 24, false );
+		$body     = '';
+		foreach ( $fields as $name => $value ) {
+			$body .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$name}\"\r\n\r\n{$value}\r\n";
+		}
+		$body .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"" . basename( $path ) . "\"\r\nContent-Type: " . ( wp_get_image_mime( $path ) ?: 'image/jpeg' ) . "\r\n\r\n";
+		$body .= (string) file_get_contents( $path ) . "\r\n--{$boundary}--\r\n"; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+
+		$response = wp_remote_post( self::API_BASE . $this->token . '/sendPhoto', [
+			'timeout' => 20,
+			'headers' => [ 'Content-Type' => 'multipart/form-data; boundary=' . $boundary ],
+			'body'    => $body,
+		] );
+		if ( is_wp_error( $response ) ) {
+			return false;
+		}
+		$json = json_decode( wp_remote_retrieve_body( $response ), true );
+		return is_array( $json ) && ! empty( $json['ok'] );
+	}
+
+	/**
 	 * Acknowledges a button tap (Telegram's own requirement — the
 	 * tapped button shows a loading spinner/error state to the customer
 	 * until this is called, or a few seconds pass and Telegram gives up
