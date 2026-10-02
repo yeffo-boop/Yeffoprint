@@ -104,7 +104,7 @@ class YeffoPrint_Tracker_Reminders {
 	}
 
 	/**
-	 * Running-low and mix-day notifications. The app works these out
+	 * Running-low, mix-day and vial-expiry notifications. The app works these out
 	 * (it has the vial math) and saves the upcoming ones as the `alerts`
 	 * settings record: [{ id, date, time, title, body }] in the customer's
 	 * own clock. Each one goes out once, as its time passes.
@@ -132,9 +132,10 @@ class YeffoPrint_Tracker_Reminders {
 				// Titles, bodies and ids (low-bpc157-…) all carry the name, so
 				// hidden-names alerts use fixed wording and a hashed tag.
 				$mix   = 0 === strpos( $id, 'mix-' );
+				$exp   = 0 === strpos( $id, 'exp-' );
 				$out[] = [
-					'title' => $mix ? __( 'Time to mix a new vial', 'yeffoprint-core' ) : __( 'Your supply is running low', 'yeffoprint-core' ),
-					'body'  => $mix ? __( 'Your next dose needs a new vial or pen.', 'yeffoprint-core' ) : __( 'Open the tracker to see what to reorder.', 'yeffoprint-core' ),
+					'title' => $exp ? __( 'A vial is about to expire', 'yeffoprint-core' ) : ( $mix ? __( 'Time to mix a new vial', 'yeffoprint-core' ) : __( 'Your supply is running low', 'yeffoprint-core' ) ),
+					'body'  => $exp ? __( 'Open the tracker to see which one.', 'yeffoprint-core' ) : ( $mix ? __( 'Your next dose needs a new vial or pen.', 'yeffoprint-core' ) : __( 'Open the tracker to see what to reorder.', 'yeffoprint-core' ) ),
 					'tag'   => 'yp-supply-' . substr( md5( $id ), 0, 12 ),
 					'url'   => home_url( '/tracker/' ),
 				];
@@ -181,7 +182,7 @@ class YeffoPrint_Tracker_Reminders {
 					$name = wp_strip_all_tags( (string) ( $protocol['compound'] ?? '' ) );
 					$slots[ $key ]['key']     = str_replace( [ '-', ':' ], '', $key );
 					$slots[ $key ]['names'][] = $name;
-					$slots[ $key ]['lines'][] = trim( $name . ' ' . self::format_amount( $protocol ) );
+					$slots[ $key ]['lines'][] = trim( $name . ' ' . self::format_amount( $protocol, $date ) );
 				}
 			}
 		}
@@ -190,8 +191,9 @@ class YeffoPrint_Tracker_Reminders {
 		return array_values( $slots );
 	}
 
-	private static function format_amount( array $protocol ): string {
-		$dose = (float) ( $protocol['dose'] ?? 0 );
+	private static function format_amount( array $protocol, string $date ): string {
+		// Titration: the dose that day, not the starting one.
+		$dose = YeffoPrint_Tracker_Schedule::dose_on( $protocol, $date );
 		if ( $dose <= 0 ) {
 			return '';
 		}

@@ -1422,3 +1422,138 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-legend--sites i.is-recent { background: var(--ypt-magenta); border-color: var(--ypt-magenta-deep); }
 .ypt-legend--sites i.is-week { background: #F9C6E3; border-color: #EC8CC4; }
 .ypt-log__site { font-size: 12px; color: var(--ypt-cyan-deep); margin-top: 2px; }
+
+/* ---------- How you felt (side effects & notes on a dose) ---------- */
+.ypt-feel {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 8px;
+	width: 100%;
+	margin-top: 10px;
+	padding: 8px 10px;
+	border: 1px dashed var(--ypt-line);
+	border-radius: 12px;
+	background: none;
+	font: inherit;
+	font-size: 13px;
+	text-align: left;
+	color: var(--ypt-ink);
+	cursor: pointer;
+}
+.ypt-feel__add { font-weight: 600; color: var(--ypt-cyan-deep); }
+.ypt-feel__hint { color: var(--ypt-mute); font-size: 12px; }
+.ypt-feel__tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ypt-feel__note { color: var(--ypt-mute); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.ypt-ftag {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.5;
+	background: var(--ypt-soft);
+	color: var(--ypt-charcoal);
+}
+.ypt-ftag--bad { background: #FDECEC; color: var(--ypt-danger); }
+.ypt-ftag--good { background: var(--ypt-ok-soft); color: var(--ypt-ok); }
+.ypt-ftag-btn--bad[aria-pressed="true"] { background: var(--ypt-danger); border-color: var(--ypt-danger); }
+.ypt-ftag-btn--good[aria-pressed="true"] { background: var(--ypt-ok); border-color: var(--ypt-ok); }
+.ypt-chip--dashed { border-style: dashed; color: var(--ypt-mute); }
+.ypt-tagpick__group { margin-top: 8px; }
+.ypt-tagpick__group:first-child { margin-top: 0; }
+.ypt-tagpick__label { display: block; font-size: 12px; color: var(--ypt-mute); margin-bottom: 4px; }
+.ypt-feelrow { padding: 8px 0; border-top: 1px solid var(--ypt-line); }
+.ypt-feelrow:nth-child(2) { border-top: 0; }
+.ypt-feelrow__head { display: flex; justify-content: space-between; align-items: center; }
+.ypt-feelrow__bar { height: 6px; border-radius: 3px; background: var(--ypt-soft); margin: 6px 0 4px; overflow: hidden; }
+.ypt-feelrow__bar i { display: block; height: 100%; border-radius: 3px; background: #A9A6A0; }
+.ypt-feelrow__bar .ypt-feelrow__fill--bad { background: var(--ypt-danger); }
+.ypt-feelrow__bar .ypt-feelrow__fill--good { background: var(--ypt-ok); }
+.ypt-report-cta { align-items: flex-start; }
+
+/* ---------- Cycle planner ---------- */
+.ypt-cplan__row { align-items: center; margin-top: 8px; }
+.ypt-cplan__row > span { flex: none; font-size: 14px; color: var(--ypt-mute); }
+.ypt-input--sm { width: 76px; flex: none !important; padding: 10px; text-align: center; }
+.ypt-cplan__gen { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--ypt-soft); }
+.ypt-cplan__gen .ypt-cplan__row { gap: 6px; font-size: 14px; }
+.ypt-cplan__gen .ypt-cplan__row:first-child { margin-top: 0; }
+.ypt-cplan__gen .ypt-input--sm { width: 60px; padding: 8px 4px; }
+.ypt-cplan__gen .ypt-btn { margin-left: auto; }
+.ypt-cplan__steps { margin-top: 10px; }
+.ypt-cplan__step { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ypt-line); font-size: 14px; }
+.ypt-cplan__step:first-child { border-top: 0; }
+.ypt-cplan__step > b { min-width: 72px; }
+.ypt-cplan__preview { margin-top: 12px; }
+.ypt-cplan__svg { display: block; width: 100%; height: auto; }
+.ypt-cplan__svg .c-off { fill: #CFCBC4; }
+.ypt-cplan__svg .c-val { font-size: 9px; fill: var(--ypt-charcoal); font-weight: 600; }
+.ypt-cplan__svg .c-wk { font-size: 8px; fill: var(--ypt-mute); }
+.ypt-cplan__svg .c-today { stroke: var(--ypt-magenta); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.ypt-stepline { margin-top: 8px; padding: 6px 10px; border-radius: 10px; background: #F4FBFE; color: var(--ypt-cyan-deep); font-size: 13px; }
+.ypt-offweek { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: var(--ypt-soft); font-size: 14px; color: var(--ypt-charcoal); }
+.ypt-offweek .ypt-dot { flex: none; }
+
+/* ---------- Supply: reorder labels ---------- */
+.ypt-reorder {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 12px;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: #FDF0F7;
+	font-size: 13px;
+}
+.ypt-reorder > span { flex: 1; }
+.ypt-reorder .ypt-btn { flex: none; }
+
+/* ---------- Progress log ---------- */
+.ypt-prog-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.ypt-prog-head__big { font-family: var(--ypt-heading); font-size: 34px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.ypt-prog-head__delta { font-size: 14px; font-weight: 600; color: var(--ypt-mute); }
+.ypt-prog-head__delta.is-down { color: var(--ypt-ok); }
+.ypt-prog-head__delta.is-up { color: var(--ypt-warn); }
+.ypt-prog-ranges { display: flex; gap: 4px; margin-bottom: 8px; }
+.ypt-prog-ranges .ypt-chip { flex: 1; padding: 6px 0; text-align: center; }
+.ypt-chartwrap { margin-top: 4px; }
+.ypt-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.ypt-chart .g-grid { stroke: var(--ypt-line); stroke-width: 1; }
+.ypt-chart .g-axis { font-size: 9px; fill: var(--ypt-mute); }
+.ypt-chart .g-axis--y { text-anchor: end; }
+.ypt-chart .g-axis--x { text-anchor: middle; }
+.ypt-chart .g-axis--x.is-start { text-anchor: start; }
+.ypt-chart .g-axis--x.is-end { text-anchor: end; }
+.ypt-chart .g-line { fill: none; stroke: var(--ypt-cyan); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.ypt-chart .g-dot { fill: #fff; stroke: var(--ypt-cyan); stroke-width: 2; }
+.ypt-chart .g-dot.is-last { fill: var(--ypt-cyan); }
+.ypt-chart .g-last { font-size: 11px; font-weight: 700; fill: var(--ypt-ink); text-anchor: middle; }
+.ypt-chart .g-last.is-end { text-anchor: end; }
+.ypt-chart .g-empty { font-size: 12px; fill: var(--ypt-mute); text-anchor: middle; }
+.ypt-chart .g-step { stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
+.ypt-chart .g-step-label { font-size: 9px; font-weight: 700; }
+.ypt-chart .g-lane { stroke: var(--ypt-line); stroke-width: 1; }
+.ypt-chart .g-dose { font-size: 8px; fill: var(--ypt-mute); }
+.ypt-chart .g-lane-label { font-size: 9px; font-weight: 600; }
+.ypt-thennow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ypt-thennow__item { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ypt-charcoal); text-align: left; cursor: pointer; }
+.ypt-thennow__item .ypt-photo { aspect-ratio: 3 / 4; }
+.ypt-photo { display: block; width: 100%; border-radius: 12px; object-fit: cover; background: var(--ypt-soft); min-height: 60px; }
+.ypt-photo.is-loading { animation: ypt-pulse 1.2s ease-in-out infinite; }
+.ypt-photo.is-missing { opacity: 0.4; }
+@keyframes ypt-pulse { 50% { opacity: 0.55; } }
+.ypt-prog-row { align-items: center; gap: 10px; }
+.ypt-prog-row > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ypt-prog-row__sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ypt-prog-row__right { display: flex; align-items: center; gap: 8px; flex: none; }
+.ypt-prog-row__cam { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--ypt-mute); }
+.ypt-prog-row__cam svg { width: 14px; height: 14px; }
+.ypt-prog-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.ypt-prog-grid__f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ypt-mute); }
+.ypt-prog-grid__f .ypt-input { width: 100%; }
+.ypt-viewer__img .ypt-photo { max-height: 62vh; object-fit: contain; background: #111; }
+.ypt-viewer__bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; text-align: center; }
+.ypt-viewer__bar > div { display: flex; flex-direction: column; }
+.ypt-report-parts { padding-top: 0; padding-bottom: 0; }
+.ypt-report-parts .ypt-toggle + .ypt-toggle { border-top: 1px solid var(--ypt-line); }

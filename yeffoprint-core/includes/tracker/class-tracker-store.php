@@ -11,6 +11,9 @@
  *   dose     — one taken/skipped dose (id is deterministic per scheduled slot, so an offline retry never double-logs)
  *   vial     — a mixed/opened vial, for units-to-draw and doses-left
  *   stock    — unmixed vials, pens or pills on hand (the Supply tab)
+ *   progress — a weigh-in: weight, measurements, note and the ids of its photos
+ *   photo    — one progress photo (a shrunk JPEG), only ever read one at a
+ *              time through /tracker/photos/{id}, never with the rest of the state
  *   settings — the "me" record (timezone, reminders, travel) and "alerts"
  *              (upcoming running-low / mix-day notifications the app works out)
  *   push     — this customer's browser push subscriptions
@@ -23,10 +26,16 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Tracker_Store {
 
-	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push' ];
+	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push', 'progress', 'photo' ];
 
 	/** Per-record plaintext ceiling — a dose note or protocol is a few hundred bytes; this only stops abuse. */
 	public const MAX_RECORD_BYTES = 8192;
+
+	/** A progress photo is shrunk on the phone to about 200 KB; this leaves room and stops abuse. */
+	public const MAX_PHOTO_BYTES = 1572864;
+
+	/** Progress photos per customer: three a week for two years. */
+	public const MAX_PHOTOS = 300;
 
 	/** Per-customer ceiling: years of several daily doses fits comfortably. */
 	public const MAX_RECORDS = 25000;
@@ -157,9 +166,12 @@ class YeffoPrint_Tracker_Store {
 		delete_user_meta( $user_id, YeffoPrint_Tracker_Reminders::LAST_SWEEP_META );
 	}
 
-	public static function count( int $user_id ): int {
+	public static function count( int $user_id, string $kind = '' ): int {
 		global $wpdb;
 		$table = self::table_name();
+		if ( '' !== $kind ) {
+			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE user_id = %d AND kind = %s", $user_id, $kind ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		}
 		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE user_id = %d", $user_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
