@@ -3006,3 +3006,216 @@
 	outline: 2px solid var(--wp--preset--color--cyan);
 	outline-offset: 2px;
 }
+
+/* Review photos, average line and product-page reviews
+   (functions.php yeffoprint_render_review_cards(), patterns/reviews.php,
+   patterns/product-reviews.php). */
+.yp-reviews-summary {
+	text-align: center;
+	margin: -0.5rem 0 var(--wp--preset--spacing--sm);
+	color: var(--wp--preset--color--charcoal);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-reviews-summary__star {
+	color: #f5b300;
+	font-size: 1.1em;
+}
+
+.yp-review-card__text {
+	white-space: pre-line;
+}
+
+.yp-review-card__photos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0 0 1rem;
+}
+
+.yp-review-card__photos a {
+	display: block;
+	border-radius: 10px;
+	overflow: hidden;
+	line-height: 0;
+}
+
+.yp-review-card__photos img {
+	width: 76px;
+	height: 76px;
+	object-fit: cover;
+	transition: transform 0.2s ease;
+}
+
+.yp-review-card__photos a:hover img {
+	transform: scale(1.05);
+}
+
+.yp-review-card__verified {
+	display: inline-block;
+	margin-left: 0.35rem;
+	font-size: 0.72rem;
+	color: #16875a;
+	font-family: var(--wp--preset--font-family--body, inherit);
+}
+
+.yp-review-card__verified::before {
+	content: "✓ ";
+}
+
+.yp-product-reviews__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	margin-bottom: var(--wp--preset--spacing--sm);
+}
+
+.yp-product-reviews__head h2 {
+	margin: 0;
+}
+
+.yp-product-reviews__head .yp-reviews-summary {
+	margin: 0;
+	text-align: left;
+}
+
+/* Full-size review photo (site.js initReviewPhotos()). */
+.yp-review-lightbox {
+	border: 0;
+	padding: 0;
+	background: transparent;
+	max-width: min(92vw, 1000px);
+	max-height: 90vh;
+}
+
+.yp-review-lightbox::backdrop {
+	background: rgba(20, 20, 20, 0.85);
+}
+
+.yp-review-lightbox img {
+	display: block;
+	max-width: min(92vw, 1000px);
+	max-height: 86vh;
+	border-radius: 12px;
+}
+
+.yp-review-lightbox__close {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	border: 0;
+	background: rgba(20, 20, 20, 0.75);
+	color: #fff;
+	font-size: 22px;
+	line-height: 36px;
+	padding: 0;
+	cursor: pointer;
+}
+
+/* Stars shared by the product-page rating button and shop cards
+   (functions.php yeffoprint_render_stars()). */
+.yp-stars {
+	display: inline-flex;
+	gap: 1px;
+	line-height: 0;
+}
+
+.yp-stars svg {
+	width: 17px;
+	height: 17px;
+	fill: #f5b300;
+}
+
+.yp-stars svg.is-off {
+	fill: #e2ded6;
+}
+
+/* Rating button under a product title — scrolls to #reviews
+   (yeffoprint_render_rating_jump(), site.js initRatingJump()). */
+.yp-rating-jump {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	margin: 0.75rem 0 0.25rem;
+	padding: 0.45rem 0.5rem 0.45rem 0.85rem;
+	border-radius: 999px;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	color: var(--wp--preset--color--near-black);
+	font-size: 0.92rem;
+	line-height: 1;
+	text-decoration: none !important;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.yp-rating-jump:hover,
+.yp-rating-jump:focus-visible {
+	color: var(--wp--preset--color--near-black);
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.yp-rating-jump strong {
+	font-weight: 700;
+	font-size: 0.98rem;
+}
+
+.yp-rating-jump__count {
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-rating-jump__go {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: var(--wp--preset--color--warm-white);
+	transition: transform 0.15s ease;
+}
+
+.yp-rating-jump:hover .yp-rating-jump__go {
+	transform: translateY(2px);
+}
+
+.yp-rating-jump__go svg {
+	width: 12px;
+	height: 12px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* Clears the floating header when the button scrolls here. */
+.yp-product-reviews {
+	scroll-margin-top: 96px;
+}
+
+/* Shop card stars + count (blocks/template-card/render.php). */
+.yp-card-rating {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin: -0.3rem 0 0;
+	font-size: 0.8rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-card-rating .yp-stars svg {
+	width: 13px;
+	height: 13px;
+}
+
+.yp-card-rating strong {
+	color: var(--wp--preset--color--near-black);
+	font-weight: 700;
+}

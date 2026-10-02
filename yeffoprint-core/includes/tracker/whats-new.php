@@ -15,10 +15,28 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
-		'id'    => '2026-09-29w',
-		'date'  => '2026-09-29',
+		'id'    => '2026-10-02b',
+		'date'  => '2026-10-02',
 		'title' => 'Injection site rotation',
 		'text'  => 'Each injection now shows the next spot to use, picked from the one that has rested longest. Tap "Change" to choose a different spot on the body map, and see where you\'ve injected lately on the History tab. Choose the spots you use when you edit a peptide.',
+	],
+	[
+		'id'    => '2026-10-02a',
+		'date'  => '2026-10-02',
+		'title' => 'Help & feedback',
+		'text'  => 'Got a question, found a problem or have an idea? Open the Me tab and tap Help & feedback to send us a note, with a screenshot if you like. We reply by email, and your tracker data is only included if you turn it on.',
+	],
+	[
+		'id'    => '2026-09-29x',
+		'date'  => '2026-09-29',
+		'title' => 'Bac water in your supply',
+		'text'  => 'Add your bac water on Supply > On hand. It counts down by the water you use each time you mix a vial, and you\'ll get a heads-up before you run short for your next mix.',
+	],
+	[
+		'id'    => '2026-09-29w',
+		'date'  => '2026-09-29',
+		'title' => 'Private reminders',
+		'text'  => 'Don\'t want medication names on your lock screen? On the Me tab, turn off "Show names in reminders" and dose and supply notifications will just say something is due.',
 	],
 	[
 		'id'    => '2026-09-29v',

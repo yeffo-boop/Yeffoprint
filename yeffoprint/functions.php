@@ -629,6 +629,45 @@ add_action( 'wp_enqueue_scripts', function () {
 		break;
 	}
 
+	if ( is_page() && in_array( get_page_template_slug(), [ 'leave-a-review', 'leave-a-review.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-configurator',
+			get_theme_file_uri( 'assets/css/configurator.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/configurator.css' )
+		);
+
+		wp_enqueue_style(
+			'yeffoprint-leave-review',
+			get_theme_file_uri( 'assets/css/leave-review.css' ),
+			[ 'yeffoprint-configurator' ],
+			yeffoprint_asset_version( 'assets/css/leave-review.css' )
+		);
+
+		wp_enqueue_script(
+			'yeffoprint-leave-review',
+			get_theme_file_uri( 'assets/js/leave-review.js' ),
+			[],
+			yeffoprint_asset_version( 'assets/js/leave-review.js' ),
+			[ 'strategy' => 'defer' ]
+		);
+
+		// Same stale-nonce-from-a-cached-page risk as the configurator
+		// above — see that comment.
+		if ( is_user_logged_in() ) {
+			nocache_headers();
+		}
+
+		wp_localize_script( 'yeffoprint-leave-review', 'yeffoprintLeaveReview', [
+			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			// Only meaningful for a logged-in customer viewing their own
+			// order — a guest is authenticated by the `key` query param
+			// instead (class-review-controller.php's check_access()).
+			'nonce'   => is_user_logged_in() ? wp_create_nonce( 'wp_rest' ) : '',
+			'shopUrl' => home_url( '/shop-labels/' ),
+		] );
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'track-order', 'track-order.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-configurator',
@@ -1201,4 +1240,108 @@ function yeffoprint_recent_template_ids( int $limit = 4, int $exclude_id = 0 ): 
 		} ) );
 	}
 	return array_slice( $ids, 0, $limit );
+}
+
+/**
+ * Review cards shared by the homepage "What Customers Say" section
+ * (patterns/reviews.php) and the product-page reviews
+ * (patterns/product-reviews.php). $reviews are
+ * YeffoPrint_Order_Reviews::format() rows. Photos open full-size in the
+ * site.js lightbox (initReviewPhotos()).
+ */
+function yeffoprint_render_review_cards( array $reviews ): string {
+	$star_svg = '<svg class="yp-review-card__star" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 1.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.5L10 13.8 4.9 16.6l1.2-5.5L2 7.3l5.6-.6z"/></svg>';
+	$accents  = [ 'cyan', 'magenta', 'yellow' ];
+
+	ob_start();
+	echo '<div class="yp-reviews-grid">';
+	foreach ( array_values( $reviews ) as $i => $review ) {
+		$rating = max( 0, min( 5, (int) $review['rating'] ) );
+		?>
+		<div class="yp-review-card yp-review-card--accent-<?php echo esc_attr( $accents[ $i % 3 ] ); ?>">
+			<?php if ( $rating > 0 ) : ?>
+				<div class="yp-review-card__stars" role="img" aria-label="<?php echo esc_attr( sprintf( /* translators: %d: star rating */ __( '%d out of 5 stars', 'yeffoprint' ), $rating ) ); ?>">
+					<?php echo str_repeat( $star_svg, $rating ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG markup above. ?>
+				</div>
+			<?php endif; ?>
+			<?php if ( '' !== trim( $review['text'] ) ) : ?>
+				<p class="yp-review-card__text">&ldquo;<?php echo esc_html( $review['text'] ); ?>&rdquo;</p>
+			<?php endif; ?>
+			<?php if ( ! empty( $review['photos'] ) ) : ?>
+				<div class="yp-review-card__photos">
+					<?php foreach ( $review['photos'] as $photo ) : ?>
+						<a href="<?php echo esc_url( $photo['full'] ); ?>" data-yp-review-photo>
+							<img src="<?php echo esc_url( $photo['thumb'] ); ?>" alt="<?php echo esc_attr( sprintf( /* translators: %s: reviewer name */ __( 'Photo from %s', 'yeffoprint' ), $review['name'] ) ); ?>" loading="lazy" />
+						</a>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+			<p class="yp-review-card__author">— <?php echo esc_html( $review['name'] ); ?> <span class="yp-review-card__verified"><?php esc_html_e( 'Verified buyer', 'yeffoprint' ); ?></span></p>
+		</div>
+		<?php
+	}
+	echo '</div>';
+	return (string) ob_get_clean();
+}
+
+/** "★ 4.9 average from 23 reviews" line above the review cards. */
+function yeffoprint_render_review_summary( array $summary ): string {
+	if ( empty( $summary['count'] ) ) {
+		return '';
+	}
+	return sprintf(
+		'<p class="yp-reviews-summary"><span class="yp-reviews-summary__star" aria-hidden="true">&#9733;</span> <strong>%1$s</strong> %2$s</p>',
+		esc_html( number_format_i18n( (float) $summary['average'], 1 ) ),
+		esc_html( sprintf(
+			/* translators: %s: number of reviews */
+			_n( 'from %s review', 'average from %s reviews', (int) $summary['count'], 'yeffoprint' ),
+			number_format_i18n( (int) $summary['count'] )
+		) )
+	);
+}
+
+/**
+ * Five SVG stars, the average rounded to the nearest whole star.
+ * Shared by the product-page rating button and the shop cards.
+ */
+function yeffoprint_render_stars( float $average ): string {
+	$filled = (int) round( max( 0, min( 5, $average ) ) );
+	$path   = '<path d="M10 1.5l2.4 5.2 5.6.6-4.2 3.8 1.2 5.5L10 13.8 4.9 16.6l1.2-5.5L2 7.3l5.6-.6z"/>';
+	$out    = '';
+	for ( $i = 1; $i <= 5; $i++ ) {
+		$out .= '<svg viewBox="0 0 20 20" focusable="false"' . ( $i > $filled ? ' class="is-off"' : '' ) . '>' . $path . '</svg>';
+	}
+	return '<span class="yp-stars" aria-hidden="true">' . $out . '</span>';
+}
+
+/** @return array{average:float, count:int} Published review summary for a template or print, or zeros. */
+function yeffoprint_review_summary_for( string $for ): array {
+	return class_exists( 'YeffoPrint_Order_Reviews' ) && method_exists( 'YeffoPrint_Order_Reviews', 'summary_for' )
+		? YeffoPrint_Order_Reviews::summary_for( $for )
+		: [ 'average' => 0.0, 'count' => 0 ];
+}
+
+/**
+ * The rating button under a product page title: stars, the average and
+ * the review count, scrolling to the Customer Reviews section
+ * (patterns/product-reviews.php, id="reviews") when tapped. Nothing for
+ * a design with no published reviews yet.
+ */
+function yeffoprint_render_rating_jump( string $for ): string {
+	$summary = yeffoprint_review_summary_for( $for );
+	if ( ! $summary['count'] ) {
+		return '';
+	}
+	$average = number_format_i18n( $summary['average'], 1 );
+	/* translators: %s: number of reviews */
+	$count   = sprintf( _n( '%s review', '%s reviews', $summary['count'], 'yeffoprint' ), number_format_i18n( $summary['count'] ) );
+
+	return sprintf(
+		'<a class="yp-rating-jump" href="#reviews" data-yp-rating-jump aria-label="%1$s">%2$s<strong>%3$s</strong><span class="yp-rating-jump__count">%4$s</span><span class="yp-rating-jump__go" aria-hidden="true"><svg viewBox="0 0 12 12" focusable="false"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></span></a>',
+		/* translators: 1: average rating, 2: review count text */
+		esc_attr( sprintf( __( 'Rated %1$s out of 5 from %2$s. See reviews', 'yeffoprint' ), $average, $count ) ),
+		yeffoprint_render_stars( $summary['average'] ),
+		esc_html( $average ),
+		esc_html( $count )
+	);
 }

@@ -126,13 +126,16 @@ class YeffoPrint_Admin_Order_Controller {
 			$args['post__in'] = $order_ids;
 		}
 
-		$result = wc_get_orders( $args );
+		$result          = wc_get_orders( $args );
+		$unpaid_requests = $this->unpaid_custom_requests();
 
 		return rest_ensure_response( [
-			'orders'        => array_map( [ $this, 'summary_payload' ], $result->orders ),
-			'total'         => $result->total,
-			'max_num_pages' => $result->max_num_pages,
-			'page'          => $page,
+			'orders'          => array_map( [ $this, 'summary_payload' ], $result->orders ),
+			'total'           => $result->total,
+			'max_num_pages'   => $result->max_num_pages,
+			'page'            => $page,
+			// Only sent with the Drafts tab, which lists them above its orders.
+			'unpaid_requests' => 'checkout-draft' === $status ? $unpaid_requests : [],
 			// Counts for Order History's quick tabs (direct request: "the
 			// ability to see draft orders"). Drafts never show under "All
 			// statuses" — WooCommerce registers checkout-draft as
@@ -140,9 +143,66 @@ class YeffoPrint_Admin_Order_Controller {
 			// tab count is how they get noticed.
 			'counts'        => [
 				'pending'        => wc_orders_count( 'pending' ),
-				'checkout-draft' => wc_orders_count( 'checkout-draft' ),
+				'checkout-draft' => wc_orders_count( 'checkout-draft' ) + count( $unpaid_requests ),
 			],
 		] );
+	}
+
+	/**
+	 * Custom design requests a customer submitted but never checked out
+	 * (direct request: "a custom proof showing 'awaiting payment', but I
+	 * don't see a matching draft order"). Submitting the custom design
+	 * form only creates the unpublished yp_custom_order and puts its
+	 * items in the customer's cart — no WooCommerce order exists until
+	 * they press Place order, so there's nothing for the Drafts tab's
+	 * order query to find. Unpaid records already on a WooCommerce order
+	 * (a manual order's proof, or a checkout that got as far as Place
+	 * order) are left out: that order is what shows up instead.
+	 */
+	private function unpaid_custom_requests(): array {
+		$ids = get_posts( [
+			'post_type'      => 'yp_custom_order',
+			'post_status'    => 'draft',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		] );
+
+		if ( ! $ids ) {
+			return [];
+		}
+
+		global $wpdb;
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders built above; WooCommerce has no API for "which order items carry this meta value".
+		$linked = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT meta_value FROM {$wpdb->prefix}woocommerce_order_itemmeta WHERE meta_key = '_yp_custom_order_id' AND meta_value IN ( {$placeholders} )", $ids ) );
+		$linked = array_map( 'intval', $linked );
+
+		$rows = [];
+		foreach ( $ids as $id ) {
+			if ( in_array( (int) $id, $linked, true ) ) {
+				continue;
+			}
+
+			$batch      = json_decode( (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::BATCH, true ), true );
+			$label_rows = is_array( $batch ) ? count( $batch ) : 0;
+			$quantity   = is_array( $batch ) ? array_sum( array_map( static fn( $row ) => (int) ( $row['quantity'] ?? 0 ), $batch ) ) : (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::QUANTITY, true );
+			$order_type = YeffoPrint_Custom_Order_Meta::get_order_type( (int) $id );
+
+			$rows[] = [
+				'id'               => (int) $id,
+				'title'            => get_the_title( $id ),
+				'order_type_label' => YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ $order_type ],
+				'date'             => get_post_datetime( $id ) ? get_post_datetime( $id )->format( 'c' ) : null,
+				'customer_name'    => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true ),
+				'customer_email'   => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, true ),
+				'label_rows'       => $label_rows,
+				'quantity'         => $quantity,
+			];
+		}
+
+		return $rows;
 	}
 
 	/** A lighter row shape for the Order History list — detail_payload() (full items/shipping/Shippo panel data) only loads once a row is actually clicked open. */
@@ -296,6 +356,8 @@ class YeffoPrint_Admin_Order_Controller {
 			'status_label'         => wc_get_order_status_name( $order->get_status() ),
 			'statuses'             => $this->status_options(),
 			'date'                 => $order->get_date_created() ? $order->get_date_created()->date( 'c' ) : null,
+			// Drives the drawer's Cancel order button (unpaid orders only).
+			'date_paid'            => $order->get_date_paid() ? $order->get_date_paid()->date( 'c' ) : null,
 			'customer_name'        => trim( $order->get_formatted_billing_full_name() ),
 			'customer_email'       => $order->get_billing_email(),
 			'customer_phone'       => $order->get_billing_phone(),
@@ -364,7 +426,7 @@ class YeffoPrint_Admin_Order_Controller {
 			// Shippo label already purchased on this order, printable link included, so the panel
 			// can offer a reprint regardless of whether it was purchased in this drawer session or
 			// a previous one.
-			'shippo_labels'            => YeffoPrint_Order_Tracking::get_shippo_labels( $order ),
+			'shippo_labels'            => $this->shippo_labels_payload( $order ),
 			// Direct request: "can we add the rewards info to this screen... how many points this
 			// order will receive (or has received)?" Same processed-vs-pending distinction as the
 			// classic order screen's own "Rewards Points" meta box (class-rewards-order-box.php) —
@@ -406,6 +468,19 @@ class YeffoPrint_Admin_Order_Controller {
 				? [ 'package_id' => YeffoPrint_Web_Design_Project_Meta::get_package_id( $order ) ]
 				: null,
 		];
+	}
+
+	/**
+	 * Every Shippo label on the order. International labels bought before
+	 * the carrier's customs messages were saved get them looked up once
+	 * first, so "Customs invoice sent electronically" shows on those too.
+	 */
+	private function shippo_labels_payload( \WC_Order $order ): array {
+		if ( YeffoPrint_Shippo_Settings::is_configured() && YeffoPrint_Admin_Shippo_Controller::customs_payload( $order )['international'] ) {
+			YeffoPrint_Order_Tracking::backfill_shippo_label_customs( $order, new YeffoPrint_Shippo_Client( YeffoPrint_Shippo_Settings::get_api_key() ) );
+		}
+
+		return YeffoPrint_Order_Tracking::get_shippo_labels( $order );
 	}
 
 	private function refund_gateway_supported( \WC_Order $order ): bool {

@@ -50,6 +50,17 @@ class YeffoPrint_Cart_Controller {
 		if ( function_exists( 'wc_load_cart' ) ) {
 			wc_load_cart();
 		}
+
+		// wc_load_cart() only creates an empty cart object on a REST
+		// request; the saved cart is read from the session lazily, on the
+		// first get_cart(). add_to_cart() never calls get_cart(), so an
+		// add made first was later overwritten when calculate_totals()
+		// loaded the saved cart: every item after the first vanished.
+		// Loading it here, before anything reads or changes the cart,
+		// keeps what's already in it.
+		if ( function_exists( 'WC' ) && WC()->cart ) {
+			WC()->cart->get_cart();
+		}
 	}
 
 	/**

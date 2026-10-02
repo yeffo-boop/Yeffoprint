@@ -15,7 +15,7 @@
  *   vial      { kind:'vial'|'pen', compound, mode:'mg'|'iu'|'conc'|'blend', amount, water, conc, volume, mixed, syringe, finished, parts, blend }
  *             A blend has parts [{ name, amount (mg) }] and amount = their total; blend is 'bought' or 'mixed' (the customer combined vials).
  *             A pen is a 3 mL cartridge the customer mixes like a vial; its dial is read as U-100 units (0.01 mL each).
- *   settings  { tz, reminders }
+ *   settings  { tz, reminders, reminderNames }
  *
  * The Mix a vial calculator is the same math as the Peptide & Hormone
  * Calculator page (theme assets/js/peptide-calculator.js):
@@ -168,6 +168,9 @@
 		bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
 		calc: 'M6 3h12v18H6zM9 7h6M9 12h1M14 12h1M9 16h1M14 16h1',
 		check: 'M5 12l5 5L20 7',
+		help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01',
+		problem: 'M8 8a4 4 0 0 1 8 0v7a4 4 0 0 1-8 0zM12 11v6M4 13h4M16 13h4M5 7l3 2M19 7l-3 2M5 19l3-2M19 19l-3-2',
+		idea: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z',
 	};
 
 	function icon( name ) {
@@ -2279,12 +2282,15 @@
 	 *        'pen'      pen cartridges to mix (amount + amountUnit)
 	 *        'premixed' ready-to-use vials (conc mg/mL, volume mL)
 	 *        'count'    pills, sprays, patches… (count is how many of them)
+ *        'water'    bac water (volume mL per bottle, ml = mL left across
+ *                   every bottle; mixing a vial from supply takes its water off)
 	 * count is how many vials/pens (or pills) there were at countedAt;
 	 * mixing a vial from supply takes one off, and pills count down with
 	 * each dose taken after countedAt. warn: days of supply left that
 	 * counts as running low (0 = never warn).
 	 */
-	var STOCK_FORMS = [ [ 'powder', 'Powder vial' ], [ 'pen', 'Pen cartridge' ], [ 'premixed', 'Premixed vial' ], [ 'count', 'Pills & other' ] ];
+	var STOCK_FORMS = [ [ 'powder', 'Powder vial' ], [ 'pen', 'Pen cartridge' ], [ 'premixed', 'Premixed vial' ], [ 'count', 'Pills & other' ], [ 'water', 'Bac water' ] ];
+	var WATER_NAME = 'Bac water';
 	var WARN_CHOICES = [ [ 7, '1 week' ], [ 14, '2 weeks' ], [ 30, '1 month' ], [ 0, 'Off' ] ];
 	var PLAN_DAYS = 730;
 	var BUY_AHEAD_DAYS = 7;
@@ -2296,12 +2302,29 @@
 	}
 
 	function isVialStock( s ) {
-		return s.form !== 'count';
+		return s.form !== 'count' && s.form !== 'water';
+	}
+
+	function isWaterStock( s ) {
+		return s.form === 'water';
+	}
+
+	function waterStocks() {
+		return stocks().filter( isWaterStock );
+	}
+
+	/** The bac water line a mix takes from: the one with the most left. */
+	function waterToMix() {
+		return waterStocks().filter( function ( s ) {
+			return stockLeft( s ) > 0;
+		} ).sort( function ( a, b ) {
+			return stockLeft( b ) - stockLeft( a );
+		} )[ 0 ] || null;
 	}
 
 	/** Whether a stock item feeds this protocol: same name, and the same kind of thing (pen cartridges for pen doses, vials for syringe doses, pills for anything without a vial). */
 	function stockFits( s, p ) {
-		if ( ! sameCompound( s.compound, p.compound ) ) {
+		if ( isWaterStock( s ) || ! sameCompound( s.compound, p.compound ) ) {
 			return false;
 		}
 		if ( ! isVialStock( s ) ) {
@@ -2335,6 +2358,9 @@
 
 	/** What's left of a stock item: vials/pens as counted, pills minus every dose taken since they were counted. */
 	function stockLeft( s ) {
+		if ( isWaterStock( s ) ) {
+			return Math.max( 0, Math.round( ( +s.ml || 0 ) * 10 ) / 10 );
+		}
 		var count = Math.max( 0, +s.count || 0 );
 		if ( isVialStock( s ) ) {
 			return count;
@@ -2350,6 +2376,9 @@
 	}
 
 	function countUnit( s, n ) {
+		if ( isWaterStock( s ) ) {
+			return 'mL';
+		}
 		var u = s.countUnit || 'tablet';
 		return n === 1 ? u : UNIT_PLURAL[ u ] || u;
 	}
@@ -2359,6 +2388,9 @@
 		var many = n !== 1;
 		if ( s.form === 'premixed' ) {
 			return ( +s.conc > 0 ? fmtNum( +s.conc ) + ' mg/mL · ' : '' ) + ( +s.volume > 0 ? fmtNum( +s.volume ) + ' mL ' : '' ) + ( many ? 'vials' : 'vial' );
+		}
+		if ( isWaterStock( s ) ) {
+			return ( +s.volume > 0 ? fmtNum( +s.volume ) + ' mL ' : '' ) + ( many ? 'bottles' : 'bottle' );
 		}
 		if ( s.form === 'count' ) {
 			return ( s.strength ? s.strength + ' ' : '' ) + countUnit( s, n );
@@ -2481,8 +2513,77 @@
 		return plan;
 	}
 
+	/**
+	 * Bac water: every upcoming mix across all vial schedules (each new
+	 * vial mixed like the one in use, with the same water), paid for in
+	 * date order from the mL on hand. coveredUntil is the day before the
+	 * first mix there isn't enough water for.
+	 */
+	function waterPlan() {
+		var mixes = [];
+		protocols().forEach( function ( p ) {
+			if ( p.paused || ! usesVial( p ) ) {
+				return;
+			}
+			var cur = currentVial( p );
+			var water = cur && cur.mode !== 'conc' ? +cur.water || 0 : 0;
+			var per = supplyPlan( p ).perVial;
+			var info = cur ? vialInfo( cur ) : null;
+			if ( ! water || ! per || ! info || info.dosesLeft == null ) {
+				return;
+			}
+			var dates = upcomingDoseDates( p ).dates;
+			for ( var idx = info.dosesLeft; idx < dates.length && mixes.length < 300; idx += per ) {
+				mixes.push( { date: dates[ idx ], ml: water, protocol: p } );
+			}
+		} );
+		mixes.sort( function ( a, b ) {
+			return a.date.localeCompare( b.date );
+		} );
+		var left = waterStocks().reduce( function ( n, s ) {
+			return n + stockLeft( s );
+		}, 0 );
+		var covered = 0;
+		while ( covered < mixes.length && left + 0.0001 >= mixes[ covered ].ml ) {
+			left -= mixes[ covered ].ml;
+			covered++;
+		}
+		var next = mixes[ covered ] || null;
+		return {
+			water: true,
+			mixes: mixes,
+			covered: covered,
+			known: mixes.length > 0,
+			all: covered >= mixes.length,
+			nextNeeded: next ? next.date : null,
+			coveredUntil: next ? addDays( next.date, -1 ) : mixes.length ? mixes[ mixes.length - 1 ].date : null,
+		};
+	}
+
+	function waterStatus( s ) {
+		var left = stockLeft( s );
+		var plan = waterPlan();
+		var warn = s.warn == null ? 14 : +s.warn;
+		if ( ! plan.known ) {
+			return { protocol: null, left: left, plan: plan, tone: 'mute', text: 'No mixes coming up', low: false };
+		}
+		if ( plan.all ) {
+			return { protocol: null, left: left, plan: plan, tone: 'ok', text: 'Enough for ' + plan.mixes.length + ' mix' + ( plan.mixes.length === 1 ? '' : 'es' ), low: false };
+		}
+		var until = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+		if ( ! plan.covered ) {
+			var soon = daysBetween( todayStr(), plan.nextNeeded ) < warn;
+			return { protocol: null, left: left, plan: plan, tone: soon ? 'bad' : 'warn', text: 'Not enough for your next mix', low: warn > 0 && soon };
+		}
+		var low = warn > 0 && daysBetween( todayStr(), plan.coveredUntil ) < warn;
+		return { protocol: null, left: left, plan: plan, tone: low ? 'warn' : 'ok', text: ( low ? 'Low · short on ' : 'Covered to ' ) + until, low: low };
+	}
+
 	/** Running low: the stock item's plan runs out within its warning window (and before the cycle ends). */
 	function stockStatus( s ) {
+		if ( isWaterStock( s ) ) {
+			return waterStatus( s );
+		}
 		var p = stockProtocol( s );
 		var left = stockLeft( s );
 		if ( ! p ) {
@@ -2525,6 +2626,11 @@
 
 	function lowLine( x ) {
 		var plan = x.st.plan;
+		if ( isWaterStock( x.s ) ) {
+			var mixDay = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+			return ! x.st.left ? 'You’re out, and you mix next on ' + mixDay + '.'
+				: fmtNum( x.st.left, 1 ) + ' mL left' + ( plan.covered ? ', enough for your mixes until ' + mixDay + '.' : ', not enough for your mix on ' + mixDay + '.' );
+		}
 		if ( ! plan || ! plan.covered ) {
 			return 'You’ve run out.';
 		}
@@ -2782,17 +2888,17 @@
 	}
 
 	function stockIcon( s ) {
-		return h( 'span', { class: 'ypt-mini ypt-mini--' + ( s.form === 'count' ? 'bottle' : s.form === 'pen' ? 'pen' : 'vial' ), 'aria-hidden': 'true' } );
+		return h( 'span', { class: 'ypt-mini ypt-mini--' + ( s.form === 'count' || isWaterStock( s ) ? 'bottle' : s.form === 'pen' ? 'pen' : 'vial' ), 'aria-hidden': 'true' } );
 	}
 
 	function renderOnHand() {
 		var wrap = h( 'div', null );
 		var list = stocks();
-		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '2px 4px 10px' } }, 'Unmixed vials, pens and pills you have at home. Mixing one takes it off this list.' ) );
+		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '2px 4px 10px' } }, 'Unmixed vials, pens, bac water and pills you have at home. Mixing one takes it off this list.' ) );
 		if ( ! list.length ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
 				h( 'h2', null, 'Keep track of what you have' ),
-				h( 'p', null, 'Add the vials, pens or pills you have at home. We’ll show how long they’ll last on your schedule and remind you before you run out.' ),
+				h( 'p', null, 'Add the vials, pens, bac water or pills you have at home. We’ll show how long they’ll last on your schedule and remind you before you run out.' ),
 				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
 					openStockSheet( null, null );
 				} }, 'Add stock' )
@@ -2821,7 +2927,7 @@
 				),
 				isVialStock( s ) ? stepper( left, s.compound + ' on hand', function ( n ) {
 					put( 'stock', s.id, Object.assign( {}, s, { count: n, countedAt: new Date().toISOString() } ) );
-				} ) : h( 'div', { class: 'ypt-stock__count' }, h( 'b', null, fmtNum( left, 0 ) ), h( 'span', null, countUnit( s, left ) ) )
+				} ) : h( 'div', { class: 'ypt-stock__count' }, h( 'b', null, fmtNum( left, isWaterStock( s ) ? 1 : 0 ) ), h( 'span', null, countUnit( s, left ) ) )
 			);
 		} ) ) );
 		var warnsOn = list.some( function ( s ) {
@@ -2832,8 +2938,9 @@
 				? 'We’ll warn you here and on Today before anything runs out' + ( state.pushOnHere ? ', with a notification too.' : '. Turn on reminders on the Me tab to get a notification too.' )
 				: 'Running-low warnings are off for everything here.',
 			list.some( function ( s ) {
-				return ! isVialStock( s );
-			} ) ? ' Pills count down each time you tap Take.' : '' ) ) );
+				return s.form === 'count';
+			} ) ? ' Pills count down each time you tap Take.' : '',
+			list.some( isWaterStock ) ? ' Bac water counts down each time you mix a vial.' : '' ) ) );
 		return wrap;
 	}
 
@@ -2931,6 +3038,20 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-card' }, tl ) );
 		}
 
+		var waters = waterStocks();
+		if ( usesVial( p ) && waters.length ) {
+			var wst = waterStatus( waters[ 0 ] );
+			var wLeft = waters.reduce( function ( n, x ) {
+				return n + stockLeft( x );
+			}, 0 );
+			wrap.appendChild( h( 'button', { type: 'button', class: 'ypt-card ypt-note ypt-note--btn', onclick: function () {
+				openStockSheet( waters[ 0 ], null );
+			} }, stockIcon( waters[ 0 ] ),
+				h( 'div', null,
+					h( 'div', { class: 'ypt-note__title' }, WATER_NAME + ': ' + fmtNum( wLeft, 1 ) + ' mL left ', h( 'span', { class: 'ypt-tag ypt-tag--' + wst.tone }, wst.text ) ),
+					wst.plan.known ? 'Covers ' + wst.plan.covered + ' of your next ' + wst.plan.mixes.length + ' mix' + ( wst.plan.mixes.length === 1 ? '' : 'es' ) + ', across all your vials.' : 'No mixes coming up yet.' ) ) );
+		}
+
 		var s = state.records.settings.me || {};
 		if ( usesVial( p ) ) {
 			var on = s.mixReminders !== false;
@@ -2962,7 +3083,7 @@
 		} )[ 0 ];
 		var curVial = cur ? currentVial( cur ) : null;
 		var s = existing ? JSON.parse( JSON.stringify( existing ) ) : {
-			compound: opts.compound || '',
+			compound: opts.compound || ( opts.form === 'water' ? WATER_NAME : '' ),
 			form: opts.form || 'powder',
 			amount: curVial && curVial.mode !== 'conc' && ! isBlend( curVial ) ? curVial.amount : '',
 			amountUnit: curVial && curVial.mode === 'iu' ? 'IU' : 'mg',
@@ -2983,13 +3104,18 @@
 		var preview = h( 'div', { 'aria-live': 'polite' } );
 
 		function total() {
+			if ( isWaterStock( s ) ) {
+				return Math.round( ( existing ? left + adding * ( +s.volume || 0 ) : ( +s.count || 0 ) * ( +s.volume || 0 ) ) * 10 ) / 10;
+			}
 			return existing ? left + adding : +s.count || 0;
 		}
 
 		var saveBtn;
 
 		function saveLabel() {
-			return existing ? ( adding ? 'Add ' + adding : 'Save' ) : 'Add ' + ( +s.count || 0 );
+			var n = existing ? adding : +s.count || 0;
+			var what = isWaterStock( s ) ? ' bottle' + ( n === 1 ? '' : 's' ) : '';
+			return existing ? ( adding ? 'Add ' + adding + what : 'Save' ) : 'Add ' + n + what;
 		}
 
 		function renderPreview() {
@@ -2998,6 +3124,23 @@
 			}
 			preview.textContent = '';
 			if ( ! s.compound ) {
+				return;
+			}
+			if ( isWaterStock( s ) ) {
+				var saved0 = state.records.stock[ id ];
+				state.records.stock[ id ] = Object.assign( {}, s, { id: id, ml: total() } );
+				var wp = waterPlan();
+				if ( saved0 ) {
+					state.records.stock[ id ] = saved0;
+				} else {
+					delete state.records.stock[ id ];
+				}
+				if ( wp.known && total() > 0 ) {
+					preview.appendChild( h( 'div', { class: 'ypt-calc-result ypt-plan__preview' },
+						fmtNum( total(), 1 ) + ' mL = ', h( 'b', null, wp.covered + ' of your next ' + wp.mixes.length + ' mix' + ( wp.mixes.length === 1 ? '' : 'es' ) ), '. ',
+						wp.all ? 'That’s enough for every vial you have planned.' : [ 'You’re covered to ', h( 'b', null, fmtDay( wp.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ]
+					) );
+				}
 				return;
 			}
 			var probe = Object.assign( {}, s, { id: id, count: total(), countedAt: new Date().toISOString() } );
@@ -3035,6 +3178,10 @@
 
 		function renderForm() {
 			formBox.textContent = '';
+			if ( isWaterStock( s ) ) {
+				renderWaterForm();
+				return;
+			}
 			if ( s.form === 'powder' || s.form === 'pen' ) {
 				formBox.appendChild( h( 'div', { class: 'ypt-field' },
 					h( 'label', { for: 'ypt-s-amount' }, s.form === 'pen' ? 'In each pen' : 'In each vial' ),
@@ -3102,14 +3249,55 @@
 			}
 		}
 
+		// Bac water: bottles of a set size, tracked in mL.
+		function renderWaterForm() {
+			formBox.appendChild( numField( 'Bottle size (mL)', 'volume', '30', 'ypt-s-volume' ) );
+			if ( existing ) {
+				formBox.appendChild( field( 'mL left now', h( 'input', { class: 'ypt-input', id: 'ypt-s-ml', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: left, oninput: function ( e ) {
+					left = Math.max( 0, parseFloat( e.target.value ) || 0 );
+					renderPreview();
+				} } ), 'A rough guess is fine. It counts down each time you mix a vial.', 'ypt-s-ml' ) );
+				formBox.appendChild( h( 'div', { class: 'ypt-field' },
+					h( 'span', { class: 'ypt-label' }, 'Just bought more?' ),
+					h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+						h( 'span', { class: 'ypt-small' }, 'Bottles to add' ),
+						h( 'div', { class: 'ypt-shrink' }, stepper( adding, 'Bottles to add', function ( n ) {
+							adding = n;
+							renderForm();
+							renderPreview();
+						} ) )
+					)
+				) );
+				return;
+			}
+			formBox.appendChild( h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'How many bottles' ),
+				stepper( +s.count || 0, 'How many bottles', function ( n ) {
+					s.count = n;
+					renderForm();
+					renderPreview();
+				} ),
+				h( 'p', { class: 'ypt-hint' }, 'Already opened one? Save, then tap it to set the mL left.' )
+			) );
+		}
+
+		var nameInput = compoundInput( 'ypt-s-compound', s.compound, function ( v ) {
+			s.compound = v;
+			renderPreview();
+		} );
 		var body = [
-			field( 'Name', compoundInput( 'ypt-s-compound', s.compound, function ( v ) {
-				s.compound = v;
-				renderPreview();
-			} ), null, 'ypt-s-compound' ),
+			field( 'Name', nameInput, null, 'ypt-s-compound' ),
 			h( 'div', { class: 'ypt-field' },
 				h( 'span', { class: 'ypt-label' }, 'What is it?' ),
 				seg( STOCK_FORMS, s.form, function ( f ) {
+					if ( f === 'water' && s.form !== 'water' ) {
+						s.volume = '';
+						if ( ! String( s.compound || '' ).trim() ) {
+							s.compound = WATER_NAME;
+							var el = nameInput.querySelector ? nameInput.querySelector( 'input' ) || nameInput : nameInput;
+							el.value = WATER_NAME;
+						}
+					}
 					s.form = f;
 					renderForm();
 					renderPreview();
@@ -3156,6 +3344,7 @@
 				var problem = ! String( s.compound || '' ).trim() ? 'Enter what it is.'
 					: s.form === 'premixed' && ! ( +s.conc > 0 && +s.volume > 0 ) ? 'Enter the strength and vial size.'
 					: ( s.form === 'powder' || s.form === 'pen' ) && ! ( +s.amount > 0 ) ? 'Enter how much is in each ' + ( s.form === 'pen' ? 'pen.' : 'vial.' )
+					: isWaterStock( s ) && ! ( +s.volume > 0 ) ? 'Enter the bottle size.'
 					: '';
 				if ( problem ) {
 					err.textContent = problem;
@@ -3177,12 +3366,19 @@
 					expires: s.expires || '',
 					warn: s.warn == null ? 14 : +s.warn,
 				};
+				if ( isWaterStock( s ) ) {
+					data.volume = +s.volume;
+					data.ml = total();
+					data.count = 0;
+				}
 				// Same thing added again (another order of the same vials): add to that line instead of a second one.
 				var twin = existing ? null : stocks().filter( function ( x ) {
 					return sameCompound( x.compound, data.compound ) && x.form === data.form && +x.amount === data.amount && +x.conc === data.conc && ( x.countUnit || '' ) === data.countUnit;
 				} )[ 0 ];
 				closeSheet();
-				if ( twin ) {
+				if ( twin && isWaterStock( twin ) ) {
+					put( 'stock', twin.id, Object.assign( {}, twin, { ml: stockLeft( twin ) + data.ml, volume: data.volume, countedAt: data.countedAt, bought: data.bought || twin.bought, expires: data.expires || twin.expires, warn: data.warn } ) );
+				} else if ( twin ) {
 					put( 'stock', twin.id, Object.assign( {}, twin, { count: stockLeft( twin ) + data.count, countedAt: data.countedAt, bought: data.bought || twin.bought, expires: data.expires || twin.expires, warn: data.warn } ) );
 				} else {
 					put( 'stock', id, data );
@@ -3817,6 +4013,17 @@
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Reminders' ) );
 		wrap.appendChild( remindersCard( s ) );
 
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Help & feedback' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list ypt-help' }, FEEDBACK_TYPES.map( function ( t ) {
+			return h( 'button', { type: 'button', class: 'ypt-help__row', onclick: function () {
+				openFeedbackSheet( t.v );
+			} },
+				h( 'span', { class: 'ypt-help__ic ypt-help__ic--' + t.v }, icon( t.v ) ),
+				h( 'span', { class: 'ypt-help__text' }, h( 'b', null, t.title ), h( 'span', null, t.sub ) ),
+				h( 'span', { class: 'ypt-help__chev', 'aria-hidden': 'true' }, '›' )
+			);
+		} ) ) );
+
 		if ( newsList().length ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'What’s new' ) );
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
@@ -3876,6 +4083,213 @@
 		return wrap;
 	}
 
+	/* ---------- Help & feedback (includes/tracker/class-tracker-feedback.php) ---------- */
+
+	var FEEDBACK_TYPES = [
+		{ v: 'help', label: 'Help', title: 'Get help', sub: 'Ask a question about the tracker' },
+		{ v: 'problem', label: 'Problem', title: 'Report a problem', sub: 'Something broken or looks wrong' },
+		{ v: 'idea', label: 'Idea', title: 'Suggest an idea', sub: 'Tell us what would make it better' },
+	];
+	var MAX_SHOTS = 3;
+
+	/** Phone, browser and app version, so problem reports say where they happened. No tracker data. */
+	function deviceLine() {
+		var ua = navigator.userAgent || '';
+		var os = /iPhone/.test( ua ) ? 'iPhone' : /iPad/.test( ua ) || ( /Macintosh/.test( ua ) && navigator.maxTouchPoints > 1 ) ? 'iPad' : /Android/.test( ua ) ? 'Android' : /Mac OS X/.test( ua ) ? 'Mac' : /Windows/.test( ua ) ? 'Windows' : /Linux/.test( ua ) ? 'Linux' : 'Other';
+		var br = /EdgA?\//.test( ua ) ? 'Edge' : /SamsungBrowser/.test( ua ) ? 'Samsung Internet' : /FxiOS|Firefox/.test( ua ) ? 'Firefox' : /CriOS|Chrome/.test( ua ) ? 'Chrome' : /Safari/.test( ua ) ? 'Safari' : 'Browser';
+		if ( /; wv\)/.test( ua ) ) {
+			br = 'Android app';
+		}
+		return [ os, br + ( isStandalone() ? ' (Home Screen)' : '' ), 'tracker ' + ( CFG.version || '' ), 'reminders ' + ( state.pushOnHere ? 'on' : 'off' ) ].join( ' · ' );
+	}
+
+	/** The opt-in "tracker setup": medications/schedules and reminder settings only. Never doses, notes, vials, stock or injection spots. */
+	function setupLines() {
+		var s = state.records.settings.me || {};
+		var lines = protocols().map( function ( p ) {
+			return [ p.compound, amountLabel( p.dose, p.unit ), scheduleLabel( p ) + ' ' + timesOf( p ).map( fmtTime ).join( ', ' ), p.route || '' ].filter( Boolean ).join( ' · ' ) + ( p.paused ? ' (paused)' : '' );
+		} );
+		lines.push( 'Reminders on this device: ' + ( state.pushOnHere ? 'on' : 'off' ) );
+		lines.push( 'Show names in reminders: ' + ( s.reminderNames === false ? 'off' : 'on' ) );
+		lines.push( 'Time zone: ' + ( s.baseTz || s.tz || ( Intl.DateTimeFormat().resolvedOptions().timeZone || '' ) ) + ( s.travel ? ' (travel mode)' : '' ) );
+		return lines;
+	}
+
+	/** A picked image, shrunk to at most 1600px and re-encoded as JPEG (which also drops photo metadata). */
+	function shrinkImage( file ) {
+		return new Promise( function ( resolve, reject ) {
+			var url = URL.createObjectURL( file );
+			var img = new Image();
+			img.onload = function () {
+				var scale = Math.min( 1, 1600 / Math.max( img.naturalWidth, img.naturalHeight ) );
+				var c = document.createElement( 'canvas' );
+				c.width = Math.max( 1, Math.round( img.naturalWidth * scale ) );
+				c.height = Math.max( 1, Math.round( img.naturalHeight * scale ) );
+				var ctx = c.getContext( '2d' );
+				ctx.fillStyle = '#fff';
+				ctx.fillRect( 0, 0, c.width, c.height );
+				ctx.drawImage( img, 0, 0, c.width, c.height );
+				URL.revokeObjectURL( url );
+				resolve( c.toDataURL( 'image/jpeg', 0.82 ) );
+			};
+			img.onerror = function () {
+				URL.revokeObjectURL( url );
+				reject( new Error( 'That file isn’t an image we can read.' ) );
+			};
+			img.src = url;
+		} );
+	}
+
+	function openFeedbackSheet( type ) {
+		var f = { type: type || 'help', message: '', email: CFG.email || '', shots: [], setup: false };
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var shotsBox = h( 'div', { class: 'ypt-shots' } );
+		var setupBox = h( 'div', null );
+		var picker = h( 'input', { type: 'file', accept: 'image/*', hidden: true, onchange: function () {
+			var files = [].slice.call( picker.files || [], 0, MAX_SHOTS - f.shots.length );
+			picker.value = '';
+			Promise.all( files.map( shrinkImage ) ).then( function ( urls ) {
+				f.shots = f.shots.concat( urls ).slice( 0, MAX_SHOTS );
+				drawShots();
+			} ).catch( function ( e ) {
+				toast( e.message );
+			} );
+		} } );
+		if ( MAX_SHOTS > 1 ) {
+			picker.setAttribute( 'multiple', '' );
+		}
+		var hints = { help: 'What are you trying to do?', problem: 'What happened, and what did you expect to happen?', idea: 'What would make the tracker better for you?' };
+		var msg = h( 'textarea', { class: 'ypt-textarea', id: 'ypt-fb-msg', rows: '4', maxlength: '4000', placeholder: hints[ f.type ], oninput: function () {
+			f.message = msg.value;
+		} } );
+		var email = h( 'input', { class: 'ypt-input', id: 'ypt-fb-email', type: 'email', autocomplete: 'email', value: f.email, oninput: function () {
+			f.email = email.value.trim();
+		} } );
+
+		function drawShots() {
+			shotsBox.textContent = '';
+			f.shots.forEach( function ( url, i ) {
+				shotsBox.appendChild( h( 'div', { class: 'ypt-shot' },
+					h( 'img', { src: url, alt: 'Screenshot ' + ( i + 1 ) } ),
+					h( 'button', { type: 'button', class: 'ypt-shot__x', 'aria-label': 'Remove screenshot', onclick: function () {
+						f.shots.splice( i, 1 );
+						drawShots();
+					} }, '×' )
+				) );
+			} );
+			if ( f.shots.length < MAX_SHOTS ) {
+				shotsBox.appendChild( h( 'button', { type: 'button', class: 'ypt-shot ypt-shot--add', 'aria-label': 'Add a screenshot', onclick: function () {
+					picker.click();
+				} }, '+' ) );
+			}
+		}
+
+		function drawSetup() {
+			setupBox.textContent = '';
+			var sw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': f.setup ? 'true' : 'false', 'aria-label': 'Include my tracker setup', onclick: function () {
+				f.setup = ! f.setup;
+				drawSetup();
+			} } );
+			setupBox.appendChild( h( 'div', { class: 'ypt-toggle', style: { borderTop: '1px solid var(--ypt-line)', marginTop: '16px' } },
+				h( 'div', null, h( 'b', null, 'Include my tracker setup' ), h( 'div', { class: 'ypt-muted ypt-small' }, f.setup ? 'Helps us fix problems faster.' : 'Helps us fix problems faster. Off by default.' ) ),
+				sw
+			) );
+			if ( ! f.setup ) {
+				setupBox.appendChild( h( 'p', { class: 'ypt-fb-privacy' }, icon( 'lock' ), h( 'span', null, 'We only get what you type, any screenshots, and your device type (phone, browser, app version). Your doses, medications and vials stay encrypted and are not sent.' ) ) );
+				return;
+			}
+			var meds = setupLines();
+			var protoLines = meds.slice( 0, meds.length - 3 );
+			setupBox.appendChild( h( 'div', { class: 'ypt-label' }, 'This note will include' ) );
+			setupBox.appendChild( h( 'div', { class: 'ypt-fb-incl' },
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__y' }, '✓' ), h( 'span', null, 'Your medications and schedules', protoLines.length ? protoLines.map( function ( l ) {
+					return h( 'span', { class: 'ypt-muted', style: { display: 'block' } }, l );
+				} ) : h( 'span', { class: 'ypt-muted', style: { display: 'block' } }, 'None yet' ) ) ),
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__y' }, '✓' ), h( 'span', null, 'Reminder settings and time zone' ) ),
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__y' }, '✓' ), h( 'span', null, 'Device and app version' ) ),
+				h( 'div', { class: 'ypt-fb-incl__sep' }, h( 'span', { class: 'ypt-fb-incl__n' }, '✕' ), h( 'span', null, 'Dose history and notes' ) ),
+				h( 'div', null, h( 'span', { class: 'ypt-fb-incl__n' }, '✕' ), h( 'span', null, 'Vials, stock and injection spots' ) )
+			) );
+			setupBox.appendChild( h( 'p', { class: 'ypt-hint' }, 'Only with this one note. It’s erased once we’ve sorted it out.' ) );
+		}
+
+		var send = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			err.hidden = true;
+			if ( ! f.message.trim() ) {
+				err.textContent = 'Write a message first.';
+				err.hidden = false;
+				msg.focus();
+				return;
+			}
+			if ( ! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test( f.email ) ) {
+				err.textContent = 'Enter an email address we can reply to.';
+				err.hidden = false;
+				email.focus();
+				return;
+			}
+			if ( state.offline ) {
+				err.textContent = 'You’re offline. Connect to the internet to send this.';
+				err.hidden = false;
+				return;
+			}
+			send.disabled = true;
+			send.textContent = 'Sending…';
+			api( 'POST', 'tracker/feedback', {
+				type: f.type,
+				message: f.message.trim(),
+				email: f.email,
+				device: deviceLine(),
+				setup: f.setup ? setupLines() : [],
+				screenshots: f.shots,
+			} ).then( function () {
+				openFeedbackSent( f );
+			} ).catch( function ( e ) {
+				send.disabled = false;
+				send.textContent = 'Send';
+				err.textContent = e.message || 'Your note couldn’t be sent. Please try again.';
+				err.hidden = false;
+			} );
+		} }, 'Send' );
+
+		drawShots();
+		drawSetup();
+		openSheet( 'Send us a note', 'Help & feedback', [
+			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'What’s this about?' ), seg( FEEDBACK_TYPES.map( function ( t ) {
+				return [ t.v, t.label ];
+			} ), f.type, function ( v ) {
+				f.type = v;
+				msg.setAttribute( 'placeholder', hints[ v ] );
+			} ) ),
+			field( 'Message', msg, null, 'ypt-fb-msg' ),
+			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Screenshot (optional)' ), shotsBox, picker ),
+			field( 'Reply to', email, 'We answer by email, usually within a day.', 'ypt-fb-email' ),
+			setupBox,
+			err,
+		], send );
+	}
+
+	function openFeedbackSent( f ) {
+		var label = FEEDBACK_TYPES.filter( function ( t ) {
+			return t.v === f.type;
+		} )[ 0 ].label;
+		var extras = [];
+		if ( f.shots.length ) {
+			extras.push( f.shots.length === 1 ? '1 screenshot' : f.shots.length + ' screenshots' );
+		}
+		extras.push( f.setup ? 'tracker setup included' : 'tracker setup not included' );
+		openSheet( 'Thanks, we got it', 'Help & feedback', [
+			h( 'div', { class: 'ypt-fb-sent' },
+				h( 'div', { class: 'ypt-fb-sent__check' }, icon( 'check' ) ),
+				h( 'p', { class: 'ypt-muted' }, 'We’ll reply to ', h( 'b', null, f.email ), ', usually within a day.' ),
+				h( 'div', { class: 'ypt-card', style: { textAlign: 'left', marginTop: '14px' } },
+					h( 'div', { class: 'ypt-eyebrow' }, label ),
+					h( 'p', { style: { margin: '4px 0 0', whiteSpace: 'pre-line' } }, f.message.trim() ),
+					h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } }, extras.join( ' · ' ) )
+				)
+			),
+		], h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', onclick: closeSheet }, 'Done' ) );
+	}
+
 	function remindersCard( s ) {
 		var supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 		var card = h( 'div', { class: 'ypt-card' } );
@@ -3914,6 +4328,18 @@
 					toast( e.message || 'Couldn’t send a test.' );
 				} );
 			} }, 'Send a test reminder' ) );
+		}
+		if ( on || state.push.devices > 0 ) {
+			// Lock-screen privacy: names show by default (Jeff), and can be hidden.
+			var names = s.reminderNames !== false;
+			var namesSw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': names ? 'true' : 'false', 'aria-label': 'Show names in reminders' } );
+			namesSw.addEventListener( 'click', function () {
+				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { reminderNames: ! names } ) );
+			} );
+			card.appendChild( h( 'div', { class: 'ypt-toggle', style: { marginTop: '12px' } },
+				h( 'div', null, h( 'b', null, 'Show names in reminders' ), h( 'div', { class: 'ypt-muted ypt-small' }, names ? 'Reminders say what’s due, like “Time for BPC-157”. Anyone who sees your lock screen can read them.' : 'Reminders just say a dose is due, without naming it.' ) ),
+				namesSw
+			) );
 		}
 		if ( state.push.devices > ( on ? 1 : 0 ) ) {
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, 'Also on for ' + ( state.push.devices - ( on ? 1 : 0 ) ) + ' other device' + ( state.push.devices - ( on ? 1 : 0 ) === 1 ? '' : 's' ) + '.' ) );
@@ -4593,11 +5019,13 @@
 		// New vials only: take one from the Supply tab's on-hand count.
 		var stockBox = h( 'div', null );
 		var takeStock = true;
+		var takeWater = true;
 
 		function renderStockBox() {
 			stockBox.textContent = '';
 			var st = existing ? null : stockToMix( v );
 			if ( ! st ) {
+				renderWaterBox();
 				return;
 			}
 			var on = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': takeStock ? 'true' : 'false', 'aria-label': 'Take it from your supply' } );
@@ -4609,6 +5037,23 @@
 			stockBox.appendChild( h( 'div', { class: 'ypt-toggle ypt-field' },
 				h( 'div', null, h( 'b', null, 'Take it from your supply' ), h( 'div', { class: 'ypt-muted ypt-small' }, n + ' ' + stockSummary( st, n ) + ' on hand' ) ),
 				on ) );
+			renderWaterBox();
+		}
+
+		// New vials mixed with water: take the water off the bac water line too.
+		function renderWaterBox() {
+			var w = existing || v.mode === 'conc' ? null : waterToMix();
+			if ( ! w ) {
+				return;
+			}
+			var sw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': takeWater ? 'true' : 'false', 'aria-label': 'Use bac water from your supply' } );
+			sw.addEventListener( 'click', function () {
+				takeWater = ! takeWater;
+				sw.setAttribute( 'aria-checked', takeWater ? 'true' : 'false' );
+			} );
+			stockBox.appendChild( h( 'div', { class: 'ypt-toggle ypt-field' },
+				h( 'div', null, h( 'b', null, 'Use bac water from your supply' ), h( 'div', { class: 'ypt-muted ypt-small' }, fmtNum( stockLeft( w ), 1 ) + ' mL left' + ( +v.water > 0 ? ', ' + fmtNum( Math.max( 0, stockLeft( w ) - +v.water ), 1 ) + ' mL after this' : '' ) ) ),
+				sw ) );
 		}
 
 		function numInput( id2, key, placeholder, target, onInput ) {
@@ -4964,6 +5409,10 @@
 				put( 'vial', id, saved );
 				if ( fromStock ) {
 					put( 'stock', fromStock.id, Object.assign( {}, fromStock, { count: Math.max( 0, stockLeft( fromStock ) - 1 ) } ) );
+				}
+				var water = ! existing && takeWater && saved.water > 0 ? waterToMix() : null;
+				if ( water ) {
+					put( 'stock', water.id, Object.assign( {}, water, { ml: Math.max( 0, Math.round( ( stockLeft( water ) - saved.water ) * 10 ) / 10 ), countedAt: new Date().toISOString() } ) );
 				}
 				if ( opts.replaces && state.records.vial[ opts.replaces ] && ! state.records.vial[ opts.replaces ].finished ) {
 					put( 'vial', opts.replaces, Object.assign( {}, state.records.vial[ opts.replaces ], { finished: true } ) );

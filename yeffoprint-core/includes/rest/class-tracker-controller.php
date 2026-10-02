@@ -15,6 +15,7 @@
  *   GET    /tracker/label-templates       designs offered by "Order labels" (public storefront data)
  *   POST   /tracker/shares                a share link for one protocol (class-tracker-shares.php)
  *   DELETE /tracker/shares/{code}         stop sharing one of the customer's own links
+ *   POST   /tracker/feedback              Me > Help & feedback note to the owner (class-tracker-feedback.php)
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -86,6 +87,12 @@ class YeffoPrint_Tracker_Controller {
 		register_rest_route( self::NAMESPACE, '/tracker/shares/(?P<code>[A-Za-z0-9]{10})', [
 			'methods'             => \WP_REST_Server::DELETABLE,
 			'callback'            => [ $this, 'delete_share' ],
+			'permission_callback' => $perm,
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/feedback', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'send_feedback' ],
 			'permission_callback' => $perm,
 		] );
 
@@ -256,6 +263,16 @@ class YeffoPrint_Tracker_Controller {
 	public function delete_share( \WP_REST_Request $request ) {
 		if ( ! YeffoPrint_Tracker_Shares::delete( get_current_user_id(), (string) $request['code'] ) ) {
 			return new \WP_Error( 'yeffoprint_tracker_share_missing', __( 'That link was already stopped.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+		return self::no_store( [ 'ok' => true ] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function send_feedback( \WP_REST_Request $request ) {
+		$params = $request->get_json_params();
+		$id     = YeffoPrint_Tracker_Feedback::submit( get_current_user_id(), is_array( $params ) ? $params : [] );
+		if ( is_wp_error( $id ) ) {
+			return $id;
 		}
 		return self::no_store( [ 'ok' => true ] );
 	}

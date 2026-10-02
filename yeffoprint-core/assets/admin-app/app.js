@@ -277,7 +277,7 @@
 			{ id: 'label-colors', label: 'Label Colors' },
 			{ id: 'compound-list', label: 'Compound List' },
 			{ id: 'prints', label: '3D Prints' },
-			{ id: 'filament-colors', label: 'Filament Colors' }
+			{ id: 'filament-colors', label: 'Filaments' }
 		] },
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },
@@ -285,6 +285,8 @@
 			{ id: 'abandoned-carts', label: 'Abandoned Carts' },
 			{ id: 'web-design-orders', label: 'Web Design Orders' },
 			{ id: 'customers', label: 'Customers' },
+			{ id: 'reviews', label: 'Reviews' },
+			{ id: 'tracker-feedback', label: 'Tracker Feedback' },
 			{ id: 'pricing', label: 'Pricing Rules' },
 			{ id: 'orders', label: 'Custom Orders' },
 			{ id: 'proofs', label: 'Proofs' },
@@ -1191,6 +1193,9 @@
 						return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
 					} ).join( '' ) +
 				'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
+				( isUnpaidWcOrder( order )
+					? '<p class="yp-field__hint">Customer changed their mind? <button type="button" class="yp-row-action" style="color:#b3311c;" data-yp-wc-cancel-order>Cancel order</button></p>'
+					: '' ) +
 				'<div data-yp-wc-status-error></div>' +
 			'</div>' +
 
@@ -1224,6 +1229,22 @@
 			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
 
 		bodyEl.querySelector( '[data-yp-wc-save-status]' ).addEventListener( 'click', function () { saveWcOrderStatus( order, drawer, bodyEl ); } );
+
+		var cancelOrderButton = bodyEl.querySelector( '[data-yp-wc-cancel-order]' );
+		if ( cancelOrderButton ) {
+			cancelOrderButton.addEventListener( 'click', function () {
+				YP.confirmModal( {
+					title: 'Cancel order #' + order.number + '?',
+					message: 'The pay link stops working and any unpaid custom proof on this order is removed. Nothing has been charged, so there is nothing to refund.',
+					confirmLabel: 'Cancel order',
+					danger: true,
+					onConfirm: function () {
+						bodyEl.querySelector( '[data-yp-wc-status]' ).value = 'cancelled';
+						saveWcOrderStatus( order, drawer, bodyEl );
+					}
+				} );
+			} );
+		}
 
 		var printButton = bodyEl.querySelector( '[data-yp-print-label]' );
 		if ( printButton ) {
@@ -1301,14 +1322,14 @@
 
 		viewEl.innerHTML =
 			'<p class="yp-panel__hint">Change a price or remove an item. To change a quantity, remove the item and use Add items to add it again. The customer’s payment link stays the same and charges the new total.</p>' +
-			'<table class="yp-record-table yp-record-table--top"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>' +
+			'<table class="yp-record-table yp-record-table--top yp-stack-rows"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>' +
 				order.items.map( function ( item ) {
 					return (
 						'<tr data-yp-edit-item="' + item.id + '">' +
-							'<td>' + YP.escapeHtml( item.name ) + '</td>' +
-							'<td>' + item.quantity + '</td>' +
-							'<td><input type="number" step="0.01" min="0" style="width:7rem;" data-yp-edit-total value="' + item.total.toFixed( 2 ) + '" /></td>' +
-							'<td><label style="white-space:nowrap;"><input type="checkbox" data-yp-edit-remove /> Remove</label></td>' +
+							'<td class="yp-stack-grow"><strong>' + YP.escapeHtml( item.name ) + '</strong></td>' +
+							'<td data-label="Qty" class="yp-stack-half">' + item.quantity + '</td>' +
+							'<td data-label="Price ($)" class="yp-stack-half"><input type="number" step="0.01" min="0" inputmode="decimal" style="width:7rem;" data-yp-edit-total aria-label="Price" value="' + item.total.toFixed( 2 ) + '" /></td>' +
+							'<td><label class="yp-field yp-field--checkbox" style="margin:0;white-space:nowrap;"><input type="checkbox" data-yp-edit-remove /><span>Remove</span></label></td>' +
 						'</tr>'
 					);
 				} ).join( '' ) +
@@ -1453,10 +1474,10 @@
 		row = row || { label: '', due_date: '', done: false };
 		return (
 			'<tr>' +
-				'<td><label class="yp-field--checkbox yp-field" style="margin:0;"><input type="checkbox" data-wd-milestone-done' + ( row.done ? ' checked' : '' ) + ' /></label></td>' +
-				'<td><input type="text" data-wd-milestone-label value="' + YP.escapeAttr( row.label ) + '" placeholder="Milestone" /></td>' +
-				'<td><input type="date" data-wd-milestone-date value="' + YP.escapeAttr( row.due_date ) + '" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove milestone">&times;</button></td>' +
+				'<td class="yp-stack-half yp-wd-milestone-done"><label class="yp-field--checkbox yp-field" style="margin:0;"><input type="checkbox" data-wd-milestone-done' + ( row.done ? ' checked' : '' ) + ' /><span>Done</span></label></td>' +
+				'<td data-label="Milestone" class="yp-stack-grow yp-stack-first"><input type="text" data-wd-milestone-label aria-label="Milestone" value="' + YP.escapeAttr( row.label ) + '" placeholder="Milestone" /></td>' +
+				'<td data-label="Due date" class="yp-wd-milestone-date"><input type="date" data-wd-milestone-date aria-label="Due date" value="' + YP.escapeAttr( row.due_date ) + '" /></td>' +
+				'<td class="yp-stack-remove yp-stack-half"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove milestone">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -1465,9 +1486,9 @@
 		row = row || { label: '', price: '' };
 		return (
 			'<tr>' +
-				'<td><input type="text" data-wd-addon-label value="' + YP.escapeAttr( row.label ) + '" placeholder="Add-on" /></td>' +
-				'<td><input type="number" step="0.01" min="0" data-wd-addon-price value="' + YP.escapeAttr( row.price ) + '" placeholder="0.00" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove add-on">&times;</button></td>' +
+				'<td data-label="Add-on" class="yp-stack-grow"><input type="text" data-wd-addon-label aria-label="Add-on" value="' + YP.escapeAttr( row.label ) + '" placeholder="Add-on" /></td>' +
+				'<td data-label="Price ($)" class="yp-stack-half yp-wd-addon-price"><input type="number" step="0.01" min="0" inputmode="decimal" data-wd-addon-price aria-label="Price" value="' + YP.escapeAttr( row.price ) + '" placeholder="0.00" /></td>' +
+				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove add-on">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -1503,7 +1524,7 @@
 					'<div class="yp-field"><label>Go-live due</label><input type="date" data-wd-golive-due value="' + YP.escapeAttr( a.golive_due ) + '"' + ( signed ? ' disabled' : '' ) + ' /></div>' +
 				'</div>' +
 				'<p class="yp-field__hint">Add-ons</p>' +
-				'<table class="yp-record-table"><tbody data-wd-addons>' + addons.map( addonRowHtml ).join( '' ) + '</tbody></table>' +
+				'<table class="yp-record-table yp-stack-rows yp-edit-rows"><thead><tr><th>Add-on</th><th>Price ($)</th><th></th></tr></thead><tbody data-wd-addons>' + addons.map( addonRowHtml ).join( '' ) + '</tbody></table>' +
 				( signed ? '' : '<button type="button" class="yp-row-action" data-yp-wd-add-addon>+ Add add-on</button>' ) +
 				'<div class="yp-field" style="margin-top:0.75rem;"><label>Scope &amp; expectations</label><textarea rows="4" data-wd-scope' + ( signed ? ' disabled' : '' ) + '>' + YP.escapeHtml( a.scope_text ) + '</textarea></div>' +
 				( signed
@@ -1551,6 +1572,17 @@
 
 		var errorEl = panel.querySelector( '[data-yp-wd-agreement-error]' );
 
+		// Save Draft and Send also save the milestone rows on screen, so
+		// milestones typed in but not yet saved on their own aren't lost
+		// when the panel re-renders after sending.
+		function agreementPayload() {
+			var fields = readWebDesignAgreementForm( panel );
+			if ( panel.querySelector( '[data-yp-wd-milestones-panel] [data-wd-milestones]' ) ) {
+				fields.milestones = readWebDesignMilestonesForm( panel.querySelector( '[data-yp-wd-milestones-panel]' ) );
+			}
+			return fields;
+		}
+
 		var saveButton = panel.querySelector( '[data-yp-wd-save-agreement]' );
 		if ( saveButton ) {
 			saveButton.addEventListener( 'click', function () {
@@ -1559,7 +1591,7 @@
 				YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( readWebDesignAgreementForm( panel ) )
+					body: JSON.stringify( agreementPayload() )
 				} )
 					.then( function () { saveButton.disabled = false; } )
 					.catch( function ( error ) {
@@ -1577,7 +1609,7 @@
 				YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( readWebDesignAgreementForm( panel ) )
+					body: JSON.stringify( agreementPayload() )
 				} )
 					.then( function () {
 						return YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement/send', { method: 'POST' } );
@@ -1612,7 +1644,7 @@
 			'<div class="yp-panel yp-panel--compact" data-yp-wd-milestones-panel>' +
 				'<div class="yp-panel__head"><h3>Milestones</h3></div>' +
 				'<p class="yp-panel__hint">Visible to the customer on their agreement page as the project progresses.</p>' +
-				'<table class="yp-record-table"><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
+				'<table class="yp-record-table yp-stack-rows yp-edit-rows"><thead><tr><th></th><th>Milestone</th><th>Due date</th><th></th></tr></thead><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
 				'<button type="button" class="yp-row-action" data-yp-wd-add-milestone>+ Add milestone</button>' +
 				'<div class="yp-form__row">' +
 					'<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-save-milestones>Save Milestones</button>' +
@@ -2321,11 +2353,44 @@
 									? '<span class="yp-pill yp-pill--crit">Voided</span>'
 									: '<button type="button" class="wp-block-button__link yp-button--danger" data-yp-shippo-void="' + YP.escapeAttr( label.tracking_number ) + '" data-yp-shippo-void-carrier="' + YP.escapeAttr( label.carrier_label ) + '">Void</button>' ) +
 							'</span>' +
+							shippoLabelCustomsHtml( label.customs ) +
 						'</li>'
 					);
 				} ).join( '' ) +
 			'</ul>'
 		);
+	}
+
+	/**
+	 * Direct request: "a confirmation somewhere on our order screen saying
+	 * the invoice was sent electronically." Built from the carrier's own
+	 * messages Shippo returns with an international label (UPS: "The
+	 * commercial invoice has been submitted electronically...") — see
+	 * YeffoPrint_Order_Tracking::label_customs_summary(). Nothing for
+	 * domestic labels.
+	 */
+	function shippoLabelCustomsHtml( customs ) {
+		if ( ! customs ) {
+			return '';
+		}
+		var status = customs.sent_electronically
+			? '<span class="yp-pill yp-pill--good">✓ Customs invoice sent electronically</span>' +
+				'<span class="yp-shippo-label-row__customs-note">No need to attach it to the parcel.</span>'
+			: ( customs.commercial_invoice_url
+				? '<span class="yp-pill yp-pill--warn">Paperless invoice not confirmed</span>' +
+					'<span class="yp-shippo-label-row__customs-note">Print the invoice and attach it to the parcel.</span>'
+				: '' );
+		var invoiceButton = customs.commercial_invoice_url
+			? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-print="' + YP.escapeAttr( customs.commercial_invoice_url ) + '">' + ( customs.sent_electronically ? 'View invoice' : 'Print invoice' ) + '</button>'
+			: '';
+		var notes = ( customs.messages || [] ).length
+			? '<details class="yp-shippo-label-row__customs-messages"><summary>Carrier messages</summary><ul>' +
+				customs.messages.map( function ( text ) {
+					return '<li>' + YP.escapeHtml( text ) + '</li>';
+				} ).join( '' ) +
+				'</ul></details>'
+			: '';
+		return '<div class="yp-shippo-label-row__customs">' + status + invoiceButton + notes + '</div>';
 	}
 
 	/**
@@ -2797,7 +2862,8 @@
 					tracking_number:  response.label.tracking_number,
 					label_url:        response.label.label_url,
 					transaction_id:   response.label.transaction_id,
-					voided:           false
+					voided:           false,
+					customs:          response.label.customs || null
 				} ] );
 				var labelsListEl = panel.querySelector( '[data-yp-shippo-labels]' );
 				if ( labelsListEl ) {
@@ -2821,6 +2887,16 @@
 				purchaseButton.textContent = 'Purchase Selected Label';
 				errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
 			} );
+	}
+
+	/**
+	 * Direct request: unpaid orders were "stuck on awaiting payment" with
+	 * no obvious way out when the customer changes their mind. Offered
+	 * only while nothing has been paid — a paid order needs a refund,
+	 * not a cancel.
+	 */
+	function isUnpaidWcOrder( order ) {
+		return [ 'pending', 'failed', 'checkout-draft' ].indexOf( order.status ) !== -1 && ! order.date_paid;
 	}
 
 	function saveWcOrderStatus( order, drawer, bodyEl ) {

@@ -143,6 +143,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-processing-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-secret-box.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-login-throttle.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-retired-plugins.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-project-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-credential-purge.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-web-design-controller.php';
@@ -192,7 +193,13 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-shares.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-reminders.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-app.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-feedback.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-tracker-feedback-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/calculator/class-calculator-app.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-tracker-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-order-reviews.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-review-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-review-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -288,11 +295,13 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Webhook_Controller();
 		new YeffoPrint_Web_Chat_Controller();
 		new YeffoPrint_Login_Throttle();
+		new YeffoPrint_Retired_Plugins();
 		new YeffoPrint_Tracker_Store();
 		new YeffoPrint_Tracker_Usage();
 		new YeffoPrint_Tracker_Shares();
 		new YeffoPrint_Tracker_Reminders();
 		new YeffoPrint_Tracker_App();
+		new YeffoPrint_Calculator_App();
 		new YeffoPrint_Tracker_Controller();
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
@@ -306,6 +315,11 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Express_Alerts();
 		new YeffoPrint_Abandoned_Carts();
 		new YeffoPrint_Admin_Abandoned_Cart_Controller();
+		new YeffoPrint_Order_Reviews();
+		new YeffoPrint_Review_Controller();
+		new YeffoPrint_Admin_Review_Controller();
+		new YeffoPrint_Tracker_Feedback();
+		new YeffoPrint_Admin_Tracker_Feedback_Controller();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)

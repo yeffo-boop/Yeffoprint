@@ -86,6 +86,7 @@ if ( $seo ) {
 	</noscript>
 	<div class="yp-configurator__intro">
 		<h1 class="yp-configurator__title" data-yp-title><?php echo esc_html( $title ); ?></h1>
+		<?php echo $post_id && function_exists( 'yeffoprint_render_rating_jump' ) ? yeffoprint_render_rating_jump( 'template:' . (int) $post_id ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside the helper. ?>
 	</div>
 	<div class="yp-configurator__status" role="status" aria-live="polite"><?php esc_html_e( 'Loading design…', 'yeffoprint' ); ?></div>
 	<div class="yp-configurator__skeleton" data-yp-skeleton aria-hidden="true">
