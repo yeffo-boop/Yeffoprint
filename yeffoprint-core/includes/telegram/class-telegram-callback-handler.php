@@ -55,6 +55,17 @@ class YeffoPrint_Telegram_Callback_Handler {
 			return;
 		}
 
+		// "✅ Mark done" on a Dose Tracker feedback alert
+		// (class-tracker-feedback.php) — the owner's own chat only.
+		if ( 'fb_done' === $action ) {
+			if ( ! YeffoPrint_Telegram_Admin_Commands::is_admin_chat( $chat_id ) ) {
+				$client->answer_callback_query( $callback_query_id, __( "You don't have access to that.", 'yeffoprint-core' ) );
+				return;
+			}
+			$client->answer_callback_query( $callback_query_id, YeffoPrint_Tracker_Feedback::mark_done( absint( $parts[1] ?? '' ) ) ? __( 'Marked done.', 'yeffoprint-core' ) : __( 'Already done.', 'yeffoprint-core' ) );
+			return;
+		}
+
 		// Abandoned cart buttons (class-abandoned-carts.php): the owner's
 		// Send now / Don't send / Send code on a "Cart left behind" alert,
 		// and a linked customer's "No more reminders". Access is checked

@@ -2654,3 +2654,50 @@ body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
 		flex-direction: column;
 	}
 }
+
+/* ---------- Tracker Feedback (views/tracker-feedback.js) ---------- */
+.yp-fb-pill--help {
+	background: rgba(0, 120, 164, 0.1);
+	color: #0078a4;
+}
+
+.yp-fb-pill--problem {
+	background: rgba(194, 0, 122, 0.1);
+	color: #c2007a;
+}
+
+.yp-fb-pill--new {
+	background: var(--wp--preset--color--ink, #141414);
+	color: #fff;
+}
+
+.yp-fb__shots img {
+	width: 72px;
+	height: 124px;
+	object-fit: cover;
+	object-position: top;
+}
+
+.yp-fb__device {
+	display: inline-block;
+	margin: 0.2rem 0;
+	padding: 0.25rem 0.5rem;
+	border-radius: 6px;
+	background: rgba(58, 58, 60, 0.06);
+	font-family: var(--wp--preset--font-family--mono);
+	font-size: 0.75rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-fb__setup {
+	margin: 0.6rem 0 0;
+	padding: 0.6rem 0.85rem;
+	border: 1px dashed var(--wp--preset--color--light-gray);
+	border-radius: 10px;
+	font-size: 0.875rem;
+}
+
+.yp-fb__setup ul {
+	margin: 0.3rem 0 0;
+	padding-left: 1.1rem;
+}

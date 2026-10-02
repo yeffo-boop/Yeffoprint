@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-02a',
+		'date'  => '2026-10-02',
+		'title' => 'Help & feedback',
+		'text'  => 'Got a question, found a problem or have an idea? Open the Me tab and tap Help & feedback to send us a note, with a screenshot if you like. We reply by email, and your tracker data is only included if you turn it on.',
+	],
+	[
 		'id'    => '2026-09-29x',
 		'date'  => '2026-09-29',
 		'title' => 'Bac water in your supply',
