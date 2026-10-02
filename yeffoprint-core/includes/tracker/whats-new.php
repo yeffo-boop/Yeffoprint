@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-02b',
+		'date'  => '2026-10-02',
+		'title' => 'Injection site rotation',
+		'text'  => 'Each injection now shows the next spot to use, picked from the one that has rested longest. Tap "Change" to choose a different spot on the body map, and see where you\'ve injected lately on the History tab. Choose the spots you use when you edit a peptide.',
+	],
+	[
 		'id'    => '2026-10-02a',
 		'date'  => '2026-10-02',
 		'title' => 'Help & feedback',

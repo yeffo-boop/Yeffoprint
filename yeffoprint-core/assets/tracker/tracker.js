@@ -7,9 +7,11 @@
  * the app opens instantly and works offline, queueing changes until the
  * connection is back. Records:
  *
- *   protocol  { compound, dose, unit, route, device:'syringe'|'pen'|'single', schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused, doseOf }
+ *   protocol  { compound, dose, unit, route, device:'syringe'|'pen'|'single', schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused, doseOf, sites[], siteOff }
+ *             sites / siteOff: the injection spots this protocol rotates through ([] = all) and whether to track them at all.
  *             doseOf: for a blend, the peptide the dose is measured by ('' = the whole blend).
- *   dose      { protocolId, compound, date, time, status:'taken'|'skipped', at, dose, unit, vialId, units, note }
+ *   dose      { protocolId, compound, date, time, status:'taken'|'skipped', at, dose, unit, vialId, units, note, site }
+ *             site: where an injection went (SITES id), for injection site rotation.
  *   vial      { kind:'vial'|'pen', compound, mode:'mg'|'iu'|'conc'|'blend', amount, water, conc, volume, mixed, syringe, finished, parts, blend }
  *             A blend has parts [{ name, amount (mg) }] and amount = their total; blend is 'bought' or 'mixed' (the customer combined vials).
  *             A pen is a 3 mL cartridge the customer mixes like a vial; its dial is read as U-100 units (0.01 mL each).
@@ -86,6 +88,7 @@
 		historyDay: todayStr(),
 		historyFilter: '',
 		sheet: null,
+		siteChoice: {}, // slot id -> spot picked on Today before tapping Take
 	};
 	var queue = [];
 	var installPrompt = null;
@@ -755,6 +758,242 @@
 
 	var DEVICES = [ [ 'syringe', 'Syringe' ], [ 'pen', 'Multi-dose pen' ], [ 'single', 'Single-use' ] ];
 
+	/* =========================================================
+	 * Injection sites (rotation)
+	 *
+	 * A taken injection dose stores `site` (one of SITES' ids). The next
+	 * spot suggested is the one in the protocol's rotation that has gone
+	 * longest without a dose, counting every injection the customer logged
+	 * (any compound), so two protocols rotate around each other. Protocols
+	 * keep `sites` (the spots the customer uses; empty = every spot for
+	 * the route) and `siteOff` (don't suggest or ask).
+	 *
+	 * The map is drawn as if looking in a mirror: the customer's left side
+	 * is on the left in both the front and back views.
+	 * ======================================================= */
+
+	// `im` / `subq`: which injections the spot suits. x/y are on the body map (front figure centered at 80, back at 240).
+	var SITES = [
+		{ id: 'delt-l', label: 'Left shoulder', subq: false, im: true, x: 43, y: 66 },
+		{ id: 'delt-r', label: 'Right shoulder', subq: false, im: true, x: 117, y: 66 },
+		{ id: 'belly-ul', label: 'Belly, upper left', subq: true, im: false, x: 68, y: 106 },
+		{ id: 'belly-ur', label: 'Belly, upper right', subq: true, im: false, x: 92, y: 106 },
+		{ id: 'belly-ll', label: 'Belly, lower left', subq: true, im: false, x: 68, y: 132 },
+		{ id: 'belly-lr', label: 'Belly, lower right', subq: true, im: false, x: 92, y: 132 },
+		{ id: 'thigh-l', label: 'Left thigh', subq: true, im: true, x: 66, y: 214 },
+		{ id: 'thigh-r', label: 'Right thigh', subq: true, im: true, x: 94, y: 214 },
+		{ id: 'arm-l', label: 'Back of left arm', subq: true, im: false, x: 202, y: 92 },
+		{ id: 'arm-r', label: 'Back of right arm', subq: true, im: false, x: 278, y: 92 },
+		{ id: 'flank-l', label: 'Left love handle', subq: true, im: false, x: 220, y: 128 },
+		{ id: 'flank-r', label: 'Right love handle', subq: true, im: false, x: 260, y: 128 },
+		{ id: 'glute-l', label: 'Left glute', subq: true, im: true, x: 226, y: 160 },
+		{ id: 'glute-r', label: 'Right glute', subq: true, im: true, x: 254, y: 160 },
+	];
+
+	function siteById( id ) {
+		return SITES.filter( function ( s ) {
+			return s.id === id;
+		} )[ 0 ] || null;
+	}
+
+	function siteLabel( id ) {
+		var s = siteById( id );
+		return s ? s.label : '';
+	}
+
+	/** Spots that suit the route: intramuscular gets shoulders, thighs and glutes; everything else under the skin. */
+	function sitesForRoute( route ) {
+		var im = route === 'Intramuscular';
+		return SITES.filter( function ( s ) {
+			return im ? s.im : s.subq;
+		} );
+	}
+
+	/** The spots a protocol rotates through (all of the route's spots unless the customer narrowed it down). */
+	function rotationOf( p ) {
+		var all = sitesForRoute( p.route );
+		var mine = all.filter( function ( s ) {
+			return ( p.sites || [] ).indexOf( s.id ) !== -1;
+		} );
+		return mine.length ? mine : all;
+	}
+
+	function tracksSites( p ) {
+		return !! p && isInjected( p.route ) && ! p.siteOff;
+	}
+
+	/** { siteId: 'YYYY-MM-DD' of the latest taken dose there }, optionally ignoring one dose (the one being edited). */
+	function siteLastUsed( exceptId ) {
+		var last = {};
+		values( state.records.dose ).forEach( function ( d ) {
+			if ( d.status !== 'taken' || ! d.site || d.id === exceptId ) {
+				return;
+			}
+			var key = d.date + ( d.at || '' );
+			if ( ! last[ d.site ] || key > last[ d.site ].key ) {
+				last[ d.site ] = { key: key, date: d.date };
+			}
+		} );
+		Object.keys( last ).forEach( function ( k ) {
+			last[ k ] = last[ k ].date;
+		} );
+		return last;
+	}
+
+	/** The spot in the rotation that has rested longest (never-used spots first, in map order). */
+	function nextSite( p, exceptId ) {
+		var last = siteLastUsed( exceptId );
+		var best = null;
+		rotationOf( p ).forEach( function ( s ) {
+			if ( ! best || ( last[ s.id ] || '' ) < ( last[ best.id ] || '' ) ) {
+				best = s;
+			}
+		} );
+		return best ? best.id : '';
+	}
+
+	function restedLabel( date ) {
+		if ( ! date ) {
+			return 'Not used yet';
+		}
+		var n = daysBetween( date, todayStr() );
+		return n <= 0 ? 'Used today' : n === 1 ? 'Used yesterday' : 'Used ' + n + ' days ago';
+	}
+
+	/** 'recent' (0-2 days), 'week' (3-6 days) or 'rested'. */
+	function siteHeat( date ) {
+		if ( ! date ) {
+			return 'rested';
+		}
+		var n = daysBetween( date, todayStr() );
+		return n <= 2 ? 'recent' : n <= 6 ? 'week' : 'rested';
+	}
+
+	/**
+	 * The body map. opts:
+	 *   sites     spots to draw as choices (others are hidden)
+	 *   selected  id, or an array of ids when `multi`
+	 *   multi     tap toggles (the protocol sheet's "spots you use")
+	 *   last      siteLastUsed() map, to shade by how recently each spot was used
+	 *   onPick    function( id )
+	 */
+	function bodyMap( opts ) {
+		var s = svg( 'svg', { class: 'ypt-body', viewBox: '0 0 320 300', role: 'group', 'aria-label': 'Body map, front and back' } );
+		[ 80, 240 ].forEach( function ( cx ) {
+			var g = svg( 'g', { class: 'b-figure', 'aria-hidden': 'true' }, s );
+			svg( 'circle', { cx: cx, cy: 24, r: 15 }, g );
+			svg( 'rect', { x: cx - 6, y: 36, width: 12, height: 12, rx: 3 }, g );
+			// Torso (shoulders to hips), arms, legs.
+			svg( 'path', { d: 'M' + ( cx - 34 ) + ' 56 Q' + ( cx - 34 ) + ' 46 ' + ( cx - 22 ) + ' 46 L' + ( cx + 22 ) + ' 46 Q' + ( cx + 34 ) + ' 46 ' + ( cx + 34 ) + ' 56 L' + ( cx + 28 ) + ' 116 L' + ( cx + 30 ) + ' 170 L' + ( cx - 30 ) + ' 170 L' + ( cx - 28 ) + ' 116 Z' }, g );
+			svg( 'path', { d: 'M' + ( cx - 34 ) + ' 54 L' + ( cx - 48 ) + ' 120 L' + ( cx - 46 ) + ' 160', class: 'b-limb' }, g );
+			svg( 'path', { d: 'M' + ( cx + 34 ) + ' 54 L' + ( cx + 48 ) + ' 120 L' + ( cx + 46 ) + ' 160', class: 'b-limb' }, g );
+			svg( 'path', { d: 'M' + ( cx - 15 ) + ' 168 L' + ( cx - 17 ) + ' 280', class: 'b-limb b-leg' }, g );
+			svg( 'path', { d: 'M' + ( cx + 15 ) + ' 168 L' + ( cx + 17 ) + ' 280', class: 'b-limb b-leg' }, g );
+			if ( cx === 80 ) {
+				svg( 'circle', { cx: cx, cy: 119, r: 2, class: 'b-navel' }, g );
+			}
+			svg( 'text', { x: cx, y: 298, class: 'b-caption' }, s ).textContent = cx === 80 ? 'Front' : 'Back';
+			svg( 'text', { x: cx - 58, y: 298, class: 'b-side' }, s ).textContent = 'L';
+			svg( 'text', { x: cx + 58, y: 298, class: 'b-side' }, s ).textContent = 'R';
+		} );
+		var picked = opts.multi ? opts.selected || [] : [ opts.selected ];
+		var last = opts.last || {};
+		opts.sites.forEach( function ( site ) {
+			var on = picked.indexOf( site.id ) !== -1;
+			var cls = 'b-site' + ( on ? ' is-on' : '' ) + ( opts.multi ? '' : ' b-site--' + siteHeat( last[ site.id ] ) );
+			var g = svg( 'g', { class: cls, role: opts.multi ? 'checkbox' : 'radio', tabindex: '0', 'aria-checked': on ? 'true' : 'false', 'aria-label': site.label + ( opts.multi ? '' : ', ' + restedLabel( last[ site.id ] ).toLowerCase() ) }, s );
+			svg( 'circle', { cx: site.x, cy: site.y, r: 18, class: 'b-hit' }, g );
+			svg( 'circle', { cx: site.x, cy: site.y, r: 9, class: 'b-dot' }, g );
+			if ( on ) {
+				svg( 'path', { d: 'M' + ( site.x - 4 ) + ' ' + site.y + ' l3 3 l5 -6', class: 'b-check' }, g );
+			}
+			function pick() {
+				if ( opts.onPick ) {
+					opts.onPick( site.id );
+				}
+			}
+			g.addEventListener( 'click', pick );
+			g.addEventListener( 'keydown', function ( e ) {
+				if ( e.key === 'Enter' || e.key === ' ' ) {
+					e.preventDefault();
+					pick();
+				}
+			} );
+		} );
+		return s;
+	}
+
+	function mapLegend() {
+		return h( 'div', { class: 'ypt-legend ypt-legend--sites' },
+			h( 'span', null, h( 'i', { class: 'is-recent' } ), 'Last 2 days' ),
+			h( 'span', null, h( 'i', { class: 'is-week' } ), 'This week' ),
+			h( 'span', null, h( 'i', { class: 'is-rested' } ), 'Rested' )
+		);
+	}
+
+	/**
+	 * Pick a spot for one dose: its map, the spot's label and when it was
+	 * last used. Returns the node; `onChange( id )` fires on every tap, and
+	 * once up front with the suggestion unless `noDefault` (fixing a dose
+	 * that was logged without a spot shouldn't invent one).
+	 */
+	function sitePicker( p, current, exceptId, onChange, noDefault ) {
+		var wrap = h( 'div', { class: 'ypt-sitepick' } );
+		var last = siteLastUsed( exceptId );
+		var suggested = nextSite( p, exceptId );
+		var sel = current || ( noDefault ? '' : suggested );
+		// A spot logged outside the rotation (or before it changed) still shows.
+		var shown = rotationOf( p ).slice();
+		if ( sel && ! shown.some( function ( s ) {
+			return s.id === sel;
+		} ) && siteById( sel ) ) {
+			shown.push( siteById( sel ) );
+		}
+		function draw() {
+			wrap.textContent = '';
+			wrap.appendChild( bodyMap( { sites: shown, selected: sel, last: last, onPick: function ( id ) {
+				sel = id;
+				onChange( id );
+				draw();
+			} } ) );
+			wrap.appendChild( sel ? h( 'p', { class: 'ypt-sitepick__line' },
+				h( 'b', null, siteLabel( sel ) ),
+				' · ' + restedLabel( last[ sel ] ) + ( sel === suggested ? ' · suggested' : '' ) ) : h( 'p', { class: 'ypt-sitepick__line ypt-muted' }, 'Tap the spot you used.' ) );
+			wrap.appendChild( mapLegend() );
+		}
+		draw();
+		if ( sel ) {
+			onChange( sel );
+		}
+		return wrap;
+	}
+
+	/** From a dose card: choose where this dose goes (before taking it) or fix where it went. */
+	function openSiteSheet( slot ) {
+		var p = slot.protocol;
+		var log = slot.log;
+		var site = log ? log.site : ui.siteChoice[ slot.id ];
+		var body = [
+			h( 'p', { class: 'ypt-muted' }, log ? 'Tap where you injected.' : 'The highlighted spot has rested longest. Tap another spot to use it instead.' ),
+			sitePicker( p, site, log ? slot.id : null, function ( id ) {
+				site = id;
+			}, !! log ),
+		];
+		openSheet( log ? 'Where you injected' : 'Where to inject', p.compound, body,
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+				if ( log ) {
+					closeSheet();
+					if ( site ) {
+						put( 'dose', slot.id, Object.assign( {}, log, { site: site } ) );
+					}
+					return;
+				}
+				ui.siteChoice[ slot.id ] = site;
+				closeSheet();
+				logDose( slot, 'taken' );
+			} }, log ? 'Save' : 'Take dose here' ) );
+	}
+
 
 	/** Unit choices: buttons when a few short ones fit on a phone, otherwise a dropdown. The current unit is always offered. */
 	function unitPicker( units, current, onPick ) {
@@ -1003,6 +1242,7 @@
 		var p = slot.protocol;
 		var v = status === 'taken' ? currentVial( p ) : null;
 		var units = v ? unitsForDose( p.dose, p.unit, v, p.doseOf ) : ( p.unit === 'units' ? +p.dose : null );
+		var site = status === 'taken' && tracksSites( p ) ? ui.siteChoice[ slot.id ] || nextSite( p ) : '';
 		// Logging a past day's dose: stamp it at its scheduled time.
 		var at = slot.date !== todayStr() ? wallToIso( slot.date, slot.time ) : new Date().toISOString();
 		put( 'dose', slot.id, {
@@ -1017,9 +1257,11 @@
 			vialId: v ? v.id : '',
 			units: units != null ? Math.round( units * 100 ) / 100 : null,
 			note: '',
+			site: site,
 		} );
+		delete ui.siteChoice[ slot.id ];
 		if ( status === 'taken' ) {
-			toast( p.compound + ' logged', function () {
+			toast( p.compound + ' logged' + ( site ? ' · ' + siteLabel( site ) : '' ), function () {
 				del( 'dose', slot.id );
 			} );
 		}
@@ -1336,7 +1578,27 @@
 				} }, p.device === 'pen' ? 'Add your pen to see how many units to dial →' : 'Add your vial to see how many units to draw →' ) );
 			}
 		}
+		var siteRow = siteLine( s );
+		if ( siteRow ) {
+			card.appendChild( siteRow );
+		}
 		return card;
+	}
+
+	/** "Next spot: Left thigh  Change" before the dose, "Injected: Left thigh" after (tap to fix it). */
+	function siteLine( s ) {
+		var p = s.protocol;
+		var log = s.log;
+		if ( log ? log.status !== 'taken' || ( ! log.site && ! tracksSites( p ) ) : ! tracksSites( p ) ) {
+			return null;
+		}
+		var site = log ? log.site : ui.siteChoice[ s.id ] || nextSite( p );
+		var text = log
+			? ( site ? [ 'Injected: ', h( 'b', null, siteLabel( site ) ) ] : [ 'Where did you inject? ', h( 'b', null, 'Add spot' ) ] )
+			: [ 'Next spot: ', h( 'b', null, siteLabel( site ) ) ];
+		return h( 'button', { type: 'button', class: 'ypt-site', onclick: function () {
+			openSiteSheet( s );
+		} }, h( 'span', { class: 'ypt-site__pin', 'aria-hidden': 'true' } ), h( 'span', { class: 'ypt-site__text' }, text ), h( 'span', { class: 'ypt-site__go' }, log ? 'Edit' : 'Change' ) );
 	}
 
 	/* ---------- Shared protocols ---------- */
@@ -1899,6 +2161,12 @@
 			h( 'div', null, h( 'b', null, String( totalTaken ) ), h( 'span', null, 'doses logged' ) )
 		) );
 
+		var sitesCard = historySites();
+		if ( sitesCard ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Injection sites' ) );
+			wrap.appendChild( sitesCard );
+		}
+
 		// Selected day's detail.
 		var day = ui.historyDay;
 		var rows = [];
@@ -1934,7 +2202,9 @@
 						go( 'today' );
 					}
 				} },
-					h( 'div', null, h( 'div', null, r.name ), r.log && r.log.note ? h( 'div', { class: 'ypt-log__note' }, '“' + r.log.note + '”' ) : null ),
+					h( 'div', null, h( 'div', null, r.name ),
+						r.log && r.log.status === 'taken' && r.log.site ? h( 'div', { class: 'ypt-log__site' }, siteLabel( r.log.site ) ) : null,
+						r.log && r.log.note ? h( 'div', { class: 'ypt-log__note' }, '“' + r.log.note + '”' ) : null ),
 					h( 'span', { class: 'ypt-log__right', style: ! r.log && right === 'Missed' ? { color: 'var(--ypt-magenta-deep)' } : null }, right )
 				);
 			} ) ) );
@@ -1946,12 +2216,40 @@
 		return wrap;
 	}
 
+	/** Where the customer has injected lately, for everyone who logs spots. Tap a spot to see when it was last used. */
+	function historySites() {
+		var last = siteLastUsed();
+		if ( ! Object.keys( last ).length ) {
+			return null;
+		}
+		var shown = SITES.filter( function ( x ) {
+			return last[ x.id ] || protocols().some( function ( p ) {
+				return tracksSites( p ) && rotationOf( p ).indexOf( x ) !== -1;
+			} );
+		} );
+		var line = h( 'p', { class: 'ypt-sitepick__line ypt-muted' }, 'Tap a spot to see when you last used it.' );
+		var card = h( 'div', { class: 'ypt-card' } );
+		function draw( sel ) {
+			card.textContent = '';
+			card.appendChild( bodyMap( { sites: shown, selected: sel, last: last, onPick: function ( id ) {
+				line.className = 'ypt-sitepick__line';
+				line.textContent = '';
+				append( line, [ h( 'b', null, siteLabel( id ) ), ' · ' + restedLabel( last[ id ] ) ] );
+				draw( id );
+			} } ) );
+			card.appendChild( line );
+			card.appendChild( mapLegend() );
+		}
+		draw( '' );
+		return card;
+	}
+
 	function exportCsv() {
-		var rows = [ [ 'Date', 'Time', 'Compound', 'Dose', 'Unit', 'Status', 'Units drawn', 'Note' ] ];
+		var rows = [ [ 'Date', 'Time', 'Compound', 'Dose', 'Unit', 'Status', 'Units drawn', 'Injection site', 'Note' ] ];
 		values( state.records.dose ).sort( function ( a, b ) {
 			return ( a.date + a.time ).localeCompare( b.date + b.time );
 		} ).forEach( function ( d ) {
-			rows.push( [ d.date, d.status === 'taken' && d.at ? fmtIsoTime( d.at ) : fmtTime( d.time ), d.compound, d.dose, d.unit, d.status, d.units == null ? '' : d.units, d.note || '' ] );
+			rows.push( [ d.date, d.status === 'taken' && d.at ? fmtIsoTime( d.at ) : fmtTime( d.time ), d.compound, d.dose, d.unit, d.status, d.units == null ? '' : d.units, d.status === 'taken' ? siteLabel( d.site ) : '', d.note || '' ] );
 		} );
 		var csv = rows.map( function ( r ) {
 			return r.map( function ( c ) {
@@ -4304,6 +4602,7 @@
 		var vialField = h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Vial' ), vialBox );
 		var routeTouched = !! existing;
 		var deviceField = h( 'div', { class: 'ypt-field' } );
+		var sitesField = h( 'div', { class: 'ypt-field' } );
 		var unitTouched = !! existing || !! ( draft && draft.p && draft.p.unit );
 
 		function setRoute( route ) {
@@ -4317,9 +4616,43 @@
 				routeSelect.value = route;
 			}
 			renderDevice();
+			renderSites();
 			renderUnits();
 			renderVial();
 			renderDraw();
+		}
+
+		/** Injection site rotation: on/off, and which spots to rotate through. */
+		function renderSites() {
+			sitesField.textContent = '';
+			sitesField.hidden = ! isInjected( p.route );
+			if ( sitesField.hidden ) {
+				return;
+			}
+			var sw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': p.siteOff ? 'false' : 'true', 'aria-label': 'Suggest where to inject next', onclick: function () {
+				p.siteOff = ! p.siteOff;
+				renderSites();
+			} } );
+			sitesField.appendChild( h( 'div', { class: 'ypt-toggle' },
+				h( 'div', null, h( 'b', null, 'Rotate injection sites' ), h( 'div', { class: 'ypt-muted ypt-small' }, 'Suggests the spot that has rested longest and remembers where each dose went.' ) ),
+				sw ) );
+			if ( p.siteOff ) {
+				return;
+			}
+			var on = rotationOf( p ).map( function ( x ) {
+				return x.id;
+			} );
+			sitesField.appendChild( h( 'p', { class: 'ypt-hint', style: { marginTop: '10px' } }, 'Tap to choose the spots you use (' + on.length + ' of ' + sitesForRoute( p.route ).length + ').' ) );
+			sitesField.appendChild( bodyMap( { sites: sitesForRoute( p.route ), selected: on, multi: true, onPick: function ( id ) {
+				var i = on.indexOf( id );
+				if ( i === -1 ) {
+					on.push( id );
+				} else if ( on.length > 1 ) {
+					on.splice( i, 1 );
+				}
+				p.sites = on;
+				renderSites();
+			} } ) );
 		}
 
 		function renderDevice() {
@@ -4514,6 +4847,11 @@
 				notes: p.notes || '',
 				paused: !! p.paused,
 				doseOf: usesVial( p ) && blendPart( currentVial( p ), p.doseOf ) ? p.doseOf : '',
+				// Every spot for the route picked = no narrowing, so spots added to the map later join in.
+				sites: isInjected( p.route ) && rotationOf( p ).length < sitesForRoute( p.route ).length ? rotationOf( p ).map( function ( x ) {
+					return x.id;
+				} ) : [],
+				siteOff: isInjected( p.route ) && !! p.siteOff,
 			};
 			closeSheet();
 			put( 'protocol', id, data );
@@ -4560,6 +4898,7 @@
 				schedDetail
 			),
 			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Time' ), timesBox ),
+			sitesField,
 			h( 'div', { class: 'ypt-row' },
 				field( 'Start', h( 'input', { class: 'ypt-input', id: 'ypt-p-start', type: 'date', value: p.start, onchange: function ( e ) {
 					p.start = e.target.value;
@@ -4580,7 +4919,7 @@
 					} } );
 				} ) )
 			),
-			field( 'Notes', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-p-notes', maxlength: '500', placeholder: 'Injection site rotation, with food, fasted, etc.', oninput: function ( e ) {
+			field( 'Notes', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-p-notes', maxlength: '500', placeholder: 'With food, fasted, etc.', oninput: function ( e ) {
 				p.notes = e.target.value;
 			} }, p.notes || '' ), null, 'ypt-p-notes' ),
 			existing ? h( 'button', { type: 'button', class: 'ypt-btn', style: { marginTop: '14px' }, onclick: function () {
@@ -4610,6 +4949,7 @@
 		renderSchedDetail();
 		renderTimes();
 		renderDevice();
+		renderSites();
 		renderUnits();
 		renderVial();
 		renderDraw();
@@ -5137,6 +5477,13 @@
 		var id = log.id;
 		var at = effDate( d.at ? Date.parse( d.at ) : Date.now() );
 		var timeVal = pad( at.getHours() ) + ':' + pad( at.getMinutes() );
+		var lp = d.protocolId ? state.records.protocol[ d.protocolId ] : null;
+		var siteField = d.site || tracksSites( lp ) ? h( 'div', { class: 'ypt-field' },
+			h( 'span', { class: 'ypt-label' }, 'Injection site' ),
+			sitePicker( lp && isInjected( lp.route ) ? lp : { route: 'Subcutaneous' }, d.site, id, function ( site ) {
+				d.site = site;
+			}, true )
+		) : null;
 		var body = [
 			h( 'p', { class: 'ypt-muted' }, amountLabel( d.dose, d.unit ) + ' · ' + fmtDay( d.date ) ),
 			h( 'div', { class: 'ypt-field' },
@@ -5148,7 +5495,8 @@
 			field( 'Time taken', h( 'input', { class: 'ypt-input', id: 'ypt-l-time', type: 'time', value: timeVal, onchange: function ( e ) {
 				timeVal = e.target.value || timeVal;
 			} } ), null, 'ypt-l-time' ),
-			field( 'Note', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-l-note', maxlength: '500', placeholder: 'Injection site, how you felt…', oninput: function ( e ) {
+			siteField,
+			field( 'Note', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-l-note', maxlength: '500', placeholder: 'How you felt, anything to remember…', oninput: function ( e ) {
 				d.note = e.target.value;
 			} }, d.note || '' ), null, 'ypt-l-note' ),
 			h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px' }, onclick: function () {
@@ -5162,6 +5510,7 @@
 				delete d.id;
 				if ( d.status === 'skipped' ) {
 					d.units = null;
+					d.site = '';
 				}
 				closeSheet();
 				put( 'dose', id, d );
@@ -5198,6 +5547,15 @@
 					} ) )
 				)
 			) );
+			d.site = '';
+			if ( tracksSites( picked ) ) {
+				box.appendChild( h( 'div', { class: 'ypt-field' },
+					h( 'span', { class: 'ypt-label' }, 'Injection site' ),
+					sitePicker( picked, '', null, function ( site ) {
+						d.site = site;
+					} )
+				) );
+			}
 		}
 
 		var picker = list.length ? h( 'div', { class: 'ypt-field' },
@@ -5254,8 +5612,9 @@
 				vialId: v ? v.id : '',
 				units: units != null ? Math.round( units * 100 ) / 100 : null,
 				note: d.note || '',
+				site: d.site || '',
 			} );
-			toast( 'Extra dose logged' );
+			toast( 'Extra dose logged' + ( d.site ? ' · ' + siteLabel( d.site ) : '' ) );
 		} }, 'Log dose' ) );
 	}
 

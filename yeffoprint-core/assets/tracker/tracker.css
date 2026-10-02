@@ -1372,3 +1372,53 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 	margin: 10px auto 12px;
 }
 .ypt-fb-sent__check svg { width: 32px; height: 32px; }
+
+/* ---------- Injection sites (body map) ---------- */
+
+.ypt-site {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	margin-top: 8px;
+	padding: 8px 10px;
+	background: #fff;
+	border: 1px solid var(--ypt-line);
+	border-radius: 10px;
+	font-size: 13px;
+	text-align: left;
+	color: var(--ypt-charcoal);
+}
+.ypt-site__pin {
+	flex: 0 0 auto;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 3px solid var(--ypt-cyan);
+	background: #fff;
+}
+.ypt-site__text { flex: 1 1 auto; min-width: 0; }
+.ypt-site__go { flex: 0 0 auto; color: var(--ypt-cyan-deep); font-weight: 600; }
+
+.ypt-body { display: block; width: 100%; max-width: 360px; height: auto; margin: 4px auto 0; -webkit-user-select: none; user-select: none; }
+.ypt-body .b-figure > * { fill: #ECEAE5; }
+.ypt-body .b-figure .b-limb { fill: none; stroke: #ECEAE5; stroke-width: 15; stroke-linecap: round; stroke-linejoin: round; }
+.ypt-body .b-figure .b-leg { stroke-width: 24; }
+.ypt-body .b-figure .b-navel { fill: #CFCBC4; }
+.ypt-body .b-caption { font: 600 12px var(--ypt-body); fill: var(--ypt-mute); text-anchor: middle; }
+.ypt-body .b-side { font: 600 10px var(--ypt-body); fill: #A9A6A0; text-anchor: middle; }
+.ypt-body .b-site { cursor: pointer; outline: none; }
+.ypt-body .b-hit { fill: transparent; }
+.ypt-body .b-dot { fill: #fff; stroke: #A9A6A0; stroke-width: 2; transition: fill .15s; }
+.ypt-body .b-site--week .b-dot { fill: #F9C6E3; stroke: #EC8CC4; }
+.ypt-body .b-site--recent .b-dot { fill: var(--ypt-magenta); stroke: var(--ypt-magenta-deep); }
+.ypt-body .b-site.is-on .b-hit { fill: rgba(0, 174, 239, .14); stroke: var(--ypt-cyan); stroke-width: 2; }
+.ypt-body .b-site.is-on .b-dot { fill: var(--ypt-cyan); stroke: var(--ypt-cyan-deep); }
+.ypt-body .b-check { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.ypt-body .b-site:focus-visible .b-hit { stroke: var(--ypt-ink); stroke-width: 2; stroke-dasharray: 3 3; }
+
+.ypt-sitepick__line { text-align: center; font-size: 14px; margin: 10px 0 0; }
+.ypt-legend--sites i { border-radius: 50%; border: 2px solid #A9A6A0; background: #fff; }
+.ypt-legend--sites i.is-recent { background: var(--ypt-magenta); border-color: var(--ypt-magenta-deep); }
+.ypt-legend--sites i.is-week { background: #F9C6E3; border-color: #EC8CC4; }
+.ypt-log__site { font-size: 12px; color: var(--ypt-cyan-deep); margin-top: 2px; }
