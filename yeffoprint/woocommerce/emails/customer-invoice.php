@@ -27,6 +27,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $email_improvements_enabled = FeaturesUtil::feature_is_enabled( 'email_improvements' );
 $is_web_design               = class_exists( 'YeffoPrint_Web_Design_Project_Meta' ) && YeffoPrint_Web_Design_Project_Meta::is_web_design_order( $order );
+// Staff left shipping on "Customer picks": the total here doesn't include it yet.
+$shipping_not_chosen         = class_exists( 'YeffoPrint_Order_Pay_Address' ) && YeffoPrint_Order_Pay_Address::shipping_not_chosen_yet( $order );
 
 /**
  * Executes the e-mail header.
@@ -78,8 +80,11 @@ if ( ! empty( $order->get_billing_first_name() ) ) {
 
 	<table class="yp-payment-cta" role="presentation" cellpadding="0" cellspacing="0" width="100%">
 		<tr><td>
-			<span class="yp-payment-cta-label"><?php esc_html_e( 'Amount due', 'yeffoprint' ); ?></span>
+			<span class="yp-payment-cta-label"><?php $shipping_not_chosen ? esc_html_e( 'Total before shipping', 'yeffoprint' ) : esc_html_e( 'Amount due', 'yeffoprint' ); ?></span>
 			<span class="yp-payment-cta-amount"><?php echo wp_kses_post( wc_price( $order->get_total() ) ); ?></span>
+			<?php if ( $shipping_not_chosen ) : ?>
+				<span class="yp-payment-cta-sub" style="margin:0 0 14px;"><?php echo esc_html( YeffoPrint_Order_Pay_Address::shipping_not_chosen_message() ); ?></span>
+			<?php endif; ?>
 			<a class="yp-payment-cta-button" href="<?php echo esc_url( $order->get_checkout_payment_url() ); ?>"><?php esc_html_e( 'Pay for this order →', 'yeffoprint' ); ?></a>
 			<span class="yp-payment-cta-sub">
 				<?php

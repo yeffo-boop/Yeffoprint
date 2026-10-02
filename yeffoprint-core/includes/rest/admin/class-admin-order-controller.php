@@ -64,6 +64,12 @@ class YeffoPrint_Admin_Order_Controller {
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/record-payment', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'record_payment' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/orders', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'list_orders' ],
@@ -334,6 +340,40 @@ class YeffoPrint_Admin_Order_Controller {
 		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
 	}
 
+	/**
+	 * Direct request: "alert a customer that they accidentally underpaid
+	 * if a zelle/venmo comes in that's slightly short." Staff enter what
+	 * actually arrived; a full payment marks the order paid, a short one
+	 * emails the customer the balance (class-partial-payments.php).
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function record_payment( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		if ( ! YeffoPrint_Partial_Payments::can_record( $order ) ) {
+			return new \WP_Error( 'yeffoprint_order_not_unpaid', __( 'This order is already paid or closed.', 'yeffoprint-core' ), [ 'status' => 409 ] );
+		}
+
+		$params = $request->get_json_params() ?: [];
+		$amount = round( (float) ( $params['amount'] ?? 0 ), 2 );
+		$method = sanitize_key( (string) ( $params['method'] ?? '' ) );
+
+		if ( $amount <= 0 ) {
+			return new \WP_Error( 'yeffoprint_payment_invalid_amount', __( 'Enter the amount you received.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		if ( ! array_key_exists( $method, YeffoPrint_Partial_Payments::METHODS ) ) {
+			return new \WP_Error( 'yeffoprint_payment_invalid_method', __( 'Pick how they paid.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		YeffoPrint_Partial_Payments::record( $order, $amount, $method, __( 'recorded by staff', 'yeffoprint-core' ), ! empty( $params['email_customer'] ) );
+
+		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
+	}
+
 	/** @return \WC_Order|\WP_Error */
 	private function validate_order( int $order_id ) {
 		if ( ! function_exists( 'wc_get_order' ) ) {
@@ -392,6 +432,13 @@ class YeffoPrint_Admin_Order_Controller {
 			'editable'             => YeffoPrint_Manual_Order_Creator::is_editable( $order ),
 			'payment_url'          => $order->needs_payment() ? $order->get_checkout_payment_url() : null,
 			'customer_picks_shipping' => YeffoPrint_Order_Pay_Address::customer_picks_shipping( $order ),
+			// Record payment panel (class-partial-payments.php): what has
+			// come in so far on an unpaid order, and what's still owed.
+			'can_record_payment'   => YeffoPrint_Partial_Payments::can_record( $order ),
+			'amount_received'      => YeffoPrint_Partial_Payments::received( $order ),
+			'balance_due'          => YeffoPrint_Partial_Payments::balance_due( $order ),
+			'payments_received'    => YeffoPrint_Partial_Payments::log( $order ),
+			'payment_method'       => $order->get_payment_method(),
 			'shipping_lines'       => array_values( array_map( static function ( \WC_Order_Item_Shipping $item ): array {
 				return [ 'title' => $item->get_method_title(), 'amount' => (float) $item->get_total() ];
 			}, $order->get_items( 'shipping' ) ) ),

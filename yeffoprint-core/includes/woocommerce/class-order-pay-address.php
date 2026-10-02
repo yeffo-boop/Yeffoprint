@@ -49,6 +49,9 @@ class YeffoPrint_Order_Pay_Address {
 	/** Flags the shipping line the customer picked, so a later pick replaces it. */
 	private const CHOSEN_SHIPPING_ITEM_META = '_yp_customer_chosen_shipping';
 
+	/** Set while an invoice email's order table renders, so the totals filter leaves the pay page alone. */
+	private bool $rendering_invoice_email = false;
+
 	private const FIELDS = [ 'first_name', 'last_name', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone' ];
 
 	public function __construct() {
@@ -57,6 +60,67 @@ class YeffoPrint_Order_Pay_Address {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_script' ] );
 		add_action( 'wp_ajax_yeffoprint_pay_order_shipping', [ $this, 'ajax_select_shipping' ] );
 		add_action( 'wp_ajax_nopriv_yeffoprint_pay_order_shipping', [ $this, 'ajax_select_shipping' ] );
+
+		// Invoice email for an order still waiting on the customer's
+		// shipping pick: say so, and that the total excludes it.
+		add_action( 'woocommerce_email_order_details', [ $this, 'mark_invoice_email' ], 5, 4 );
+		add_action( 'woocommerce_email_order_details', [ $this, 'unmark_invoice_email' ], 100 );
+		add_filter( 'woocommerce_get_order_item_totals', [ $this, 'invoice_totals_rows' ], 20, 2 );
+		add_action( 'woocommerce_email_before_order_table', [ $this, 'invoice_plain_text_notice' ], 10, 4 );
+	}
+
+	/**
+	 * Direct request: "If I create a manual order and don't select a
+	 * shipping method (because the customer will choose it) can the email
+	 * with the order total and the payment link indicate that they will
+	 * choose shipping when paying and that the total in the email doesn't
+	 * reflect shipping charges?" True while staff left shipping on
+	 * "Customer picks" and the customer hasn't picked one yet.
+	 */
+	public static function shipping_not_chosen_yet( \WC_Order $order ): bool {
+		return self::customer_picks_shipping( $order ) && ! $order->get_items( 'shipping' ) && $order->needs_payment();
+	}
+
+	public function mark_invoice_email( \WC_Order $order, bool $sent_to_admin, bool $plain_text, \WC_Email $email ): void {
+		$this->rendering_invoice_email = 'customer_invoice' === $email->id && self::shipping_not_chosen_yet( $order );
+	}
+
+	public function unmark_invoice_email(): void {
+		$this->rendering_invoice_email = false;
+	}
+
+	/** Adds a "Shipping: Chosen when you pay" row and relabels the total. */
+	public function invoice_totals_rows( array $rows, \WC_Order $order ): array {
+		if ( ! $this->rendering_invoice_email || ! self::shipping_not_chosen_yet( $order ) ) {
+			return $rows;
+		}
+
+		$out = [];
+		foreach ( $rows as $key => $row ) {
+			if ( 'order_total' === $key ) {
+				$out['yp_shipping_pending'] = [
+					'label' => __( 'Shipping:', 'yeffoprint-core' ),
+					'value' => __( 'You’ll choose this when you pay', 'yeffoprint-core' ),
+				];
+				$row['label'] = __( 'Total before shipping:', 'yeffoprint-core' );
+			}
+			$out[ $key ] = $row;
+		}
+
+		return $out;
+	}
+
+	/** Plain-text copy of the note the HTML invoice template shows under "Total before shipping". */
+	public function invoice_plain_text_notice( \WC_Order $order, bool $sent_to_admin, bool $plain_text, \WC_Email $email ): void {
+		if ( ! $plain_text || $sent_to_admin || 'customer_invoice' !== $email->id || ! self::shipping_not_chosen_yet( $order ) ) {
+			return;
+		}
+
+		echo esc_html( self::shipping_not_chosen_message() ) . "\n\n";
+	}
+
+	public static function shipping_not_chosen_message(): string {
+		return __( 'You’ll choose your shipping option when you pay. Shipping isn’t included in the total below; it’s added on the payment page once you pick it.', 'yeffoprint-core' );
 	}
 
 	public static function needs_address( \WC_Order $order ): bool {
