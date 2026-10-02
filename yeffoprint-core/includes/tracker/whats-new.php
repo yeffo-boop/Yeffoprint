@@ -15,6 +15,42 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-02h',
+		'date'  => '2026-10-02',
+		'title' => 'Progress log',
+		'text'  => 'Track your weight, measurements and progress photos on History > Progress. Each chart shows the doses you took underneath, so you can see what changed when. Photos are encrypted like everything else and only you can see them.',
+	],
+	[
+		'id'    => '2026-10-02g',
+		'date'  => '2026-10-02',
+		'title' => 'Printable report',
+		'text'  => 'Seeing a doctor or coach? On the History tab, tap "Create PDF report" to make a clean PDF of your medications, doses taken, side effects, injection spots and progress for any time period. It\'s made on your phone and only shared if you share it.',
+	],
+	[
+		'id'    => '2026-10-02f',
+		'date'  => '2026-10-02',
+		'title' => 'Reorder labels from Supply',
+		'text'  => 'When a vial is running low, Supply now has an "Order labels" button so you can get labels for the new vials at the same time. The compound and strength are filled in for you.',
+	],
+	[
+		'id'    => '2026-10-02e',
+		'date'  => '2026-10-02',
+		'title' => 'Vial expiry countdown',
+		'text'  => 'Mixed vials now count down from the day you mixed them (28 days unless you change it for that vial). Supply shows the days left, Today warns you a few days before, and you can get a reminder before one expires.',
+	],
+	[
+		'id'    => '2026-10-02d',
+		'date'  => '2026-10-02',
+		'title' => 'Cycles and titration',
+		'text'  => 'Edit a medication to plan weeks on and weeks off, or to raise the dose over time (for example, up 0.25 mg every 4 weeks). Your schedule, reminders and supply plan follow the plan automatically.',
+	],
+	[
+		'id'    => '2026-10-02c',
+		'date'  => '2026-10-02',
+		'title' => 'How you felt',
+		'text'  => 'Tap a taken dose to note how you felt: nausea, headache, good sleep, more energy or your own tags. History shows which ones come up most and whether they followed a dose increase.',
+	],
+	[
 		'id'    => '2026-10-02b',
 		'date'  => '2026-10-02',
 		'title' => 'Injection site rotation',

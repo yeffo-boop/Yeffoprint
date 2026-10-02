@@ -199,6 +199,24 @@ class YeffoPrint_Tracker_Shares {
 			'notes'    => $text( $in['notes'] ?? '', 500 ),
 		];
 
+		// Cycle planner: weeks on / off, and titration steps (dose from week N).
+		$cycle = is_array( $in['cycle'] ?? null ) ? $in['cycle'] : [];
+		if ( (int) ( $cycle['on'] ?? 0 ) > 0 && (int) ( $cycle['off'] ?? 0 ) > 0 ) {
+			$out['cycle'] = [ 'on' => min( 52, (int) $cycle['on'] ), 'off' => min( 52, (int) $cycle['off'] ) ];
+		}
+		$steps = [];
+		foreach ( array_slice( (array) ( $in['steps'] ?? [] ), 0, 24 ) as $step ) {
+			$week  = is_array( $step ) ? (int) ( $step['week'] ?? 0 ) : 0;
+			$sdose = is_array( $step ) ? $num( $step['dose'] ?? 0 ) : 0.0;
+			if ( $week > 0 && $week <= 520 && $sdose > 0 ) {
+				$steps[ $week ] = [ 'week' => $week, 'dose' => $sdose ];
+			}
+		}
+		if ( $steps ) {
+			ksort( $steps );
+			$out['steps'] = array_values( $steps );
+		}
+
 		// How to mix it (optional): the vial the sharer mixes, never their vial record itself.
 		$mix = is_array( $in['mix'] ?? null ) ? $in['mix'] : null;
 		if ( $mix ) {
