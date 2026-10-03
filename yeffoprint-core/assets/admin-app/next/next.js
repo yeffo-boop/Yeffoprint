@@ -269,6 +269,7 @@
 
 	var COLUMNS = [
 		{ id: 'unpaid', label: 'Unpaid', hint: 'Waiting for payment' },
+		{ id: 'design', label: 'In design', hint: 'Websites being built' },
 		{ id: 'proof', label: 'Needs proof', hint: 'Paid, proof not sent yet' },
 		{ id: 'approval', label: 'Proof sent', hint: 'Waiting on the customer' },
 		{ id: 'ready', label: 'Ready to print', hint: 'Paid and approved' },
@@ -468,16 +469,22 @@
 	// Orders with a custom design go through the proof first.
 	var PROOF_STEPS = [ 'Paid', 'Proof', 'Approved', 'Printing', 'Shipped' ];
 
+	// Websites are built, then go live; nothing to print or ship.
+	var WEB_STEPS = [ 'Placed', 'Paid', 'In design', 'Live' ];
+	var WEB_STEP_FOR_STATUS = { 'checkout-draft': 0, pending: 1, 'on-hold': 1, processing: 2, 'in-design': 2, completed: 4 };
+
 	/**
 	 * `proof` is '' (no custom design on the order, or every proof
 	 * approved), 'needs_proof' or 'proof_sent', same as the board's.
 	 * `hasDesign` switches to the proof steps.
 	 */
 	function progressHtml( order, proof, hasDesign ) {
-		var steps = hasDesign ? PROOF_STEPS : STEPS;
+		var steps = order.web_design ? WEB_STEPS : ( hasDesign ? PROOF_STEPS : STEPS );
 		var current;
 
-		if ( hasDesign ) {
+		if ( order.web_design ) {
+			current = WEB_STEP_FOR_STATUS[ order.status ];
+		} else if ( hasDesign ) {
 			current = {
 				pending: 0, 'on-hold': 0, 'checkout-draft': 0,
 				processing: 'needs_proof' === proof ? 1 : ( 'proof_sent' === proof ? 2 : 3 ),
@@ -494,7 +501,7 @@
 		return '<ol class="ypn-progress">' + steps.map( function ( step, i ) {
 			var state = i < current ? 'done' : ( i === current ? 'now' : '' );
 			var label = step;
-			if ( 'Printing' === step && 'processing' === order.status && i === current ) {
+			if ( 'Printing' === step && 'processing' === order.status && i === current && ! order.web_design ) {
 				label = 'Ready to print';
 			}
 			return '<li class="' + state + '"><i>' + ( 'done' === state ? '✓' : i + 1 ) + '</i><span>' + esc( label ) + '</span></li>';
@@ -594,7 +601,7 @@
 		if ( ! onPage ) {
 			actions.push( '<a class="ypn-btn" href="#/order/' + order.id + '" data-ypn-full-page>Open full page</a>' );
 		}
-		if ( 'processing' === order.status ) {
+		if ( 'processing' === order.status && ! order.web_design ) {
 			actions.push( '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-detail-print>Send to printer</button>' );
 		}
 		if ( order.payment_url ) {
@@ -769,7 +776,9 @@
 			var proof     = proofStageOf( customOrders );
 			var paid      = !! order.date_paid;
 			var unpaid    = [ 'pending', 'on-hold', 'checkout-draft', 'failed' ].indexOf( order.status ) !== -1;
-			var shipStage = [ 'processing', 'in-production', 'shipped', 'completed' ].indexOf( order.status ) !== -1;
+			var website   = !! order.web_design;
+			var printable = 'processing' === order.status && ! website;
+			var shipStage = ! website && [ 'processing', 'in-production', 'shipped', 'completed' ].indexOf( order.status ) !== -1;
 			var units     = order.items.reduce( function ( n, item ) { return n + Number( item.quantity || 0 ); }, 0 );
 			var other     = Math.round( ( order.total - order.subtotal - order.shipping_total ) * 100 ) / 100;
 			var needsProofFor = customOrders.filter( function ( c ) {
@@ -786,7 +795,7 @@
 			var actions = [];
 			if ( needsProofFor ) {
 				actions.push( '<button type="button" class="ypn-act ypn-act--primary" data-ypn-act="proof">Upload proof <span>↑</span></button>' );
-			} else if ( 'processing' === order.status ) {
+			} else if ( printable ) {
 				actions.push( '<button type="button" class="ypn-act ypn-act--primary" data-ypn-act="print">Send to printer <span>›</span></button>' );
 			}
 			if ( shipStage ) {
@@ -867,7 +876,7 @@
 						( shipStage ? '<button type="button" class="ypn-btn" data-ypn-act="label">Label</button>' : '' ) +
 						( needsProofFor
 							? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-act="proof">Upload proof</button>'
-							: ( 'processing' === order.status
+							: ( printable
 								? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-act="print">Send to printer</button>'
 								: '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-act="details">All details</button>' ) ) +
 					'</div>' +

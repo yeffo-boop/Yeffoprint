@@ -92,7 +92,7 @@ class YeffoPrint_Abandoned_Carts {
 	private const OWNER_HEADS_UP = 5 * MINUTE_IN_SECONDS;
 
 	/** On Hold counts: a Venmo/Zelle order waits there until the owner confirms payment. */
-	private const PAID_STATUSES = [ 'processing', 'on-hold', 'completed', 'in-production', 'shipped', 'delivered' ];
+	private const PAID_STATUSES = [ 'processing', 'on-hold', 'completed', 'in-design', 'in-production', 'shipped', 'delivered' ];
 
 	/** Orders in these states don't count as "they already ordered". */
 	private const NOT_ORDERED_STATUSES = [ 'checkout-draft', 'failed', 'cancelled', 'refunded', 'trash' ];

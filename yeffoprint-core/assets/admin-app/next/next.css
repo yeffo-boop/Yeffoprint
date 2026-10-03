@@ -487,7 +487,7 @@ body.yp-next .ypn-search {
 
 .ypn-board {
 	display: grid;
-	grid-template-columns: repeat(6, minmax(190px, 1fr));
+	grid-template-columns: repeat(7, minmax(190px, 1fr));
 	gap: 12px;
 	overflow-x: auto;
 	align-items: start;
@@ -525,6 +525,7 @@ body.yp-next .ypn-search {
 	font-weight: 500;
 }
 
+.ypn-col--design .ypn-col__head i { background: #2563eb; }
 .ypn-col--proof .ypn-col__head i { background: var(--ypn-yel); }
 .ypn-col--approval .ypn-col__head i { background: var(--ypn-cy); }
 .ypn-col--ready .ypn-col__head i { background: #7c3aed; }

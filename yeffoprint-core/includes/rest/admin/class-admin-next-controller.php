@@ -7,7 +7,7 @@
  * these three only back its new pieces:
  *
  * - `/admin/next/board` — the Production board. Every open order
- *   (unpaid, paid, in production, plus anything shipped in the last
+ *   (unpaid, paid, in design, in production, plus anything shipped in the last
  *   SHIPPED_DAYS days), each placed in one board column. Paid orders are
  *   split by their custom design proof, read from the linked
  *   yp_custom_order the same way the Custom Orders screen does
@@ -35,7 +35,7 @@ class YeffoPrint_Admin_Next_Controller {
 	private const BEST_SELLER_DAYS = 30;
 
 	/** Statuses that mean the customer has paid. Revenue on Today only counts these. */
-	private const PAID_STATUSES = [ 'processing', 'in-production', 'shipped', 'completed' ];
+	private const PAID_STATUSES = [ 'processing', 'in-design', 'in-production', 'shipped', 'completed' ];
 
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
@@ -99,7 +99,7 @@ class YeffoPrint_Admin_Next_Controller {
 		}
 
 		$open = wc_get_orders( [
-			'status'  => [ 'pending', 'on-hold', 'processing', YeffoPrint_Order_Production_Status::STATUS ],
+			'status'  => [ 'pending', 'on-hold', 'processing', YeffoPrint_Order_Design_Status::STATUS, YeffoPrint_Order_Production_Status::STATUS ],
 			'limit'   => 200,
 			'orderby' => 'date',
 			'order'   => 'ASC',
@@ -139,6 +139,10 @@ class YeffoPrint_Admin_Next_Controller {
 
 		if ( in_array( $status, [ 'pending', 'on-hold' ], true ) ) {
 			$column = 'unpaid';
+		} elseif ( YeffoPrint_Order_Design_Status::STATUS === $status
+			|| ( 'processing' === $status && YeffoPrint_Web_Design_Project_Meta::is_web_design_order( $order ) ) ) {
+			// Websites are built, never printed or shipped.
+			$column = 'design';
 		} elseif ( 'processing' === $status ) {
 			$column = 'needs_proof' === $proof ? 'proof' : ( 'proof_sent' === $proof ? 'approval' : 'ready' );
 		} elseif ( YeffoPrint_Order_Production_Status::STATUS === $status ) {
