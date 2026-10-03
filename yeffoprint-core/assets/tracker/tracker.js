@@ -169,6 +169,11 @@
 	var ICONS = {
 		today: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M8 13l2.5 2.5L16 12',
 		history: 'M4 19V9M10 19V5M16 19v-7M22 19H2',
+		progress: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+		cal: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M8 13h2M14 13h2M8 17h2',
+		syringe: 'M18 2l4 4M17 7l3-3M19 9L9 19l-4 1 1-4L16 6zM14 8l2 2M11 11l2 2',
+		pill: 'M10.5 20.5a5 5 0 0 1-7-7l10-10a5 5 0 0 1 7 7zM8.5 8.5l7 7',
+		feel: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01',
 		plus: 'M12 5v14M5 12h14',
 		vials: 'M9 3h6M10 3v4l-3 3v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V10l-3-3V3M7 14h10',
 		me: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1-4 4-6 8-6s7 2 8 6',
@@ -1545,7 +1550,7 @@
 		if ( state.offline ) {
 			root.appendChild( h( 'div', { class: 'ypt-offline' }, queue.length ? 'Offline · ' + queue.length + ' change' + ( queue.length === 1 ? '' : 's' ) + ' will sync' : 'Offline · showing your saved copy' ) );
 		}
-		var screens = { today: renderToday, history: renderHistory, vials: renderSupply, me: renderMe };
+		var screens = { today: renderToday, history: renderHistory, progress: renderProgressTab, vials: renderSupply, me: renderMe };
 		root.appendChild( ( screens[ ui.tab ] || renderToday )() );
 		root.appendChild( lockLine() );
 		root.appendChild( renderTabs() );
@@ -1571,22 +1576,105 @@
 	}
 
 	function renderTabs() {
+		// History (the full dose log) opens from Today's calendar button, so Today stays lit there.
+		var current = ui.tab === 'history' ? 'today' : ui.tab;
 		function tab( id, label, ic ) {
-			return h( 'button', { type: 'button', class: 'ypt-tab', 'aria-current': ui.tab === id ? 'page' : null, onclick: function () {
+			return h( 'button', { type: 'button', class: 'ypt-tab', 'aria-current': current === id ? 'page' : null, onclick: function () {
 				go( id );
 			} }, icon( ic ), label );
 		}
 		return h( 'nav', { class: 'ypt-tabs', 'aria-label': 'Tracker' },
 			h( 'div', { class: 'ypt-tabs__inner' },
 				tab( 'today', 'Today', 'today' ),
-				tab( 'history', 'History', 'history' ),
-				h( 'button', { type: 'button', class: 'ypt-tab ypt-tab--add', onclick: function () {
-					openProtocolSheet( null );
-				} }, h( 'span', { class: 'ypt-tab__plus' }, icon( 'plus' ) ), 'Add' ),
+				tab( 'progress', 'Progress', 'progress' ),
+				h( 'button', { type: 'button', class: 'ypt-tab ypt-tab--add', 'aria-haspopup': 'dialog', onclick: openAddMenu }, h( 'span', { class: 'ypt-tab__plus' }, icon( 'plus' ) ), 'Add' ),
 				tab( 'vials', 'Supply', 'vials' ),
 				tab( 'me', 'Me', 'me' )
 			)
 		);
+	}
+
+	/** The + button: everything you can add or log, from any tab. */
+	function openAddMenu() {
+		var today = todayStr();
+		var lastTaken = values( state.records.dose ).filter( function ( d ) {
+			return d.date === today && d.status === 'taken';
+		} ).sort( function ( a, b ) {
+			return String( b.at || '' ).localeCompare( String( a.at || '' ) );
+		} )[ 0 ];
+		function row( ic, title, sub, onPick ) {
+			return h( 'button', { type: 'button', class: 'ypt-help__row', onclick: function () {
+				closeSheet();
+				onPick();
+			} },
+				h( 'span', { class: 'ypt-help__ic ypt-help__ic--' + ic }, icon( ic ) ),
+				h( 'span', { class: 'ypt-help__text' }, h( 'b', null, title ), h( 'span', null, sub ) ),
+				h( 'span', { class: 'ypt-help__chev', 'aria-hidden': 'true' }, '›' )
+			);
+		}
+		openSheet( 'What do you want to add?', 'Add', [
+			h( 'div', { class: 'ypt-card ypt-list ypt-help' },
+				protocols().length ? row( 'syringe', 'Log a dose', 'Something you just took, on or off schedule', function () {
+					openExtraSheet( today );
+				} ) : null,
+				row( 'pill', 'New peptide or medication', 'Dose, schedule and reminders', function () {
+					openProtocolSheet( null );
+				} ),
+				row( 'vials', 'Mix a vial or pen', 'Get the units to draw', function () {
+					openVialSheet( null, null );
+				} ),
+				row( 'scale', 'Weight & measurements', 'Adds to Progress', function () {
+					openProgressSheet( null );
+				} ),
+				row( 'camera', 'Progress photo', 'Encrypted, only you can see it', function () {
+					openProgressSheet( null, { photo: true } );
+				} ),
+				lastTaken ? row( 'feel', 'How I feel', 'Side effects, sleep, energy · on your ' + lastTaken.compound + ' dose', function () {
+					openLogSheet( lastTaken );
+				} ) : null
+			),
+		] );
+	}
+
+	/* ---------- Progress ---------- */
+
+	function renderProgressTab() {
+		var wrap = h( 'div', null );
+		wrap.appendChild( h( 'header', { class: 'ypt-top' },
+			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Weight, measurements & photos' ), h( 'h1', null, 'Progress' ) )
+		) );
+		wrap.appendChild( renderProgress() );
+		return wrap;
+	}
+
+	/** Today's week strip: the week of the day shown, each day with how it went (tap one to see it), then the full calendar. */
+	function weekStrip( date ) {
+		var start = addDays( date, -parseDate( date ).getDay() );
+		var last = addDays( todayStr(), 6 );
+		var strip = h( 'div', { class: 'ypt-week', role: 'group', 'aria-label': 'This week' } );
+		for ( var i = 0; i < 7; i++ ) {
+			( function ( d ) {
+				var st = dayStatus( d, '' );
+				strip.appendChild( h( 'button', {
+					type: 'button',
+					class: 'ypt-week__d ypt-week__d--' + st + ( d === date ? ' is-on' : '' ) + ( d === todayStr() ? ' is-today' : '' ),
+					disabled: d > last,
+					'aria-current': d === date ? 'date' : null,
+					'aria-label': fmtDay( d ) + ', ' + { full: 'all taken', part: 'some taken', miss: 'missed', none: 'nothing due or logged', future: 'upcoming' }[ st ],
+					onclick: function () {
+						ui.day = d;
+						render();
+					},
+				}, DOW[ parseDate( d ).getDay() ], h( 'b', null, String( parseDate( d ).getDate() ) ), h( 'i', { 'aria-hidden': 'true' } ) ) );
+			}( addDays( start, i ) ) );
+		}
+		// The month calendar, older days and the PDF report.
+		strip.appendChild( h( 'button', { type: 'button', class: 'ypt-week__cal', 'aria-label': 'Calendar and full history', onclick: function () {
+			ui.historyDay = date > todayStr() ? todayStr() : date;
+			ui.month = ui.historyDay.slice( 0, 7 );
+			go( 'history' );
+		} }, icon( 'cal' ), h( 'span', null, 'All' ) ) );
+		return strip;
 	}
 
 	/* ---------- Today ---------- */
@@ -1625,6 +1713,9 @@
 			slots.length ? h( 'div', { class: 'ypt-ring' + ( pct === 100 ? ' ypt-ring--done' : '' ), style: { '--p': pct }, role: 'img', 'aria-label': done + ' of ' + slots.length + ' doses done' },
 				h( 'span', null, done + '/' + slots.length ) ) : null
 		) );
+		if ( protocols().length ) {
+			wrap.appendChild( weekStrip( date ) );
+		}
 
 		if ( isToday ) {
 			var banner = installBanner();
@@ -2450,21 +2541,14 @@
 			return h( 'option', { value: p.id, selected: p.id === filter }, p.compound );
 		} ) );
 
-		var view = ui.historyView || 'doses';
+		// Opened from Today's calendar button; weight and photos live on the Progress tab.
+		wrap.appendChild( h( 'button', { type: 'button', class: 'ypt-back', onclick: function () {
+			go( 'today' );
+		} }, '‹ Today' ) );
 		wrap.appendChild( h( 'header', { class: 'ypt-top' },
-			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, view === 'progress' ? 'Weight, measurements & photos' : MONTHS[ first.getMonth() ] + ' ' + first.getFullYear() ), h( 'h1', null, 'History' ) ),
-			view === 'doses' && list.length > 1 ? select : null
+			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, MONTHS[ first.getMonth() ] + ' ' + first.getFullYear() ), h( 'h1', null, 'History' ) ),
+			list.length > 1 ? select : null
 		) );
-		wrap.appendChild( h( 'div', { class: 'ypt-views', role: 'tablist' }, [ [ 'doses', 'Doses' ], [ 'progress', 'Progress' ] ].map( function ( v ) {
-			return h( 'button', { type: 'button', role: 'tab', 'aria-selected': view === v[ 0 ] ? 'true' : 'false', onclick: function () {
-				ui.historyView = v[ 0 ];
-				render();
-			} }, v[ 1 ] );
-		} ) ) );
-		if ( view === 'progress' ) {
-			wrap.appendChild( renderProgress() );
-			return wrap;
-		}
 
 		var cal = h( 'div', { class: 'ypt-cal' } );
 		DOW.forEach( function ( d ) {
@@ -3120,7 +3204,8 @@
 
 	/* ---------- Log progress ---------- */
 
-	function openProgressSheet( existing ) {
+	/** Log or edit a progress entry. `opts.photo` opens the photo picker right away (Add > Progress photo). */
+	function openProgressSheet( existing, opts ) {
 		var prev = progressEntries().filter( function ( x ) {
 			return ! existing || x.id !== existing.id;
 		} ).pop() || null;
@@ -3258,9 +3343,7 @@
 					// The first weigh-in's unit becomes the customer's units.
 					put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { units: data.wUnit === 'kg' ? 'metric' : 'us' } ) );
 				}
-				ui.tab = 'history';
-				ui.historyView = 'progress';
-				render();
+				go( 'progress' );
 				toast( existing ? 'Progress updated' : 'Progress logged' );
 			} ).catch( function ( x ) {
 				save.disabled = false;
@@ -3306,6 +3389,9 @@
 			} }, 'Delete this entry' ) : null,
 			err,
 		], save );
+		if ( opts && opts.photo ) {
+			picker.click();
+		}
 	}
 
 	/** Where the customer has injected lately, for everyone who logs spots. Tap a spot to see when it was last used. */

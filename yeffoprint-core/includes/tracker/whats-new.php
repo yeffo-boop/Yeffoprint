@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-03b',
+		'date'  => '2026-10-03',
+		'title' => 'New Progress tab and Add menu',
+		'text'  => 'Progress now has its own tab for your weight, measurements and photos. Today shows your week at a glance, and the calendar button next to the date opens your full history and PDF report. The + button now lets you log a dose, add a medication, mix a vial, or log your weight or a photo from anywhere.',
+	],
+	[
 		'id'    => '2026-10-03a',
 		'date'  => '2026-10-03',
 		'title' => 'Dosage for pills',
