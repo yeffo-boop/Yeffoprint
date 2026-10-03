@@ -203,6 +203,11 @@ class YeffoPrint_Order_Item_Meta {
 			$canvas_width_mm   = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ] ?? 0 );
 			$canvas_height_mm  = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] ?? 0 );
 			self::snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength, $canvas_width_mm, $canvas_height_mm );
+			$qr_url = (string) ( $values[ YeffoPrint_Cart_Item_Keys::QR_URL ] ?? '' );
+			if ( '' !== $qr_url ) {
+				$item->add_meta_data( '_yp_qr_url_snapshot', $qr_url, true );
+				$item->add_meta_data( __( 'QR code', 'yeffoprint-core' ), $qr_url, true );
+			}
 			// Custom Design row on a no-dimensions Size ("Custom"): show
 			// the size the customer typed instead of just "Custom"
 			// (unique add_meta_data replaces the Size row just written).
@@ -450,6 +455,18 @@ class YeffoPrint_Order_Item_Meta {
 			return $formatted_meta;
 		}
 
+		// Custom Labels form row: one optional QR URL, already shown as
+		// its own "QR code" row — add the download links to that row.
+		$custom_qr_url = (string) $item->get_meta( '_yp_qr_url_snapshot' );
+		if ( '' !== $custom_qr_url ) {
+			foreach ( $formatted_meta as $entry ) {
+				if ( __( 'QR code', 'yeffoprint-core' ) === $entry->key ) {
+					$entry->display_value = self::qr_download_html( $custom_qr_url );
+				}
+			}
+			return $formatted_meta;
+		}
+
 		$batch = $this->get_batch_data( $item );
 		if ( ! $batch ) {
 			return $formatted_meta;
@@ -473,9 +490,6 @@ class YeffoPrint_Order_Item_Meta {
 					continue;
 				}
 
-				$png_url = add_query_arg( [ 'text' => rawurlencode( $url ), 'format' => 'png', 'download' => 1 ], rest_url( 'yeffoprint-core/v1/qr' ) );
-				$pdf_url = add_query_arg( [ 'text' => rawurlencode( $url ), 'format' => 'pdf', 'download' => 1 ], rest_url( 'yeffoprint-core/v1/qr' ) );
-
 				$label = $multiple
 					? sprintf(
 						/* translators: 1: field label, 2: label number within the batch */
@@ -490,20 +504,28 @@ class YeffoPrint_Order_Item_Meta {
 				$entry->key          = '_yp_qr_download_' . $suffix;
 				$entry->value        = $url;
 				$entry->display_key  = $label;
-				$entry->display_value = sprintf(
-					'%s &mdash; <a href="%s">%s</a> / <a href="%s">%s</a>',
-					esc_html( $url ),
-					esc_url( $png_url ),
-					esc_html__( 'Download PNG', 'yeffoprint-core' ),
-					esc_url( $pdf_url ),
-					esc_html__( 'Download PDF', 'yeffoprint-core' )
-				);
+				$entry->display_value = self::qr_download_html( $url );
 
 				$formatted_meta[ 'yp_qr_' . $suffix ] = $entry;
 			}
 		}
 
 		return $formatted_meta;
+	}
+
+	/** "<url> — Download PNG / Download PDF" for the order screen. */
+	private static function qr_download_html( string $url ): string {
+		$png_url = add_query_arg( [ 'text' => rawurlencode( $url ), 'format' => 'png', 'download' => 1 ], rest_url( 'yeffoprint-core/v1/qr' ) );
+		$pdf_url = add_query_arg( [ 'text' => rawurlencode( $url ), 'format' => 'pdf', 'download' => 1 ], rest_url( 'yeffoprint-core/v1/qr' ) );
+
+		return sprintf(
+			'%s &mdash; <a href="%s">%s</a> / <a href="%s">%s</a>',
+			esc_html( $url ),
+			esc_url( $png_url ),
+			esc_html__( 'Download PNG', 'yeffoprint-core' ),
+			esc_url( $pdf_url ),
+			esc_html__( 'Download PDF', 'yeffoprint-core' )
+		);
 	}
 
 	/**
@@ -822,6 +844,7 @@ class YeffoPrint_Order_Item_Meta {
 			'_yp_shape',
 			'_yp_batch_row_index',
 			'_yp_compound_strength_snapshot',
+			'_yp_qr_url_snapshot',
 			'_yp_print_snapshot',
 		] );
 	}

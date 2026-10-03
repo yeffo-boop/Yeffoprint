@@ -109,6 +109,9 @@
 
 	/* ---------- Batch rows ---------- */
 
+	// YeffoPrint_Field_Schema::QR_MAX_CHARS (the server trims to it too).
+	var QR_MAX_CHARS = 500;
+
 	function createRow( overrides ) {
 		return Object.assign( {
 			id: nextRowId++,
@@ -116,6 +119,7 @@
 			material_id: firstAvailableMaterialId(),
 			quantity: quantityPresets[ 0 ] || 10,
 			compound_strength: '',
+			qr_url: '',
 			custom_width_in: '',
 			custom_height_in: ''
 		}, overrides || {} );
@@ -137,6 +141,7 @@
 				material_id: row.material_id,
 				quantity: row.quantity,
 				compound_strength: row.compound_strength,
+				qr_url: String( row.qr_url || '' ).trim(),
 				custom_width_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_width_in ) || 0 : 0,
 				custom_height_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_height_in ) || 0 : 0
 			};
@@ -225,6 +230,10 @@
 					'<label for="yp-co-row-' + row.id + '-compound">Product details <span class="description">(e.g. compound &amp; strength) (optional)</span></label>' +
 					'<input type="text" id="yp-co-row-' + row.id + '-compound" data-row-field="compound_strength" maxlength="120" class="widefat" />' +
 				'</div>' +
+				'<div class="yp-field">' +
+					'<label for="yp-co-row-' + row.id + '-qr">QR code <span class="description">(a web address to link to) (optional)</span></label>' +
+					'<input type="url" id="yp-co-row-' + row.id + '-qr" data-row-field="qr_url" placeholder="https://" maxlength="' + QR_MAX_CHARS + '" class="widefat" />' +
+				'</div>' +
 			'</div>'
 		);
 	}
@@ -303,6 +312,12 @@
 				window.YPLabelProofing.attachSpellCheck( compoundInput, { anchor: compoundInput.closest( '.yp-field' ) } );
 			}
 
+			var qrInput = rowEl.querySelector( '[data-row-field="qr_url"]' );
+			qrInput.value = row.qr_url || '';
+			qrInput.addEventListener( 'input', function () {
+				row.qr_url = qrInput.value;
+			} );
+
 			renderRowQuantity( row, rowEl.querySelector( '[data-row-quantity]' ) );
 		} );
 
@@ -330,6 +345,7 @@
 			material_id: source.material_id,
 			quantity: source.quantity,
 			compound_strength: source.compound_strength,
+			qr_url: source.qr_url,
 			custom_width_in: source.custom_width_in,
 			custom_height_in: source.custom_height_in
 		} ) );
@@ -1201,7 +1217,7 @@
 				// every row it actually had comes back, not just one.
 				var rows = data.batch && data.batch.length ? data.batch : [ {} ];
 				batchRows = rows.map( function ( row ) {
-					var overrides = { compound_strength: row.compound_strength || '' };
+					var overrides = { compound_strength: row.compound_strength || '', qr_url: row.qr_url || '' };
 					if ( row.size_id ) {
 						overrides.size_id = row.size_id;
 					}
@@ -1397,7 +1413,8 @@
 			getRecap: function () {
 				var brand = document.getElementById( 'yp-co-brand' ).value.trim();
 				var details = batchRows.map( function ( row ) {
-					return String( row.compound_strength || '' ).trim();
+					var qr = String( row.qr_url || '' ).trim();
+					return [ String( row.compound_strength || '' ).trim(), qr ? 'QR: ' + qr : '' ].filter( Boolean ).join( ' · ' );
 				} ).filter( Boolean );
 				return [ brand ].concat( details );
 			},

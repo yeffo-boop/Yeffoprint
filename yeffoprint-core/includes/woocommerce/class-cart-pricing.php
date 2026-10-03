@@ -337,6 +337,9 @@ class YeffoPrint_Cart_Pricing {
 				'key'   => __( 'Quantity', 'yeffoprint-core' ),
 				'value' => number_format_i18n( (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ),
 			];
+			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::QR_URL ] ) ) {
+				$item_data[] = [ 'key' => __( 'QR code', 'yeffoprint-core' ), 'value' => esc_html( (string) $cart_item[ YeffoPrint_Cart_Item_Keys::QR_URL ] ) ];
+			}
 			return $item_data;
 		}
 

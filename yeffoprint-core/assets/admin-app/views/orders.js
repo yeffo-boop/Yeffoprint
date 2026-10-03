@@ -65,6 +65,12 @@
 		return yeffoprintAdminApp.restUrl + 'admin/' + path;
 	}
 
+	/** Print-ready QR file for a Custom Labels row (same /qr endpoint as the order screen's download links). */
+	function qrDownloadUrl( url, format ) {
+		var base = yeffoprintAdminApp.restUrl + 'qr';
+		return base + ( base.indexOf( '?' ) === -1 ? '?' : '&' ) + 'format=' + format + '&download=1&text=' + encodeURIComponent( url );
+	}
+
 	YP.views.orders = function ( viewEl, subId ) {
 		var allOrders  = [];
 		var selectedId = subId ? parseInt( subId, 10 ) : 0;
@@ -218,10 +224,13 @@
 						} ).join( '' ) +
 					'</tbody></table>';
 			} else if ( 'label' === order.order_type ) {
+				var hasQr = order.label.batch.some( function ( b ) { return !! b.qr_url; } );
 				batchHtml =
-					'<table class="yp-record-table"><thead><tr><th>Size</th><th>Material</th><th>Qty</th><th>Compound / Strength</th></tr></thead><tbody>' +
+					'<table class="yp-record-table"><thead><tr><th>Size</th><th>Material</th><th>Qty</th><th>Compound / Strength</th>' + ( hasQr ? '<th>QR code</th>' : '' ) + '</tr></thead><tbody>' +
 						order.label.batch.map( function ( b ) {
-							return '<tr><td>' + YP.escapeHtml( b.size_label || '—' ) + '</td><td>' + YP.escapeHtml( b.material_label || '—' ) + '</td><td>' + b.quantity + '</td><td>' + YP.escapeHtml( b.compound_strength || '—' ) + '</td></tr>';
+							return '<tr><td>' + YP.escapeHtml( b.size_label || '—' ) + '</td><td>' + YP.escapeHtml( b.material_label || '—' ) + '</td><td>' + b.quantity + '</td><td>' + YP.escapeHtml( b.compound_strength || '—' ) + '</td>' +
+								( hasQr ? '<td>' + ( b.qr_url ? YP.escapeHtml( b.qr_url ) + ' <a href="' + YP.escapeHtml( qrDownloadUrl( b.qr_url, 'png' ) ) + '">PNG</a> / <a href="' + YP.escapeHtml( qrDownloadUrl( b.qr_url, 'pdf' ) ) + '">PDF</a>' : '—' ) + '</td>' : '' ) +
+								'</tr>';
 						} ).join( '' ) +
 					'</tbody></table>';
 			}

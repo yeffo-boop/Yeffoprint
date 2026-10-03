@@ -612,6 +612,10 @@ class YeffoPrint_Custom_Order_Controller {
 				YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH      => $row['compound_strength'],
 			];
 
+			if ( ! empty( $row['qr_url'] ) ) {
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::QR_URL ] = $row['qr_url'];
+			}
+
 			// Label Designer row: no SIZE_ID (0, harmlessly ignored by
 			// class-cart-pricing.php's adjustment() lookup) — these two
 			// keys are what actually drive its dynamic base price instead.
@@ -706,11 +710,19 @@ class YeffoPrint_Custom_Order_Controller {
 				}
 			}
 
+			// Optional QR code (same URL rules as a Template's qr_code field).
+			$raw_qr = trim( (string) ( $row['qr_url'] ?? '' ) );
+			$qr_url = '' !== $raw_qr ? esc_url_raw( substr( $raw_qr, 0, YeffoPrint_Field_Schema::QR_MAX_CHARS ) ) : '';
+			if ( '' !== $raw_qr && ( '' === $qr_url || ! wp_http_validate_url( $qr_url ) ) ) {
+				return new \WP_Error( 'yeffoprint_invalid_qr_url', __( 'The QR code needs a valid web address (starting with https://).', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
 			$rows[] = [
 				'size_id'           => $size_id,
 				'material_id'       => $material_id,
 				'quantity'          => $quantity,
 				'compound_strength' => sanitize_text_field( (string) ( $row['compound_strength'] ?? '' ) ),
+				'qr_url'            => $qr_url,
 				'custom_width_in'   => $custom_width_in,
 				'custom_height_in'  => $custom_height_in,
 			];

@@ -171,6 +171,7 @@ class YeffoPrint_Custom_Order_Editor {
 									<th><?php esc_html_e( 'Material', 'yeffoprint-core' ); ?></th>
 									<th><?php esc_html_e( 'Quantity', 'yeffoprint-core' ); ?></th>
 									<th><?php esc_html_e( 'Compound / Strength', 'yeffoprint-core' ); ?></th>
+									<th><?php esc_html_e( 'QR code', 'yeffoprint-core' ); ?></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -180,6 +181,7 @@ class YeffoPrint_Custom_Order_Editor {
 										<td><?php echo esc_html( ! empty( $row['material_id'] ) ? get_the_title( (int) $row['material_id'] ) : '—' ); ?></td>
 										<td><?php echo esc_html( (int) ( $row['quantity'] ?? 0 ) ); ?></td>
 										<td><?php echo esc_html( $row['compound_strength'] ?? '' ?: '—' ); ?></td>
+										<td><?php echo esc_html( $row['qr_url'] ?? '' ?: '—' ); ?></td>
 									</tr>
 								<?php endforeach; ?>
 							</tbody>
