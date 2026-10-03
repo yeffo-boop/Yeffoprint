@@ -77,11 +77,12 @@
 		} ).filter( function ( option ) { return '' !== option.label.trim(); } );
 	}
 
-	YP.views.settings = function ( viewEl ) {
+	// `subId` opens a tab directly (`#/settings/shipping`), used by the new app's Settings hub.
+	YP.views.settings = function ( viewEl, subId ) {
 		viewEl.innerHTML = '<p class="yp-app__intro">Loading settings&hellip;</p>';
 
 		YP.request( endpoint() )
-			.then( function ( settings ) { render( settings ); } )
+			.then( function ( settings ) { render( settings, subId ); } )
 			.catch( function ( error ) {
 				viewEl.innerHTML = '<p class="yp-app__intro">Couldn’t load settings: ' + YP.escapeHtml( error.message ) + '</p>';
 			} );

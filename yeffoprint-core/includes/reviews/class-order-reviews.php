@@ -439,7 +439,7 @@ class YeffoPrint_Order_Reviews {
 			? __( 'It is live on the site.', 'yeffoprint-core' )
 			: __( 'Approve it in YeffoDesign › Reviews.', 'yeffoprint-core' );
 
-		YeffoPrint_Telegram_Admin_Alerts::notify( implode( "\n", $lines ) );
+		YeffoPrint_Telegram_Admin_Alerts::notify( implode( "\n", $lines ), [ 'section' => 'reviews' ] );
 	}
 
 	/** Deleting a review removes its photos too. */

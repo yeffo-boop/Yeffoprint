@@ -314,7 +314,86 @@
 		} );
 	} );
 
-	root.innerHTML =
+	/**
+	 * The redesigned app ("YeffoDesign (new)", class-admin-app.php) uses
+	 * the same router, views and order window with a different shell: five
+	 * top tabs (a bottom tab bar on phones), each covering a set of the
+	 * sections above, shown as a strip of sub-tabs under the page title.
+	 * `dashboard` is Today; `production`, `catalog`, `people` and `store`
+	 * are the new screens next/next.js adds to YP.views.
+	 */
+	var NEXT = 'next' === yeffoprintAdminApp.shell;
+	var NEXT_TABS = [
+		{ id: 'dashboard', label: 'Today', icon: 'sun', sections: [ 'dashboard' ] },
+		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders' ] },
+		{ id: 'catalog', label: 'Catalog', icon: 'box', sections: [ 'catalog', 'templates', 'sizes', 'sticker-sizes', 'materials', 'label-fields', 'label-colors', 'compound-list', 'prints', 'filament-colors', 'pricing' ] },
+		{ id: 'people', label: 'Customers', icon: 'people', sections: [ 'people', 'customers', 'reviews', 'tracker-feedback', 'rewards', 'coupons', 'maintenance' ] },
+		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
+	];
+	var NEXT_SUB_LABELS = {
+		production: 'Production board',
+		'order-history': 'All orders',
+		catalog: 'Overview',
+		people: 'Overview',
+		store: 'Overview',
+		settings: 'All settings'
+	};
+
+	if ( NEXT ) {
+		labelsById.dashboard  = 'Today';
+		labelsById.production = 'Production';
+		labelsById.catalog    = 'Catalog';
+		labelsById.people     = 'Customers';
+		labelsById.store      = 'Settings';
+	}
+
+	function nextTabFor( id ) {
+		for ( var i = 0; i < NEXT_TABS.length; i++ ) {
+			if ( NEXT_TABS[ i ].sections.indexOf( id ) !== -1 ) {
+				return NEXT_TABS[ i ];
+			}
+		}
+		return NEXT_TABS[ 0 ];
+	}
+
+	var NEXT_ICONS = {
+		sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+		board: '<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/>',
+		box: '<path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/>',
+		people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.5-5 6.5-5s5.7 1.5 6.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.2 0 4 1.3 4.5 4"/>',
+		gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+		plus: '<path d="M12 5v14M5 12h14"/>'
+	};
+
+	function nextIcon( name ) {
+		return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + NEXT_ICONS[ name ] + '</svg>';
+	}
+
+	root.innerHTML = NEXT ? (
+		'<div class="yp-app yp-app--next">' +
+			'<header class="ypn-header">' +
+				'<a class="ypn-brand" href="#/dashboard"><span class="ypn-brand__mark"></span><span>YeffoDesign</span></a>' +
+				'<nav class="ypn-tabs" data-yp-nav aria-label="Sections"></nav>' +
+				'<div class="ypn-header__end">' +
+					'<label class="ypn-jump"><span class="screen-reader-text">Jump to</span><input type="search" list="ypn-jump-list" placeholder="Jump to…" data-ypn-jump autocomplete="off"><datalist id="ypn-jump-list"></datalist></label>' +
+					'<a class="ypn-btn ypn-btn--primary" href="#/manual-order">+ New order</a>' +
+					'<a class="ypn-old-link" href="' + YP.escapeAttr( yeffoprintAdminApp.classicUrl ) + '">Old admin</a>' +
+				'</div>' +
+				// The classic shell's off-canvas nav pieces, kept (hidden)
+				// so the shared code below works unchanged on both pages.
+				'<div hidden data-yp-nav-panel></div><div hidden data-yp-nav-backdrop></div><button type="button" hidden data-yp-menu-toggle></button>' +
+			'</header>' +
+			'<main class="ypn-main">' +
+				'<div class="ypn-pagehead">' +
+					'<div><div class="ypn-crumb" data-ypn-crumb></div><h1 class="ypn-title" data-yp-title></h1></div>' +
+					'<div class="yp-app__status" data-yp-status data-state="loading"><span class="yp-app__status-dot"></span><span data-yp-status-text>Connecting&hellip;</span></div>' +
+				'</div>' +
+				'<div class="ypn-subnav" data-ypn-subnav></div>' +
+				'<div class="yp-app__view" data-yp-view></div>' +
+			'</main>' +
+			'<nav class="ypn-bottom" data-ypn-bottom aria-label="Sections"></nav>' +
+		'</div>'
+	) :
 		'<div class="yp-app">' +
 			'<div class="yp-app__nav-backdrop" data-yp-nav-backdrop></div>' +
 			'<nav class="yp-app__nav" data-yp-nav-panel>' +
@@ -324,6 +403,7 @@
 				'</div>' +
 				'<div class="yp-app__groups" data-yp-nav></div>' +
 				'<div class="yp-app__foot">' +
+					'<a class="yp-app__exit" href="' + YP.escapeAttr( yeffoprintAdminApp.nextUrl ) + '">Try the new admin &rarr;</a>' +
 					'<a class="yp-app__exit" href="' + YP.escapeAttr( yeffoprintAdminApp.exitUrl ) + '">&larr; Exit to WordPress</a>' +
 				'</div>' +
 			'</nav>' +
@@ -380,7 +460,35 @@
 
 	/* ---------- Nav ---------- */
 
-	navEl.innerHTML = SECTIONS.map( function ( group ) {
+	if ( NEXT ) {
+		navEl.innerHTML = NEXT_TABS.map( function ( tab ) {
+			return '<button type="button" class="ypn-tab" data-yp-nav-item="' + tab.id + '">' + YP.escapeHtml( tab.label ) + '</button>';
+		} ).join( '' );
+
+		root.querySelector( '[data-ypn-bottom]' ).innerHTML = [ NEXT_TABS[ 0 ], NEXT_TABS[ 1 ], null, NEXT_TABS[ 2 ], NEXT_TABS[ 4 ] ].map( function ( tab ) {
+			if ( ! tab ) {
+				return '<a class="ypn-bottom__add" href="#/manual-order" aria-label="New order">' + nextIcon( 'plus' ) + '</a>';
+			}
+			return '<button type="button" class="ypn-bottom__item" data-yp-nav-item="' + tab.id + '">' + nextIcon( tab.icon ) + '<span>' + YP.escapeHtml( 'store' === tab.id ? 'More' : tab.label ) + '</span></button>';
+		} ).join( '' );
+
+		var jumpEl = root.querySelector( '[data-ypn-jump]' );
+		root.querySelector( '#ypn-jump-list' ).innerHTML = Object.keys( labelsById ).map( function ( id ) {
+			return '<option value="' + YP.escapeAttr( labelsById[ id ] ) + '"></option>';
+		} ).join( '' );
+		jumpEl.addEventListener( 'change', function () {
+			var wanted = jumpEl.value.trim().toLowerCase();
+			Object.keys( labelsById ).some( function ( id ) {
+				if ( labelsById[ id ].toLowerCase() === wanted ) {
+					window.location.hash = '#/' + id;
+					jumpEl.value = '';
+					jumpEl.blur();
+					return true;
+				}
+				return false;
+			} );
+		} );
+	} else navEl.innerHTML = SECTIONS.map( function ( group ) {
 		var items = group.items.map( function ( item ) {
 			return (
 				'<button type="button" class="yp-nav-item" data-yp-nav-item="' + item.id + '">' +
@@ -397,7 +505,7 @@
 		);
 	} ).join( '' );
 
-	navEl.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
+	root.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
 		button.addEventListener( 'click', function () {
 			window.location.hash = '#/' + button.getAttribute( 'data-yp-nav-item' );
 			closeMobileNav(); // No-op above the mobile breakpoint — is-open is never set there.
@@ -424,9 +532,14 @@
 	function renderView( id, subId ) {
 		titleEl.textContent = labelsById[ id ] || 'Dashboard';
 
-		navEl.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
-			button.classList.toggle( 'is-active', button.getAttribute( 'data-yp-nav-item' ) === id );
+		var activeNavId = NEXT ? nextTabFor( id ).id : id;
+		root.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
+			button.classList.toggle( 'is-active', button.getAttribute( 'data-yp-nav-item' ) === activeNavId );
 		} );
+
+		if ( NEXT ) {
+			renderNextChrome( id );
+		}
 
 		if ( 'dashboard' === id ) {
 			renderDashboard();
@@ -443,6 +556,34 @@
 				'<strong>' + YP.escapeHtml( labelsById[ id ] ) + '</strong>' +
 				'<span>This section’s screen ships in a later phase — the nav item is live now so the whole map is navigable from day one.</span>' +
 			'</div>';
+	}
+
+	/** Breadcrumb and the sub-tab strip for the tab `id` belongs to (new app only). */
+	function renderNextChrome( id ) {
+		var tab      = nextTabFor( id );
+		var crumbEl  = root.querySelector( '[data-ypn-crumb]' );
+		var subnavEl = root.querySelector( '[data-ypn-subnav]' );
+
+		crumbEl.innerHTML = tab.id !== id
+			? '<a href="#/' + tab.id + '">' + YP.escapeHtml( tab.label ) + '</a>'
+			: '';
+
+		if ( tab.sections.length < 2 ) {
+			subnavEl.innerHTML = '';
+			subnavEl.hidden = true;
+			return;
+		}
+
+		subnavEl.hidden = false;
+		subnavEl.innerHTML = tab.sections.map( function ( sectionId ) {
+			return '<a class="ypn-subtab' + ( sectionId === id ? ' is-active' : '' ) + '" href="#/' + sectionId + '">' + YP.escapeHtml( NEXT_SUB_LABELS[ sectionId ] || labelsById[ sectionId ] ) + '</a>';
+		} ).join( '' );
+
+		var active = subnavEl.querySelector( '.is-active' );
+		if ( active && active.scrollIntoView && subnavEl.scrollWidth > subnavEl.clientWidth ) {
+			subnavEl.scrollLeft = active.offsetLeft - 16;
+		}
+		window.scrollTo( 0, 0 );
 	}
 
 	function route() {
@@ -487,8 +628,14 @@
 
 	function renderDashboard() {
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Welcome back' + ( yeffoprintAdminApp.currentUserName ? ', ' + YP.escapeHtml( yeffoprintAdminApp.currentUserName ) : '' ) + '. Here’s what needs attention today.</p>' +
+			( NEXT
+				? '<div data-ypn-today></div>'
+				: '<p class="yp-app__intro">Welcome back' + ( yeffoprintAdminApp.currentUserName ? ', ' + YP.escapeHtml( yeffoprintAdminApp.currentUserName ) : '' ) + '. Here’s what needs attention today.</p>' ) +
 			'<div data-yp-dashboard><p class="yp-field__hint">Loading&hellip;</p></div>';
+
+		if ( NEXT && YP.next && YP.next.today ) {
+			YP.next.today( viewEl.querySelector( '[data-ypn-today]' ) );
+		}
 
 		ping();
 		loadDashboard();
@@ -1262,6 +1409,11 @@
 		bindRefundPanel( order, bodyEl, drawer );
 		bindRecordPaymentPanel( order, bodyEl, drawer );
 		loadWebDesignPanel( order, bodyEl );
+
+		// The new app's progress tracker and quick actions (next/next.js).
+		if ( YP.onOrderDetail ) {
+			YP.onOrderDetail( order, drawer, bodyEl );
+		}
 	}
 
 	/**

@@ -364,6 +364,20 @@ class YeffoPrint_Admin_Menu {
 		// div for it to style. Settings is still a plain Settings-API
 		// page, so it keeps using the classic reskin as before.
 		YeffoPrint_Admin_App::set_hook_suffix( $dashboard_hook );
+
+		// The redesigned admin app (direct request: "Can this live as a
+		// separate app in the backend until I confirm all functionality.
+		// Then we will remove the old."). Same screens and data as the
+		// page above, in the new layout, at its own slug.
+		YeffoPrint_Admin_App::set_next_hook_suffix( (string) add_menu_page(
+			__( 'YeffoDesign (new)', 'yeffoprint-core' ),
+			__( 'YeffoDesign (new)', 'yeffoprint-core' ),
+			'manage_options',
+			YeffoPrint_Admin_Push::APP_SLUG,
+			[ 'YeffoPrint_Admin_App', 'render' ],
+			'dashicons-art',
+			26
+		) );
 		YeffoPrint_Admin_Shell::register_page_hook( $this->settings_page_hook );
 	}
 

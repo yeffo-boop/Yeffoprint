@@ -64,6 +64,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-coupon-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-abandoned-cart-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-dashboard-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-next-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-settings-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-surcharge-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-rewards-controller.php';
@@ -161,6 +162,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-quote-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-app-shortcut.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-push.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-settings.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-client.php';
@@ -246,6 +248,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Shippo_Webhook_Sync();
 		new YeffoPrint_Shippo_Webhook_Controller();
 		new YeffoPrint_Admin_Dashboard_Controller();
+		new YeffoPrint_Admin_Next_Controller();
+		new YeffoPrint_Admin_Push();
 		new YeffoPrint_Admin_Settings_Controller();
 		new YeffoPrint_Admin_Surcharge_Controller();
 		new YeffoPrint_Compound_List();
