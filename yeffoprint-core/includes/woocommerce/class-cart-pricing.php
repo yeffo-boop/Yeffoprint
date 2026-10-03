@@ -50,53 +50,59 @@ class YeffoPrint_Cart_Pricing {
 		$sticker_tier_quantity = self::combined_sticker_quantity( $cart );
 
 		foreach ( $cart->get_cart() as $cart_item ) {
-			// 3D print: the size's price plus the picked colors' extra
-			// charges and any lid text/image charge, per item —
-			// WooCommerce's own line quantity does the rest.
-			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
-				$cart_item['data']->set_price( YeffoPrint_Print_Meta::unit_price(
-					(int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ],
-					(array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] ),
-					(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_SIZE ] ?? '' ),
-					(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_TEXT ] ?? '' ),
-					(int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE ] ?? 0 )
-				) );
-				continue;
-			}
-
-			// Checked first: a Custom Stickers line item also carries
-			// CUSTOM_ORDER_ID and TOTAL_QTY, same as a Custom Design
-			// labels item, but needs YeffoPrint_Sticker_Pricing's own
-			// formula, not the label one below — STICKER_TYPE only ever
-			// gets set on a sticker item (class-custom-sticker-
-			// controller.php), so its presence is what tells the two
-			// apart.
-			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
-				$breakdown = self::calculate_sticker_for_cart_item( $cart_item, $sticker_tier_quantity );
-				if ( null !== $breakdown ) {
-					$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
-				}
-				continue;
-			}
-
-			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) && empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
-				// The flat $25 design fee line item — no batch/quantity
-				// data, always priced as the fee. A Custom Order's *labels*
-				// line item also carries CUSTOM_ORDER_ID (to link it back
-				// to the same record) but has TOTAL_QTY too, so it falls
-				// through to the normal per-unit calculation below instead.
-				$cart_item['data']->set_price( YeffoPrint_Pricing_Rule::get_custom_design_fee() );
-				continue;
-			}
-
-			// Both a normal Template batch and a Custom Order's own labels
-			// line item reach here and price identically — the formula
-			// only needs size/material/quantity, never a template_id.
-			$breakdown = self::calculate_for_cart_item( $cart_item, $label_tier_quantity );
-			if ( null !== $breakdown ) {
-				$cart_item['data']->set_price( $breakdown['unit_price_after_discount'] );
+			$unit_price = self::unit_price_for_cart_item( $cart_item, $label_tier_quantity, $sticker_tier_quantity );
+			if ( null !== $unit_price ) {
+				$cart_item['data']->set_price( $unit_price );
 			}
 		}
+	}
+
+	/**
+	 * The price one unit of a cart line sells at, or null when it has no
+	 * pricing of its own (left at the product's own price). Shared by
+	 * apply_price() and the Meta pixel's AddToCart value
+	 * (class-meta-pixel.php), so both always agree.
+	 */
+	public static function unit_price_for_cart_item( array $cart_item, int $label_tier_quantity, int $sticker_tier_quantity ): ?float {
+		// 3D print: the size's price plus the picked colors' extra
+		// charges and any lid text/image charge, per item —
+		// WooCommerce's own line quantity does the rest.
+		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ] ) ) {
+			return YeffoPrint_Print_Meta::unit_price(
+				(int) $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_ID ],
+				(array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_COLORS ] ?? [] ),
+				(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_SIZE ] ?? '' ),
+				(string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_TEXT ] ?? '' ),
+				(int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::PRINT_IMAGE ] ?? 0 )
+			);
+		}
+
+		// Checked first: a Custom Stickers line item also carries
+		// CUSTOM_ORDER_ID and TOTAL_QTY, same as a Custom Design
+		// labels item, but needs YeffoPrint_Sticker_Pricing's own
+		// formula, not the label one below — STICKER_TYPE only ever
+		// gets set on a sticker item (class-custom-sticker-
+		// controller.php), so its presence is what tells the two
+		// apart.
+		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] ) ) {
+			$breakdown = self::calculate_sticker_for_cart_item( $cart_item, $sticker_tier_quantity );
+			return null !== $breakdown ? (float) $breakdown['unit_price_after_discount'] : null;
+		}
+
+		if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ) && empty( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ) ) {
+			// The flat $25 design fee line item — no batch/quantity
+			// data, always priced as the fee. A Custom Order's *labels*
+			// line item also carries CUSTOM_ORDER_ID (to link it back
+			// to the same record) but has TOTAL_QTY too, so it falls
+			// through to the normal per-unit calculation below instead.
+			return (float) YeffoPrint_Pricing_Rule::get_custom_design_fee();
+		}
+
+		// Both a normal Template batch and a Custom Order's own labels
+		// line item reach here and price identically — the formula
+		// only needs size/material/quantity, never a template_id.
+		$breakdown = self::calculate_for_cart_item( $cart_item, $label_tier_quantity );
+		return null !== $breakdown ? (float) $breakdown['unit_price_after_discount'] : null;
 	}
 
 	/**
