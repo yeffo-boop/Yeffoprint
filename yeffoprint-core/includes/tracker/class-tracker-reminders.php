@@ -205,6 +205,13 @@ class YeffoPrint_Tracker_Reminders {
 		}
 		// A blend dosed by one of its peptides: "250 mcg BPC-157".
 		$of = sanitize_text_field( (string) ( $protocol['doseOf'] ?? '' ) );
-		return rtrim( rtrim( number_format( $dose, 3, '.', '' ), '0' ), '.' ) . ' ' . $unit . ( '' !== $of ? ' ' . $of : '' );
+		// A tablet / capsule's dosage on the bottle: "2 tablets (500 mg each)".
+		$strength = (float) ( $protocol['strength'] ?? 0 );
+		$s_unit   = (string) ( $protocol['strengthUnit'] ?? '' );
+		$per      = '';
+		if ( $strength > 0 && in_array( $protocol['unit'] ?? '', [ 'tablet', 'capsule' ], true ) && in_array( $s_unit, [ 'mg', 'mcg', 'g', 'IU' ], true ) ) {
+			$per = ' (' . rtrim( rtrim( number_format( $strength, 3, '.', '' ), '0' ), '.' ) . ' ' . $s_unit . ( 1.0 === $dose ? ')' : ' each)' );
+		}
+		return rtrim( rtrim( number_format( $dose, 3, '.', '' ), '0' ), '.' ) . ' ' . $unit . $per . ( '' !== $of ? ' ' . $of : '' );
 	}
 }

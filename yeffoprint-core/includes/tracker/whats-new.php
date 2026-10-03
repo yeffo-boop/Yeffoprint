@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-03a',
+		'date'  => '2026-10-03',
+		'title' => 'Dosage for pills',
+		'text'  => 'Adding a tablet or capsule now asks for its dosage too, like 500 mg, next to how many you take. Today, History, reminders and your PDF report show both, for example "2 tablets (500 mg each)".',
+	],
+	[
 		'id'    => '2026-10-02h',
 		'date'  => '2026-10-02',
 		'title' => 'Progress log',

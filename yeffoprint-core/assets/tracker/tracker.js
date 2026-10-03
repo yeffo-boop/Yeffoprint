@@ -953,8 +953,27 @@
 		return UNIT_PLURAL[ unit ] && +dose !== 1 ? UNIT_PLURAL[ unit ] : unit || '';
 	}
 
-	function amountLabel( dose, unit ) {
-		return fmtNum( +dose, 3 ) + ' ' + unitLabel( unit, dose );
+	/*
+	 * Pills are counted ("2 tablets"), so a tablet or capsule also keeps its
+	 * strength: the dosage on the bottle, like 500 mg. Stored on protocols
+	 * and dose logs as strength + strengthUnit.
+	 */
+	var PILL_UNITS = [ 'tablet', 'capsule' ];
+	var STRENGTH_UNITS = [ 'mg', 'mcg', 'g', 'IU' ];
+
+	/** { amount, unit } for a tablet / capsule record with its strength filled in, else null. */
+	function strengthOf( src, unit ) {
+		unit = unit || ( src && src.unit );
+		if ( ! src || PILL_UNITS.indexOf( unit ) === -1 || ! ( +src.strength > 0 ) || STRENGTH_UNITS.indexOf( src.strengthUnit ) === -1 ) {
+			return null;
+		}
+		return { amount: +src.strength, unit: src.strengthUnit };
+	}
+
+	/** "250 mcg", "2 tablets" — and with `src` (a protocol or dose log) a pill's strength: "2 tablets (500 mg each)". */
+	function amountLabel( dose, unit, src ) {
+		var s = strengthOf( src, unit );
+		return fmtNum( +dose, 3 ) + ' ' + unitLabel( unit, dose ) + ( s ? ' (' + fmtNum( s.amount, 3 ) + ' ' + s.unit + ( +dose === 1 ? ')' : ' each)' ) : '' );
 	}
 
 	function routeInfo( value ) {
@@ -1478,6 +1497,8 @@
 			at: at,
 			dose: dose,
 			unit: p.unit,
+			strength: strengthOf( p ) ? +p.strength : 0,
+			strengthUnit: strengthOf( p ) ? p.strengthUnit : '',
 			vialId: v ? v.id : '',
 			units: units != null ? Math.round( units * 100 ) / 100 : null,
 			note: '',
@@ -1703,7 +1724,7 @@
 						h( 'div', { class: 'ypt-dot', style: { background: colorForCompound( d.compound ) } } ),
 						h( 'div', { class: 'ypt-dose__main' },
 							h( 'div', { class: 'ypt-dose__name' }, d.compound ),
-							h( 'div', { class: 'ypt-dose__sub' }, amountLabel( d.dose, d.unit ) + ( tagsOf( d ).length ? ' · ' + tagsOf( d ).join( ', ' ) : '' ) + ( d.note ? ' · ' + d.note : '' ) )
+							h( 'div', { class: 'ypt-dose__sub' }, amountLabel( d.dose, d.unit, d ) + ( tagsOf( d ).length ? ' · ' + tagsOf( d ).join( ', ' ) : '' ) + ( d.note ? ' · ' + d.note : '' ) )
 						),
 						h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--done', onclick: function () {
 							openLogSheet( d );
@@ -1727,7 +1748,7 @@
 		var dose = log && +log.dose > 0 ? +log.dose : doseOn( p, s.date );
 		var units = log && log.units != null ? +log.units : ( v ? unitsForDose( dose, p.unit, v, p.doseOf ) : null );
 		var how = p.device === 'pen' ? 'pen' : p.device === 'single' ? 'single-use injector' : p.route ? routeInfo( p.route ).short || p.route.toLowerCase() : '';
-		var sub = [ amountLabel( dose, p.unit ) + ( p.doseOf ? ' ' + p.doseOf : '' ), how, scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
+		var sub = [ amountLabel( dose, p.unit, log && log.strength ? log : p ) + ( p.doseOf ? ' ' + p.doseOf : '' ), how, scheduleLabel( p ), weekLabel( p, s.date ) ].filter( Boolean ).join( ' · ' );
 
 		var actions;
 		if ( log ) {
@@ -1893,7 +1914,7 @@
 	function protoCard( pr ) {
 		var how = pr.device === 'pen' ? 'multi-dose pen' : pr.device === 'single' ? 'single-use injector' : pr.route ? routeInfo( pr.route ).short || String( pr.route ).toLowerCase() : '';
 		var rows = [
-			[ 'Dose', amountLabel( pr.dose, pr.unit ) + ( pr.doseOf ? ' ' + pr.doseOf : '' ) + ( how ? ', ' + how : '' ) ],
+			[ 'Dose', amountLabel( pr.dose, pr.unit, pr ) + ( pr.doseOf ? ' ' + pr.doseOf : '' ) + ( how ? ', ' + how : '' ) ],
 			[ 'Schedule', ( scheduleLabel( pr ) === 'daily' ? 'Every day' : scheduleLabel( pr ).charAt( 0 ).toUpperCase() + scheduleLabel( pr ).slice( 1 ) ) + ', ' + timesOf( pr ).map( fmtTime ).join( ' & ' ) ],
 			+pr.weeks ? [ 'Length', pr.weeks + ' week' + ( +pr.weeks === 1 ? '' : 's' ) ] : null,
 			cycleOf( pr ) ? [ 'Cycle', cycleLine( pr ) ] : null,
@@ -1920,7 +1941,7 @@
 		var foot = h( 'div', { style: { display: 'flex', gap: '8px', flex: '1' } } );
 
 		function payload() {
-			var out = { compound: p.compound, dose: p.dose, unit: p.unit, route: p.route, device: p.device || '', doseOf: p.doseOf || '', schedule: p.schedule, times: timesOf( p ), weeks: inc.weeks ? +p.weeks || 0 : 0, notes: inc.notes ? p.notes || '' : '' };
+			var out = { compound: p.compound, dose: p.dose, unit: p.unit, route: p.route, device: p.device || '', doseOf: p.doseOf || '', strength: strengthOf( p ) ? +p.strength : 0, strengthUnit: strengthOf( p ) ? p.strengthUnit : '', schedule: p.schedule, times: timesOf( p ), weeks: inc.weeks ? +p.weeks || 0 : 0, notes: inc.notes ? p.notes || '' : '' };
 			if ( inc.plan && cycleOf( p ) ) {
 				out.cycle = cycleOf( p );
 			}
@@ -2103,6 +2124,8 @@
 				notes: pr.notes || '',
 				paused: false,
 				doseOf: pr.doseOf || '',
+				strength: strengthOf( pr ) ? +pr.strength : 0,
+				strengthUnit: strengthOf( pr ) ? pr.strengthUnit : '',
 				cycle: cycleOf( pr ),
 				steps: stepsOf( pr ),
 			};
@@ -2519,13 +2542,13 @@
 			if ( filter && s.protocol.id !== filter ) {
 				return;
 			}
-			rows.push( { name: s.protocol.compound + ' · ' + amountLabel( s.log && +s.log.dose > 0 ? s.log.dose : doseOn( s.protocol, day ), s.protocol.unit ), log: s.log, time: s.time, slot: s } );
+			rows.push( { name: s.protocol.compound + ' · ' + amountLabel( s.log && +s.log.dose > 0 ? s.log.dose : doseOn( s.protocol, day ), s.protocol.unit, s.log && s.log.strength ? s.log : s.protocol ), log: s.log, time: s.time, slot: s } );
 		} );
 		extrasOn( day ).forEach( function ( d ) {
 			if ( filter && d.protocolId !== filter ) {
 				return;
 			}
-			rows.push( { name: d.compound + ' · ' + amountLabel( d.dose, d.unit ) + ' (extra)', log: d, time: d.time } );
+			rows.push( { name: d.compound + ' · ' + amountLabel( d.dose, d.unit, d ) + ' (extra)', log: d, time: d.time } );
 		} );
 		rows.sort( function ( a, b ) {
 			return String( a.time ).localeCompare( String( b.time ) );
@@ -3683,7 +3706,7 @@
 			protocols().forEach( function ( p ) {
 				var a = protocolAdherence( p, from, today );
 				var lines = [
-					'Dose now: ' + amountLabel( doseOn( p, today ), p.unit ) + ', ' + scheduleLabel( p ) + ' at ' + timesOf( p ).map( fmtTime ).join( ', ' ) + ( p.route ? ' · ' + p.route : '' ),
+					'Dose now: ' + amountLabel( doseOn( p, today ), p.unit, p ) + ', ' + scheduleLabel( p ) + ' at ' + timesOf( p ).map( fmtTime ).join( ', ' ) + ( p.route ? ' · ' + p.route : '' ),
 					stepsOf( p ).length ? 'Titration: ' + stepsLine( p ) : '',
 					cycleOf( p ) ? 'Cycle: ' + cycleLine( p ) : '',
 					'Started ' + shortDate( p.start, true ) + ( parseInt( p.weeks, 10 ) ? ' · ' + parseInt( p.weeks, 10 ) + ' weeks' : '' ) + ( p.paused ? ' · paused' : '' ),
@@ -3863,7 +3886,7 @@
 					shortDate( d.date, true ),
 					d.status === 'taken' && d.at ? fmtIsoTime( d.at ) : fmtTime( d.time ),
 					d.compound,
-					amountLabel( d.dose, d.unit ) + ( d.units != null && d.units !== '' && d.status === 'taken' ? ' (' + fmtNum( +d.units, 1 ) + ' u)' : '' ),
+					amountLabel( d.dose, d.unit, d ) + ( d.units != null && d.units !== '' && d.status === 'taken' ? ' (' + fmtNum( +d.units, 1 ) + ' u)' : '' ),
 					d.status === 'taken' ? 'Taken' : d.status === 'skipped' ? 'Skipped' : String( d.status || '' ),
 					d.status === 'taken' ? siteLabel( d.site ) : '',
 				];
@@ -5869,7 +5892,7 @@
 					openProtocolSheet( p );
 				} },
 					h( 'span', null, h( 'span', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: protocolColor( p ), marginRight: '8px' } } ), p.compound ),
-					h( 'span', null, p.paused ? 'Paused' : amountLabel( doseOn( p, todayStr() ), p.unit ) + ' · ' + scheduleLabel( p ) )
+					h( 'span', null, p.paused ? 'Paused' : amountLabel( doseOn( p, todayStr() ), p.unit, p ) + ' · ' + scheduleLabel( p ) )
 				);
 			} ) : h( 'p', { class: 'ypt-list-row ypt-muted' }, 'None yet.' )
 		) );
@@ -5937,7 +5960,7 @@
 	function setupLines() {
 		var s = state.records.settings.me || {};
 		var lines = protocols().map( function ( p ) {
-			return [ p.compound, amountLabel( doseOn( p, todayStr() ), p.unit ) + ( stepsOf( p ).length ? ' (titration: ' + stepsLine( p ) + ')' : '' ), scheduleLabel( p ) + ( cycleOf( p ) ? ', ' + cycleLine( p ) : '' ) + ' ' + timesOf( p ).map( fmtTime ).join( ', ' ), p.route || '' ].filter( Boolean ).join( ' · ' ) + ( p.paused ? ' (paused)' : '' );
+			return [ p.compound, amountLabel( doseOn( p, todayStr() ), p.unit, p ) + ( stepsOf( p ).length ? ' (titration: ' + stepsLine( p ) + ')' : '' ), scheduleLabel( p ) + ( cycleOf( p ) ? ', ' + cycleLine( p ) : '' ) + ' ' + timesOf( p ).map( fmtTime ).join( ', ' ), p.route || '' ].filter( Boolean ).join( ' · ' ) + ( p.paused ? ' (paused)' : '' );
 		} );
 		lines.push( 'Reminders on this device: ' + ( state.pushOnHere ? 'on' : 'off' ) );
 		lines.push( 'Show names in reminders: ' + ( s.reminderNames === false ? 'off' : 'on' ) );
@@ -6438,6 +6461,7 @@
 		var drawBox = h( 'div', null );
 		var doseOfBox = h( 'div', null );
 		var unitBox = h( 'div', { style: { flex: '1 1 auto', minWidth: '0' } } );
+		var strengthBox = h( 'div', null );
 		var routeSelect;
 		var vialField = h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Vial' ), vialBox );
 		var routeTouched = !! existing;
@@ -6518,8 +6542,33 @@
 				unitTouched = true;
 				renderDraw();
 				renderPlan();
+				renderStrength();
 			} ) );
 			doseInput.placeholder = isInjected( p.route ) ? '250' : '1';
+			renderStrength();
+		}
+
+		/** Tablets and capsules: how many is the dose above, so also ask the dosage on the bottle (500 mg). */
+		function renderStrength() {
+			strengthBox.textContent = '';
+			if ( PILL_UNITS.indexOf( p.unit ) === -1 ) {
+				return;
+			}
+			if ( STRENGTH_UNITS.indexOf( p.strengthUnit ) === -1 ) {
+				p.strengthUnit = 'mg';
+			}
+			strengthBox.appendChild( h( 'label', { for: 'ypt-p-strength', class: 'ypt-label', style: { marginTop: '12px' } }, 'Dosage per ' + p.unit ) );
+			strengthBox.appendChild( h( 'div', { class: 'ypt-row' },
+				h( 'div', { style: { flex: '0 0 34%' } }, h( 'input', { class: 'ypt-input', id: 'ypt-p-strength', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: p.strength || '', placeholder: '500', oninput: function ( e ) {
+					p.strength = e.target.value;
+				} } ) ),
+				h( 'div', { style: { flex: '1 1 auto', minWidth: '0' } }, seg( STRENGTH_UNITS.map( function ( u ) {
+					return [ u, u ];
+				} ), p.strengthUnit, function ( u ) {
+					p.strengthUnit = u;
+				} ) )
+			) );
+			strengthBox.appendChild( h( 'p', { class: 'ypt-hint' }, 'The strength printed on the bottle, like 500 mg. Leave it blank if you don’t know it.' ) );
 		}
 
 		function renderSchedDetail() {
@@ -6827,6 +6876,8 @@
 				notes: p.notes || '',
 				paused: !! p.paused,
 				doseOf: usesVial( p ) && blendPart( currentVial( p ), p.doseOf ) ? p.doseOf : '',
+				strength: strengthOf( p ) ? +p.strength : 0,
+				strengthUnit: strengthOf( p ) ? p.strengthUnit : '',
 				// Every spot for the route picked = no narrowing, so spots added to the map later join in.
 				sites: isInjected( p.route ) && rotationOf( p ).length < sitesForRoute( p.route ).length ? rotationOf( p ).map( function ( x ) {
 					return x.id;
@@ -6869,6 +6920,7 @@
 			h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: 'ypt-p-dose' }, 'Dose' ),
 				h( 'div', { class: 'ypt-row' }, h( 'div', { style: { flex: '0 0 34%' } }, doseInput ), unitBox ),
+				strengthBox,
 				doseOfBox,
 				drawBox
 			),
@@ -7514,7 +7566,7 @@
 			}, true )
 		) : null;
 		var body = [
-			h( 'p', { class: 'ypt-muted' }, amountLabel( d.dose, d.unit ) + ' · ' + fmtDay( d.date ) ),
+			h( 'p', { class: 'ypt-muted' }, amountLabel( d.dose, d.unit, d ) + ' · ' + fmtDay( d.date ) ),
 			h( 'div', { class: 'ypt-field' },
 				h( 'span', { class: 'ypt-label' }, 'Status' ),
 				seg( [ [ 'taken', 'Taken' ], [ 'skipped', 'Skipped' ] ], d.status, function ( s ) {
@@ -7749,6 +7801,7 @@
 			var p = d.protocolId ? state.records.protocol[ d.protocolId ] : null;
 			var v = currentVial( { compound: d.compound } );
 			var units = v ? unitsForDose( d.dose, d.unit, v, p ? p.doseOf : '' ) : null;
+			var str = p && p.unit === d.unit ? strengthOf( p ) : null;
 			closeSheet();
 			put( 'dose', uid( 'x-' ), {
 				protocolId: p ? d.protocolId : '',
@@ -7759,6 +7812,8 @@
 				at: wallToIso( date, timeVal ),
 				dose: parseFloat( d.dose ),
 				unit: d.unit,
+				strength: str ? str.amount : 0,
+				strengthUnit: str ? str.unit : '',
 				vialId: v ? v.id : '',
 				units: units != null ? Math.round( units * 100 ) / 100 : null,
 				note: d.note || '',

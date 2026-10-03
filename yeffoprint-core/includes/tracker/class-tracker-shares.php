@@ -187,6 +187,9 @@ class YeffoPrint_Tracker_Shares {
 			'route'    => $text( $in['route'] ?? '', 40 ),
 			'device'   => in_array( $in['device'] ?? '', [ 'syringe', 'pen', 'single' ], true ) ? $in['device'] : '',
 			'doseOf'   => $text( $in['doseOf'] ?? '', 80 ),
+			// A tablet / capsule's dosage on the bottle (500 mg).
+			'strength'     => $num( $in['strength'] ?? 0 ),
+			'strengthUnit' => in_array( $in['strengthUnit'] ?? '', [ 'mg', 'mcg', 'g', 'IU' ], true ) ? $in['strengthUnit'] : '',
 			'schedule' => [
 				'type'  => $type,
 				'days'  => $days,
