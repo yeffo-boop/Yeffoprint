@@ -61,6 +61,12 @@
 	border-top: 1px solid var(--wp--preset--color--light-gray);
 }
 
+/* Dims the totals while a new price is on its way (custom-order-form.js). */
+.yp-custom-order__pricing.is-updating strong {
+	opacity: 0.4;
+	transition: opacity 0.15s;
+}
+
 /*
  * Card-style choice selectors — direct request: make the "how do you
  * want to submit this" / "describe it vs. use our Designer" choices
