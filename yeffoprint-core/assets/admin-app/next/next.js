@@ -82,6 +82,17 @@
 			);
 		}
 
+		el.insertAdjacentHTML( 'beforeend',
+			'<div class="ypn-today">' +
+				'<section class="ypn-card ypn-queue"><h3 class="ypn-card__title">Your queue <span data-ypn-queue-count></span></h3><div data-ypn-queue><p class="yp-field__hint">Loading&hellip;</p></div></section>' +
+				'<section class="ypn-card ypn-ship"><h3 class="ypn-card__title">Ship today <span data-ypn-ship-count></span></h3><div data-ypn-ship><p class="yp-field__hint">Loading&hellip;</p></div></section>' +
+			'</div>'
+		);
+		todayEl = el;
+		todayBoard = null;
+		todayProblems = [];
+		loadToday();
+
 		YP.request( api( 'admin/next/stats' ) ).then( function ( stats ) {
 			var symbol = stats.currency_symbol;
 			var change = stats.revenue_last_week > 0
@@ -108,6 +119,151 @@
 			el.querySelector( '.ypn-kpis' ).innerHTML = '<p class="yp-form__error">Couldn’t load today’s numbers: ' + esc( error.message ) + '</p>';
 		} );
 	};
+
+	/* ---------- Today: Your queue + Ship today ---------- */
+
+	var todayEl = null;
+	var todayBoard = null;
+	var todayProblems = [];
+
+	// Bar color and order of each kind of queue item, most urgent first.
+	var QUEUE_KINDS = {
+		problem: { rank: 0, color: '#dc2626' },
+		proof: { rank: 1, color: 'var(--ypn-mag)' },
+		ready: { rank: 2, color: '#7c3aed' },
+		approval: { rank: 3, color: 'var(--ypn-yel)' },
+		unpaid: { rank: 4, color: '#9a9aa0' }
+	};
+
+	function loadToday() {
+		YP.request( api( 'admin/next/board' ) ).then( function ( data ) {
+			todayBoard = data.orders;
+			drawToday();
+		} ).catch( function ( error ) {
+			if ( todayEl && document.body.contains( todayEl ) ) {
+				todayEl.querySelector( '[data-ypn-queue]' ).innerHTML = '<p class="yp-form__error">Couldn’t load your queue: ' + esc( error.message ) + '</p>';
+				todayEl.querySelector( '[data-ypn-ship]' ).innerHTML = '';
+			}
+		} );
+	}
+
+	// The dashboard summary app.js already loads; lost or returned packages join the queue.
+	YP.next.onDashboard = function ( summary ) {
+		todayProblems = ( summary.shipped_packages || [] ).filter( function ( pkg ) {
+			return 'FAILURE' === pkg.tracking_status || 'RETURNED' === pkg.tracking_status;
+		} );
+		drawToday();
+	};
+
+	function orderLabel( o ) {
+		return ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + o.number;
+	}
+
+	function queueItems() {
+		var items = todayProblems.map( function ( pkg ) {
+			return {
+				kind: 'problem',
+				id: pkg.id,
+				title: pkg.order_label + ': ' + ( 'FAILURE' === pkg.tracking_status ? 'delivery failed' : 'returned to sender' ),
+				meta: ( pkg.customer || '' ) + ' · ' + ( pkg.carrier_label || 'Carrier' ) + ' ' + pkg.tracking_number,
+				action: 'Open'
+			};
+		} );
+
+		var day = 86400000;
+		( todayBoard || [] ).forEach( function ( o ) {
+			var age = o.date ? Date.now() - new Date( o.date ).getTime() : 0;
+			var base = { id: o.id, express: o.express, date: o.date, meta: ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
+			if ( 'proof' === o.column ) {
+				items.push( Object.assign( base, { kind: 'proof', title: 'Make the proof for ' + orderLabel( o ), action: 'Open' } ) );
+			} else if ( 'ready' === o.column ) {
+				items.push( Object.assign( base, { kind: 'ready', title: 'Print ' + orderLabel( o ), action: 'Send to printer', print: true } ) );
+			} else if ( 'approval' === o.column && ( o.express || age > 2 * day ) ) {
+				items.push( Object.assign( base, { kind: 'approval', title: 'Nudge ' + ( o.customer || 'the customer' ) + ' about their proof', action: 'Open' } ) );
+			} else if ( 'unpaid' === o.column && ( o.express || age > 2 * day ) ) {
+				items.push( Object.assign( base, { kind: 'unpaid', title: 'Payment still due on ' + orderLabel( o ), action: 'Open' } ) );
+			}
+		} );
+
+		items.sort( function ( a, b ) {
+			if ( ( 'problem' === a.kind ) !== ( 'problem' === b.kind ) ) {
+				return 'problem' === a.kind ? -1 : 1;
+			}
+			if ( !! a.express !== !! b.express ) {
+				return a.express ? -1 : 1;
+			}
+			if ( QUEUE_KINDS[ a.kind ].rank !== QUEUE_KINDS[ b.kind ].rank ) {
+				return QUEUE_KINDS[ a.kind ].rank - QUEUE_KINDS[ b.kind ].rank;
+			}
+			return String( a.date || '' ).localeCompare( String( b.date || '' ) );
+		} );
+		return items;
+	}
+
+	document.addEventListener( 'ypn:drawer-closed', function () {
+		if ( todayEl && document.body.contains( todayEl ) ) {
+			loadToday();
+		}
+	} );
+
+	function drawToday() {
+		if ( ! todayEl || ! document.body.contains( todayEl ) || ! todayBoard ) {
+			return;
+		}
+
+		var items = queueItems();
+		var shown = items.slice( 0, 7 );
+		var queueEl = todayEl.querySelector( '[data-ypn-queue]' );
+		todayEl.querySelector( '[data-ypn-queue-count]' ).textContent = items.length ? String( items.length ) : '';
+
+		queueEl.innerHTML = items.length
+			? shown.map( function ( item ) {
+				return (
+					'<div class="ypn-q' + ( item.express || 'problem' === item.kind ? ' is-hot' : '' ) + '">' +
+						'<i style="background:' + QUEUE_KINDS[ item.kind ].color + '"></i>' +
+						'<a class="ypn-q__text" href="#/order/' + item.id + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
+						( item.print
+							? '<button type="button" class="ypn-btn" data-ypn-q-print="' + item.id + '">' + esc( item.action ) + '</button>'
+							: '<a class="ypn-btn" href="#/order/' + item.id + '">' + esc( item.action ) + '</a>' ) +
+					'</div>'
+				);
+			} ).join( '' ) + ( items.length > shown.length ? '<a class="ypn-more" href="#/production">' + ( items.length - shown.length ) + ' more on the board &rarr;</a>' : '' )
+			: '<div class="ypn-empty"><b>All caught up</b><span>No proofs to make, nothing waiting to print.</span></div>';
+
+		var ship = todayBoard.filter( function ( o ) { return 'printing' === o.column; } );
+		todayEl.querySelector( '[data-ypn-ship-count]' ).textContent = ship.length ? String( ship.length ) : '';
+		todayEl.querySelector( '[data-ypn-ship]' ).innerHTML = ship.length
+			? ship.map( function ( o ) {
+				return (
+					'<div class="ypn-q">' +
+						'<a class="ypn-q__text" href="#/order/' + o.id + '"><b class="ypn-mono">' + esc( orderLabel( o ) ) + ( o.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + '</b><span>' + esc( ( o.customer || 'Guest' ) + ( o.shipping ? ' · ' + o.shipping : '' ) ) + '</span></a>' +
+						'<button type="button" class="ypn-btn" data-ypn-q-label="' + o.id + '">Label</button>' +
+					'</div>'
+				);
+			} ).join( '' )
+			: '<div class="ypn-empty"><span>Nothing on the printer right now. Orders you send to the printer show up here.</span></div>';
+
+		if ( ! todayEl.getAttribute( 'data-ypn-bound' ) ) {
+			todayEl.setAttribute( 'data-ypn-bound', '1' );
+			todayEl.addEventListener( 'click', function ( event ) {
+				var print = event.target.closest( '[data-ypn-q-print]' );
+				if ( print ) {
+					print.disabled = true;
+					print.textContent = 'Sending…';
+					sendOrderToPrinter( print.getAttribute( 'data-ypn-q-print' ) ).then( loadToday ).catch( function ( error ) {
+						print.disabled = false;
+						print.textContent = 'Send to printer';
+						window.alert( 'Couldn’t send to printer: ' + error.message );
+					} );
+					return;
+				}
+				var label = event.target.closest( '[data-ypn-q-label]' );
+				if ( label ) {
+					YP.next.openDetails( parseInt( label.getAttribute( 'data-ypn-q-label' ), 10 ), 'label' );
+				}
+			} );
+		}
+	}
 
 	/* ---------- Production board ---------- */
 
@@ -161,7 +317,7 @@
 			var canPrint = PRINTABLE.indexOf( o.column ) !== -1;
 			return (
 				'<div class="ypn-order' + ( o.express ? ' is-express' : '' ) + '" data-ypn-order="' + o.id + '"' + ( canPrint ? ' draggable="true"' : '' ) + ' tabindex="0" role="button">' +
-					'<div class="ypn-order__row"><span class="ypn-order__num">#' + esc( String( o.number ) ) + '</span>' +
+					'<div class="ypn-order__row"><span class="ypn-order__num">' + ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + esc( String( o.number ) ) + '</span>' +
 						( o.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '<span class="ypn-order__age">' + esc( ago( o.date ) ) + '</span>' ) +
 					'</div>' +
 					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + '</div>' +
@@ -234,7 +390,7 @@
 			}
 			var card = event.target.closest( '[data-ypn-order]' );
 			if ( card ) {
-				YP.openWcOrderDrawer( parseInt( card.getAttribute( 'data-ypn-order' ), 10 ) );
+				window.location.hash = '#/order/' + card.getAttribute( 'data-ypn-order' );
 			}
 		} );
 
@@ -242,7 +398,7 @@
 			var card = event.target.closest && event.target.closest( '[data-ypn-order]' );
 			if ( card && ( 'Enter' === event.key || ' ' === event.key ) ) {
 				event.preventDefault();
-				YP.openWcOrderDrawer( parseInt( card.getAttribute( 'data-ypn-order' ), 10 ) );
+				window.location.hash = '#/order/' + card.getAttribute( 'data-ypn-order' );
 			}
 		} );
 
@@ -298,35 +454,146 @@
 
 		load();
 
+		// Older phone alerts linked #/production/{id}; that order now has its own page.
 		if ( subId && /^\d+$/.test( subId ) ) {
-			YP.openWcOrderDrawer( parseInt( subId, 10 ) );
-			history.replaceState( null, '', '#/production' );
+			window.location.replace( '#/order/' + subId );
 		}
 	};
 
-	/* ---------- Order window: progress + quick actions ---------- */
+	/* ---------- Progress tracker (order page + order window) ---------- */
 
 	var STEPS = [ 'Placed', 'Paid', 'Printing', 'Shipped', 'Delivered' ];
 	var STEP_FOR_STATUS = { 'checkout-draft': 0, pending: 1, 'on-hold': 1, processing: 2, 'in-production': 2, shipped: 3, completed: 5 };
 
-	YP.onOrderDetail = function ( order, drawer, bodyEl ) {
-		var current = STEP_FOR_STATUS[ order.status ];
-		var html = '';
+	// Orders with a custom design go through the proof first.
+	var PROOF_STEPS = [ 'Paid', 'Proof', 'Approved', 'Printing', 'Shipped' ];
 
-		if ( undefined === current ) {
-			html = '<div class="ypn-progress ypn-progress--stopped">This order is ' + esc( order.status_label.toLowerCase() ) + '.</div>';
+	/**
+	 * `proof` is '' (no custom design on the order, or every proof
+	 * approved), 'needs_proof' or 'proof_sent', same as the board's.
+	 * `hasDesign` switches to the proof steps.
+	 */
+	function progressHtml( order, proof, hasDesign ) {
+		var steps = hasDesign ? PROOF_STEPS : STEPS;
+		var current;
+
+		if ( hasDesign ) {
+			current = {
+				pending: 0, 'on-hold': 0, 'checkout-draft': 0,
+				processing: 'needs_proof' === proof ? 1 : ( 'proof_sent' === proof ? 2 : 3 ),
+				'in-production': 3, shipped: 4, completed: 5
+			}[ order.status ];
 		} else {
-			html = '<ol class="ypn-progress">' + STEPS.map( function ( step, i ) {
-				var state = i < current ? 'done' : ( i === current ? 'now' : '' );
-				var label = step;
-				if ( 2 === i && 'processing' === order.status ) {
-					label = 'Ready to print';
-				}
-				return '<li class="' + state + '"><i>' + ( 'done' === state ? '✓' : i + 1 ) + '</i><span>' + esc( label ) + '</span></li>';
-			} ).join( '' ) + '</ol>';
+			current = STEP_FOR_STATUS[ order.status ];
 		}
 
+		if ( undefined === current ) {
+			return '<div class="ypn-progress ypn-progress--stopped">This order is ' + esc( order.status_label.toLowerCase() ) + '.</div>';
+		}
+
+		return '<ol class="ypn-progress">' + steps.map( function ( step, i ) {
+			var state = i < current ? 'done' : ( i === current ? 'now' : '' );
+			var label = step;
+			if ( 'Printing' === step && 'processing' === order.status && i === current ) {
+				label = 'Ready to print';
+			}
+			return '<li class="' + state + '"><i>' + ( 'done' === state ? '✓' : i + 1 ) + '</i><span>' + esc( label ) + '</span></li>';
+		} ).join( '' ) + '</ol>';
+	}
+
+	function proofStageOf( customOrders ) {
+		var stage = '';
+		customOrders.forEach( function ( c ) {
+			if ( 'design_in_progress' === c.status || 'proof_ready' === c.status ) {
+				stage = 'needs_proof';
+			} else if ( 'awaiting_approval' === c.status && 'needs_proof' !== stage ) {
+				stage = 'proof_sent';
+			}
+		} );
+		return stage;
+	}
+
+	function copyText( text, button ) {
+		var done = function () { button.textContent = 'Copied'; };
+		if ( navigator.clipboard ) {
+			navigator.clipboard.writeText( text ).then( done, function () { window.prompt( 'Copy this', text ); } );
+		} else {
+			window.prompt( 'Copy this', text );
+		}
+	}
+
+	function sendOrderToPrinter( id ) {
+		return YP.request( api( 'admin/order/' + id + '/send-to-printer' ), { method: 'POST' } );
+	}
+
+	/**
+	 * The order window (app.js) still holds everything the order page
+	 * doesn't repeat: status, refunds, customer notes, Shippo, editing.
+	 * `focus` jumps straight to one part of it once it has loaded:
+	 * 'label' (the shipping label panel), 'edit' (Edit order), or a
+	 * panel heading such as 'Status' or 'Record payment'.
+	 */
+	var pendingFocus = '';
+
+	YP.next.openDetails = function ( id, focus ) {
+		pendingFocus = focus || '';
+		YP.openWcOrderDrawer( id );
+	};
+
+	function panelByHeading( bodyEl, text ) {
+		var wanted = text.toLowerCase();
+		var found = null;
+		bodyEl.querySelectorAll( '.yp-panel' ).forEach( function ( panel ) {
+			var h2 = panel.querySelector( '.yp-panel__head h2' );
+			if ( ! found && h2 && h2.textContent.trim().toLowerCase().indexOf( wanted ) === 0 ) {
+				found = panel;
+			}
+		} );
+		return found;
+	}
+
+	function applyFocus( order, bodyEl ) {
+		var focus = pendingFocus;
+		pendingFocus = '';
+		if ( ! focus ) {
+			return;
+		}
+
+		var target = null;
+		if ( 'edit' === focus ) {
+			var edit = bodyEl.querySelector( '[data-yp-edit-order]' );
+			if ( edit ) {
+				edit.click();
+			}
+			target = bodyEl.querySelector( '[data-yp-items-panel]' );
+		} else if ( 'label' === focus ) {
+			if ( ! order.shippo_configured && order.shipping_label_available ) {
+				var print = bodyEl.querySelector( '[data-yp-print-label]' );
+				if ( print ) {
+					print.click();
+				}
+				target = bodyEl.querySelector( '[data-yp-shipping-label-panel]' );
+			} else {
+				target = panelByHeading( bodyEl, 'Shippo' );
+			}
+		} else {
+			target = panelByHeading( bodyEl, focus );
+		}
+
+		if ( target ) {
+			target.classList.add( 'ypn-flash' );
+			window.setTimeout( function () { target.scrollIntoView( { behavior: 'smooth', block: 'start' } ); }, 60 );
+		}
+	}
+
+	/* ---------- Order window: progress + quick actions ---------- */
+
+	YP.onOrderDetail = function ( order, drawer, bodyEl ) {
+		var onPage = /^#\/order\//.test( window.location.hash );
 		var actions = [];
+		if ( ! onPage ) {
+			actions.push( '<a class="ypn-btn" href="#/order/' + order.id + '" data-ypn-full-page>Open full page</a>' );
+		}
 		if ( 'processing' === order.status ) {
 			actions.push( '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-detail-print>Send to printer</button>' );
 		}
@@ -337,18 +604,26 @@
 			actions.push( '<a class="ypn-btn" href="mailto:' + escAttr( order.customer_email ) + '">Email customer</a>' );
 		}
 
+		var hasDesign = order.items.some( function ( item ) { return item.custom_order_id; } );
+
 		bodyEl.insertAdjacentHTML( 'afterbegin',
-			'<div class="ypn-detail-top">' + html +
+			'<div class="ypn-detail-top">' +
+				( onPage ? '' : progressHtml( order, '', hasDesign && 'processing' !== order.status ) ) +
 				( actions.length ? '<div class="ypn-detail-actions">' + actions.join( '' ) + '</div>' : '' ) +
 			'</div>'
 		);
+
+		var fullPage = bodyEl.querySelector( '[data-ypn-full-page]' );
+		if ( fullPage ) {
+			fullPage.addEventListener( 'click', function () { YP.closeDrawer( drawer ); } );
+		}
 
 		var printButton = bodyEl.querySelector( '[data-ypn-detail-print]' );
 		if ( printButton ) {
 			printButton.addEventListener( 'click', function () {
 				printButton.disabled = true;
 				printButton.textContent = 'Sending…';
-				YP.request( api( 'admin/order/' + order.id + '/send-to-printer' ), { method: 'POST' } )
+				sendOrderToPrinter( order.id )
 					.then( function () {
 						YP.closeDrawer( drawer );
 						YP.openWcOrderDrawer( order.id );
@@ -363,15 +638,321 @@
 
 		var copyButton = bodyEl.querySelector( '[data-ypn-copy-pay]' );
 		if ( copyButton ) {
-			copyButton.addEventListener( 'click', function () {
-				var done = function () { copyButton.textContent = 'Copied'; };
-				if ( navigator.clipboard ) {
-					navigator.clipboard.writeText( order.payment_url ).then( done, function () { window.prompt( 'Pay link', order.payment_url ); } );
-				} else {
-					window.prompt( 'Pay link', order.payment_url );
-				}
+			copyButton.addEventListener( 'click', function () { copyText( order.payment_url, copyButton ); } );
+		}
+
+		applyFocus( order, bodyEl );
+	};
+
+	/* ---------- Order page (#/order/{id}) ---------- */
+
+	var mediaUrl = yeffoprintAdminApp.restUrl.replace( /yeffoprint-core\/v1\/?$/, '' ) + 'wp/v2/media';
+
+	function uploadProof( file, customOrderId ) {
+		return YP.request( mediaUrl, {
+			method: 'POST',
+			headers: {
+				'Content-Type': file.type || 'application/octet-stream',
+				'Content-Disposition': 'attachment; filename="' + file.name.replace( /["\\\r\n]/g, '' ) + '"'
+			},
+			body: file
+		} ).then( function ( media ) {
+			return YP.request( api( 'admin/proofs' ), {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { custom_order_id: customOrderId, file_id: media.id } )
+			} );
+		} );
+	}
+
+	function addressText( html ) {
+		var div = document.createElement( 'div' );
+		div.innerHTML = String( html || '' ).replace( /<br\s*\/?>/gi, '\n' );
+		return div.textContent;
+	}
+
+	function kv( rows ) {
+		return '<dl class="ypn-kv">' + rows.filter( Boolean ).map( function ( r ) {
+			return '<dt>' + esc( r[ 0 ] ) + '</dt><dd>' + r[ 1 ] + '</dd>';
+		} ).join( '' ) + '</dl>';
+	}
+
+	function initials( name ) {
+		return String( name || '?' ).replace( /[^A-Za-z0-9 ]/g, ' ' ).trim().split( /\s+/ ).slice( 0, 2 ).map( function ( w ) { return w.charAt( 0 ); } ).join( '' ).toUpperCase() || '?';
+	}
+
+	function labelCardHtml( item ) {
+		var preview = item.image_url
+			? '<img src="' + escAttr( item.image_url ) + '" alt="" loading="lazy">'
+			: '<span>' + esc( initials( item.name ) ) + '</span>';
+		return (
+			'<div class="ypn-lab">' +
+				'<div class="ypn-lab__pv' + ( item.image_url ? ' has-img' : '' ) + '">' + preview + '</div>' +
+				'<div class="ypn-lab__name">' + esc( item.name ) + '</div>' +
+				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
+				( item.meta.length
+					// display_value is WooCommerce's own kses-filtered HTML (batch tables, color swatches), rendered the same way the order window does.
+					? '<details class="ypn-lab__more"><summary>Details</summary><dl>' + item.meta.map( function ( m ) {
+						return '<dt>' + esc( m.label ) + '</dt><dd>' + m.value + '</dd>';
+					} ).join( '' ) + '</dl></details>'
+					: '' ) +
+			'</div>'
+		);
+	}
+
+	function proofCardHtml( c ) {
+		var latest = c.proofs && c.proofs.length ? c.proofs[ 0 ] : null;
+		var needs = 'design_in_progress' === c.status || 'proof_ready' === c.status;
+		var note = c.change_request_notes && 'design_in_progress' === c.status
+			? '<div class="ypn-proof__changes"><b>Customer asked for changes</b>' + esc( c.change_request_notes ) + '</div>'
+			: '';
+
+		return (
+			'<section class="ypn-card ypn-proof" data-ypn-proof="' + c.id + '">' +
+				'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--' + ( needs ? 'mag' : ( 'awaiting_approval' === c.status ? 'yel' : 'grn' ) ) + '">' + esc( c.status_label || 'Not paid yet' ) + '</span></span></h3>' +
+				'<p class="ypn-proof__title">' + esc( c.title ) + ( c.order_type_label ? ' · ' + esc( c.order_type_label ) : '' ) + '</p>' +
+				note +
+				( latest
+					? '<p class="ypn-proof__latest">Last proof sent ' + esc( new Date( latest.date ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } ) ) +
+						( latest.file_url ? ' · <a href="' + escAttr( latest.file_url ) + '" target="_blank" rel="noopener noreferrer">View file</a>' : '' ) +
+						( c.approval_url ? ' · <button type="button" class="ypn-link" data-ypn-copy="' + escAttr( c.approval_url ) + '">Copy approval link</button>' : '' ) +
+					'</p>'
+					: '' ) +
+				( c.paid
+					? '<label class="ypn-drop' + ( needs ? ' is-wanted' : '' ) + '" data-ypn-drop-proof="' + c.id + '">' +
+						'<input type="file" accept="image/*,application/pdf" hidden data-ypn-proof-file="' + c.id + '">' +
+						'<b>' + ( latest ? 'Drop a new proof here' : 'Drop the proof PDF or PNG here' ) + '</b>' +
+						'<span>or tap to choose a file. The customer gets an approval link right away.</span>' +
+					'</label>'
+					: '<p class="yp-field__hint">The proof can be sent once this order is paid.</p>' ) +
+				'<p class="ypn-proof__foot"><a href="#/orders/' + c.id + '">Open in Custom Orders &rsaquo;</a></p>' +
+			'</section>'
+		);
+	}
+
+	YP.views.order = function ( viewEl, subId ) {
+		var id = parseInt( subId, 10 );
+		var titleEl = document.querySelector( '[data-yp-title]' );
+		if ( ! id ) {
+			window.location.hash = '#/production';
+			return;
+		}
+
+		viewEl.innerHTML = '<p class="yp-field__hint">Loading&hellip;</p>';
+
+		function load() {
+			YP.request( api( 'admin/order/' + id ) ).then( function ( order ) {
+				var ids = [];
+				order.items.forEach( function ( item ) {
+					if ( item.custom_order_id && ids.indexOf( item.custom_order_id ) === -1 ) {
+						ids.push( item.custom_order_id );
+					}
+				} );
+				return Promise.all( ids.map( function ( customId ) {
+					return YP.request( api( 'admin/custom-order/' + customId ) ).catch( function () { return null; } );
+				} ) ).then( function ( customOrders ) {
+					draw( order, customOrders.filter( Boolean ) );
+				} );
+			} ).catch( function ( error ) {
+				viewEl.innerHTML = '<p class="yp-form__error">Couldn’t load this order: ' + esc( error.message ) + '</p><a class="ypn-btn" href="#/production">Back to the board</a>';
 			} );
 		}
+
+		function draw( order, customOrders ) {
+			if ( ! document.body.contains( viewEl ) ) {
+				return;
+			}
+			if ( titleEl ) {
+				titleEl.textContent = 'Order ' + ( /^\d+$/.test( String( order.number ) ) ? '#' : '' ) + order.number;
+			}
+
+			var proof     = proofStageOf( customOrders );
+			var paid      = !! order.date_paid;
+			var unpaid    = [ 'pending', 'on-hold', 'checkout-draft', 'failed' ].indexOf( order.status ) !== -1;
+			var shipStage = [ 'processing', 'in-production', 'shipped', 'completed' ].indexOf( order.status ) !== -1;
+			var units     = order.items.reduce( function ( n, item ) { return n + Number( item.quantity || 0 ); }, 0 );
+			var other     = Math.round( ( order.total - order.subtotal - order.shipping_total ) * 100 ) / 100;
+			var needsProofFor = customOrders.filter( function ( c ) {
+				return c.paid && ( 'design_in_progress' === c.status || 'proof_ready' === c.status );
+			} )[ 0 ];
+
+			var sub = [
+				esc( order.customer_name || order.customer_email || 'Guest' ),
+				esc( money( order.total ) ) + ( paid ? ' paid' : ' unpaid' ) + ( order.payment_method_title ? ( paid ? ' by ' : ' · ' ) + esc( order.payment_method_title ) : '' ),
+				order.date ? esc( ago( order.date ) ) + ' ago' : ''
+			].filter( Boolean ).join( ' · ' );
+
+			// Actions, most likely next step first.
+			var actions = [];
+			if ( needsProofFor ) {
+				actions.push( '<button type="button" class="ypn-act ypn-act--primary" data-ypn-act="proof">Upload proof <span>↑</span></button>' );
+			} else if ( 'processing' === order.status ) {
+				actions.push( '<button type="button" class="ypn-act ypn-act--primary" data-ypn-act="print">Send to printer <span>›</span></button>' );
+			}
+			if ( shipStage ) {
+				actions.push( '<button type="button" class="ypn-act' + ( 'in-production' === order.status ? ' ypn-act--primary' : '' ) + '" data-ypn-act="label">' + ( ( order.shippo_labels || [] ).length ? 'Shipping label' : 'Buy shipping label' ) + ' <span>' + esc( order.shipping_method || '›' ) + '</span></button>' );
+			}
+			if ( order.payment_url ) {
+				actions.push( '<button type="button" class="ypn-act" data-ypn-act="pay">Copy pay link <span>⧉</span></button>' );
+			}
+			if ( order.can_record_payment ) {
+				actions.push( '<button type="button" class="ypn-act" data-ypn-act="record">Record a payment <span>›</span></button>' );
+			}
+			if ( order.editable ) {
+				actions.push( '<button type="button" class="ypn-act" data-ypn-act="edit">Edit items <span>›</span></button>' );
+				actions.push( '<a class="ypn-act" href="#/manual-order/' + order.id + '">Add items <span>+</span></a>' );
+			}
+			if ( order.customer_email ) {
+				actions.push( '<a class="ypn-act" href="mailto:' + escAttr( order.customer_email ) + '?subject=' + encodeURIComponent( 'Your YeffoDesign order #' + order.number ) + '">Message customer <span>›</span></a>' );
+			}
+			actions.push( '<button type="button" class="ypn-act" data-ypn-act="status">Change status <span>' + esc( order.status_label ) + '</span></button>' );
+			actions.push( '<button type="button" class="ypn-act" data-ypn-act="details">Notes, refunds &amp; all details <span>›</span></button>' );
+
+			var shipTo = order.needs_customer_address
+				? '<span class="ypn-pill ypn-pill--yel">Customer adds it when paying</span>'
+				: ( order.shipping_address ? esc( addressText( order.shipping_address ) ) : '—' );
+
+			var notes = order.customer_notes || [];
+			var balance = Number( order.balance_due || 0 );
+
+			viewEl.innerHTML =
+				'<div class="ypn-op">' +
+					'<div class="ypn-op__sub">' +
+						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
+						'<span class="ypn-pill ypn-pill--' + ( unpaid ? 'yel' : ( 'shipped' === order.status || 'completed' === order.status ? 'grn' : 'ink' ) ) + '">' + esc( order.status_label ) + '</span>' +
+						'<span>' + sub + '</span>' +
+					'</div>' +
+					'<div class="ypn-card ypn-op__track">' + progressHtml( order, proof, customOrders.length > 0 ) + '</div>' +
+					'<div class="ypn-op__grid">' +
+						'<div class="ypn-op__main">' +
+							customOrders.map( proofCardHtml ).join( '' ) +
+							'<section class="ypn-card">' +
+								'<h3 class="ypn-card__title">Labels &amp; items <span>' + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ' · ' + units + ' total</span></h3>' +
+								( order.items.length ? '<div class="ypn-labs">' + order.items.map( labelCardHtml ).join( '' ) + '</div>' : '<p class="yp-field__hint">No items on this order.</p>' ) +
+							'</section>' +
+							( order.customer_note
+								? '<section class="ypn-card"><h3 class="ypn-card__title">Note from the customer</h3><p class="ypn-op__note">' + esc( order.customer_note ) + '</p></section>'
+								: '' ) +
+							( notes.length
+								? '<section class="ypn-card"><h3 class="ypn-card__title">Your notes on this customer <span>' + notes.length + '</span></h3>' +
+									notes.slice( 0, 3 ).map( function ( n ) { return '<p class="ypn-op__note">' + esc( n.note ) + '</p>'; } ).join( '' ) +
+								'</section>'
+								: '' ) +
+						'</div>' +
+						'<aside class="ypn-op__side">' +
+							'<section class="ypn-card ypn-acts"><h3 class="ypn-card__title">Actions</h3>' + actions.join( '' ) + '</section>' +
+							'<section class="ypn-card"><h3 class="ypn-card__title">Ship to</h3>' + kv( [
+								[ 'Name', esc( order.customer_name || '—' ) ],
+								[ 'Address', '<span class="ypn-pre">' + shipTo + '</span>' ],
+								[ 'Method', esc( order.shipping_method || ( order.customer_picks_shipping ? 'Customer picks when paying' : '—' ) ) ],
+								order.customer_email ? [ 'Email', '<a href="mailto:' + escAttr( order.customer_email ) + '">' + esc( order.customer_email ) + '</a>' ] : null,
+								order.customer_phone ? [ 'Phone', '<a href="tel:' + escAttr( order.customer_phone ) + '">' + esc( order.customer_phone ) + '</a>' ] : null
+							] ) + '</section>' +
+							'<section class="ypn-card"><h3 class="ypn-card__title">Payment</h3>' + kv( [
+								[ 'Items', esc( money( order.subtotal ) ) ],
+								[ 'Shipping', esc( money( order.shipping_total ) ) ],
+								other > 0 ? [ 'Fees', esc( money( other ) ) ] : null,
+								[ 'Total', '<b>' + esc( money( order.total ) ) + '</b>' ],
+								paid
+									? [ 'Paid', '<b class="ypn-good">' + esc( money( order.total ) ) + ( order.payment_method_title ? ' ' + esc( order.payment_method_title ) : '' ) + '</b>' ]
+									: [ 'Paid', Number( order.amount_received || 0 ) > 0 ? esc( money( order.amount_received ) ) + ' so far' : 'Not yet' ],
+								! paid && balance > 0 && Number( order.amount_received || 0 ) > 0 ? [ 'Still owed', '<b class="ypn-bad">' + esc( money( balance ) ) + '</b>' ] : null,
+								Number( order.total_refunded || 0 ) > 0 ? [ 'Refunded', esc( money( order.total_refunded ) ) ] : null
+							] ) + '</section>' +
+							'<p class="ypn-op__woo"><a href="' + escAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>' +
+						'</aside>' +
+					'</div>' +
+					// Phone: the main step stays under your thumb.
+					'<div class="ypn-op__sticky">' +
+						( shipStage ? '<button type="button" class="ypn-btn" data-ypn-act="label">Label</button>' : '' ) +
+						( needsProofFor
+							? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-act="proof">Upload proof</button>'
+							: ( 'processing' === order.status
+								? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-act="print">Send to printer</button>'
+								: '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-act="details">All details</button>' ) ) +
+					'</div>' +
+				'</div>';
+
+			bind( order, needsProofFor );
+		}
+
+		function bind( order, needsProofFor ) {
+			viewEl.querySelectorAll( '[data-ypn-act]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					var act = button.getAttribute( 'data-ypn-act' );
+					if ( 'proof' === act && needsProofFor ) {
+						var input = viewEl.querySelector( '[data-ypn-proof-file="' + needsProofFor.id + '"]' );
+						if ( input ) {
+							input.click();
+						}
+					} else if ( 'print' === act ) {
+						button.disabled = true;
+						button.textContent = 'Sending…';
+						sendOrderToPrinter( order.id ).then( load ).catch( function ( error ) {
+							button.disabled = false;
+							button.textContent = 'Send to printer';
+							window.alert( 'Couldn’t send to printer: ' + error.message );
+						} );
+					} else if ( 'pay' === act ) {
+						copyText( order.payment_url, button );
+					} else if ( 'label' === act ) {
+						YP.next.openDetails( order.id, 'label' );
+					} else if ( 'record' === act ) {
+						YP.next.openDetails( order.id, 'Record' );
+					} else if ( 'edit' === act ) {
+						YP.next.openDetails( order.id, 'edit' );
+					} else if ( 'status' === act ) {
+						YP.next.openDetails( order.id, 'Status' );
+					} else {
+						YP.next.openDetails( order.id );
+					}
+				} );
+			} );
+
+			viewEl.querySelectorAll( '[data-ypn-copy]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () { copyText( button.getAttribute( 'data-ypn-copy' ), button ); } );
+			} );
+
+			viewEl.querySelectorAll( '[data-ypn-drop-proof]' ).forEach( function ( zone ) {
+				var customId = parseInt( zone.getAttribute( 'data-ypn-drop-proof' ), 10 );
+				var input = zone.querySelector( 'input[type="file"]' );
+
+				function send( file ) {
+					if ( ! file ) {
+						return;
+					}
+					zone.classList.add( 'is-busy' );
+					zone.querySelector( 'b' ).textContent = 'Sending ' + file.name + '…';
+					uploadProof( file, customId ).then( load ).catch( function ( error ) {
+						zone.classList.remove( 'is-busy' );
+						zone.querySelector( 'b' ).textContent = 'Couldn’t send the proof: ' + error.message;
+					} );
+				}
+
+				input.addEventListener( 'change', function () { send( input.files[ 0 ] ); } );
+				zone.addEventListener( 'dragover', function ( event ) {
+					event.preventDefault();
+					zone.classList.add( 'is-over' );
+				} );
+				zone.addEventListener( 'dragleave', function () { zone.classList.remove( 'is-over' ); } );
+				zone.addEventListener( 'drop', function ( event ) {
+					event.preventDefault();
+					zone.classList.remove( 'is-over' );
+					send( event.dataTransfer.files[ 0 ] );
+				} );
+			} );
+		}
+
+		function onDrawerClosed() {
+			if ( ! document.body.contains( viewEl ) || window.location.hash.indexOf( '#/order/' + id ) !== 0 ) {
+				document.removeEventListener( 'ypn:drawer-closed', onDrawerClosed );
+				return;
+			}
+			load();
+		}
+		document.addEventListener( 'ypn:drawer-closed', onDrawerClosed );
+
+		load();
 	};
 
 	/* ---------- Hubs ---------- */
@@ -383,7 +964,7 @@
 					'<span class="ypn-tile__icon" style="--tile:' + t[ 3 ] + '">' + esc( t[ 1 ].charAt( 0 ) ) + '</span>' +
 					'<b>' + esc( t[ 1 ] ) + '</b>' +
 					'<span class="ypn-tile__text">' + esc( t[ 2 ] ) + '</span>' +
-					'<span class="ypn-tile__go">Open &rsaquo;</span>' +
+					'<span class="ypn-tile__go"><span data-ypn-count="' + escAttr( t[ 0 ] ) + '"></span><span>Open &rsaquo;</span></span>' +
 				'</a>'
 			);
 		} ).join( '' ) + '</div>';
@@ -392,7 +973,8 @@
 	var MAG = '#EC008C', CY = '#00AEEF', YEL = '#d4a300', VIO = '#7c3aed', GRN = '#16a34a', ORA = '#ea580c', INK = '#3a3a3c';
 
 	YP.views.catalog = function ( viewEl ) {
-		viewEl.innerHTML = tilesHtml( [
+		viewEl.innerHTML = '<div data-ypn-tiles></div><section class="ypn-card ypn-best" data-ypn-best><h3 class="ypn-card__title">Best sellers <span>last 30 days</span></h3><p class="yp-field__hint">Loading&hellip;</p></section>';
+		viewEl.querySelector( '[data-ypn-tiles]' ).innerHTML = tilesHtml( [
 			[ 'templates', 'Templates', 'Label designs, categories, descriptions and photos.', MAG ],
 			[ 'sizes', 'Sizes', 'Label sizes, what they fit, and round lid stickers.', CY ],
 			[ 'sticker-sizes', 'Sticker Sizes', 'Custom sticker sizes and prices.', CY ],
@@ -404,6 +986,53 @@
 			[ 'filament-colors', 'Filaments', 'Brand colors for the 3D print picker.', ORA ],
 			[ 'pricing', 'Pricing Rules', 'Quantity tiers and price rules.', INK ]
 		] );
+
+		var COUNT_WORDS = {
+			templates: [ 'live', 'drafts' ], prints: [ 'live', 'drafts' ],
+			sizes: [ 'sizes' ], 'sticker-sizes': [ 'sizes' ], materials: [ 'materials' ],
+			'label-colors': [ 'colors' ], 'compound-list': [ 'names' ], 'filament-colors': [ 'filaments' ], pricing: [ 'rules' ]
+		};
+
+		YP.request( api( 'admin/next/catalog' ) ).then( function ( data ) {
+			Object.keys( data.counts ).forEach( function ( key ) {
+				var el = viewEl.querySelector( '[data-ypn-count="' + key + '"]' );
+				var c = data.counts[ key ];
+				var words = COUNT_WORDS[ key ] || [ '' ];
+				if ( ! el ) {
+					return;
+				}
+				el.className = 'ypn-tile__count';
+				el.textContent = c.live + ' ' + words[ 0 ] + ( c.draft && words[ 1 ] ? ' · ' + c.draft + ' ' + words[ 1 ] : '' );
+			} );
+			var labelFields = viewEl.querySelector( '[data-ypn-count="label-fields"]' );
+			if ( labelFields ) {
+				labelFields.className = 'ypn-tile__count';
+				labelFields.textContent = 'Shared set';
+			}
+
+			var best = data.best_sellers;
+			var max = best.reduce( function ( m, r ) { return Math.max( m, r.revenue ); }, 0 ) || 1;
+			viewEl.querySelector( '[data-ypn-best]' ).innerHTML =
+				'<h3 class="ypn-card__title">Best sellers <span>last ' + data.days + ' days, paid orders</span></h3>' +
+				( best.length
+					? '<table class="ypn-table"><thead><tr><th>Item</th><th class="ypn-hide-phone">Kind</th><th class="ypn-hide-phone">Units</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>' +
+						best.map( function ( r ) {
+							return (
+								'<tr>' +
+									'<td><a class="ypn-best__name" href="#/' + escAttr( r.section ) + '">' +
+										( r.image ? '<img src="' + escAttr( r.image ) + '" alt="" loading="lazy">' : '<span class="ypn-best__ph">' + esc( initials( r.name ) ) + '</span>' ) +
+										'<b>' + esc( r.name ) + '</b></a></td>' +
+									'<td class="ypn-hide-phone ypn-muted">' + esc( r.kind ) + '</td>' +
+									'<td class="ypn-hide-phone">' + esc( String( r.units ) ) + '</td>' +
+									'<td>' + esc( String( r.orders ) ) + '</td>' +
+									'<td class="ypn-best__rev"><i style="width:' + Math.max( 4, Math.round( r.revenue / max * 90 ) ) + 'px"></i>' + esc( money( r.revenue ) ) + '</td>' +
+								'</tr>'
+							);
+						} ).join( '' ) + '</tbody></table>'
+					: '<p class="yp-field__hint">No paid orders in the last ' + data.days + ' days yet.</p>' );
+		} ).catch( function ( error ) {
+			viewEl.querySelector( '[data-ypn-best]' ).innerHTML = '<p class="yp-form__error">Couldn’t load catalog numbers: ' + esc( error.message ) + '</p>';
+		} );
 	};
 
 	YP.views.people = function ( viewEl ) {

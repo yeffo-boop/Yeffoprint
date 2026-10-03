@@ -345,9 +345,15 @@
 		labelsById.catalog    = 'Catalog';
 		labelsById.people     = 'Customers';
 		labelsById.store      = 'Settings';
+		labelsById.settings   = 'All settings';
+		// `#/order/{id}`: one order's full page (next/next.js), under Orders.
+		labelsById.order      = 'Order';
 	}
 
 	function nextTabFor( id ) {
+		if ( 'order' === id ) {
+			id = 'production';
+		}
 		for ( var i = 0; i < NEXT_TABS.length; i++ ) {
 			if ( NEXT_TABS[ i ].sections.indexOf( id ) !== -1 ) {
 				return NEXT_TABS[ i ];
@@ -473,7 +479,7 @@
 		} ).join( '' );
 
 		var jumpEl = root.querySelector( '[data-ypn-jump]' );
-		root.querySelector( '#ypn-jump-list' ).innerHTML = Object.keys( labelsById ).map( function ( id ) {
+		root.querySelector( '#ypn-jump-list' ).innerHTML = Object.keys( labelsById ).filter( function ( id ) { return 'order' !== id; } ).map( function ( id ) {
 			return '<option value="' + YP.escapeAttr( labelsById[ id ] ) + '"></option>';
 		} ).join( '' );
 		jumpEl.addEventListener( 'change', function () {
@@ -1086,7 +1092,7 @@
 
 		el.querySelectorAll( '[data-yp-wc-order]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
-				openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-wc-order' ), 10 ) );
+				YP.openOrder( parseInt( button.getAttribute( 'data-yp-wc-order' ), 10 ) );
 			} );
 		} );
 
@@ -1110,6 +1116,11 @@
 					} );
 			} );
 		} );
+
+		// The new app's Today screen builds its queue from this summary too (next/next.js).
+		if ( NEXT && YP.next && YP.next.onDashboard ) {
+			YP.next.onDashboard( summary, el );
+		}
 
 		var refreshTrackingButton = el.querySelector( '[data-yp-refresh-tracking]' );
 		if ( refreshTrackingButton ) {
@@ -1186,6 +1197,17 @@
 	// in a new tab; it opens this same drawer in place instead, so staff
 	// never have to leave the app's own order view.
 	YP.openWcOrderDrawer = openWcOrderDrawer;
+
+	// A list row's "open this order": its full page in the new app
+	// (next/next.js, #/order/{id}), the order window everywhere else.
+	YP.openOrder = function ( id ) {
+		if ( NEXT && YP.views.order ) {
+			document.querySelectorAll( '.yp-drawer[data-open="true"]' ).forEach( function ( drawer ) { YP.closeDrawer( drawer ); } );
+			window.location.hash = '#/order/' + id;
+			return;
+		}
+		openWcOrderDrawer( id );
+	};
 
 	function loadWcOrderDetail( id, drawer, autoPrintLabel ) {
 		var bodyEl = drawer.querySelector( '[data-yp-body]' );
