@@ -205,10 +205,14 @@ class YeffoPrint_Custom_Sticker_Controller {
 			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add your stickers to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
+		// drawer_html lets the form open the cart drawer and stay put, so
+		// a customer can add another sticker design before checking out
+		// (direct report: customers couldn't add more than one).
 		return rest_ensure_response( [
 			'success'      => true,
 			'checkout_url' => wc_get_checkout_url(),
 			'cart_count'   => WC()->cart->get_cart_contents_count(),
+			'drawer_html'  => class_exists( 'YeffoPrint_Cart_Controller' ) ? YeffoPrint_Cart_Controller::drawer_html() : '',
 		] );
 	}
 
