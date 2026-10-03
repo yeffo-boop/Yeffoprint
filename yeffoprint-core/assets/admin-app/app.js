@@ -1686,12 +1686,14 @@
 			webDesignMilestonesHtml( project ) +
 			webDesignStagingHtml( project ) +
 			webDesignGoLiveHtml( project ) +
+			webDesignShowcaseHtml( project ) +
 			webDesignUpdatesHtml( project );
 
 		bindWebDesignAgreement( project, panel, order );
 		bindWebDesignMilestones( project, panel, order );
 		bindWebDesignStaging( project, panel, order );
 		bindWebDesignGoLive( project, panel, order, bodyEl );
+		bindWebDesignShowcase( project, panel, order );
 		bindWebDesignUpdates( project, panel, order );
 	}
 
@@ -2125,6 +2127,162 @@
 						} );
 				}
 			} );
+		} );
+	}
+
+	/* ---------- Showcase ---------- */
+
+	/**
+	 * Direct request: a public "Our Work" Showcase of finished sites
+	 * (class-web-design-showcase.php). One entry per order; it only
+	 * shows on the website once the customer said yes (asked on the
+	 * agreement), "Show on website" is ticked, and it has a name and a
+	 * desktop screenshot.
+	 */
+	function showcaseShotHtml( kind, label, url ) {
+		return (
+			'<div class="yp-wd-showcase__shot yp-wd-showcase__shot--' + kind + '" data-yp-wd-shot="' + kind + '">' +
+				( url ? '<img src="' + YP.escapeAttr( url ) + '" alt="" />' : '<span>No ' + label.toLowerCase() + ' screenshot yet</span>' ) +
+				'<div class="yp-wd-showcase__shot-actions">' +
+					'<strong>' + label + '</strong>' +
+					'<button type="button" class="yp-row-action" data-yp-wd-shot-pick="' + kind + '">' + ( url ? 'Replace' : 'Add' ) + '</button>' +
+					( url ? '<button type="button" class="yp-row-action" data-yp-wd-shot-clear="' + kind + '">Remove</button>' : '' ) +
+				'</div>' +
+			'</div>'
+		);
+	}
+
+	function webDesignShowcaseHtml( project ) {
+		var s = project.showcase || {};
+		var ok = ( project.feature_ok || {} ).answer || '';
+		var from = ( project.feature_ok || {} ).from || '';
+		var okHint = 'yes' === ok
+			? ( 'agreement' === from ? 'They said yes on their agreement.' : 'Marked yes by you.' )
+			: ( 'no' === ok
+				? ( 'agreement' === from ? 'They said no on their agreement.' : 'Marked no by you.' )
+				: 'Not asked yet. Their agreement asks this when they sign.' );
+
+		return (
+			'<div class="yp-panel yp-panel--compact yp-wd-showcase' + ( project.is_live && ! s.on && 'no' !== ok ? ' yp-wd-showcase--prompt' : '' ) + '" data-yp-wd-showcase>' +
+				'<div class="yp-panel__head"><h3>Showcase</h3>' +
+					'<span class="yp-pill yp-pill--' + ( s.on ? 'good' : 'neutral' ) + '">' + ( s.on ? 'On the website' : 'Hidden' ) + '</span>' +
+				'</div>' +
+				'<p class="yp-panel__hint">' +
+					( project.is_live && ! s.on && 'no' !== ok ? '<strong>This site is live.</strong> Add it to the <a href="' + YP.escapeAttr( project.showcase_page ) + '" target="_blank" rel="noopener noreferrer">Our Work</a> page for future customers? ' : 'Shows on the <a href="' + YP.escapeAttr( project.showcase_page ) + '" target="_blank" rel="noopener noreferrer">Our Work</a> page once it’s switched on. ' ) +
+				'</p>' +
+
+				'<div class="yp-field"><label>Customer said OK to feature their site</label>' +
+					'<select data-wd-sc-permission>' +
+						'<option value=""' + ( '' === ok ? ' selected' : '' ) + '>Not answered</option>' +
+						'<option value="yes"' + ( 'yes' === ok ? ' selected' : '' ) + '>Yes</option>' +
+						'<option value="no"' + ( 'no' === ok ? ' selected' : '' ) + '>No</option>' +
+					'</select>' +
+					'<p class="yp-field__hint">' + okHint + '</p>' +
+				'</div>' +
+
+				'<div class="yp-wd-showcase__shots">' +
+					showcaseShotHtml( 'desktop', 'Desktop', s.desktop_url ) +
+					showcaseShotHtml( 'phone', 'Phone', s.phone_url ) +
+				'</div>' +
+				'<p class="yp-field__hint">Full-page or top-of-page screenshots work best. Phone is optional.</p>' +
+
+				'<div class="yp-field"><label>Name shown</label><input type="text" maxlength="80" data-wd-sc-name value="' + YP.escapeAttr( s.name || '' ) + '" placeholder="e.g. Northline Peptides" /></div>' +
+				'<div class="yp-field"><label>Live site link</label><input type="url" data-wd-sc-url value="' + YP.escapeAttr( s.url || '' ) + '" placeholder="https://" /></div>' +
+				'<div class="yp-field"><label>One-line description</label><input type="text" maxlength="200" data-wd-sc-blurb value="' + YP.escapeAttr( s.blurb || '' ) + '" placeholder="e.g. Dark, clinical storefront with COA links on every product." /></div>' +
+				'<div class="yp-field"><label>Their story <span class="description">(optional)</span></label><textarea rows="3" data-wd-sc-story placeholder="What they needed and how we solved it">' + YP.escapeHtml( s.story || '' ) + '</textarea></div>' +
+				'<div class="yp-field"><label>What we did <span class="description">(one per line, filled in from the package)</span></label><textarea rows="5" data-wd-sc-did>' + YP.escapeHtml( ( s.did || [] ).join( '\n' ) ) + '</textarea></div>' +
+				'<div class="yp-field"><label>Customer quote <span class="description">(optional)</span></label><textarea rows="2" maxlength="600" data-wd-sc-quote>' + YP.escapeHtml( s.quote || '' ) + '</textarea></div>' +
+				'<div class="yp-field"><label>Quote credited as</label><input type="text" maxlength="80" data-wd-sc-quote-by value="' + YP.escapeAttr( s.quote_by || '' ) + '" placeholder="e.g. Marcus, owner" /></div>' +
+
+				'<label class="yp-field--checkbox yp-field"><input type="checkbox" data-wd-sc-on' + ( s.on ? ' checked' : '' ) + ' /> Show on website</label>' +
+				'<label class="yp-field--checkbox yp-field"><input type="checkbox" data-wd-sc-featured' + ( s.featured ? ' checked' : '' ) + ' /> Show first on the page</label>' +
+				'<div class="yp-form__row">' +
+					'<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-save-showcase>Save Showcase</button>' +
+				'</div>' +
+				'<div data-yp-wd-showcase-error></div>' +
+			'</div>'
+		);
+	}
+
+	function bindWebDesignShowcase( project, panel, order ) {
+		var box = panel.querySelector( '[data-yp-wd-showcase]' );
+		if ( ! box ) {
+			return;
+		}
+
+		var shots = {
+			desktop: { id: ( project.showcase || {} ).desktop_id || 0, url: ( project.showcase || {} ).desktop_url || '' },
+			phone: { id: ( project.showcase || {} ).phone_id || 0, url: ( project.showcase || {} ).phone_url || '' }
+		};
+
+		function redrawShot( kind ) {
+			var el = box.querySelector( '[data-yp-wd-shot="' + kind + '"]' );
+			el.outerHTML = showcaseShotHtml( kind, 'desktop' === kind ? 'Desktop' : 'Phone', shots[ kind ].url );
+			wireShot( kind );
+		}
+
+		function wireShot( kind ) {
+			var pick = box.querySelector( '[data-yp-wd-shot-pick="' + kind + '"]' );
+			pick.addEventListener( 'click', function () {
+				if ( typeof wp === 'undefined' || ! wp.media ) {
+					return;
+				}
+				var frame = wp.media( {
+					title: ( 'desktop' === kind ? 'Desktop' : 'Phone' ) + ' screenshot',
+					multiple: false,
+					library: { type: 'image' },
+					button: { text: 'Use this screenshot' }
+				} );
+				frame.on( 'select', function () {
+					var attachment = frame.state().get( 'selection' ).first().toJSON();
+					shots[ kind ] = { id: attachment.id, url: ( attachment.sizes && attachment.sizes.large && attachment.sizes.large.url ) || attachment.url };
+					redrawShot( kind );
+				} );
+				frame.open();
+			} );
+
+			var clear = box.querySelector( '[data-yp-wd-shot-clear="' + kind + '"]' );
+			if ( clear ) {
+				clear.addEventListener( 'click', function () {
+					shots[ kind ] = { id: 0, url: '' };
+					redrawShot( kind );
+				} );
+			}
+		}
+
+		wireShot( 'desktop' );
+		wireShot( 'phone' );
+
+		var errorEl = box.querySelector( '[data-yp-wd-showcase-error]' );
+		var saveButton = box.querySelector( '[data-yp-wd-save-showcase]' );
+		var field = function ( name ) { return box.querySelector( '[data-wd-sc-' + name + ']' ); };
+
+		saveButton.addEventListener( 'click', function () {
+			saveButton.disabled = true;
+			errorEl.innerHTML = '';
+			YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/showcase', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( {
+					permission: field( 'permission' ).value,
+					on: field( 'on' ).checked,
+					featured: field( 'featured' ).checked,
+					name: field( 'name' ).value.trim(),
+					url: field( 'url' ).value.trim(),
+					blurb: field( 'blurb' ).value.trim(),
+					story: field( 'story' ).value.trim(),
+					did: field( 'did' ).value.split( '\n' ).map( function ( line ) { return line.trim(); } ).filter( Boolean ),
+					quote: field( 'quote' ).value.trim(),
+					quote_by: field( 'quote-by' ).value.trim(),
+					desktop_id: shots.desktop.id,
+					phone_id: shots.phone.id
+				} )
+			} )
+				.then( function ( refreshed ) { renderWebDesignPanel( refreshed, panel, order, panel.closest( '[data-yp-body]' ) ); } )
+				.catch( function ( error ) {
+					saveButton.disabled = false;
+					errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
 		} );
 	}
 

@@ -93,6 +93,12 @@ class YeffoPrint_Admin_Web_Design_Controller {
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/admin/web-design/(?P<id>\d+)/showcase', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'save_showcase' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/web-design/(?P<id>\d+)/progress-report', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'send_progress_report' ],
@@ -347,6 +353,25 @@ class YeffoPrint_Admin_Web_Design_Controller {
 	}
 
 	/**
+	 * The order's "Our Work" Showcase entry (class-web-design-showcase.php).
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function save_showcase( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$saved = YeffoPrint_Web_Design_Showcase::save( $order, $request->get_json_params() ?: [] );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+
+		return rest_ensure_response( $this->project_payload( wc_get_order( $order->get_id() ) ) );
+	}
+
+	/**
 	 * Direct request: "provide progress reports to the customer by
 	 * email but also let them access all of the changes." Always stores
 	 * the report so it shows on the customer's Updates tab; the email
@@ -465,6 +490,9 @@ class YeffoPrint_Admin_Web_Design_Controller {
 			],
 			'golive'         => YeffoPrint_Web_Design_Project_Meta::get_golive( $order ),
 			'is_live'        => YeffoPrint_Web_Design_Project_Meta::is_live( $order ),
+			'showcase'       => YeffoPrint_Web_Design_Showcase::get( $order ),
+			'feature_ok'     => YeffoPrint_Web_Design_Showcase::get_permission( $order ),
+			'showcase_page'  => YeffoPrint_Web_Design_Showcase::page_url(),
 			// The digest token is a write credential for the project's own
 			// automation (never the customer), so it's fine to include in
 			// full here — this payload only ever reaches an authenticated

@@ -151,6 +151,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-retired-plugins.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-project-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-credential-purge.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-showcase.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-web-design-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-portal-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-digest-controller.php';
@@ -289,6 +290,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Completed_Email();
 		new YeffoPrint_Order_Processing_Email();
 		new YeffoPrint_Web_Design_Credential_Purge();
+		new YeffoPrint_Web_Design_Showcase();
 		new YeffoPrint_Admin_Web_Design_Controller();
 		new YeffoPrint_Web_Design_Portal_Controller();
 		new YeffoPrint_Web_Design_Digest_Controller();

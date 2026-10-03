@@ -2785,3 +2785,62 @@ body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
 		font-size: 0.82rem;
 	}
 }
+
+/* Web design order: Showcase panel (app.js webDesignShowcaseHtml). */
+.yp-wd-showcase--prompt {
+	border-color: #bfe9cf;
+	background: linear-gradient(90deg, #e8fbef, #fff 60%);
+}
+
+.yp-wd-showcase__shots {
+	display: grid;
+	grid-template-columns: 2.2fr 1fr;
+	gap: 12px;
+	margin-bottom: 6px;
+}
+
+.yp-wd-showcase__shot {
+	border: 1px dashed #d6d3cd;
+	border-radius: 12px;
+	padding: 8px;
+	background: #faf9f6;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-height: 120px;
+}
+
+.yp-wd-showcase__shot img {
+	width: 100%;
+	height: 150px;
+	object-fit: cover;
+	object-position: top;
+	border-radius: 8px;
+	display: block;
+}
+
+.yp-wd-showcase__shot > span {
+	flex: 1;
+	display: grid;
+	place-items: center;
+	text-align: center;
+	color: #6b6b70;
+	font-size: 12.5px;
+}
+
+.yp-wd-showcase__shot-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 12.5px;
+}
+
+.yp-wd-showcase__shot-actions strong {
+	margin-right: auto;
+}
+
+@media (max-width: 600px) {
+	.yp-wd-showcase__shots {
+		grid-template-columns: 1fr;
+	}
+}

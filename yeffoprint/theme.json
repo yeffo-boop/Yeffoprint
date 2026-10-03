@@ -177,6 +177,11 @@
 			"name": "leave-a-review",
 			"title": "Leave a Review",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "web-design-showcase",
+			"title": "Web Design Showcase",
+			"postTypes": [ "page" ]
 		}
 	]
 }
