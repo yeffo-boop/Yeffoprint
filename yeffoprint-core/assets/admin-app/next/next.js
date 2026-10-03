@@ -699,8 +699,11 @@
 				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
 				( item.meta.length
 					// display_value is WooCommerce's own kses-filtered HTML (batch tables, color swatches), rendered the same way the order window does.
+					// Each label/value pair is its own grid cell so Details spreads across the card;
+					// a batch label's field boxes (.yp-order-fields) or a table get a full row.
 					? '<details class="ypn-lab__more"><summary>Details</summary><dl>' + item.meta.map( function ( m ) {
-						return '<dt>' + esc( m.label ) + '</dt><dd>' + m.value + '</dd>';
+						var wide = /yp-order-fields|<table/.test( String( m.value ) );
+						return '<div class="ypn-lab__f' + ( wide ? ' is-wide' : '' ) + '"><dt>' + esc( m.label ) + '</dt><dd>' + m.value + '</dd></div>';
 					} ).join( '' ) + '</dl></details>'
 					: '' ) +
 			'</div>'

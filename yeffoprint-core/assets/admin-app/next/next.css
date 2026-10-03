@@ -1480,13 +1480,18 @@ body.yp-next [data-yp-dashboard] > .yp-attn {
 }
 
 .ypn-lab__pv.has-img {
+	height: auto;
+	min-height: 86px;
+	padding: 6px;
 	background: #fff;
 	border: 1px solid var(--ypn-line);
 }
 
 .ypn-lab__pv img {
+	display: block;
 	width: 100%;
-	height: 100%;
+	height: auto;
+	max-height: 180px;
 	object-fit: contain;
 }
 
@@ -1513,14 +1518,47 @@ body.yp-next [data-yp-dashboard] > .yp-attn {
 	font-weight: 600;
 }
 
+/* An open Details takes the whole row so its fields can spread out sideways. */
+.ypn-lab:has(.ypn-lab__more[open]) {
+	grid-column: 1 / -1;
+	display: grid;
+	grid-template-columns: minmax(160px, 260px) minmax(0, 1fr);
+	column-gap: 16px;
+	align-items: start;
+}
+
+.ypn-lab:has(.ypn-lab__more[open]) > :not(.ypn-lab__more) {
+	grid-column: 1;
+}
+
+.ypn-lab:has(.ypn-lab__more[open]) > .ypn-lab__more {
+	grid-column: 2;
+	grid-row: 1 / span 4;
+	margin-top: 0;
+}
+
 .ypn-lab__more dl {
-	margin: 6px 0 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 10px 16px;
+	margin: 8px 0 0;
+}
+
+.ypn-lab__f {
+	min-width: 0;
+}
+
+.ypn-lab__f.is-wide {
+	grid-column: 1 / -1;
 	overflow-x: auto;
 }
 
 .ypn-lab__more dt {
 	color: var(--ypn-mute);
-	margin-top: 6px;
+}
+
+body.yp-next .ypn-lab__more .yp-order-fields {
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 }
 
 .ypn-lab__more dd {
@@ -1757,6 +1795,10 @@ body.yp-next .ypn-acts .ypn-card__title {
 
 	.ypn-lab__pv {
 		height: 70px;
+	}
+
+	.ypn-lab:has(.ypn-lab__more[open]) {
+		display: block;
 	}
 
 	.ypn-progress span {
