@@ -598,6 +598,16 @@
 	 * to share one bulk-discount tier with each other, not just with
 	 * whatever's already in the cart.
 	 */
+	var pricingEl = totalEl ? totalEl.closest( '.yp-custom-order__pricing' ) : null;
+	var pricingTimer = null;
+
+	/**
+	 * Re-prices the batch after any change. Debounced so typing a
+	 * quantity sends one request, and the totals dim while it's out so a
+	 * slow response never looks like the old price is the new one. A
+	 * failed request is retried once, then shows dashes rather than a
+	 * stale total.
+	 */
 	function updatePricePreview() {
 		updateAiPanel();
 		var batch = currentBatchPayload();
@@ -606,7 +616,16 @@
 		}
 
 		var requestId = ++pricingRequestId;
+		if ( pricingEl ) {
+			pricingEl.classList.add( 'is-updating' );
+		}
+		window.clearTimeout( pricingTimer );
+		pricingTimer = window.setTimeout( function () {
+			fetchPricing( batch, requestId, 1 );
+		}, 250 );
+	}
 
+	function fetchPricing( batch, requestId, retriesLeft ) {
 		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders/pricing-preview', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -630,8 +649,28 @@
 
 				labelsTotalEl.textContent = formatCurrency( data.labels_subtotal );
 				totalEl.textContent = formatCurrency( data.total );
+				if ( pricingEl ) {
+					pricingEl.classList.remove( 'is-updating' );
+				}
 			} )
-			.catch( function () {} );
+			.catch( function () {
+				if ( requestId !== pricingRequestId ) {
+					return;
+				}
+				if ( retriesLeft > 0 ) {
+					window.setTimeout( function () {
+						if ( requestId === pricingRequestId ) {
+							fetchPricing( batch, requestId, retriesLeft - 1 );
+						}
+					}, 1500 );
+					return;
+				}
+				labelsTotalEl.innerHTML = '&mdash;';
+				totalEl.innerHTML = '&mdash;';
+				if ( pricingEl ) {
+					pricingEl.classList.remove( 'is-updating' );
+				}
+			} );
 	}
 
 	/**
