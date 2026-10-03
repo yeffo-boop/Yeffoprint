@@ -302,6 +302,25 @@ main.wp-block-group {
 	opacity: 1;
 }
 
+/* Header logo at 1.5x the base lockup (Jeff picked option B, mockups in
+   mockups/header-logo-size/). Phones get a smaller step below. */
+.yp-header__logo .yp-brand-lockup {
+	gap: 0.9rem;
+}
+
+.yp-header__logo .yp-brand-lockup__mark {
+	width: 2.4rem;
+	height: 2.7rem;
+}
+
+.yp-header__logo .yp-brand-lockup__word {
+	font-size: 1.725rem;
+}
+
+.yp-header__logo .yp-brand-lockup__tagline {
+	font-size: 1rem;
+}
+
 .yp-header.is-scrolled .yp-brand-lockup__tagline {
 	margin-top: 0;
 	max-height: 0;
@@ -409,8 +428,9 @@ main.wp-block-group {
    Stickers and 3D Prints grouped under the one "Shop" menu (and the
    calculator and tracker under "Tools") below, the
    nav is six items, which fits on one row comfortably from here down
-   to the mobile menu. */
-@media (max-width: 1279px) {
+   to the mobile menu. Starts below 1440px (was 1280px) since the
+   bigger header logo takes the room the roomier links had. */
+@media (max-width: 1439px) {
 	.yp-header__nav ul.wp-block-navigation__container {
 		gap: 0.25rem;
 	}
@@ -1368,6 +1388,36 @@ fieldset {
 	.yp-header__logo {
 		min-width: 0;
 		flex: 1 1 auto;
+	}
+
+	/* Option B on phones: up to 1.35x the base lockup, scaled down with the
+	   screen width so it never runs under the menu button on narrow
+	   phones. The tagline wrapped onto two lines here and the search icon
+	   duplicates the search bar right under the header, so both go to make
+	   room. */
+	.yp-header__logo {
+		--yp-logo-size: clamp(1rem, calc((100vw - 214px) / 7.1), 1.55rem);
+	}
+
+	.yp-header__logo .yp-brand-lockup {
+		gap: calc(var(--yp-logo-size) * 0.56);
+	}
+
+	.yp-header__logo .yp-brand-lockup__mark {
+		width: calc(var(--yp-logo-size) * 1.39);
+		height: calc(var(--yp-logo-size) * 1.57);
+	}
+
+	.yp-header__logo .yp-brand-lockup__word {
+		font-size: var(--yp-logo-size);
+	}
+
+	.yp-header__logo .yp-brand-lockup__tagline {
+		display: none;
+	}
+
+	.yp-header__actions [data-yp-drawer-trigger="yp-search-drawer"] {
+		display: none;
 	}
 
 	/* Less room to give the screenshot on a phone-height screen, so
