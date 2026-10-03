@@ -230,6 +230,39 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 	public function sticker_pricing_preview( \WP_REST_Request $request ) {
 		$params = $request->get_json_params() ?: [];
 
+		// Several stickers on one order: each priced on the order's
+		// combined sticker quantity, same pool add_sticker_row() uses.
+		if ( isset( $params['stickers'] ) && is_array( $params['stickers'] ) ) {
+			$stickers      = array_values( array_filter( $params['stickers'], 'is_array' ) );
+			$tier_quantity = 0;
+			foreach ( $stickers as $sticker ) {
+				$tier_quantity += max( 1, absint( $sticker['quantity'] ?? 1 ) );
+			}
+
+			$items = [];
+			$total = 0.0;
+			foreach ( $stickers as $sticker ) {
+				$pricing = YeffoPrint_Sticker_Pricing::calculate(
+					absint( $sticker['size_id'] ?? 0 ),
+					(float) ( $sticker['custom_width_in'] ?? 0 ),
+					(float) ( $sticker['custom_height_in'] ?? 0 ),
+					absint( $sticker['material_id'] ?? 0 ),
+					sanitize_key( (string) ( $sticker['sticker_type'] ?? '' ) ),
+					sanitize_key( (string) ( $sticker['shape'] ?? '' ) ),
+					max( 1, absint( $sticker['quantity'] ?? 1 ) ),
+					$tier_quantity
+				);
+				if ( is_wp_error( $pricing ) ) {
+					$items[] = [ 'error' => $pricing->get_error_message() ];
+					continue;
+				}
+				$items[] = [ 'total' => $pricing['total'] ];
+				$total  += $pricing['total'];
+			}
+
+			return rest_ensure_response( [ 'items' => $items, 'total' => round( $total, 2 ) ] );
+		}
+
 		$pricing = YeffoPrint_Sticker_Pricing::calculate(
 			absint( $params['size_id'] ?? 0 ),
 			(float) ( $params['custom_width_in'] ?? 0 ),

@@ -1282,6 +1282,34 @@ body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[typ
 	margin-bottom: 1.25rem;
 }
 
+/* Create Order: one card per Custom Sticker once there's more than one. */
+.yp-mo-sticker + .yp-mo-sticker {
+	margin-top: 1.25rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-mo-sticker__head {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 0.75rem;
+}
+
+.yp-mo-sticker__head h3 {
+	margin: 0;
+	font-size: 1rem;
+}
+
+.yp-mo-sticker__price {
+	margin-left: auto;
+	font-weight: 600;
+}
+
+.yp-mo-sticker__head .yp-row-action {
+	order: 3;
+}
+
 /* "Fill all": shown under each field in the first label row once
    there's more than one row; copies that value into every row below. */
 .yp-fill-all {

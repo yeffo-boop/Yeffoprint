@@ -12,9 +12,10 @@
  * the one that fully exercised every piece of shared plumbing (customer
  * resolution, direct order assembly outside the cart, the proof-approval
  * linkage). Phase B (this revision) adds Custom Stickers, reusing all of
- * that plumbing unchanged — no fee item (Custom Stickers has none) and
- * no batching (one sticker configuration per submission, matching the
- * customer-facing flow exactly). Phase C (this revision) adds Template
+ * that plumbing unchanged — no fee item (Custom Stickers has none). An
+ * order can carry several stickers, each its own line item and proof
+ * shell (direct report: "I can only add one custom sticker to an
+ * order"). Phase C (this revision) adds Template
  * Label orders — a real, existing `yp_template` (the same kind customers
  * order from directly), not a freeform Custom Design/Sticker submission.
  * This is the one case that genuinely needed its own new `ORDER_TYPE`
@@ -135,9 +136,13 @@ class YeffoPrint_Manual_Order_Creator {
 	 *                                 the $25 design fee on some manual orders (VIP customer, goodwill,
 	 *                                 etc), which has no equivalent on the other two groups (neither has a
 	 *                                 flat fee to waive in the first place).
-	 *     @type array  $sticker       Optional — { size_id, material_id, sticker_type, shape, quantity,
-	 *                                 custom_width_in, custom_height_in, instructions, uploads } — uploads:
-	 *                                 attachment IDs, already uploaded via /custom-orders/uploads.
+	 *     @type array  $stickers      Optional — a list of { size_id, material_id, sticker_type, shape,
+	 *                                 quantity, custom_width_in, custom_height_in, instructions, uploads } —
+	 *                                 uploads: attachment IDs, already uploaded via /custom-orders/uploads.
+	 *                                 Direct report: "I can only add one custom sticker to an order" — each
+	 *                                 entry is its own line item (and its own proof shell), priced on the
+	 *                                 order's combined sticker quantity like the storefront cart does.
+	 *     @type array  $sticker       Optional, legacy — one sticker in the same shape as a $stickers entry.
 	 *     @type array  $template      Optional — { template_id, size_id, material_id,
 	 *                                 variants: [ { quantity, values: { field_id: value } } ], instructions }.
 	 *     @type array  $web_design    Optional — { package_id } — a yp_web_design_pkg with a real Checkout
@@ -382,7 +387,7 @@ class YeffoPrint_Manual_Order_Creator {
 			}
 		};
 
-		foreach ( $groups as $type => $group ) {
+		foreach ( $groups as list( $type, $group ) ) {
 			$custom_order_id = 0;
 
 			// 'web_design' is never in SHELL_TYPES (see this class's own
@@ -407,7 +412,7 @@ class YeffoPrint_Manual_Order_Creator {
 			if ( 'custom_design' === $type ) {
 				$result = self::add_custom_design_rows( $order, $group['batch'], $custom_order_id, $group['waive_design_fee'] );
 			} elseif ( 'sticker' === $type ) {
-				$result = self::add_sticker_row( $order, $group, $custom_order_id );
+				$result = self::add_sticker_row( $order, $group, $custom_order_id, $group['tier_quantity'] );
 			} elseif ( 'template' === $type ) {
 				$result = self::add_template_row( $order, $group, $custom_order_id );
 			} else {
@@ -684,6 +689,10 @@ class YeffoPrint_Manual_Order_Creator {
 			return sprintf( '%s — %s', $group['brand_name'], current_time( 'Y-m-d H:i' ) );
 		}
 		if ( 'sticker' === $type ) {
+			if ( $group['count'] > 1 ) {
+				/* translators: 1: this sticker's number, 2: how many stickers the order has, 3: submission date/time */
+				return sprintf( __( 'Custom Stickers %1$d of %2$d — %3$s', 'yeffoprint-core' ), $group['index'], $group['count'], current_time( 'Y-m-d H:i' ) );
+			}
 			/* translators: %s: submission date/time */
 			return sprintf( __( 'Custom Stickers — %s', 'yeffoprint-core' ), current_time( 'Y-m-d H:i' ) );
 		}
@@ -755,8 +764,10 @@ class YeffoPrint_Manual_Order_Creator {
 	 * directly instead of the top-level payload a single-group order
 	 * used to pass them).
 	 *
-	 * @return array<string, array>|\WP_Error Keyed by 'custom_design'/'sticker'/'template' — only the
-	 *                                        groups actually present, each already validated/sanitized.
+	 * @return array<int, array{0:string, 1:array}>|\WP_Error A list of [ type, group ] pairs — only the
+	 *                                        groups actually present, each already validated/sanitized. A list
+	 *                                        rather than keyed by type because an order can carry several
+	 *                                        stickers, each its own group.
 	 */
 	private static function validate_groups( array $payload ) {
 		$groups = [];
@@ -774,21 +785,44 @@ class YeffoPrint_Manual_Order_Creator {
 				return $batch;
 			}
 
-			$groups['custom_design'] = [
+			$groups[] = [ 'custom_design', [
 				'brand_name'       => $brand_name,
 				'batch'            => $batch,
 				'style_notes'      => sanitize_textarea_field( (string) ( $raw['style_notes'] ?? '' ) ),
 				'instructions'     => sanitize_textarea_field( (string) ( $raw['instructions'] ?? '' ) ),
 				'waive_design_fee' => ! empty( $raw['waive_design_fee'] ),
-			];
+			] ];
 		}
 
-		if ( ! empty( $payload['sticker'] ) && is_array( $payload['sticker'] ) ) {
-			$sticker = self::validate_sticker_fields( $payload['sticker'] );
+		$raw_stickers = [];
+		if ( ! empty( $payload['stickers'] ) && is_array( $payload['stickers'] ) ) {
+			$raw_stickers = array_values( array_filter( $payload['stickers'], 'is_array' ) );
+		} elseif ( ! empty( $payload['sticker'] ) && is_array( $payload['sticker'] ) ) {
+			$raw_stickers = [ $payload['sticker'] ];
+		}
+
+		$stickers = [];
+		foreach ( $raw_stickers as $i => $raw_sticker ) {
+			$sticker = self::validate_sticker_fields( $raw_sticker );
 			if ( is_wp_error( $sticker ) ) {
+				if ( count( $raw_stickers ) > 1 ) {
+					/* translators: 1: sticker number, 2: the validation message */
+					return new \WP_Error( $sticker->get_error_code(), sprintf( __( 'Sticker %1$d: %2$s', 'yeffoprint-core' ), $i + 1, $sticker->get_error_message() ), $sticker->get_error_data() );
+				}
 				return $sticker;
 			}
-			$groups['sticker'] = $sticker;
+			$stickers[] = $sticker;
+		}
+
+		// Same bulk-discount pool the storefront cart uses: every sticker
+		// on the order counts toward the tier (class-cart-pricing.php's
+		// combined_sticker_quantity()).
+		$sticker_tier_quantity = array_sum( array_column( $stickers, 'quantity' ) );
+		foreach ( $stickers as $i => $sticker ) {
+			$sticker['tier_quantity'] = $sticker_tier_quantity;
+			$sticker['index']         = $i + 1;
+			$sticker['count']         = count( $stickers );
+			$groups[]                 = [ 'sticker', $sticker ];
 		}
 
 		if ( ! empty( $payload['template'] ) && is_array( $payload['template'] ) ) {
@@ -796,7 +830,7 @@ class YeffoPrint_Manual_Order_Creator {
 			if ( is_wp_error( $template ) ) {
 				return $template;
 			}
-			$groups['template'] = $template;
+			$groups[] = [ 'template', $template ];
 		}
 
 		if ( ! empty( $payload['web_design'] ) && is_array( $payload['web_design'] ) ) {
@@ -804,7 +838,7 @@ class YeffoPrint_Manual_Order_Creator {
 			if ( is_wp_error( $web_design ) ) {
 				return $web_design;
 			}
-			$groups['web_design'] = $web_design;
+			$groups[] = [ 'web_design', $web_design ];
 		}
 
 		if ( ! $groups ) {
@@ -1008,27 +1042,24 @@ class YeffoPrint_Manual_Order_Creator {
 	}
 
 	/**
-	 * Custom Stickers' single line item — no fee item (Custom Stickers
-	 * has none at all, unlike Custom Design's separate $25 design fee)
-	 * and no batching (one sticker configuration per manual order,
-	 * matching the customer-facing flow's own shape exactly). Mirrors
+	 * One Custom Sticker line item — no fee item (Custom Stickers has
+	 * none at all, unlike Custom Design's separate $25 design fee). An
+	 * order can carry several of these, one per sticker. Mirrors
 	 * class-custom-sticker-controller.php::submit()'s own pricing/add
 	 * steps, just built directly on the order instead of through
 	 * WC()->cart->add_to_cart().
 	 *
 	 * @return true|\WP_Error
 	 */
-	private static function add_sticker_row( \WC_Order $order, array $sticker, int $custom_order_id ) {
+	private static function add_sticker_row( \WC_Order $order, array $sticker, int $custom_order_id, int $tier_quantity ) {
 		$product_id = YeffoPrint_Custom_Sticker_Product::get_product_id();
 		if ( ! $product_id ) {
 			return new \WP_Error( 'yeffoprint_no_sticker_product', __( 'Custom Stickers orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 		$product = wc_get_product( $product_id );
 
-		// No cart-wide pool to combine against — this is the only sticker
-		// row a manual order can ever have (no batching for Custom
-		// Stickers), so the bulk-discount tier is just this row's own
-		// quantity, same as a solo customer-facing submission would see.
+		// $tier_quantity is every sticker on this submission combined, the
+		// same pool the storefront cart prices a sticker's tier against.
 		$pricing = YeffoPrint_Sticker_Pricing::calculate(
 			$sticker['size_id'],
 			$sticker['custom_width_in'],
@@ -1036,7 +1067,8 @@ class YeffoPrint_Manual_Order_Creator {
 			$sticker['material_id'],
 			$sticker['sticker_type'],
 			$sticker['shape'],
-			$sticker['quantity']
+			$sticker['quantity'],
+			$tier_quantity
 		);
 		if ( is_wp_error( $pricing ) ) {
 			return $pricing;
@@ -1060,7 +1092,7 @@ class YeffoPrint_Manual_Order_Creator {
 				YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN => $sticker['custom_height_in'],
 				YeffoPrint_Cart_Item_Keys::TOTAL_QTY        => $sticker['quantity'],
 			];
-			YeffoPrint_Order_Item_Meta::apply( $item, $values, $sticker['quantity'] );
+			YeffoPrint_Order_Item_Meta::apply( $item, $values, $tier_quantity );
 			$item->save();
 		}
 
