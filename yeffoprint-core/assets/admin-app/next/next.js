@@ -259,7 +259,7 @@
 				}
 				var label = event.target.closest( '[data-ypn-q-label]' );
 				if ( label ) {
-					YP.next.openDetails( parseInt( label.getAttribute( 'data-ypn-q-label' ), 10 ), 'label' );
+					window.location.hash = '#/ship/' + parseInt( label.getAttribute( 'data-ypn-q-label' ), 10 );
 				}
 			} );
 		}
@@ -896,7 +896,7 @@
 					} else if ( 'pay' === act ) {
 						copyText( order.payment_url, button );
 					} else if ( 'label' === act ) {
-						YP.next.openDetails( order.id, 'label' );
+						window.location.hash = '#/ship/' + order.id;
 					} else if ( 'record' === act ) {
 						YP.next.openDetails( order.id, 'Record' );
 					} else if ( 'edit' === act ) {
@@ -953,6 +953,538 @@
 		document.addEventListener( 'ypn:drawer-closed', onDrawerClosed );
 
 		load();
+	};
+
+	/* ---------- Shipping label (#/ship/{id}) ----------
+	   Buy and print a Shippo label without the order window: labels
+	   already bought (print here, send to the label printer, void), then
+	   package size → rates → buy. Same endpoints the order window's
+	   Shippo panel uses (class-admin-shippo-controller.php). */
+
+	function queueLabel( orderId, tracking, kind ) {
+		return YP.request( api( 'admin/next/print-queue' ), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( { order_id: orderId, tracking_number: tracking, kind: kind || 'label' } )
+		} );
+	}
+
+	function stationStatus() {
+		return YP.request( api( 'admin/next/print-queue' ) ).catch( function () { return { station_online: false, jobs: [] }; } );
+	}
+
+	YP.views.ship = function ( viewEl, subId ) {
+		var id = parseInt( subId, 10 );
+		var titleEl = document.querySelector( '[data-yp-title]' );
+		if ( ! id ) {
+			window.location.hash = '#/production';
+			return;
+		}
+
+		var order = null;
+		var station = { station_online: false };
+		var rates = [];
+		var carrier = '';
+		var picked = '';
+		var bestMatch = null;
+
+		viewEl.innerHTML = '<p class="yp-field__hint">Loading&hellip;</p>';
+
+		function load() {
+			Promise.all( [ YP.request( api( 'admin/order/' + id ) ), stationStatus() ] ).then( function ( results ) {
+				order = results[ 0 ];
+				station = results[ 1 ];
+				draw();
+			} ).catch( function ( error ) {
+				viewEl.innerHTML = '<p class="yp-form__error">Couldn’t load this order: ' + esc( error.message ) + '</p>';
+			} );
+		}
+
+		function labelRowHtml( label ) {
+			var invoice = label.customs && label.customs.commercial_invoice_url && ! label.customs.sent_electronically;
+			return (
+				'<div class="ypn-shiplabel' + ( label.voided ? ' is-voided' : '' ) + '">' +
+					'<div class="ypn-shiplabel__text"><b>' + esc( label.carrier_label ) + '</b><span class="ypn-mono">' + esc( label.tracking_number ) + '</span>' +
+						( label.voided ? '<span class="ypn-pill">Voided</span>' : '' ) +
+						( label.customs && label.customs.sent_electronically ? '<span class="ypn-pill ypn-pill--grn">Customs sent electronically</span>' : '' ) +
+					'</div>' +
+					( label.voided ? '' :
+						'<div class="ypn-shiplabel__acts">' +
+							'<button type="button" class="ypn-btn' + ( station.station_online ? ' ypn-btn--primary' : '' ) + '" data-ypn-queue="' + escAttr( label.tracking_number ) + '">Send to label printer</button>' +
+							'<button type="button" class="ypn-btn' + ( station.station_online ? '' : ' ypn-btn--primary' ) + '" data-ypn-print-here="' + escAttr( label.label_url ) + '">Print here</button>' +
+							( invoice ? '<button type="button" class="ypn-btn" data-ypn-queue-invoice="' + escAttr( label.tracking_number ) + '">Send customs invoice</button>' : '' ) +
+							'<button type="button" class="ypn-link ypn-bad" data-ypn-void="' + escAttr( label.tracking_number ) + '" data-carrier="' + escAttr( label.carrier_label ) + '">Void</button>' +
+						'</div>' ) +
+				'</div>'
+			);
+		}
+
+		function stationLine() {
+			return station.station_online
+				? '<p class="ypn-station is-on"><i></i>Label printer is ready. <a href="#/print-station">Print station</a></p>'
+				: '<p class="ypn-station"><i></i>Label printer isn’t connected. Open the <a href="#/print-station">Print station</a> on the computer it’s plugged into, or use Print here.</p>';
+		}
+
+		function draw() {
+			if ( ! document.body.contains( viewEl ) ) {
+				return;
+			}
+			if ( titleEl ) {
+				titleEl.textContent = 'Ship ' + ( /^\d+$/.test( String( order.number ) ) ? '#' : '' ) + order.number;
+			}
+
+			var labels = order.shippo_labels || [];
+			var active = labels.filter( function ( l ) { return ! l.voided; } );
+			var pkg = order.shippo_default_package || {};
+			var customs = order.shippo_customs || {};
+			var addr = order.needs_customer_address
+				? '<span class="ypn-pill ypn-pill--yel">Customer hasn’t added an address yet</span>'
+				: '<span class="ypn-pre">' + esc( addressText( order.shipping_address ) ) + '</span>';
+
+			var buy;
+			if ( ! order.shippo_configured ) {
+				buy = '<p class="yp-field__hint">Shippo isn’t set up yet. Add your API token under <a href="#/settings/shipping">Settings › Shipping</a> to buy labels here.</p>' +
+					( order.shipping_label_available ? '<button type="button" class="ypn-btn" data-ypn-wcs>Use WooCommerce Shipping instead</button>' : '' );
+			} else {
+				buy =
+					'<div class="ypn-dims">' +
+						[ [ 'weight_oz', 'Weight', 'oz' ], [ 'length_in', 'Length', 'in' ], [ 'width_in', 'Width', 'in' ], [ 'height_in', 'Height', 'in' ] ].map( function ( f ) {
+							return '<label><span>' + f[ 1 ] + '</span><span class="ypn-dims__in"><input type="number" inputmode="decimal" min="0.1" step="0.1" data-ypn-dim="' + f[ 0 ] + '" value="' + escAttr( pkg[ f[ 0 ] ] ) + '"><i>' + f[ 2 ] + '</i></span></label>';
+						} ).join( '' ) +
+					'</div>' +
+					( customs.international
+						? '<div class="ypn-dims ypn-dims--two">' +
+							'<label><span>Customs contents</span><input type="text" data-ypn-customs-desc value="' + escAttr( customs.description ) + '"></label>' +
+							'<label><span>Value (' + esc( customs.currency || 'USD' ) + ')</span><input type="number" inputmode="decimal" min="0.01" step="0.01" data-ypn-customs-value value="' + escAttr( customs.value ) + '"></label>' +
+						'</div>'
+						: '' ) +
+					'<button type="button" class="ypn-btn ypn-ship__rates-btn" data-ypn-rates>' + ( rates.length ? 'Refresh rates' : 'Get rates' ) + '</button>' +
+					'<p class="ypn-ship__hint">Comparing rates is free. Buying a label charges your Shippo account.</p>' +
+					'<div data-ypn-rate-list>' + ratesHtml() + '</div>' +
+					'<div data-ypn-ship-error></div>';
+			}
+
+			viewEl.innerHTML =
+				'<div class="ypn-ship">' +
+					'<div class="ypn-op__sub">' +
+						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
+						'<span>' + esc( order.customer_name || 'Guest' ) + ( order.shipping_method ? ' picked ' + esc( order.shipping_method ) : '' ) + '</span>' +
+						'<a class="ypn-link" href="#/order/' + order.id + '">Open order</a>' +
+					'</div>' +
+					'<div class="ypn-op__grid">' +
+						'<div class="ypn-op__main">' +
+							( labels.length
+								? '<section class="ypn-card"><h3 class="ypn-card__title">Labels on this order <span>' + active.length + ' active</span></h3>' + stationLine() + labels.map( labelRowHtml ).join( '' ) + '</section>'
+								: '' ) +
+							'<section class="ypn-card"><h3 class="ypn-card__title">' + ( active.length ? 'Buy another label' : 'Buy a label' ) + '</h3>' + buy + '</section>' +
+						'</div>' +
+						'<aside class="ypn-op__side">' +
+							'<section class="ypn-card"><h3 class="ypn-card__title">Ship to</h3>' + kv( [
+								[ 'Name', esc( order.customer_name || '—' ) ],
+								[ 'Address', addr ],
+								order.customer_phone ? [ 'Phone', esc( order.customer_phone ) ] : null,
+								[ 'Picked', esc( order.shipping_method || '—' ) ]
+							] ) + '</section>' +
+							( labels.length ? '' : '<section class="ypn-card">' + stationLine() + '</section>' ) +
+						'</aside>' +
+					'</div>' +
+					( rates.length ? '<div class="ypn-op__sticky ypn-ship__sticky"><button type="button" class="ypn-btn ypn-btn--primary" data-ypn-buy>' + buyLabel() + '</button></div>' : '' ) +
+				'</div>';
+
+			bind();
+		}
+
+		function visibleRates() {
+			return carrier ? rates.filter( function ( r ) { return r.carrier_label === carrier; } ) : rates;
+		}
+
+		function pickedRate() {
+			return rates.filter( function ( r ) { return r.id === picked; } )[ 0 ] || null;
+		}
+
+		function buyLabel() {
+			var rate = pickedRate();
+			return rate ? 'Buy ' + esc( rate.carrier_label ) + ' label · ' + esc( money( rate.amount ) ) : 'Pick a rate';
+		}
+
+		function ratesHtml() {
+			if ( ! rates.length ) {
+				return '';
+			}
+			var carriers = [];
+			rates.forEach( function ( r ) {
+				if ( carriers.indexOf( r.carrier_label ) === -1 ) {
+					carriers.push( r.carrier_label );
+				}
+			} );
+			var list = visibleRates();
+			if ( ! list.some( function ( r ) { return r.id === picked; } ) ) {
+				picked = list.length ? ( bestMatch && list.some( function ( r ) { return r.id === bestMatch; } ) ? bestMatch : list[ 0 ].id ) : '';
+			}
+			return (
+				( carriers.length > 1
+					? '<div class="ypn-seg ypn-seg--show">' +
+						'<button type="button" class="' + ( carrier ? '' : 'is-on' ) + '" data-ypn-carrier="">All</button>' +
+						carriers.map( function ( c ) {
+							return '<button type="button" class="' + ( c === carrier ? 'is-on' : '' ) + '" data-ypn-carrier="' + escAttr( c ) + '">' + esc( c ) + '</button>';
+						} ).join( '' ) +
+					'</div>'
+					: '' ) +
+				'<div class="ypn-rates">' + list.map( function ( r ) {
+					return (
+						'<label class="ypn-rate' + ( r.id === picked ? ' is-on' : '' ) + '">' +
+							'<input type="radio" name="ypn-rate" value="' + escAttr( r.id ) + '"' + ( r.id === picked ? ' checked' : '' ) + '>' +
+							'<span class="ypn-rate__text"><b>' + esc( r.carrier_label ) + ' ' + esc( r.service ) + '</b>' +
+								'<span>' + ( r.days ? r.days + ( 1 === r.days ? ' day' : ' days' ) : 'Delivery time not given' ) + ( r.id === bestMatch ? ' · <em>Customer’s choice</em>' : '' ) + '</span></span>' +
+							'<span class="ypn-rate__price">' + esc( money( r.amount ) ) + '</span>' +
+						'</label>'
+					);
+				} ).join( '' ) + '</div>' +
+				'<button type="button" class="ypn-btn ypn-btn--primary ypn-ship__buy" data-ypn-buy>' + buyLabel() + '</button>'
+			);
+		}
+
+		function redrawRates() {
+			var el = viewEl.querySelector( '[data-ypn-rate-list]' );
+			if ( el ) {
+				el.innerHTML = ratesHtml();
+			}
+			var sticky = viewEl.querySelector( '.ypn-ship__sticky [data-ypn-buy]' );
+			if ( sticky ) {
+				sticky.innerHTML = buyLabel();
+			}
+		}
+
+		function getRates( button ) {
+			var defaults = order.shippo_default_package || {};
+			var parcel = {};
+			viewEl.querySelectorAll( '[data-ypn-dim]' ).forEach( function ( input ) {
+				var key = input.getAttribute( 'data-ypn-dim' );
+				parcel[ key ] = parseFloat( input.value ) || defaults[ key ];
+			} );
+			var desc = viewEl.querySelector( '[data-ypn-customs-desc]' );
+			if ( desc ) {
+				parcel.customs_description = desc.value;
+				parcel.customs_value = viewEl.querySelector( '[data-ypn-customs-value]' ).value;
+			}
+			order.shippo_default_package = parcel;
+
+			button.disabled = true;
+			button.textContent = 'Getting rates…';
+			viewEl.querySelector( '[data-ypn-ship-error]' ).innerHTML = '';
+
+			YP.request( api( 'admin/order/' + id + '/shippo/rates' ), {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( parcel )
+			} ).then( function ( response ) {
+				rates = response.rates || [];
+				carrier = '';
+				picked = '';
+				bestMatch = YP.findBestMatchingRateId ? YP.findBestMatchingRateId( rates, order.shipping_method ) : null;
+				draw();
+				if ( ! rates.length ) {
+					viewEl.querySelector( '[data-ypn-ship-error]' ).innerHTML = '<p class="yp-field__hint">No rates came back for this address and package.</p>';
+				}
+			} ).catch( function ( error ) {
+				button.disabled = false;
+				button.textContent = 'Get rates';
+				viewEl.querySelector( '[data-ypn-ship-error]' ).innerHTML = '<p class="yp-form__error">' + esc( error.message ) + '</p>';
+			} );
+		}
+
+		function buy() {
+			var rate = pickedRate();
+			if ( ! rate ) {
+				return;
+			}
+			YP.confirmModal( {
+				title: 'Buy this label?',
+				message: rate.carrier_label + ' ' + rate.service + ' for ' + money( rate.amount ) + '. This charges your Shippo account right away.' +
+					( station.station_online ? ' It will print on your label printer.' : '' ),
+				confirmLabel: 'Buy label',
+				onConfirm: function () {
+					// Opened now, inside the tap, so the browser allows it; filled in once the label exists.
+					var printWindow = station.station_online ? null : window.open( '', '_blank' );
+					viewEl.querySelectorAll( '[data-ypn-buy]' ).forEach( function ( b ) { b.disabled = true; b.textContent = 'Buying…'; } );
+
+					YP.request( api( 'admin/order/' + id + '/shippo/purchase' ), {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label } )
+					} ).then( function ( response ) {
+						var label = response.label || {};
+						rates = [];
+						if ( station.station_online && label.tracking_number ) {
+							return queueLabel( id, label.tracking_number ).catch( function () {} ).then( load );
+						}
+						if ( printWindow && label.label_url ) {
+							printWindow.location.href = label.label_url;
+						} else if ( printWindow ) {
+							printWindow.close();
+						}
+						load();
+					} ).catch( function ( error ) {
+						if ( printWindow ) {
+							printWindow.close();
+						}
+						viewEl.querySelectorAll( '[data-ypn-buy]' ).forEach( function ( b ) { b.disabled = false; b.innerHTML = buyLabel(); } );
+						viewEl.querySelector( '[data-ypn-ship-error]' ).innerHTML = '<p class="yp-form__error">Couldn’t buy the label: ' + esc( error.message ) + '</p>';
+					} );
+				}
+			} );
+		}
+
+		function sendToPrinter( button, tracking, kind ) {
+			button.disabled = true;
+			button.textContent = 'Sending…';
+			queueLabel( id, tracking, kind ).then( function ( r ) {
+				button.textContent = r.station_online ? 'Sent to printer ✓' : 'Queued, prints when the station is open';
+			} ).catch( function ( error ) {
+				button.disabled = false;
+				button.textContent = 'Send to label printer';
+				window.alert( 'Couldn’t send it: ' + error.message );
+			} );
+		}
+
+		function bind() {
+			var ratesBtn = viewEl.querySelector( '[data-ypn-rates]' );
+			if ( ratesBtn ) {
+				ratesBtn.addEventListener( 'click', function () { getRates( ratesBtn ); } );
+			}
+			var wcs = viewEl.querySelector( '[data-ypn-wcs]' );
+			if ( wcs ) {
+				wcs.addEventListener( 'click', function () { YP.openWcOrderDrawer( id, true ); } );
+			}
+		}
+
+		viewEl.addEventListener( 'click', function ( event ) {
+			var t = event.target;
+			var el;
+			if ( ( el = t.closest( '[data-ypn-carrier]' ) ) ) {
+				carrier = el.getAttribute( 'data-ypn-carrier' );
+				redrawRates();
+			} else if ( ( el = t.closest( '.ypn-rate' ) ) ) {
+				var input = el.querySelector( 'input' );
+				if ( input && input.value !== picked ) {
+					picked = input.value;
+					redrawRates();
+				}
+			} else if ( ( el = t.closest( '[data-ypn-buy]' ) ) ) {
+				buy();
+			} else if ( ( el = t.closest( '[data-ypn-print-here]' ) ) ) {
+				YP.printLabelUrl( el.getAttribute( 'data-ypn-print-here' ) );
+			} else if ( ( el = t.closest( '[data-ypn-queue]' ) ) ) {
+				sendToPrinter( el, el.getAttribute( 'data-ypn-queue' ), 'label' );
+			} else if ( ( el = t.closest( '[data-ypn-queue-invoice]' ) ) ) {
+				sendToPrinter( el, el.getAttribute( 'data-ypn-queue-invoice' ), 'invoice' );
+			} else if ( ( el = t.closest( '[data-ypn-void]' ) ) ) {
+				var tracking = el.getAttribute( 'data-ypn-void' );
+				YP.confirmModal( {
+					title: 'Void this label?',
+					message: 'Void the ' + el.getAttribute( 'data-carrier' ) + ' label ' + tracking + '? Shippo refunds unused labels, but the carrier decides.',
+					confirmLabel: 'Void label',
+					danger: true,
+					onConfirm: function () {
+						YP.request( api( 'admin/order/' + id + '/shippo/void' ), {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify( { tracking_number: tracking } )
+						} ).then( load ).catch( function ( error ) { window.alert( 'Couldn’t void it: ' + error.message ); } );
+					}
+				} );
+			}
+		} );
+
+		load();
+	};
+
+	/* ---------- Print station (#/print-station) ----------
+	   Left open on the computer the label printer is plugged into. It
+	   checks the print queue every few seconds and prints whatever a
+	   phone sent ("Send to label printer"). Chrome started with
+	   --kiosk-printing prints straight to the default printer. */
+
+	var stationTimer = null;
+
+	YP.views[ 'print-station' ] = function ( viewEl ) {
+		var running = false;
+		var printed = {};
+		var wakeLock = null;
+
+		viewEl.innerHTML =
+			'<div class="ypn-op__grid">' +
+				'<div class="ypn-op__main">' +
+					'<section class="ypn-card ypn-station-card">' +
+						'<h3 class="ypn-card__title">Print station <span data-ypn-station-state>Off</span></h3>' +
+						'<p>Use this on the computer your label printer is plugged into. While it’s on, labels you send from your phone print here automatically.</p>' +
+						'<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-station-toggle>Start printing here</button>' +
+						'<button type="button" class="ypn-btn" data-ypn-station-test hidden>Print the last label again</button>' +
+					'</section>' +
+					'<section class="ypn-card"><h3 class="ypn-card__title">Recent print jobs</h3><div data-ypn-jobs><p class="yp-field__hint">Loading&hellip;</p></div></section>' +
+				'</div>' +
+				'<aside class="ypn-op__side">' +
+					'<section class="ypn-card"><h3 class="ypn-card__title">One-time setup</h3>' +
+						'<ol class="ypn-steps">' +
+							'<li>Make your label printer the <b>default printer</b> on this computer, with 4×6 paper.</li>' +
+							'<li>Make a Chrome shortcut that starts with <b>--kiosk-printing</b> so labels print without a dialog (details below).</li>' +
+							'<li>Open YeffoDesign (new) › Settings › <b>Print station</b> in that Chrome and tap <b>Start printing here</b>. Leave the window open.</li>' +
+						'</ol>' +
+						'<details class="ypn-howto"><summary>Mac</summary><p>Open Terminal once and run:</p><code>open -na "Google Chrome" --args --kiosk-printing</code></details>' +
+						'<details class="ypn-howto"><summary>Windows</summary><p>Right-click your Chrome shortcut › Properties. At the end of <b>Target</b>, after the quotes, add a space and <code>--kiosk-printing</code>. Close all Chrome windows, then open Chrome from that shortcut.</p></details>' +
+						'<p class="yp-field__hint">Without the shortcut it still works, you just click Print on each label.</p>' +
+					'</section>' +
+				'</aside>' +
+			'</div>';
+
+		var stateEl  = viewEl.querySelector( '[data-ypn-station-state]' );
+		var toggle   = viewEl.querySelector( '[data-ypn-station-toggle]' );
+		var testBtn  = viewEl.querySelector( '[data-ypn-station-test]' );
+		var jobsEl   = viewEl.querySelector( '[data-ypn-jobs]' );
+
+		function fileUrl( job ) {
+			return api( 'admin/next/print-queue/' + job.id + '/file' ) + ( api( '' ).indexOf( '?' ) === -1 ? '?' : '&' ) + '_wpnonce=' + encodeURIComponent( yeffoprintAdminApp.nonce );
+		}
+
+		function setJob( job, status ) {
+			return YP.request( api( 'admin/next/print-queue/' + job.id ), {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { status: status } )
+			} ).catch( function () {} );
+		}
+
+		function printJob( job ) {
+			return new Promise( function ( resolve ) {
+				var frame = document.createElement( 'iframe' );
+				frame.className = 'ypn-print-frame';
+				frame.src = fileUrl( job );
+				var done = false;
+				function finish( status ) {
+					if ( done ) {
+						return;
+					}
+					done = true;
+					setJob( job, status ).then( resolve );
+					window.setTimeout( function () { frame.remove(); }, 60000 );
+				}
+				frame.addEventListener( 'load', function () {
+					window.setTimeout( function () {
+						try {
+							frame.contentWindow.focus();
+							frame.contentWindow.print();
+							finish( 'printed' );
+						} catch ( e ) {
+							finish( 'failed' );
+						}
+					}, 700 );
+				} );
+				window.setTimeout( function () { finish( 'failed' ); }, 30000 );
+				document.body.appendChild( frame );
+			} );
+		}
+
+		function jobsHtml( jobs ) {
+			if ( ! jobs.length ) {
+				return '<div class="ypn-empty"><span>Nothing sent yet. Tap “Send to label printer” on an order’s shipping label screen.</span></div>';
+			}
+			var LABELS = { pending: [ 'Waiting', 'yel' ], printed: [ 'Printed', 'grn' ], failed: [ 'Didn’t print', 'mag' ], cancelled: [ 'Cancelled', '' ] };
+			return jobs.slice( 0, 12 ).map( function ( job ) {
+				var s = LABELS[ job.status ] || [ job.status, '' ];
+				return (
+					'<div class="ypn-q">' +
+						'<a class="ypn-q__text" href="#/ship/' + job.order_id + '"><b>' + ( 'invoice' === job.kind ? 'Customs invoice' : 'Label' ) + ' for ' + esc( ( /^\d+$/.test( job.number ) ? '#' : '' ) + job.number ) + '</b><span>' + esc( ( job.customer || '' ) + ' · ' + ago( job.created ) + ' ago' ) + '</span></a>' +
+						'<span class="ypn-pill ypn-pill--' + s[ 1 ] + '">' + esc( s[ 0 ] ) + '</span>' +
+						( 'pending' !== job.status ? '<button type="button" class="ypn-btn" data-ypn-reprint="' + escAttr( job.id ) + '">Again</button>' : '' ) +
+					'</div>'
+				);
+			} ).join( '' );
+		}
+
+		var lastJobs = [];
+
+		function refreshList() {
+			return YP.request( api( 'admin/next/print-queue' ) ).then( function ( data ) {
+				lastJobs = data.jobs;
+				jobsEl.innerHTML = jobsHtml( data.jobs );
+				testBtn.hidden = ! running || ! data.jobs.some( function ( j ) { return 'label' === j.kind; } );
+			} ).catch( function ( error ) {
+				jobsEl.innerHTML = '<p class="yp-form__error">' + esc( error.message ) + '</p>';
+			} );
+		}
+
+		function tick() {
+			if ( ! running || ! document.body.contains( viewEl ) ) {
+				stop();
+				return;
+			}
+			YP.request( api( 'admin/next/print-queue?station=1' ) ).then( function ( data ) {
+				var queue = data.jobs.filter( function ( j ) { return ! printed[ j.id ]; } ).reverse();
+				var chain = Promise.resolve();
+				queue.forEach( function ( job ) {
+					printed[ job.id ] = true;
+					chain = chain.then( function () { return printJob( job ); } );
+				} );
+				return chain.then( refreshList );
+			} ).catch( function () {
+				stateEl.textContent = 'Can’t reach the site, retrying';
+			} ).then( function () {
+				if ( running ) {
+					stateEl.textContent = 'On, waiting for labels';
+					stationTimer = window.setTimeout( tick, 4000 );
+				}
+			} );
+		}
+
+		function start() {
+			running = true;
+			toggle.textContent = 'Stop printing here';
+			toggle.classList.remove( 'ypn-btn--primary' );
+			stateEl.textContent = 'On, waiting for labels';
+			viewEl.querySelector( '.ypn-station-card' ).classList.add( 'is-on' );
+			if ( navigator.wakeLock ) {
+				navigator.wakeLock.request( 'screen' ).then( function ( lock ) { wakeLock = lock; } ).catch( function () {} );
+			}
+			tick();
+		}
+
+		function stop() {
+			running = false;
+			window.clearTimeout( stationTimer );
+			if ( wakeLock ) {
+				wakeLock.release().catch( function () {} );
+				wakeLock = null;
+			}
+			if ( document.body.contains( viewEl ) ) {
+				toggle.textContent = 'Start printing here';
+				toggle.classList.add( 'ypn-btn--primary' );
+				stateEl.textContent = 'Off';
+				viewEl.querySelector( '.ypn-station-card' ).classList.remove( 'is-on' );
+			}
+		}
+
+		window.clearTimeout( stationTimer );
+
+		toggle.addEventListener( 'click', function () {
+			if ( running ) {
+				stop();
+			} else {
+				start();
+			}
+		} );
+
+		viewEl.addEventListener( 'click', function ( event ) {
+			var again = event.target.closest( '[data-ypn-reprint]' );
+			var job = again ? lastJobs.filter( function ( j ) { return j.id === again.getAttribute( 'data-ypn-reprint' ); } )[ 0 ] : null;
+			if ( event.target.closest( '[data-ypn-station-test]' ) ) {
+				job = lastJobs.filter( function ( j ) { return 'label' === j.kind; } )[ 0 ];
+			}
+			if ( job ) {
+				printJob( job ).then( refreshList );
+			}
+		} );
+
+		refreshList();
 	};
 
 	/* ---------- Hubs ---------- */

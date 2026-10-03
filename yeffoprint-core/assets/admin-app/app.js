@@ -328,7 +328,7 @@
 		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders' ] },
 		{ id: 'catalog', label: 'Catalog', icon: 'box', sections: [ 'catalog', 'templates', 'sizes', 'sticker-sizes', 'materials', 'label-fields', 'label-colors', 'compound-list', 'prints', 'filament-colors', 'pricing' ] },
 		{ id: 'people', label: 'Customers', icon: 'people', sections: [ 'people', 'customers', 'reviews', 'tracker-feedback', 'rewards', 'coupons', 'maintenance' ] },
-		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
+		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'print-station', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
 	];
 	var NEXT_SUB_LABELS = {
 		production: 'Production board',
@@ -348,10 +348,13 @@
 		labelsById.settings   = 'All settings';
 		// `#/order/{id}`: one order's full page (next/next.js), under Orders.
 		labelsById.order      = 'Order';
+		// `#/ship/{id}`: buy and print that order's shipping label (next/next.js).
+		labelsById.ship       = 'Shipping label';
+		labelsById[ 'print-station' ] = 'Print station';
 	}
 
 	function nextTabFor( id ) {
-		if ( 'order' === id ) {
+		if ( 'order' === id || 'ship' === id ) {
 			id = 'production';
 		}
 		for ( var i = 0; i < NEXT_TABS.length; i++ ) {
@@ -479,7 +482,7 @@
 		} ).join( '' );
 
 		var jumpEl = root.querySelector( '[data-ypn-jump]' );
-		root.querySelector( '#ypn-jump-list' ).innerHTML = Object.keys( labelsById ).filter( function ( id ) { return 'order' !== id; } ).map( function ( id ) {
+		root.querySelector( '#ypn-jump-list' ).innerHTML = Object.keys( labelsById ).filter( function ( id ) { return 'order' !== id && 'ship' !== id; } ).map( function ( id ) {
 			return '<option value="' + YP.escapeAttr( labelsById[ id ] ) + '"></option>';
 		} ).join( '' );
 		jumpEl.addEventListener( 'change', function () {
@@ -1098,7 +1101,12 @@
 
 		el.querySelectorAll( '[data-yp-print-label-row]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
-				openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-print-label-row' ), 10 ), true );
+				var labelOrderId = parseInt( button.getAttribute( 'data-yp-print-label-row' ), 10 );
+				if ( NEXT && YP.views.ship ) {
+					window.location.hash = '#/ship/' + labelOrderId; // The new app's own label screen (next/next.js).
+					return;
+				}
+				openWcOrderDrawer( labelOrderId, true );
 			} );
 		} );
 
@@ -1197,6 +1205,10 @@
 	// in a new tab; it opens this same drawer in place instead, so staff
 	// never have to leave the app's own order view.
 	YP.openWcOrderDrawer = openWcOrderDrawer;
+
+	// The new app's shipping label screen (next/next.js) reuses these.
+	YP.printLabelUrl = function ( url ) { printLabelUrl( url ); };
+	YP.findBestMatchingRateId = function ( rates, method ) { return findBestMatchingRateId( rates, method ); };
 
 	// A list row's "open this order": its full page in the new app
 	// (next/next.js, #/order/{id}), the order window everywhere else.

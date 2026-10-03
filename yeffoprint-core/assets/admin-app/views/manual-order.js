@@ -257,6 +257,7 @@
 			var adding          = state.addToOrder;
 
 			viewEl.innerHTML =
+				'<div class="yp-mo">' +
 				( adding
 					? '<p class="yp-app__intro">Adding items to <strong>Order #' + YP.escapeHtml( String( adding.number ) ) + '</strong>' + ( adding.customer_name ? ' for ' + YP.escapeHtml( adding.customer_name ) : '' ) + ' (currently $' + adding.total.toFixed( 2 ) + '). Its payment link stays the same and charges the new total. <a href="#/manual-order">Start a new order instead</a></p>'
 					: '<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' ) +
@@ -300,7 +301,9 @@
 				'</div>' +
 
 				'<div data-yp-submit-status></div>' +
-				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>' + submitLabel() + '</button>';
+				// Wrapped so phones can keep it pinned to the bottom of the screen (records.css .yp-mo__submit).
+				'<div class="yp-mo__submit"><button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>' + submitLabel() + '</button></div>' +
+				'</div>';
 
 			if ( ! adding ) {
 				renderCustomerPicker();
@@ -1064,19 +1067,19 @@
 			return (
 				'<div class="yp-address-fields">' +
 					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-first-name">First name</label><input type="text" id="yp-mo-' + prefix + '-first-name" data-yp-address-field="first_name" value="' + YP.escapeAttr( address.first_name ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-last-name">Last name</label><input type="text" id="yp-mo-' + prefix + '-last-name" data-yp-address-field="last_name" value="' + YP.escapeAttr( address.last_name ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-first-name">First name</label><input type="text" id="yp-mo-' + prefix + '-first-name" data-yp-address-field="first_name" autocomplete="given-name" value="' + YP.escapeAttr( address.first_name ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-last-name">Last name</label><input type="text" id="yp-mo-' + prefix + '-last-name" data-yp-address-field="last_name" autocomplete="family-name" value="' + YP.escapeAttr( address.last_name ) + '" /></div>' +
 					'</div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-1">Address line 1</label><input type="text" id="yp-mo-' + prefix + '-address-1" data-yp-address-field="address_1" value="' + YP.escapeAttr( address.address_1 ) + '" /></div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-2">Address line 2</label><input type="text" id="yp-mo-' + prefix + '-address-2" data-yp-address-field="address_2" value="' + YP.escapeAttr( address.address_2 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-1">Address line 1</label><input type="text" id="yp-mo-' + prefix + '-address-1" data-yp-address-field="address_1" autocomplete="address-line1" value="' + YP.escapeAttr( address.address_1 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-2">Address line 2</label><input type="text" id="yp-mo-' + prefix + '-address-2" data-yp-address-field="address_2" autocomplete="address-line2" value="' + YP.escapeAttr( address.address_2 ) + '" /></div>' +
 					'<div class="yp-form__row--three">' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-city">City</label><input type="text" id="yp-mo-' + prefix + '-city" data-yp-address-field="city" value="' + YP.escapeAttr( address.city ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-state">State</label><input type="text" id="yp-mo-' + prefix + '-state" data-yp-address-field="state" value="' + YP.escapeAttr( address.state ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-postcode">ZIP / postal code</label><input type="text" id="yp-mo-' + prefix + '-postcode" data-yp-address-field="postcode" value="' + YP.escapeAttr( address.postcode ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-city">City</label><input type="text" id="yp-mo-' + prefix + '-city" data-yp-address-field="city" autocomplete="address-level2" value="' + YP.escapeAttr( address.city ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-state">State</label><input type="text" id="yp-mo-' + prefix + '-state" data-yp-address-field="state" autocomplete="address-level1" value="' + YP.escapeAttr( address.state ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-postcode">ZIP / postal code</label><input type="text" id="yp-mo-' + prefix + '-postcode" data-yp-address-field="postcode" autocomplete="postal-code" value="' + YP.escapeAttr( address.postcode ) + '" /></div>' +
 					'</div>' +
 					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-country">Country</label><input type="text" id="yp-mo-' + prefix + '-country" data-yp-address-field="country" maxlength="2" placeholder="US" value="' + YP.escapeAttr( address.country ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-phone">Phone</label><input type="text" id="yp-mo-' + prefix + '-phone" data-yp-address-field="phone" value="' + YP.escapeAttr( address.phone ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-country">Country</label><input type="text" id="yp-mo-' + prefix + '-country" data-yp-address-field="country" autocomplete="country" autocapitalize="characters" maxlength="2" placeholder="US" value="' + YP.escapeAttr( address.country ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-phone">Phone</label><input type="tel" id="yp-mo-' + prefix + '-phone" data-yp-address-field="phone" autocomplete="tel" value="' + YP.escapeAttr( address.phone ) + '" /></div>' +
 					'</div>' +
 				'</div>'
 			);
@@ -1101,7 +1104,7 @@
 
 					'<div data-yp-ship-address-fields' + ( s.customerProvidesAddress ? ' style="display:none;"' : '' ) + '>' +
 						addressFieldsHtml( 'ship', s.address ) +
-						'<button type="button" class="yp-row-action" data-yp-verify-address>Verify address</button>' +
+						'<button type="button" class="wp-block-button__link is-style-outline yp-mo__verify" data-yp-verify-address>Verify address</button>' +
 						'<div data-yp-verify-result></div>' +
 					'</div>' +
 
