@@ -125,7 +125,7 @@
 
 			listEl.querySelectorAll( '[data-yp-open-order]' ).forEach( function ( button ) {
 				button.addEventListener( 'click', function () {
-					YP.openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-open-order' ), 10 ) );
+					YP.openOrder( parseInt( button.getAttribute( 'data-yp-open-order' ), 10 ) );
 				} );
 			} );
 

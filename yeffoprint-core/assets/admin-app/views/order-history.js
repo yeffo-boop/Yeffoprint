@@ -220,7 +220,7 @@
 
 			rowsEl.querySelectorAll( '[data-yp-open-order]' ).forEach( function ( row ) {
 				row.addEventListener( 'click', function () {
-					YP.openWcOrderDrawer( parseInt( row.getAttribute( 'data-yp-open-order' ), 10 ) );
+					YP.openOrder( parseInt( row.getAttribute( 'data-yp-open-order' ), 10 ) );
 				} );
 			} );
 		}

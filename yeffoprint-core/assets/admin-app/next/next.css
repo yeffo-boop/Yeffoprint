@@ -892,6 +892,886 @@ body.yp-next .ypn-search {
 
 /* ---------- Phone tab bar ---------- */
 
+/* ---------- Every existing screen, in B Light ----------
+   The screens app.js and views/*.js already draw (Templates, Sizes,
+   All orders, Customers, Settings, the order window, every add/edit
+   form) keep their markup; these rules give them the new look:
+   flat magenta primary buttons, white outline buttons, soft pills,
+   quiet table heads, rounded inputs with a magenta focus ring. */
+
+body.yp-next .wp-block-button__link {
+	border-radius: 10px;
+	padding: 9px 16px;
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.3;
+	box-shadow: none;
+}
+
+body.yp-next .wp-block-button__link.is-style-accent,
+body.yp-next .wp-block-button__link.is-style-accent:hover {
+	background: var(--ypn-mag);
+	color: #fff;
+	box-shadow: 0 6px 18px rgba(236, 0, 140, 0.22);
+	transform: none;
+}
+
+body.yp-next .wp-block-button__link.is-style-accent:hover {
+	background: #d4007e;
+}
+
+body.yp-next .wp-block-button__link.is-style-outline {
+	background: #fff;
+	color: var(--ypn-ink);
+	border: 1px solid var(--ypn-line);
+}
+
+body.yp-next .wp-block-button__link.is-style-outline:hover {
+	background: var(--ypn-soft);
+	color: var(--ypn-ink);
+	border-color: #cfccc6;
+}
+
+body.yp-next .wp-block-button__link.yp-row-action,
+body.yp-next .yp-list-row .wp-block-button__link {
+	padding: 6px 11px !important;
+	font-size: 12.5px !important;
+}
+
+body.yp-next .yp-row-action {
+	color: var(--ypn-ink);
+	font-weight: 600;
+	border-radius: 8px;
+}
+
+body.yp-next .yp-row-action:hover:not([disabled]) {
+	color: var(--ypn-mag);
+}
+
+body.yp-next .yp-app__intro {
+	color: var(--ypn-mute);
+	font-size: 14px;
+	max-width: 70ch;
+	margin: 0 0 16px;
+}
+
+body.yp-next .yp-pill {
+	font-family: var(--wp--preset--font-family--body, Inter, sans-serif);
+	text-transform: none;
+	letter-spacing: 0;
+	font-size: 11.5px;
+	border-radius: 99px;
+	padding: 3px 9px;
+}
+
+body.yp-next .yp-pill--good { background: #dcf5e4; color: #11702f; }
+body.yp-next .yp-pill--warn { background: #fdf3c4; color: #7a5b00; }
+body.yp-next .yp-pill--neutral { background: var(--ypn-soft); color: #3a3a3c; }
+body.yp-next .yp-pill--crit { background: #fde4e0; color: #b3311c; }
+
+body.yp-next .yp-chip {
+	font-family: var(--wp--preset--font-family--body, Inter, sans-serif);
+	font-size: 12.5px;
+	background: var(--ypn-soft);
+	border-color: transparent;
+	border-radius: 99px;
+	padding: 3px 9px;
+	color: #3a3a3c;
+}
+
+/* Tables */
+body.yp-next .yp-record-card {
+	background: #fff;
+	padding: 4px 8px;
+	overflow-x: auto;
+}
+
+body.yp-next .yp-record-table th {
+	color: var(--ypn-mute);
+	font-size: 11px;
+	letter-spacing: 0.08em;
+}
+
+body.yp-next .yp-record-table td {
+	border-top-color: var(--ypn-line);
+}
+
+body.yp-next .yp-record-table tbody tr:hover td,
+body.yp-next .yp-row-clickable:hover td {
+	background: #fdfbf8;
+}
+
+body.yp-next .yp-record-name {
+	font-weight: 600;
+}
+
+/* Inputs, selects, toolbars */
+body.yp-next .yp-list-toolbar__search,
+body.yp-next .yp-list-toolbar__select,
+body.yp-next .yp-field input[type="text"],
+body.yp-next .yp-field input[type="email"],
+body.yp-next .yp-field input[type="number"],
+body.yp-next .yp-field input[type="url"],
+body.yp-next .yp-field input[type="tel"],
+body.yp-next .yp-field input[type="date"],
+body.yp-next .yp-field input[type="search"],
+body.yp-next .yp-field select,
+body.yp-next .yp-field textarea {
+	border: 1px solid var(--ypn-line);
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: none;
+}
+
+body.yp-next .yp-list-toolbar__search:focus,
+body.yp-next .yp-list-toolbar__select:focus,
+body.yp-next .yp-field input:focus,
+body.yp-next .yp-field select:focus,
+body.yp-next .yp-field textarea:focus {
+	border-color: var(--ypn-mag);
+	box-shadow: 0 0 0 3px rgba(236, 0, 140, 0.14);
+	outline: none;
+}
+
+body.yp-next .yp-field label,
+body.yp-next .yp-field__label {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+body.yp-next .yp-segmented,
+body.yp-next .yp-settings-tabs {
+	background: var(--ypn-soft);
+	border-color: var(--ypn-line);
+	border-radius: 12px;
+}
+
+body.yp-next .yp-settings-tabs__tab {
+	border-radius: 9px;
+}
+
+body.yp-next .yp-carrier-filter__pill,
+body.yp-next .yp-list-toolbar__filters button {
+	border-radius: 99px;
+}
+
+/* Drawers and modals (add/edit forms, the order window) */
+body.yp-next .yp-drawer__panel {
+	border-radius: 18px;
+	box-shadow: 0 24px 70px rgba(20, 20, 20, 0.22);
+}
+
+body.yp-next .yp-drawer__header {
+	border-bottom-color: var(--ypn-line);
+	font: 700 17px var(--wp--preset--font-family--heading, Geist, sans-serif);
+	letter-spacing: -0.01em;
+}
+
+body.yp-next .yp-drawer__body {
+	background: var(--ypn-bg);
+}
+
+body.yp-next .yp-drawer__body .yp-panel {
+	background: #fff;
+}
+
+body.yp-next .yp-icon-button {
+	border-radius: 10px;
+}
+
+body.yp-next .yp-drawer__backdrop {
+	background: rgba(20, 20, 20, 0.35);
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
+}
+
+/* Dashboard bits */
+body.yp-next .yp-usage-chart__bar span {
+	background: linear-gradient(var(--ypn-cy), #0077c8);
+	border-radius: 4px 4px 0 0;
+}
+
+body.yp-next .yp-stat-tile {
+	background: var(--ypn-bg);
+}
+
+@media (max-width: 860px) {
+	/* List tables become one card per row on phones, like the
+	   editable tables already do (PR #299). */
+	body.yp-next .yp-record-card {
+		padding: 0;
+		background: none;
+		border: 0;
+		box-shadow: none;
+		overflow: visible;
+	}
+
+	body.yp-next .yp-record-table,
+	body.yp-next .yp-record-table tbody {
+		display: block;
+	}
+
+	body.yp-next .yp-record-table thead {
+		display: none;
+	}
+
+	body.yp-next .yp-record-table tr {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 10px;
+		background: #fff;
+		border: 1px solid var(--ypn-line);
+		border-radius: 14px;
+		padding: 12px 14px;
+		margin-bottom: 8px;
+	}
+
+	body.yp-next .yp-record-table td {
+		border: 0;
+		padding: 0;
+		background: none !important;
+	}
+
+	body.yp-next .yp-record-table td:first-child {
+		flex-basis: 100%;
+		font-weight: 600;
+	}
+
+	body.yp-next .yp-record-table td.yp-row-actions {
+		flex-basis: 100%;
+		display: flex;
+		gap: 4px;
+		margin-top: 4px;
+	}
+
+	body.yp-next .yp-record-table tr.yp-empty-row td {
+		flex-basis: 100%;
+		font-weight: 400;
+	}
+
+	body.yp-next .yp-list-toolbar {
+		flex-wrap: wrap;
+	}
+}
+
+/* ---------- Shared bits for the new screens ---------- */
+
+body.yp-next .ypn-card__title {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 10px;
+	margin: 0 0 14px;
+	font: 700 13px var(--wp--preset--font-family--body, Inter, sans-serif);
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: var(--ypn-mute);
+}
+
+.ypn-card__title > span {
+	text-transform: none;
+	letter-spacing: 0;
+	font-weight: 500;
+	font-size: 12.5px;
+}
+
+.ypn-pill {
+	display: inline-block;
+	padding: 3px 9px;
+	border-radius: 99px;
+	font: 600 11.5px var(--wp--preset--font-family--body, Inter, sans-serif);
+	white-space: nowrap;
+	background: var(--ypn-soft);
+	color: #3a3a3c;
+}
+
+.ypn-pill--mag { background: #fde7f3; color: #b0006a; }
+.ypn-pill--yel { background: #fdf3c4; color: #7a5b00; }
+.ypn-pill--grn { background: #dcf5e4; color: #11702f; }
+.ypn-pill--ink { background: var(--ypn-ink); color: #fff; }
+
+.ypn-mono {
+	font-family: var(--wp--preset--font-family--mono, "JetBrains Mono", monospace);
+}
+
+.ypn-muted {
+	color: var(--ypn-mute);
+}
+
+.ypn-good { color: var(--ypn-grn); }
+.ypn-bad { color: #b3311c; }
+
+.ypn-link {
+	border: 0;
+	background: none;
+	padding: 0;
+	color: var(--ypn-mag);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.ypn-empty {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 18px;
+	border: 1px dashed var(--ypn-line);
+	border-radius: 12px;
+	color: var(--ypn-mute);
+	font-size: 13px;
+	text-align: center;
+}
+
+.ypn-empty b {
+	color: var(--ypn-ink);
+	font-size: 15px;
+}
+
+.ypn-more {
+	display: inline-block;
+	margin-top: 4px;
+	color: var(--ypn-mag);
+	font-weight: 600;
+	font-size: 13px;
+	text-decoration: none;
+}
+
+.ypn-flash {
+	animation: ypn-flash 1.6s ease-out 1;
+}
+
+@keyframes ypn-flash {
+	0%, 40% { box-shadow: 0 0 0 3px rgba(236, 0, 140, 0.35); }
+	100% { box-shadow: 0 0 0 3px rgba(236, 0, 140, 0); }
+}
+
+/* ---------- Today: queue + ship today ---------- */
+
+.ypn-today {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 14px;
+	margin-bottom: 14px;
+	align-items: start;
+}
+
+.ypn-q {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 11px 12px;
+	margin-bottom: 8px;
+	background: var(--ypn-bg);
+	border: 1px solid var(--ypn-line);
+	border-radius: 12px;
+}
+
+.ypn-q.is-hot {
+	border-color: #f3dfa0;
+	background: linear-gradient(90deg, #fffbea, var(--ypn-bg));
+}
+
+.ypn-q > i {
+	width: 6px;
+	align-self: stretch;
+	border-radius: 4px;
+	flex-shrink: 0;
+}
+
+.ypn-q__text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	color: var(--ypn-ink);
+	text-decoration: none;
+}
+
+.ypn-q__text:hover,
+.ypn-q__text:focus {
+	color: var(--ypn-ink);
+}
+
+.ypn-q__text b {
+	font-weight: 600;
+}
+
+.ypn-q__text span {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ypn-q .ypn-btn {
+	padding: 6px 11px;
+	flex-shrink: 0;
+}
+
+/* The queue above replaces the old "Needs attention" list. */
+body.yp-next [data-yp-dashboard] > .yp-attn {
+	display: none;
+}
+
+/* ---------- Order page ---------- */
+
+.ypn-op__sub {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: -6px 0 14px;
+	color: var(--ypn-mute);
+}
+
+.ypn-op__track {
+	padding: 18px 18px 6px;
+	margin-bottom: 14px;
+}
+
+.ypn-op__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr);
+	gap: 14px;
+	align-items: start;
+}
+
+.ypn-op__main,
+.ypn-op__side {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+.ypn-op__note {
+	margin: 0 0 8px;
+	padding: 10px 12px;
+	background: var(--ypn-bg);
+	border-radius: 10px;
+	white-space: pre-line;
+}
+
+.ypn-op__woo {
+	margin: 0;
+	font-size: 13px;
+}
+
+.ypn-op__woo a {
+	color: var(--ypn-mute);
+}
+
+.ypn-op__sticky {
+	display: none;
+}
+
+.ypn-proof__title {
+	margin: -6px 0 10px;
+	font-weight: 600;
+}
+
+.ypn-proof__latest {
+	margin: 0 0 10px;
+	font-size: 13px;
+	color: var(--ypn-mute);
+}
+
+.ypn-proof__latest a {
+	color: var(--ypn-mag);
+	font-weight: 600;
+}
+
+.ypn-proof__changes {
+	margin: 0 0 10px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: #fff6e0;
+	white-space: pre-line;
+	font-size: 13px;
+}
+
+.ypn-proof__changes b {
+	display: block;
+}
+
+.ypn-proof__foot {
+	margin: 10px 0 0;
+	font-size: 13px;
+}
+
+.ypn-proof__foot a {
+	color: var(--ypn-mute);
+}
+
+.ypn-drop {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 20px;
+	border: 1.5px dashed var(--ypn-line);
+	border-radius: 14px;
+	text-align: center;
+	color: var(--ypn-mute);
+	font-size: 13px;
+	background: var(--ypn-bg);
+	cursor: pointer;
+	transition: border-color 120ms ease, background 120ms ease;
+}
+
+.ypn-drop b {
+	color: var(--ypn-ink);
+	font-size: 15px;
+}
+
+.ypn-drop.is-wanted,
+.ypn-drop:hover,
+.ypn-drop.is-over {
+	border-color: #e3b7cf;
+	background: #fdf4f9;
+}
+
+.ypn-drop.is-over {
+	border-color: var(--ypn-mag);
+}
+
+.ypn-drop.is-busy {
+	opacity: 0.7;
+	pointer-events: none;
+}
+
+.ypn-labs {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+	gap: 10px;
+}
+
+.ypn-lab {
+	background: var(--ypn-bg);
+	border: 1px solid var(--ypn-line);
+	border-radius: 12px;
+	padding: 10px;
+	min-width: 0;
+}
+
+.ypn-lab__pv {
+	height: 86px;
+	border-radius: 8px;
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	background: linear-gradient(135deg, #1b1f3b, #2b2f5a);
+	color: #cfd3ff;
+	font: 700 18px var(--wp--preset--font-family--heading, Geist, sans-serif);
+	letter-spacing: 0.06em;
+}
+
+.ypn-lab__pv.has-img {
+	background: #fff;
+	border: 1px solid var(--ypn-line);
+}
+
+.ypn-lab__pv img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.ypn-lab__name {
+	margin-top: 8px;
+	font-weight: 600;
+	font-size: 13.5px;
+	line-height: 1.3;
+}
+
+.ypn-lab__meta {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+}
+
+.ypn-lab__more {
+	margin-top: 6px;
+	font-size: 12.5px;
+}
+
+.ypn-lab__more summary {
+	cursor: pointer;
+	color: var(--ypn-mag);
+	font-weight: 600;
+}
+
+.ypn-lab__more dl {
+	margin: 6px 0 0;
+	overflow-x: auto;
+}
+
+.ypn-lab__more dt {
+	color: var(--ypn-mute);
+	margin-top: 6px;
+}
+
+.ypn-lab__more dd {
+	margin: 0;
+}
+
+.ypn-lab__more table {
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.ypn-lab__more th,
+.ypn-lab__more td {
+	padding: 3px 6px;
+	border-bottom: 1px solid var(--ypn-line);
+	text-align: left;
+}
+
+.ypn-acts {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+body.yp-next .ypn-acts .ypn-card__title {
+	margin-bottom: 6px;
+}
+
+.ypn-act {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 11px 14px;
+	border: 1px solid var(--ypn-line);
+	border-radius: 10px;
+	background: #fff;
+	color: var(--ypn-ink);
+	font: 600 13.5px var(--wp--preset--font-family--body, Inter, sans-serif);
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.ypn-act span {
+	color: var(--ypn-mute);
+	font-weight: 500;
+	font-size: 12.5px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 55%;
+}
+
+.ypn-act:hover,
+.ypn-act:focus {
+	color: var(--ypn-ink);
+	border-color: #cfccc6;
+}
+
+.ypn-act--primary,
+.ypn-act--primary:hover,
+.ypn-act--primary:focus {
+	background: var(--ypn-mag);
+	border-color: var(--ypn-mag);
+	color: #fff;
+	box-shadow: 0 6px 18px rgba(236, 0, 140, 0.22);
+}
+
+.ypn-act--primary span {
+	color: rgba(255, 255, 255, 0.85);
+}
+
+.ypn-act[disabled] {
+	opacity: 0.6;
+}
+
+.ypn-kv {
+	display: grid;
+	grid-template-columns: 84px 1fr;
+	gap: 8px 10px;
+	margin: 0;
+	font-size: 13.5px;
+}
+
+.ypn-kv dt {
+	color: var(--ypn-mute);
+}
+
+.ypn-kv dd {
+	margin: 0;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.ypn-kv a {
+	color: var(--ypn-ink);
+}
+
+.ypn-pre {
+	white-space: pre-line;
+}
+
+/* ---------- Catalog: counts + best sellers ---------- */
+
+.ypn-tile__go {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+}
+
+.ypn-tile__count {
+	color: var(--ypn-ink);
+	font-weight: 600;
+	background: var(--ypn-soft);
+	padding: 2px 8px;
+	border-radius: 99px;
+	font-size: 12px;
+}
+
+.ypn-best {
+	margin-top: 14px;
+}
+
+.ypn-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13.5px;
+}
+
+.ypn-table th {
+	text-align: left;
+	color: var(--ypn-mute);
+	font: 600 11px var(--wp--preset--font-family--body, Inter, sans-serif);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	padding: 8px 10px;
+	border-bottom: 1px solid var(--ypn-line);
+}
+
+.ypn-table td {
+	padding: 10px;
+	border-bottom: 1px solid var(--ypn-line);
+	vertical-align: middle;
+}
+
+.ypn-table tr:last-child td {
+	border-bottom: 0;
+}
+
+.ypn-best__name {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	color: var(--ypn-ink);
+	text-decoration: none;
+}
+
+.ypn-best__name img,
+.ypn-best__ph {
+	width: 34px;
+	height: 34px;
+	border-radius: 8px;
+	object-fit: cover;
+	flex-shrink: 0;
+	border: 1px solid var(--ypn-line);
+}
+
+.ypn-best__ph {
+	display: grid;
+	place-items: center;
+	background: var(--ypn-soft);
+	font: 700 11px var(--wp--preset--font-family--body, Inter, sans-serif);
+	color: var(--ypn-mute);
+}
+
+.ypn-best__rev {
+	white-space: nowrap;
+	font-weight: 600;
+}
+
+.ypn-best__rev i {
+	display: inline-block;
+	height: 6px;
+	border-radius: 3px;
+	background: var(--ypn-mag);
+	margin-right: 8px;
+	vertical-align: middle;
+}
+
+@media (max-width: 1100px) {
+	.ypn-today {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 860px) {
+	.ypn-op__grid {
+		grid-template-columns: 1fr;
+	}
+
+	/* Phone: the sticky bar carries the main step, so the side panel's
+	   actions follow the items instead of leading. */
+	.ypn-op__side {
+		order: 2;
+	}
+
+	.ypn-op__sticky {
+		display: flex;
+		gap: 8px;
+		position: fixed;
+		left: 12px;
+		right: 12px;
+		bottom: calc(86px + env(safe-area-inset-bottom));
+		z-index: 29;
+	}
+
+	.ypn-op__sticky .ypn-btn {
+		flex: 1;
+		padding: 13px;
+		font-size: 14px;
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+	}
+
+	.ypn-op {
+		padding-bottom: 64px;
+	}
+
+	.ypn-labs {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.ypn-lab__pv {
+		height: 70px;
+	}
+
+	.ypn-progress span {
+		text-align: center;
+		line-height: 1.2;
+	}
+
+	.ypn-tile__go {
+		display: flex;
+		margin-top: 8px;
+	}
+
+	.ypn-tile__go > span:last-child {
+		display: none;
+	}
+
+	.ypn-hide-phone {
+		display: none;
+	}
+
+	.ypn-q__text span {
+		white-space: normal;
+	}
+}
+
 .ypn-bottom {
 	display: none;
 }
@@ -1006,10 +1886,6 @@ body.yp-next .ypn-search {
 	.ypn-tile {
 		min-height: 0;
 		padding: 13px;
-	}
-
-	.ypn-tile__go {
-		display: none;
 	}
 
 	.ypn-switches__list {

@@ -307,7 +307,7 @@
 			var openWcOrderButton = detailEl.querySelector( '[data-yp-open-wc-order]' );
 			if ( openWcOrderButton ) {
 				openWcOrderButton.addEventListener( 'click', function () {
-					YP.openWcOrderDrawer( parseInt( openWcOrderButton.getAttribute( 'data-yp-open-wc-order' ), 10 ) );
+					YP.openOrder( parseInt( openWcOrderButton.getAttribute( 'data-yp-open-wc-order' ), 10 ) );
 				} );
 			}
 

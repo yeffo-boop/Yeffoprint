@@ -18,6 +18,8 @@
  *   saves the whole Settings form at once.
  * - `/admin/next/push` — this device's phone alerts on/off, plus a test
  *   alert (class-admin-push.php).
+ * - `/admin/next/catalog` — the Catalog hub's counts per tile ("23 live")
+ *   and its best sellers table.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -28,6 +30,9 @@ class YeffoPrint_Admin_Next_Controller {
 
 	/** How far back the board's Shipped column reaches. */
 	private const SHIPPED_DAYS = 14;
+
+	/** How far back the Catalog hub's best sellers table reaches. */
+	private const BEST_SELLER_DAYS = 30;
 
 	/** Statuses that mean the customer has paid. Revenue on Today only counts these. */
 	private const PAID_STATUSES = [ 'processing', 'in-production', 'shipped', 'completed' ];
@@ -72,6 +77,12 @@ class YeffoPrint_Admin_Next_Controller {
 				'callback'            => [ $this, 'save_push' ],
 				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 			],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/next/catalog', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'get_catalog' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/admin/next/push/test', [
@@ -302,5 +313,108 @@ class YeffoPrint_Admin_Next_Controller {
 		], get_current_user_id() );
 
 		return rest_ensure_response( [ 'delivered' => $delivered ] );
+	}
+
+	public function get_catalog(): \WP_REST_Response {
+		$count = static function ( string $post_type ): array {
+			$counts = wp_count_posts( $post_type );
+			return [
+				'live'  => (int) ( $counts->publish ?? 0 ),
+				'draft' => (int) ( $counts->draft ?? 0 ) + (int) ( $counts->pending ?? 0 ),
+			];
+		};
+
+		return rest_ensure_response( [
+			'counts'       => [
+				'templates'       => $count( 'yp_template' ),
+				'sizes'           => $count( 'yp_size' ),
+				'sticker-sizes'   => $count( 'yp_sticker_size' ),
+				'materials'       => $count( 'yp_material' ),
+				'label-colors'    => $count( 'yp_label_color' ),
+				'compound-list'   => [ 'live' => count( YeffoPrint_Compound_List::get_compounds() ), 'draft' => 0 ],
+				'prints'          => $count( 'yp_print' ),
+				'filament-colors' => $count( 'yp_filament' ),
+				'pricing'         => $count( 'yp_pricing_rule' ),
+			],
+			'best_sellers' => $this->best_sellers(),
+			'days'         => self::BEST_SELLER_DAYS,
+		] );
+	}
+
+	/**
+	 * Paid order lines from the last BEST_SELLER_DAYS days, grouped by
+	 * product. Every Template and 3D print has its own hidden linked
+	 * product (class-linked-product.php, class-print-product.php), so a
+	 * product is one design; custom labels and stickers share a generic
+	 * product and show up as one row each.
+	 */
+	private function best_sellers(): array {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return [];
+		}
+
+		$orders = wc_get_orders( [
+			'status'       => self::PAID_STATUSES,
+			'limit'        => -1,
+			'date_created' => '>=' . ( time() - self::BEST_SELLER_DAYS * DAY_IN_SECONDS ),
+		] );
+
+		$rows = [];
+		foreach ( $orders as $order ) {
+			foreach ( $order->get_items() as $item ) {
+				if ( ! $item instanceof \WC_Order_Item_Product ) {
+					continue;
+				}
+				$product_id = (int) $item->get_product_id();
+				$key        = $product_id ?: 'name:' . $item->get_name();
+				if ( ! isset( $rows[ $key ] ) ) {
+					$rows[ $key ] = $this->best_seller_row( $product_id, $item->get_name() );
+				}
+				$rows[ $key ]['orders'][ $order->get_id() ] = true;
+				$rows[ $key ]['units']                    += (int) $item->get_quantity();
+				$rows[ $key ]['revenue']                  += (float) $item->get_total();
+			}
+		}
+
+		$rows = array_map( static function ( array $row ): array {
+			$row['orders']  = count( $row['orders'] );
+			$row['revenue'] = round( $row['revenue'], 2 );
+			return $row;
+		}, array_values( $rows ) );
+
+		usort( $rows, static function ( array $a, array $b ): int {
+			return $b['revenue'] <=> $a['revenue'];
+		} );
+
+		return array_slice( $rows, 0, 8 );
+	}
+
+	private function best_seller_row( int $product_id, string $fallback_name ): array {
+		$template_id = $product_id ? (int) get_post_meta( $product_id, YeffoPrint_Linked_Product::META_TEMPLATE_ID, true ) : 0;
+		$print_id    = $product_id ? (int) get_post_meta( $product_id, YeffoPrint_Print_Product::META_PRINT_ID, true ) : 0;
+
+		if ( $template_id ) {
+			$name    = get_the_title( $template_id );
+			$kind    = 'Template';
+			$section = 'templates';
+		} elseif ( $print_id ) {
+			$name    = get_the_title( $print_id );
+			$kind    = '3D print';
+			$section = 'prints';
+		} else {
+			$name    = $product_id ? get_the_title( $product_id ) : $fallback_name;
+			$kind    = 'Custom';
+			$section = 'orders';
+		}
+
+		return [
+			'name'    => html_entity_decode( $name ?: $fallback_name ),
+			'kind'    => $kind,
+			'section' => $section,
+			'image'   => $product_id ? ( wp_get_attachment_image_url( (int) get_post_thumbnail_id( $product_id ), 'thumbnail' ) ?: null ) : null,
+			'orders'  => [],
+			'units'   => 0,
+			'revenue' => 0.0,
+		];
 	}
 }

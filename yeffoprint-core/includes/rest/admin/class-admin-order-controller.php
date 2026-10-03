@@ -584,6 +584,9 @@ class YeffoPrint_Admin_Order_Controller {
 			// simply null for those — the frontend already handles a
 			// missing image (falls back to a placeholder swatch).
 			'image_url' => $product ? ( wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ) ?: null ) : null,
+			// The custom design request (yp_custom_order) behind this line,
+			// if any — the new admin's order page shows its proof there.
+			'custom_order_id' => (int) $item->get_meta( '_yp_custom_order_id' ),
 			// display_value is already wp_kses_post()-safe HTML by the
 			// time get_formatted_meta_data() returns it (WC_Order_Item's
 			// own method) — the same batch tables/variant summaries/QR

@@ -75,7 +75,7 @@ class YeffoPrint_Admin_Push {
 
 		$app = admin_url( 'admin.php?page=' . self::APP_SLUG );
 		if ( ! empty( $context['order_id'] ) ) {
-			$url = $app . '#/production/' . (int) $context['order_id'];
+			$url = $app . '#/order/' . (int) $context['order_id'];
 		} elseif ( ! empty( $context['section'] ) ) {
 			$url = $app . '#/' . sanitize_key( $context['section'] );
 		} else {
