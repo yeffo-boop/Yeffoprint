@@ -163,7 +163,10 @@ class YeffoPrint_Shippo_Client {
 	 * to /tracks/ already returns, just pushed instead of polled. One
 	 * parser, two ways of getting the raw data to it.
 	 *
-	 * @return array{status:string,events:array{status:string,description:string,location:string,timestamp:string}[]}
+	 * `eta` is the carrier's estimated delivery date (ISO 8601), '' when
+	 * the carrier doesn't give one.
+	 *
+	 * @return array{status:string,eta:string,events:array{status:string,description:string,location:string,timestamp:string}[]}
 	 */
 	public static function parse_tracking_payload( array $payload ): array {
 		// `tracking_status` is the current/latest state, `tracking_history`
@@ -181,8 +184,10 @@ class YeffoPrint_Shippo_Client {
 			$history[] = $payload['tracking_status'];
 		}
 
+		$eta = is_string( $payload['eta'] ?? null ) ? $payload['eta'] : '';
+
 		if ( ! $history ) {
-			return [ 'status' => 'UNKNOWN', 'events' => [] ];
+			return [ 'status' => 'UNKNOWN', 'eta' => $eta, 'events' => [] ];
 		}
 
 		usort( $history, static function ( $a, $b ) {
@@ -211,6 +216,7 @@ class YeffoPrint_Shippo_Client {
 
 		return [
 			'status' => $events[0]['status'] ?? 'UNKNOWN',
+			'eta'    => $eta,
 			'events' => $events,
 		];
 	}

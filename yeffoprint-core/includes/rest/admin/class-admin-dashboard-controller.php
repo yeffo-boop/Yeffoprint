@@ -243,6 +243,9 @@ class YeffoPrint_Admin_Dashboard_Controller {
 					'tracking_status'             => $status['status'] ?? null,
 					'tracking_status_description' => $status['description'] ?? '',
 					'tracking_checked_at'         => $status['checked_at'] ?? null,
+					// Direct request: "can we add estimated delivery date". Shippo's
+					// own estimate, stored by YeffoPrint_Order_Delivery_Status.
+					'estimated_delivery'          => ( $status['eta'] ?? '' ) ?: null,
 				];
 			}
 		}

@@ -64,7 +64,7 @@ class YeffoPrint_Order_Delivery_Status {
 		}
 	}
 
-	/** @return array{status:string,description:string,checked_at:int}|null Last known-good status for one shipment, or null if it's never been successfully checked. */
+	/** @return array{status:string,description:string,checked_at:int,eta?:string}|null Last known-good status for one shipment, or null if it's never been successfully checked. */
 	public static function get_status( \WC_Order $order, string $tracking_number ): ?array {
 		$statuses = $order->get_meta( self::TRACKING_STATUS_META, true );
 		return is_array( $statuses ) ? ( $statuses[ $tracking_number ] ?? null ) : null;
@@ -113,7 +113,7 @@ class YeffoPrint_Order_Delivery_Status {
 				continue; // A transient lookup failure shouldn't clobber a known-good status with "unknown".
 			}
 
-			$statuses[ $shipment['tracking_number'] ] = self::status_entry( $events );
+			$statuses[ $shipment['tracking_number'] ] = self::status_entry( $events, method_exists( $provider, 'get_eta' ) ? $provider->get_eta() : '' );
 			$changed = true;
 		}
 
@@ -136,7 +136,7 @@ class YeffoPrint_Order_Delivery_Status {
 	 * a no-op rather than an error: nothing on this order actually
 	 * changed, so there's nothing to save or re-check.
 	 */
-	public function record_live_status( \WC_Order $order, string $tracking_number, array $events ): void {
+	public function record_live_status( \WC_Order $order, string $tracking_number, array $events, string $eta = '' ): void {
 		$shipments = YeffoPrint_Order_Tracking::get_shipments( $order );
 		$is_current = in_array( $tracking_number, array_column( $shipments, 'tracking_number' ), true );
 		if ( ! $is_current ) {
@@ -146,7 +146,7 @@ class YeffoPrint_Order_Delivery_Status {
 		$statuses = $order->get_meta( self::TRACKING_STATUS_META, true );
 		$statuses = is_array( $statuses ) ? $statuses : [];
 
-		$statuses[ $tracking_number ] = self::status_entry( $events );
+		$statuses[ $tracking_number ] = self::status_entry( $events, $eta );
 
 		$order->update_meta_data( self::TRACKING_STATUS_META, $statuses );
 		$order->save();
@@ -154,14 +154,16 @@ class YeffoPrint_Order_Delivery_Status {
 		$this->maybe_complete( $order, $shipments, $statuses );
 	}
 
-	/** @return array{status:string,description:string,checked_at:int} */
-	private static function status_entry( array $events ): array {
+	/** @return array{status:string,description:string,checked_at:int,eta:string} */
+	private static function status_entry( array $events, string $eta = '' ): array {
 		$latest = $events[0] ?? null;
 
 		return [
 			'status'      => $latest ? strtoupper( (string) $latest['status'] ) : 'UNKNOWN',
 			'description' => $latest ? (string) $latest['description'] : '',
 			'checked_at'  => time(),
+			// Carrier's estimated delivery date (ISO 8601), '' if it gave none.
+			'eta'         => $eta,
 		];
 	}
 

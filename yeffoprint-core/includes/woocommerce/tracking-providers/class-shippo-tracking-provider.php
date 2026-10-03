@@ -27,6 +27,9 @@ class YeffoPrint_Shippo_Tracking_Provider implements YeffoPrint_Tracking_Provide
 	private YeffoPrint_Shippo_Client $client;
 	private string $carrier_id;
 
+	/** The estimated delivery date from the last get_events() lookup ('' if none) — see get_eta(). */
+	private string $eta = '';
+
 	public function __construct( YeffoPrint_Shippo_Client $client, string $carrier_id ) {
 		$this->client     = $client;
 		$this->carrier_id = $carrier_id;
@@ -44,6 +47,18 @@ class YeffoPrint_Shippo_Tracking_Provider implements YeffoPrint_Tracking_Provide
 			throw new YeffoPrint_Tracking_Exception( $result->get_error_message() );
 		}
 
+		$this->eta = $result['eta'];
+
 		return $result['events'];
+	}
+
+	/**
+	 * Estimated delivery date (ISO 8601) from the last get_events() call,
+	 * '' when the carrier gave none. Not part of the provider interface:
+	 * only Shippo returns one, and the delivery-status sweep asks for it
+	 * when the provider has it.
+	 */
+	public function get_eta(): string {
+		return $this->eta;
 	}
 }
