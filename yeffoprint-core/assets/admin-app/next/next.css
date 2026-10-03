@@ -121,7 +121,7 @@ body.yp-next .yp-app--next {
 	min-height: 0 !important;
 }
 
-.ypn-old-link {
+.ypn-exit-link {
 	color: var(--ypn-mute);
 	font-size: 13px;
 	text-decoration: none;

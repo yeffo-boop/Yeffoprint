@@ -1099,6 +1099,22 @@ body.wp-admin.wp-core-ui.yeffoprint-app :where(input[type="checkbox"], input[typ
 	white-space: nowrap;
 }
 
+@media (max-width: 620px) {
+	.yp-list-row__meta {
+		flex-wrap: wrap;
+		max-width: 100%;
+		row-gap: 0.35rem;
+	}
+}
+
+/* Shipped Packages: carrier's estimated delivery date ("Arrives Tue, Oct 7"). */
+.yp-list-row__eta {
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--wp--preset--color--near-black);
+	white-space: nowrap;
+}
+
 .yp-list-row__action {
 	flex: 0 0 auto;
 }

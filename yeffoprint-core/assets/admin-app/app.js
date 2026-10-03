@@ -389,7 +389,7 @@
 				'<div class="ypn-header__end">' +
 					'<label class="ypn-jump"><span class="screen-reader-text">Jump to</span><input type="search" list="ypn-jump-list" placeholder="Jump to…" data-ypn-jump autocomplete="off"><datalist id="ypn-jump-list"></datalist></label>' +
 					'<a class="ypn-btn ypn-btn--primary" href="#/manual-order">+ New order</a>' +
-					'<a class="ypn-old-link" href="' + YP.escapeAttr( yeffoprintAdminApp.classicUrl ) + '">Old admin</a>' +
+					'<a class="ypn-exit-link" href="' + YP.escapeAttr( yeffoprintAdminApp.exitUrl ) + '">&larr; Exit to WordPress</a>' +
 				'</div>' +
 				// The classic shell's off-canvas nav pieces, kept (hidden)
 				// so the shared code below works unchanged on both pages.
@@ -956,6 +956,38 @@
 		);
 	}
 
+	/**
+	 * "Arrives Tue, Oct 7" from the carrier's estimate, or "Was due Oct 2"
+	 * once that day has passed without a delivery. '' when the carrier gave
+	 * no estimate or the package is already delivered/returned.
+	 */
+	function estimatedDeliveryLabel( pkg ) {
+		if ( ! pkg.estimated_delivery || [ 'DELIVERED', 'RETURNED' ].indexOf( pkg.tracking_status ) !== -1 ) {
+			return '';
+		}
+		// Carriers estimate a day, not a time, and Shippo sends it as
+		// midnight UTC — read just the date part as a local date so it
+		// doesn't show as the day before here.
+		var parts = /^(\d{4})-(\d{2})-(\d{2})/.exec( pkg.estimated_delivery );
+		if ( ! parts ) {
+			return '';
+		}
+		var eta = new Date( +parts[ 1 ], +parts[ 2 ] - 1, +parts[ 3 ] );
+		var today = new Date();
+		today.setHours( 0, 0, 0, 0 );
+		var diff = Math.round( ( eta - today ) / 86400000 );
+		if ( diff < 0 ) {
+			return 'Was due ' + eta.toLocaleDateString( undefined, { month: 'short', day: 'numeric' } );
+		}
+		if ( 0 === diff ) {
+			return 'Arrives today';
+		}
+		if ( 1 === diff ) {
+			return 'Arrives tomorrow';
+		}
+		return 'Arrives ' + eta.toLocaleDateString( undefined, { weekday: 'short', month: 'short', day: 'numeric' } );
+	}
+
 	function renderDashboardSummary( summary, el ) {
 		var dueDateDays = summary.due_date_days;
 
@@ -965,6 +997,7 @@
 						? '<a href="' + YP.escapeAttr( pkg.tracking_url ) + '" target="_blank" rel="noopener noreferrer" class="mono">' + YP.escapeHtml( pkg.tracking_number ) + '</a>'
 						: '<span class="mono">' + YP.escapeHtml( pkg.tracking_number ) + '</span>';
 					var checkedAgo = timeAgoLabel( pkg.tracking_checked_at );
+					var eta = estimatedDeliveryLabel( pkg );
 					return (
 						'<div class="yp-list-row">' +
 							'<div class="yp-list-row__text">' +
@@ -979,6 +1012,7 @@
 							'</div>' +
 							'<div class="yp-list-row__meta">' +
 								trackingStatusPillHtml( pkg.tracking_status ) +
+								( eta ? '<span class="yp-list-row__eta">' + YP.escapeHtml( eta ) + '</span>' : '' ) +
 								( checkedAgo ? '<span class="yp-list-row__age">' + YP.escapeHtml( checkedAgo ) + '</span>' : '' ) +
 							'</div>' +
 						'</div>'
