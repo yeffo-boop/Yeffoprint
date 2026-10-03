@@ -25,6 +25,9 @@
  * a mini browser-mock reusing the same SVG technique and color classes
  * as the illustration above (`.yp-browser-mock__dot--*`/`__swatch--*`),
  * scaled down rather than duplicated, plus its own small heading/CTA.
+ *
+ * "See Our Work" links to the Showcase (/our-work/) once at least one
+ * finished site is switched on there, so it never points at an empty page.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -63,6 +66,12 @@ defined( 'ABSPATH' ) || exit;
 				<!-- wp:button {"className":"is-style-outline"} -->
 				<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="#yp-web-design-packages">See What's Included</a></div>
 				<!-- /wp:button -->
+
+				<?php if ( class_exists( 'YeffoPrint_Web_Design_Showcase' ) && YeffoPrint_Web_Design_Showcase::public_entries() ) : ?>
+				<!-- wp:button {"className":"is-style-outline"} -->
+				<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( YeffoPrint_Web_Design_Showcase::page_url() ); ?>">See Our Work</a></div>
+				<!-- /wp:button -->
+				<?php endif; ?>
 			</div>
 			<!-- /wp:buttons -->
 

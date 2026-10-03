@@ -93,6 +93,7 @@
 			root.querySelector( '[data-yp-wd-signed-name]' ).textContent = data.signed_name;
 			root.querySelector( '[data-yp-wd-signed-at]' ).textContent = new Date( data.signed_at.replace( ' ', 'T' ) ).toLocaleString();
 			root.querySelector( '[data-yp-wd-sign-form]' ).hidden = true;
+			showFeatureAnswer( data.feature_ok );
 		}
 
 		statusEl.hidden = true;
@@ -123,13 +124,31 @@
 			} );
 	}
 
+	function showFeatureAnswer( answer ) {
+		var el = root.querySelector( '[data-yp-wd-feature-answer]' );
+		if ( 'yes' === answer ) {
+			el.textContent = 'You said we can feature your site in our work.';
+		} else if ( 'no' === answer ) {
+			el.textContent = 'You asked us to keep your site private.';
+		}
+	}
+
+	function featureAnswer() {
+		var picked = root.querySelector( '[data-yp-wd-feature-choice]:checked' );
+		return picked ? picked.value : '';
+	}
+
 	var agreeCheckbox = root.querySelector( '[data-yp-wd-agree]' );
 	var nameInput = root.querySelector( '[data-yp-wd-sign-name]' );
 	var signButton = root.querySelector( '[data-yp-wd-sign-submit]' );
 
 	function refreshSignButton() {
-		signButton.disabled = ! ( agreeCheckbox.checked && nameInput.value.trim() );
+		signButton.disabled = ! ( agreeCheckbox.checked && nameInput.value.trim() && featureAnswer() );
 	}
+
+	root.querySelectorAll( '[data-yp-wd-feature-choice]' ).forEach( function ( radio ) {
+		radio.addEventListener( 'change', refreshSignButton );
+	} );
 
 	agreeCheckbox.addEventListener( 'change', refreshSignButton );
 	nameInput.addEventListener( 'input', refreshSignButton );
@@ -141,7 +160,7 @@
 
 		signButton.disabled = true;
 
-		apiPost( '/agreement/sign', { name: nameInput.value.trim() } ).then( function ( result ) {
+		apiPost( '/agreement/sign', { name: nameInput.value.trim(), feature: featureAnswer() } ).then( function ( result ) {
 			if ( ! result.ok ) {
 				signButton.disabled = false;
 				showMessage( ( result.data && result.data.message ) || "Couldn't sign this agreement. Please try again.", true );
@@ -152,6 +171,7 @@
 			root.querySelector( '[data-yp-wd-signed-name]' ).textContent = nameInput.value.trim();
 			root.querySelector( '[data-yp-wd-signed-at]' ).textContent = new Date( result.data.signed_at.replace( ' ', 'T' ) ).toLocaleString();
 			root.querySelector( '[data-yp-wd-sign-form]' ).hidden = true;
+			showFeatureAnswer( featureAnswer() );
 			showMessage( "Thanks — you're all set. We'll be in touch once your staging site is ready.", false );
 		} ).catch( function () {
 			signButton.disabled = false;

@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/showcase",
+	"title": "Web Design Showcase",
+	"category": "theme",
+	"description": "Lists finished web design projects switched on in the admin order window's Showcase panel (yeffoprint-core class-web-design-showcase.php).",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}
