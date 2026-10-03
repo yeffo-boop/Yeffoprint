@@ -106,10 +106,13 @@ a { color: var(--ypt-cyan-deep); }
 
 .ypt-daynav {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 4px;
 	margin-top: 2px;
 }
+
+.ypt-daynav h1 { white-space: nowrap; margin-right: 2px; }
 
 .ypt-daynav button {
 	border: 0;
@@ -120,6 +123,53 @@ a { color: var(--ypt-cyan-deep); }
 	font-size: 16px;
 	line-height: 1;
 }
+
+
+/* ---------- Today's week strip ---------- */
+
+.ypt-week { display: flex; gap: 5px; margin: 0 0 14px; }
+.ypt-week__d {
+	flex: 1;
+	min-width: 0;
+	border: 1px solid var(--ypt-line);
+	background: var(--ypt-card);
+	border-radius: 12px;
+	padding: 7px 0 6px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--ypt-mute);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+}
+.ypt-week__d b { font-size: 16px; color: var(--ypt-ink); }
+.ypt-week__d i { width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+.ypt-week__d--full i { background: var(--ypt-cyan); }
+.ypt-week__d--part i { background: #7FD3F5; }
+.ypt-week__d--miss i { background: var(--ypt-magenta); }
+.ypt-week__d.is-today b { color: var(--ypt-cyan-deep); }
+.ypt-week__d.is-on { background: var(--ypt-ink); border-color: var(--ypt-ink); color: #CFCFCF; }
+.ypt-week__d.is-on b { color: #fff; }
+.ypt-week__d:disabled { opacity: 0.4; }
+.ypt-week__cal {
+	flex: none;
+	width: 42px;
+	border: 0;
+	background: var(--ypt-soft);
+	border-radius: 12px;
+	color: var(--ypt-ink);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	font-size: 11px;
+	font-weight: 600;
+}
+.ypt-week__cal svg { width: 18px; height: 18px; }
+
+.ypt-back { border: 0; background: none; padding: 4px 0; margin: 0 0 4px; font-weight: 600; font-size: 15px; color: var(--ypt-cyan-deep); }
 
 /* ---------- Progress ring ---------- */
 
@@ -1292,6 +1342,12 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-help__ic--help { background: #DFF4FD; color: var(--ypt-cyan-deep); }
 .ypt-help__ic--problem { background: #FDE0EF; color: var(--ypt-magenta-deep); }
 .ypt-help__ic--idea { background: var(--ypt-warn-soft); color: var(--ypt-warn); }
+.ypt-help__ic--syringe { background: #DFF4FD; color: var(--ypt-cyan-deep); }
+.ypt-help__ic--pill { background: #FDE0EF; color: var(--ypt-magenta-deep); }
+.ypt-help__ic--vials { background: var(--ypt-warn-soft); color: var(--ypt-warn); }
+.ypt-help__ic--scale { background: var(--ypt-ok-soft); color: var(--ypt-ok); }
+.ypt-help__ic--camera { background: #EFE9FF; color: #6A3DE8; }
+.ypt-help__ic--feel { background: var(--ypt-soft); color: var(--ypt-charcoal); }
 .ypt-help__text { flex: 1; min-width: 0; }
 .ypt-help__text b { display: block; font-size: 15px; }
 .ypt-help__text span { font-size: 13px; color: var(--ypt-mute); }
