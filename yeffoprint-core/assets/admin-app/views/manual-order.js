@@ -199,6 +199,11 @@
 			webDesignPackages: null, // /wp/v2/yp_web_design_pkg — every published package, priced or not (see webDesignFieldsHtml()).
 			addToOrder: null, // GET /admin/order/{id} — only in "add to an existing order" mode (addToOrderId).
 			stickers: null, // Custom Sticker cards — see newSticker(); filled in once the options load.
+			// Direct report: switching item types "makes me start all the way
+			// over" — render() rebuilds every panel. saveDraft() copies what's
+			// typed here first and render() puts it back, so turning a type
+			// on/off (even off and on again) keeps every other panel as is.
+			draft: { fields: {}, batch: null, templateVariants: null },
 			selectedCustomer: null, // { id, display_name, email }
 			newCustomerMode: false,
 			selectedTemplate: null, // { id, title } — picked from search, before its configurator data has loaded.
@@ -332,6 +337,7 @@
 						return;
 					}
 					state.activeTypes[ type ] = ! state.activeTypes[ type ];
+					saveDraft();
 					render();
 				} );
 			} );
@@ -370,7 +376,59 @@
 				}
 			}
 
+			restoreDraftFields();
+
 			viewEl.querySelector( '[data-yp-submit]' ).addEventListener( 'click', submit );
+		}
+
+		// Every plain field with an id (brand name, notes, checkboxes, the
+		// web design package, the template's size/material, new-customer
+		// name/email...) plus the two row tables. Merged into the draft
+		// rather than replacing it, so a panel that's switched off keeps
+		// its values for when it's switched back on. Stickers and the
+		// shipping panel already live in state; search boxes are skipped.
+		function saveDraft() {
+			viewEl.querySelectorAll( 'input[id], select[id], textarea[id]' ).forEach( function ( field ) {
+				if ( 'file' === field.type || /^yp-mo-sticker-|-search$|^yp-mo-(billing-differs|customer-provides-address|shipping-method|payment-link)$/.test( field.id ) || field.hasAttribute( 'data-yp-address-field' ) ) {
+					return;
+				}
+				state.draft.fields[ field.id ] = 'checkbox' === field.type ? { checked: field.checked } : { value: field.value };
+			} );
+
+			var batchBody = viewEl.querySelector( '[data-yp-batch]' );
+			if ( batchBody ) {
+				state.draft.batch = Array.prototype.map.call( batchBody.querySelectorAll( 'tr' ), function ( row ) {
+					return {
+						size_id: row.querySelector( '[data-row-size]' ).value,
+						material_id: row.querySelector( '[data-row-material]' ).value,
+						quantity: row.querySelector( '[data-row-quantity]' ).value,
+						compound_strength: row.querySelector( '[data-row-compound]' ).value
+					};
+				} );
+			}
+
+			var variantsBody = viewEl.querySelector( '[data-yp-template-variants]' );
+			if ( variantsBody && state.templateData ) {
+				state.draft.templateVariants = readTemplateVariants( variantsBody, state.templateData.field_schema ).map( function ( variant ) {
+					variant.quantity = variant.quantity || '';
+					return variant;
+				} );
+			}
+		}
+
+		function restoreDraftFields() {
+			Object.keys( state.draft.fields ).forEach( function ( id ) {
+				var field = document.getElementById( id );
+				if ( ! field || ! viewEl.contains( field ) ) {
+					return;
+				}
+				var saved = state.draft.fields[ id ];
+				if ( 'checked' in saved ) {
+					field.checked = saved.checked;
+				} else if ( 'SELECT' !== field.tagName || field.querySelector( 'option[value="' + CSS.escape( saved.value ) + '"]' ) ) {
+					field.value = saved.value;
+				}
+			} );
 		}
 
 		/* ---------- Custom Design (Phase A) ---------- */
@@ -381,7 +439,7 @@
 					'<div class="yp-panel__head"><h2>Custom Design details</h2></div>' +
 					'<div class="yp-field"><label for="yp-mo-brand">Brand name</label><input type="text" id="yp-mo-brand" /></div>' +
 					'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
-						'<tbody data-yp-batch>' + batchRowHtml( null, state.options ) + '</tbody>' +
+						'<tbody data-yp-batch>' + ( state.draft.batch || [ null ] ).map( function ( row ) { return batchRowHtml( row, state.options ); } ).join( '' ) + '</tbody>' +
 					'</table>' +
 					'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-row>+ Add another label</button>' +
 					'<div class="yp-form__row">' +
@@ -935,7 +993,7 @@
 				'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Quantity</th>' +
 					data.field_schema.map( function ( field ) { return '<th>' + YP.escapeHtml( field.label ) + '</th>'; } ).join( '' ) +
 					'<th></th></tr></thead>' +
-					'<tbody data-yp-template-variants>' + templateVariantRowHtml( null, data.field_schema ) + '</tbody>' +
+					'<tbody data-yp-template-variants>' + ( state.draft.templateVariants || [ null ] ).map( function ( variant ) { return templateVariantRowHtml( variant, data.field_schema ); } ).join( '' ) + '</tbody>' +
 				'</table>' +
 				'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-template-row>+ Add another label</button>' +
 				'<div class="yp-field"><label for="yp-mo-template-instructions">Instructions</label><textarea id="yp-mo-template-instructions" rows="2"></textarea></div>';
@@ -943,6 +1001,9 @@
 			el.querySelector( '[data-yp-change-template]' ).addEventListener( 'click', function () {
 				state.selectedTemplate = null;
 				state.templateData = null;
+				state.draft.templateVariants = null;
+				delete state.draft.fields[ 'yp-mo-template-size' ];
+				delete state.draft.fields[ 'yp-mo-template-material' ];
 				renderTemplatePanel();
 				refreshTemplatePricePreview();
 			} );
