@@ -1975,3 +1975,18 @@ body.yp-next .ypn-acts .ypn-card__title {
 		grid-template-columns: 1fr 1fr;
 	}
 }
+
+/* Create Order's pinned button sits above the phone tab bar. */
+@media (max-width: 860px) {
+	body.yp-next .yp-mo__submit {
+		position: sticky;
+		bottom: calc(92px + env(safe-area-inset-bottom));
+		z-index: 5;
+	}
+
+	body.yp-next .yp-mo__submit .wp-block-button__link {
+		width: 100%;
+		padding: 14px;
+		font-size: 15px;
+	}
+}
