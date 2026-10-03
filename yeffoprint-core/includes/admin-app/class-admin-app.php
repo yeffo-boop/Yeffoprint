@@ -31,13 +31,45 @@ class YeffoPrint_Admin_App {
 		self::$hook_suffix = $hook_suffix;
 	}
 
+	/**
+	 * The redesigned app ("YeffoDesign (new)", class-admin-menu.php) runs
+	 * on its own page next to this one until the old one is retired. It
+	 * is the same app.js, views and REST API with a different shell
+	 * (top tabs, phone tab bar) and its own extra screens (Today stats,
+	 * Production board, Catalog/People/Settings hubs) from next/next.js,
+	 * styled by next/next.css. Both pages keep working side by side.
+	 */
+	private static string $next_hook_suffix = '';
+
+	public static function set_next_hook_suffix( string $hook_suffix ): void {
+		self::$next_hook_suffix = $hook_suffix;
+	}
+
 	public function __construct() {
 		add_filter( 'admin_body_class', [ $this, 'add_body_class' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_action( 'admin_head', [ $this, 'print_install_tags' ] );
 	}
 
 	public function add_body_class( string $classes ): string {
-		return $this->is_own_screen() ? $classes . ' yeffoprint-app' : $classes;
+		if ( ! $this->is_own_screen() ) {
+			return $classes;
+		}
+		return $classes . ' yeffoprint-app' . ( $this->is_next_screen() ? ' yp-next' : '' );
+	}
+
+	/** Home Screen install for the new app (class-admin-app-shortcut.php serves the manifest and service worker). */
+	public function print_install_tags(): void {
+		if ( ! $this->is_next_screen() ) {
+			return;
+		}
+		echo '<link rel="manifest" href="' . esc_url( YeffoPrint_Admin_App_Shortcut::manifest_url() ) . '">' . "\n";
+		echo '<link rel="apple-touch-icon" href="' . esc_url( YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/apple-touch-icon.png' ) . '">' . "\n";
+		echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
+		echo '<meta name="mobile-web-app-capable" content="yes">' . "\n";
+		echo '<meta name="apple-mobile-web-app-title" content="YeffoDesign">' . "\n";
+		echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
+		echo '<meta name="theme-color" content="#FFFFFF">' . "\n";
 	}
 
 	public static function render(): void {
@@ -146,6 +178,13 @@ class YeffoPrint_Admin_App {
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
 			'exitUrl'         => esc_url_raw( admin_url() ),
 			'currentUserName' => wp_get_current_user()->display_name,
+			// 'next' on the redesigned app's page — app.js builds that
+			// page's shell instead of the classic sidebar.
+			'shell'           => $this->is_next_screen() ? 'next' : 'classic',
+			'classicUrl'      => esc_url_raw( admin_url( 'admin.php?page=yeffoprint' ) ),
+			'nextUrl'         => esc_url_raw( admin_url( 'admin.php?page=' . YeffoPrint_Admin_Push::APP_SLUG ) ),
+			'swUrl'           => esc_url_raw( YeffoPrint_Admin_App_Shortcut::service_worker_url() ),
+			'swScope'         => YeffoPrint_Admin_App_Shortcut::admin_scope(),
 			// Static constants the Templates/Field Presets screens need
 			// (Phase 5) before any record/id exists yet — an "Add" drawer
 			// must render its full field-schema editor and Badge/etc
@@ -242,10 +281,31 @@ class YeffoPrint_Admin_App {
 				[ 'strategy' => 'defer' ]
 			);
 		}
+
+		if ( $this->is_next_screen() ) {
+			wp_enqueue_style(
+				'yeffoprint-admin-app-next',
+				YEFFOPRINT_CORE_URL . 'assets/admin-app/next/next.css',
+				[ 'yeffoprint-admin-app-field-schema', 'yeffoprint-admin-app-order-stepper' ],
+				yeffoprint_core_asset_version( 'assets/admin-app/next/next.css' )
+			);
+			wp_enqueue_script(
+				'yeffoprint-admin-app-next',
+				YEFFOPRINT_CORE_URL . 'assets/admin-app/next/next.js',
+				[ 'yeffoprint-admin-app' ],
+				yeffoprint_core_asset_version( 'assets/admin-app/next/next.js' ),
+				[ 'strategy' => 'defer' ]
+			);
+		}
 	}
 
 	private function is_own_screen(): bool {
 		$screen = get_current_screen();
-		return self::$hook_suffix && $screen && self::$hook_suffix === $screen->id;
+		return $screen && in_array( $screen->id, array_filter( [ self::$hook_suffix, self::$next_hook_suffix ] ), true );
+	}
+
+	private function is_next_screen(): bool {
+		$screen = get_current_screen();
+		return self::$next_hook_suffix && $screen && self::$next_hook_suffix === $screen->id;
 	}
 }

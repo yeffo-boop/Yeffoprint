@@ -87,10 +87,18 @@ class YeffoPrint_Telegram_Admin_Alerts {
 
 		$name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
 
-		self::notify( implode( "\n", array_merge( [ $heading, $name, '' ], $item_lines ) ) );
+		self::notify( implode( "\n", array_merge( [ $heading, $name, '' ], $item_lines ) ), [ 'order_id' => $order_id ] );
 	}
 
-	public static function notify( string $text ): void {
+	/**
+	 * @param array{order_id?:int,section?:string} $context Where a phone
+	 *   alert should open in the new admin app (class-admin-push.php),
+	 *   which hears every owner alert through `yeffoprint_owner_alert`
+	 *   whether or not Telegram is set up.
+	 */
+	public static function notify( string $text, array $context = [] ): void {
+		do_action( 'yeffoprint_owner_alert', $text, $context );
+
 		$chat_id = (int) get_option( YeffoPrint_Admin_Menu::TELEGRAM_ADMIN_CHAT_ID_OPTION, 0 );
 		$token   = YeffoPrint_Telegram_Settings::get_bot_token();
 

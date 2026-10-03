@@ -1,0 +1,1101 @@
+/*
+ * The redesigned admin app ("YeffoDesign (new)", class-admin-app.php).
+ * Everything is scoped to body.yp-next, so the classic page that loads
+ * the same app-shell.css/records.css is untouched. Colors are the
+ * storefront's own theme tokens (warm white, CMYK magenta/cyan/yellow),
+ * the layout is mockup "B Light": top tabs, a phone tab bar, cards with
+ * hairline borders, and the Production board.
+ */
+
+body.yp-next {
+	--ypn-bg: var(--wp--preset--color--warm-white, #FAF9F6);
+	--ypn-card: #fff;
+	--ypn-soft: #F4F2EE;
+	--ypn-line: var(--wp--preset--color--light-gray, #E7E5E1);
+	--ypn-ink: var(--wp--preset--color--near-black, #141414);
+	--ypn-mute: #6b6b70;
+	--ypn-mag: var(--wp--preset--color--magenta, #EC008C);
+	--ypn-cy: var(--wp--preset--color--cyan, #00AEEF);
+	--ypn-yel: #e0b400;
+	--ypn-grn: #16a34a;
+	--ypn-radius: 16px;
+	background: radial-gradient(1200px 420px at 85% -12%, #fde7f3 0, transparent 60%), var(--ypn-bg);
+}
+
+body.yp-next .yp-app--next {
+	display: block;
+	min-height: 100vh;
+}
+
+/* ---------- Header ---------- */
+
+.ypn-header {
+	position: sticky;
+	top: 0;
+	z-index: 30;
+	display: flex;
+	align-items: center;
+	gap: 22px;
+	padding: 12px 28px;
+	background: rgba(255, 255, 255, 0.9);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border-bottom: 1px solid var(--ypn-line);
+}
+
+.ypn-brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font: 700 15px var(--wp--preset--font-family--heading, Geist, sans-serif);
+	color: var(--ypn-ink);
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.ypn-brand:hover,
+.ypn-brand:focus {
+	color: var(--ypn-ink);
+}
+
+.ypn-brand__mark {
+	width: 26px;
+	height: 26px;
+	border-radius: 8px;
+	background: linear-gradient(135deg, var(--ypn-cy), var(--ypn-mag) 55%, #FFF200);
+}
+
+.ypn-tabs {
+	display: flex;
+	gap: 4px;
+	padding: 4px;
+	background: var(--ypn-soft);
+	border: 1px solid var(--ypn-line);
+	border-radius: 12px;
+}
+
+.ypn-tab {
+	border: 0;
+	background: transparent;
+	padding: 7px 14px;
+	border-radius: 9px;
+	color: var(--ypn-mute);
+	font: 500 14px var(--wp--preset--font-family--body, Inter, sans-serif);
+	cursor: pointer;
+}
+
+.ypn-tab:hover {
+	color: var(--ypn-ink);
+}
+
+.ypn-tab.is-active {
+	background: #fff;
+	color: var(--ypn-ink);
+	font-weight: 600;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), inset 0 0 0 1px var(--ypn-line);
+}
+
+.ypn-header__end {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.ypn-jump input {
+	width: 220px;
+	border: 1px solid var(--ypn-line) !important;
+	border-radius: 10px !important;
+	padding: 7px 12px !important;
+	background: #fff !important;
+	font-size: 14px !important;
+	min-height: 0 !important;
+}
+
+.ypn-old-link {
+	color: var(--ypn-mute);
+	font-size: 13px;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.ypn-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	border: 1px solid var(--ypn-line);
+	background: #fff;
+	color: var(--ypn-ink);
+	border-radius: 10px;
+	padding: 8px 14px;
+	font: 600 13px var(--wp--preset--font-family--body, Inter, sans-serif);
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.ypn-btn:hover,
+.ypn-btn:focus {
+	color: var(--ypn-ink);
+	border-color: #cfccc6;
+}
+
+.ypn-btn--primary,
+.ypn-btn--primary:hover,
+.ypn-btn--primary:focus {
+	background: var(--ypn-mag);
+	border-color: var(--ypn-mag);
+	color: #fff;
+	box-shadow: 0 6px 18px rgba(236, 0, 140, 0.22);
+}
+
+.ypn-btn[disabled] {
+	opacity: 0.6;
+	cursor: default;
+}
+
+/* ---------- Page head + sub-tabs ---------- */
+
+.ypn-main {
+	max-width: 1480px;
+	margin: 0 auto;
+	padding: 22px 28px 60px;
+}
+
+.ypn-pagehead {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+
+.ypn-crumb a {
+	color: var(--ypn-mute);
+	font-size: 13px;
+	text-decoration: none;
+}
+
+.ypn-crumb a::before {
+	content: "‹ ";
+}
+
+.ypn-title {
+	font: 700 28px/1.15 var(--wp--preset--font-family--heading, Geist, sans-serif);
+	letter-spacing: -0.015em;
+	margin: 2px 0 0;
+}
+
+body.yp-next .yp-app__status {
+	font-size: 12px;
+	color: var(--ypn-mute);
+}
+
+.ypn-subnav {
+	display: flex;
+	gap: 6px;
+	overflow-x: auto;
+	scrollbar-width: none;
+	margin: 0 0 18px;
+	padding-bottom: 2px;
+}
+
+.ypn-subnav::-webkit-scrollbar {
+	display: none;
+}
+
+.ypn-subtab {
+	flex-shrink: 0;
+	padding: 7px 13px;
+	border-radius: 99px;
+	border: 1px solid var(--ypn-line);
+	background: #fff;
+	color: #3a3a3c;
+	font-size: 13px;
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.ypn-subtab:hover,
+.ypn-subtab:focus {
+	color: var(--ypn-ink);
+}
+
+.ypn-subtab.is-active,
+.ypn-subtab.is-active:hover {
+	background: var(--ypn-ink);
+	border-color: var(--ypn-ink);
+	color: #fff;
+	font-weight: 600;
+}
+
+body.yp-next .yp-app__view {
+	padding: 0;
+}
+
+/* ---------- Existing screens, restyled ---------- */
+
+body.yp-next .yp-panel,
+body.yp-next .yp-stat-tile,
+body.yp-next .yp-record-card {
+	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04);
+	border: 1px solid var(--ypn-line);
+	border-radius: var(--ypn-radius);
+}
+
+body.yp-next .yp-panel__head h2 {
+	font-size: 13px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: var(--ypn-mute);
+}
+
+body.yp-next .ypn-pagehead .yp-app__status[data-state="loading"] {
+	visibility: hidden;
+}
+
+body.yp-next .yp-panel__head a,
+body.yp-next .yp-panel__head .yp-row-action {
+	white-space: nowrap;
+	color: var(--ypn-mag);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+/* Today: the new revenue tiles replace the old count tiles, and the
+   dashboard panels sit two to a row on wide screens. */
+body.yp-next [data-yp-dashboard] > .yp-stat-tiles {
+	display: none;
+}
+
+@media (min-width: 1100px) {
+	body.yp-next [data-yp-dashboard] {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 14px;
+		align-items: start;
+	}
+
+	body.yp-next [data-yp-dashboard] > .yp-panel {
+		margin: 0;
+	}
+
+	body.yp-next [data-yp-dashboard] > .yp-attn,
+	body.yp-next [data-yp-dashboard] > .yp-panel:last-child {
+		grid-column: 1 / -1;
+	}
+}
+
+body.yp-next .yp-attn {
+	border-color: #f3dfa0;
+}
+
+body.yp-next .yp-attn__row {
+	background: var(--ypn-bg);
+	border: 1px solid var(--ypn-line);
+	border-left: 4px solid var(--ypn-mag);
+	border-radius: 12px;
+	padding: 10px 12px;
+	margin-top: 8px;
+}
+
+body.yp-next .yp-list-row {
+	border-radius: 12px;
+}
+
+body.yp-next .yp-settings-tabs__tab.is-active {
+	background: var(--ypn-ink);
+	color: #fff;
+}
+
+/* ---------- Cards, KPIs, banner ---------- */
+
+.ypn-card {
+	background: var(--ypn-card);
+	border: 1px solid var(--ypn-line);
+	border-radius: var(--ypn-radius);
+	padding: 18px;
+	box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04);
+}
+
+.ypn-kpis {
+	display: grid;
+	grid-template-columns: 1.4fr 1fr 1fr 1fr;
+	gap: 14px;
+	margin-bottom: 14px;
+}
+
+.ypn-kpi {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	color: var(--ypn-ink);
+	text-decoration: none;
+}
+
+a.ypn-kpi:hover,
+a.ypn-kpi:focus {
+	color: var(--ypn-ink);
+	border-color: #e7b8d3;
+}
+
+.ypn-kpi__label {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+}
+
+.ypn-kpi__value {
+	font: 700 30px/1.15 var(--wp--preset--font-family--heading, Geist, sans-serif);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.01em;
+}
+
+.ypn-kpi__note {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+}
+
+.ypn-kpi__note.is-up {
+	color: var(--ypn-grn);
+}
+
+.ypn-kpi__note.is-down {
+	color: #b42318;
+}
+
+.ypn-spark {
+	width: 100%;
+	height: 52px;
+	margin-top: 8px;
+}
+
+.ypn-spark polygon {
+	fill: rgba(236, 0, 140, 0.1);
+}
+
+.ypn-spark polyline {
+	fill: none;
+	stroke: var(--ypn-mag);
+	stroke-width: 2.5;
+	vector-effect: non-scaling-stroke;
+}
+
+.ypn-banner {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin-bottom: 14px;
+	padding: 14px 16px;
+	border-radius: var(--ypn-radius);
+	background: var(--ypn-ink);
+	color: #fff;
+	text-decoration: none;
+}
+
+.ypn-banner:hover,
+.ypn-banner:focus {
+	color: #fff;
+}
+
+.ypn-banner span {
+	color: rgba(255, 255, 255, 0.7);
+	font-size: 13px;
+}
+
+/* ---------- Production board ---------- */
+
+.ypn-toolbar {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 14px;
+	flex-wrap: wrap;
+}
+
+body.yp-next .ypn-search {
+	flex: 1;
+	min-width: 200px;
+	max-width: 420px;
+	border: 1px solid var(--ypn-line);
+	border-radius: 10px;
+	padding: 8px 12px;
+	background: #fff;
+}
+
+.ypn-chip {
+	border: 1px solid var(--ypn-line);
+	background: #fff;
+	color: #3a3a3c;
+	border-radius: 99px;
+	padding: 7px 13px;
+	font: 500 13px var(--wp--preset--font-family--body, Inter, sans-serif);
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.ypn-chip.is-on {
+	background: var(--ypn-ink);
+	border-color: var(--ypn-ink);
+	color: #fff;
+}
+
+.ypn-seg {
+	display: none;
+	gap: 6px;
+	overflow-x: auto;
+	scrollbar-width: none;
+	margin-bottom: 12px;
+}
+
+.ypn-seg button {
+	flex-shrink: 0;
+	border: 1px solid var(--ypn-line);
+	background: #fff;
+	border-radius: 99px;
+	padding: 7px 12px;
+	font: 500 13px var(--wp--preset--font-family--body, Inter, sans-serif);
+	color: #3a3a3c;
+}
+
+.ypn-seg button i {
+	font-style: normal;
+	color: var(--ypn-mute);
+	margin-left: 2px;
+}
+
+.ypn-seg button.is-on {
+	background: var(--ypn-ink);
+	border-color: var(--ypn-ink);
+	color: #fff;
+}
+
+.ypn-seg button.is-on i {
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.ypn-board {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(190px, 1fr));
+	gap: 12px;
+	overflow-x: auto;
+	align-items: start;
+	padding-bottom: 8px;
+}
+
+.ypn-col {
+	background: #EFEDE8;
+	border: 1px solid var(--ypn-line);
+	border-radius: var(--ypn-radius);
+	padding: 10px;
+	min-height: 160px;
+	transition: box-shadow 120ms ease, background 120ms ease;
+}
+
+.ypn-col__head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 2px 4px 0;
+	font-weight: 600;
+	font-size: 13.5px;
+}
+
+.ypn-col__head i {
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: #9a9aa0;
+}
+
+.ypn-col__head b {
+	margin-left: auto;
+	color: var(--ypn-mute);
+	font-weight: 500;
+}
+
+.ypn-col--proof .ypn-col__head i { background: var(--ypn-yel); }
+.ypn-col--approval .ypn-col__head i { background: var(--ypn-cy); }
+.ypn-col--ready .ypn-col__head i { background: #7c3aed; }
+.ypn-col--printing .ypn-col__head i { background: var(--ypn-mag); }
+.ypn-col--shipped .ypn-col__head i { background: var(--ypn-grn); }
+
+.ypn-col__hint {
+	margin: 0 4px 10px;
+	color: var(--ypn-mute);
+	font-size: 11.5px;
+}
+
+.ypn-col__empty {
+	margin: 18px 0;
+	text-align: center;
+	color: #a3a19c;
+	font-size: 12.5px;
+}
+
+.ypn-board.is-dragging .ypn-col--printing {
+	box-shadow: 0 0 0 2px var(--ypn-mag) inset;
+	background: #fdf0f7;
+}
+
+.ypn-col.is-over {
+	background: #fbe1ef;
+}
+
+.ypn-order {
+	background: #fff;
+	border: 1px solid var(--ypn-line);
+	border-radius: 12px;
+	padding: 11px 12px;
+	margin-bottom: 8px;
+	cursor: pointer;
+	transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.ypn-order:hover,
+.ypn-order:focus {
+	border-color: #e7b8d3;
+	outline: none;
+}
+
+.ypn-order[draggable="true"] {
+	cursor: grab;
+}
+
+.ypn-order.is-express {
+	border-left: 3px solid #141414;
+}
+
+.ypn-order__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+}
+
+.ypn-order__num {
+	font: 600 13px var(--wp--preset--font-family--mono, "IBM Plex Mono", monospace);
+}
+
+.ypn-order__age,
+.ypn-order__meta {
+	color: var(--ypn-mute);
+	font-size: 12px;
+}
+
+.ypn-order__name {
+	font-weight: 600;
+	margin: 5px 0 1px;
+}
+
+.ypn-order__items {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+	margin-bottom: 8px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ypn-order__action {
+	margin-top: 9px;
+	width: 100%;
+	border: 1px dashed #e3b7cf;
+	background: #fdf4f9;
+	color: #b0006a;
+	border-radius: 9px;
+	padding: 6px;
+	font: 600 12.5px var(--wp--preset--font-family--body, Inter, sans-serif);
+	cursor: pointer;
+}
+
+.ypn-tag-express {
+	background: #141414;
+	color: #FFF200;
+	font: 700 10px var(--wp--preset--font-family--body, Inter, sans-serif);
+	letter-spacing: 0.05em;
+	border-radius: 5px;
+	padding: 2px 6px;
+}
+
+/* ---------- Order window additions ---------- */
+
+.ypn-detail-top {
+	margin-bottom: 16px;
+}
+
+.ypn-progress {
+	list-style: none;
+	display: flex;
+	margin: 0 0 14px;
+	padding: 0;
+}
+
+.ypn-progress li {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--ypn-mute);
+	position: relative;
+	margin: 0;
+}
+
+.ypn-progress li::before {
+	content: "";
+	position: absolute;
+	top: 14px;
+	left: -50%;
+	width: 100%;
+	height: 2px;
+	background: var(--ypn-line);
+	z-index: 0;
+}
+
+.ypn-progress li:first-child::before {
+	display: none;
+}
+
+.ypn-progress li.done::before,
+.ypn-progress li.now::before {
+	background: var(--ypn-grn);
+}
+
+.ypn-progress i {
+	position: relative;
+	z-index: 1;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	font-style: normal;
+	font-size: 12px;
+	font-weight: 600;
+	background: #fff;
+	border: 2px solid var(--ypn-line);
+}
+
+.ypn-progress li.done i {
+	background: var(--ypn-grn);
+	border-color: var(--ypn-grn);
+	color: #fff;
+}
+
+.ypn-progress li.now {
+	color: var(--ypn-ink);
+	font-weight: 600;
+}
+
+.ypn-progress li.now i {
+	border-color: var(--ypn-mag);
+	color: var(--ypn-mag);
+	box-shadow: 0 0 0 5px rgba(236, 0, 140, 0.14);
+}
+
+.ypn-progress--stopped {
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: var(--ypn-soft);
+	color: var(--ypn-mute);
+	margin-bottom: 12px;
+}
+
+.ypn-detail-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+/* ---------- Hubs ---------- */
+
+.ypn-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	gap: 12px;
+}
+
+.ypn-tile {
+	display: flex;
+	flex-direction: column;
+	background: #fff;
+	border: 1px solid var(--ypn-line);
+	border-radius: var(--ypn-radius);
+	padding: 16px;
+	min-height: 150px;
+	color: var(--ypn-ink);
+	text-decoration: none;
+	transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.ypn-tile:hover,
+.ypn-tile:focus {
+	color: var(--ypn-ink);
+	border-color: #e7b8d3;
+	box-shadow: 0 6px 18px rgba(20, 20, 20, 0.06);
+}
+
+.ypn-tile__icon {
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	display: grid;
+	place-items: center;
+	margin-bottom: 12px;
+	font: 700 15px var(--wp--preset--font-family--heading, Geist, sans-serif);
+	color: var(--tile);
+	background: color-mix(in srgb, var(--tile) 13%, white);
+}
+
+.ypn-tile b {
+	font-size: 15px;
+}
+
+.ypn-tile__text {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+	margin-top: 4px;
+	flex: 1;
+}
+
+.ypn-tile__go {
+	margin-top: 12px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ypn-mag);
+}
+
+.ypn-switches {
+	display: flex;
+	gap: 16px;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-bottom: 14px;
+}
+
+.ypn-switches__intro {
+	flex: 1;
+	min-width: 220px;
+	display: flex;
+	flex-direction: column;
+}
+
+.ypn-switches__intro span,
+.ypn-phone__head span {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+}
+
+.ypn-switches__list {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.ypn-switch {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: var(--ypn-bg);
+	border: 1px solid var(--ypn-line);
+	border-radius: 12px;
+	padding: 9px 12px;
+	cursor: pointer;
+	position: relative;
+	font-weight: 500;
+}
+
+.ypn-switch input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.ypn-switch i {
+	width: 40px;
+	height: 22px;
+	border-radius: 99px;
+	background: #d6d3ce;
+	position: relative;
+	transition: background 150ms ease;
+	flex-shrink: 0;
+}
+
+.ypn-switch i::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #fff;
+	transition: left 150ms ease;
+}
+
+.ypn-switch input:checked + i {
+	background: var(--ypn-mag);
+}
+
+.ypn-switch input:checked + i::after {
+	left: 21px;
+}
+
+.ypn-switch input:focus-visible + i {
+	outline: 2px solid var(--ypn-mag);
+	outline-offset: 2px;
+}
+
+.ypn-switch input:disabled + i {
+	opacity: 0.5;
+}
+
+.ypn-phone {
+	margin-bottom: 14px;
+}
+
+.ypn-phone__head {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 10px;
+}
+
+.ypn-phone__row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.ypn-phone__state {
+	margin-right: auto;
+	font-weight: 600;
+	color: var(--ypn-mute);
+}
+
+.ypn-phone__state.is-on {
+	color: var(--ypn-grn);
+}
+
+.ypn-steps {
+	margin: 0 0 8px 18px;
+	padding: 0;
+}
+
+.ypn-steps li {
+	margin: 4px 0;
+}
+
+/* ---------- Phone tab bar ---------- */
+
+.ypn-bottom {
+	display: none;
+}
+
+@media (max-width: 860px) {
+	.ypn-header {
+		padding: 10px 16px;
+		padding-top: max(10px, env(safe-area-inset-top));
+	}
+
+	.ypn-tabs,
+	.ypn-jump,
+	.ypn-header__end .ypn-btn--primary {
+		display: none;
+	}
+
+	.ypn-main {
+		padding: 16px 16px calc(110px + env(safe-area-inset-bottom));
+	}
+
+	.ypn-title {
+		font-size: 24px;
+	}
+
+	.ypn-pagehead .yp-app__status {
+		display: none;
+	}
+
+	.ypn-subnav {
+		margin-left: -16px;
+		margin-right: -16px;
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.ypn-kpis {
+		grid-template-columns: 1fr 1fr 1fr;
+		gap: 8px;
+	}
+
+	.ypn-kpi--main {
+		grid-column: span 3;
+	}
+
+	.ypn-kpi:not(.ypn-kpi--main) {
+		padding: 12px;
+	}
+
+	.ypn-kpi:not(.ypn-kpi--main) .ypn-kpi__value {
+		font-size: 19px;
+	}
+
+	.ypn-kpi:not(.ypn-kpi--main) .ypn-kpi__note {
+		display: none;
+	}
+
+	.ypn-kpi__label {
+		font-size: 11.5px;
+	}
+
+	.ypn-toolbar .ypn-chip[href],
+	.ypn-toolbar [data-ypn-refresh] {
+		display: none;
+	}
+
+	body.yp-next .ypn-search {
+		max-width: none;
+	}
+
+	.ypn-seg {
+		display: flex;
+		margin-left: -16px;
+		margin-right: -16px;
+		padding: 0 16px;
+	}
+
+	.ypn-board {
+		display: block;
+		overflow: visible;
+	}
+
+	.ypn-col {
+		background: none;
+		border: 0;
+		padding: 0;
+		min-height: 0;
+		margin-bottom: 18px;
+	}
+
+	.ypn-col__hint {
+		margin-bottom: 8px;
+	}
+
+	/* One column at a time when a chip other than All is picked. */
+	.ypn-board:not([data-column="all"]) .ypn-col:not(.is-picked) {
+		display: none;
+	}
+
+	.ypn-board[data-column="all"] .ypn-col__empty {
+		display: none;
+	}
+
+	.ypn-board[data-column="all"] .ypn-col:has(.ypn-col__empty) {
+		display: none;
+	}
+
+	.ypn-tiles {
+		grid-template-columns: 1fr 1fr;
+		gap: 10px;
+	}
+
+	.ypn-tile {
+		min-height: 0;
+		padding: 13px;
+	}
+
+	.ypn-tile__go {
+		display: none;
+	}
+
+	.ypn-switches__list {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		width: 100%;
+	}
+
+	.ypn-switch {
+		justify-content: space-between;
+	}
+
+	.ypn-progress li {
+		font-size: 10.5px;
+	}
+
+	.ypn-bottom {
+		display: flex;
+		position: fixed;
+		left: 12px;
+		right: 12px;
+		bottom: calc(12px + env(safe-area-inset-bottom));
+		z-index: 30;
+		justify-content: space-around;
+		align-items: center;
+		padding: 7px;
+		background: rgba(255, 255, 255, 0.95);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border: 1px solid var(--ypn-line);
+		border-radius: 22px;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+	}
+
+	.ypn-bottom__item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2px;
+		border: 0;
+		background: transparent;
+		color: var(--ypn-mute);
+		font: 500 10.5px var(--wp--preset--font-family--body, Inter, sans-serif);
+		padding: 5px 10px;
+		border-radius: 14px;
+	}
+
+	.ypn-bottom__item svg,
+	.ypn-bottom__add svg {
+		width: 22px;
+		height: 22px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.ypn-bottom__item.is-active {
+		color: var(--ypn-ink);
+		background: var(--ypn-soft);
+	}
+
+	.ypn-bottom__add {
+		width: 48px;
+		height: 48px;
+		border-radius: 16px;
+		background: var(--ypn-mag);
+		color: #fff;
+		display: grid;
+		place-items: center;
+		box-shadow: 0 6px 18px rgba(236, 0, 140, 0.3);
+	}
+
+	.ypn-bottom__add:hover,
+	.ypn-bottom__add:focus {
+		color: #fff;
+	}
+}
+
+@media (max-width: 1100px) and (min-width: 861px) {
+	.ypn-jump input {
+		width: 150px;
+	}
+
+	.ypn-kpis {
+		grid-template-columns: 1fr 1fr;
+	}
+}

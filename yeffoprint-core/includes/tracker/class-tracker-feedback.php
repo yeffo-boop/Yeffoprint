@@ -350,6 +350,8 @@ class YeffoPrint_Tracker_Feedback {
 
 	/** Telegram to the owner's chat, with the first screenshot uploaded alongside when there is one. */
 	private static function alert_owner( int $id ): void {
+		do_action( 'yeffoprint_owner_alert', __( 'New Dose Tracker feedback', 'yeffoprint-core' ), [ 'section' => 'tracker-feedback' ] );
+
 		if ( ! class_exists( 'YeffoPrint_Telegram_Settings' ) ) {
 			return;
 		}
