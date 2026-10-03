@@ -381,7 +381,10 @@
 	root.innerHTML = NEXT ? (
 		'<div class="yp-app yp-app--next">' +
 			'<header class="ypn-header">' +
-				'<a class="ypn-brand" href="#/dashboard"><span class="ypn-brand__mark"></span><span>YeffoDesign</span></a>' +
+				'<a class="ypn-brand" href="#/dashboard" aria-label="YeffoDesign home">' +
+					'<svg class="ypn-brand__mark" viewBox="4 2 22 32" aria-hidden="true" focusable="false"><clipPath id="ypnBrandMarkClip"><path d="M4 6C4 3.79 5.79 2 8 2h14c2.21 0 4 1.79 4 4v22c0 3.31-2.69 6-6 6h-10c-3.31 0-6-2.69-6-6V6z"/></clipPath><g clip-path="url(#ypnBrandMarkClip)"><rect x="4" y="2" width="6.63" height="34" fill="#00AEEF"/><rect x="11.63" y="2" width="6.63" height="34" fill="#EC008C"/><rect x="19.26" y="2" width="6.63" height="34" fill="#FFF200"/></g></svg>' +
+					'<span class="ypn-brand__word"><strong>Yeffo</strong>Design</span>' +
+				'</a>' +
 				'<nav class="ypn-tabs" data-yp-nav aria-label="Sections"></nav>' +
 				'<div class="ypn-header__end">' +
 					'<label class="ypn-jump"><span class="screen-reader-text">Jump to</span><input type="search" list="ypn-jump-list" placeholder="Jump to…" data-ypn-jump autocomplete="off"><datalist id="ypn-jump-list"></datalist></label>' +
