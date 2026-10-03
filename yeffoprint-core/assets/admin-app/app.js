@@ -389,7 +389,7 @@
 				'<div class="ypn-header__end">' +
 					'<label class="ypn-jump"><span class="screen-reader-text">Jump to</span><input type="search" list="ypn-jump-list" placeholder="Jump to…" data-ypn-jump autocomplete="off"><datalist id="ypn-jump-list"></datalist></label>' +
 					'<a class="ypn-btn ypn-btn--primary" href="#/manual-order">+ New order</a>' +
-					'<a class="ypn-old-link" href="' + YP.escapeAttr( yeffoprintAdminApp.classicUrl ) + '">Old admin</a>' +
+					'<a class="ypn-exit-link" href="' + YP.escapeAttr( yeffoprintAdminApp.exitUrl ) + '">&larr; Exit to WordPress</a>' +
 				'</div>' +
 				// The classic shell's off-canvas nav pieces, kept (hidden)
 				// so the shared code below works unchanged on both pages.

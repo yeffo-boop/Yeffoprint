@@ -32,12 +32,12 @@ class YeffoPrint_Admin_App {
 	}
 
 	/**
-	 * The redesigned app ("YeffoDesign (new)", class-admin-menu.php) runs
-	 * on its own page next to this one until the old one is retired. It
-	 * is the same app.js, views and REST API with a different shell
-	 * (top tabs, phone tab bar) and its own extra screens (Today stats,
-	 * Production board, Catalog/People/Settings hubs) from next/next.js,
-	 * styled by next/next.css. Both pages keep working side by side.
+	 * The redesigned app ("B Light": top tabs, phone tab bar, Today,
+	 * Production board, hubs from next/next.js, styled by next/next.css)
+	 * is the only admin now; the classic sidebar shell was retired
+	 * (direct request: "retire the old admin dashboard and move the new
+	 * one in place"). Both the `yeffoprint` page and the unlinked
+	 * `yeffoprint-next` page it first shipped at render it.
 	 */
 	private static string $next_hook_suffix = '';
 
@@ -181,7 +181,6 @@ class YeffoPrint_Admin_App {
 			// 'next' on the redesigned app's page — app.js builds that
 			// page's shell instead of the classic sidebar.
 			'shell'           => $this->is_next_screen() ? 'next' : 'classic',
-			'classicUrl'      => esc_url_raw( admin_url( 'admin.php?page=yeffoprint' ) ),
 			'nextUrl'         => esc_url_raw( admin_url( 'admin.php?page=' . YeffoPrint_Admin_Push::APP_SLUG ) ),
 			'swUrl'           => esc_url_raw( YeffoPrint_Admin_App_Shortcut::service_worker_url() ),
 			'swScope'         => YeffoPrint_Admin_App_Shortcut::admin_scope(),
@@ -305,7 +304,6 @@ class YeffoPrint_Admin_App {
 	}
 
 	private function is_next_screen(): bool {
-		$screen = get_current_screen();
-		return self::$next_hook_suffix && $screen && self::$next_hook_suffix === $screen->id;
+		return $this->is_own_screen();
 	}
 }
