@@ -79,6 +79,9 @@ class YeffoPrint_Cart_Item_Keys {
 	/** Custom Design batching only — this row's compound/strength text. Display-only, carried through to the order-item snapshot; never affects pricing. */
 	public const COMPOUND_STRENGTH = 'yp_compound_strength';
 
+	/** Custom Design batching only — the web address this row's QR code points to (optional). Display-only, like COMPOUND_STRENGTH. */
+	public const QR_URL = 'yp_qr_url';
+
 	/**
 	 * Label Designer only (own_design-mode Custom Design submission, no
 	 * SIZE_ID — the customer picked their own dimensions instead of a

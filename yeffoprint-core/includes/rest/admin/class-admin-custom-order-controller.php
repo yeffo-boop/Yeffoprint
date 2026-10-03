@@ -329,6 +329,7 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 					'material_label'    => ! empty( $row['material_id'] ) ? get_the_title( (int) $row['material_id'] ) : '',
 					'quantity'          => (int) ( $row['quantity'] ?? 0 ),
 					'compound_strength' => (string) ( $row['compound_strength'] ?? '' ),
+					'qr_url'            => (string) ( $row['qr_url'] ?? '' ),
 				];
 			}, YeffoPrint_Custom_Order_Meta::get_batch_rows( $post->ID ) );
 
