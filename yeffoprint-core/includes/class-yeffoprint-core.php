@@ -138,6 +138,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-tracking.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-shippo-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-production-status.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-design-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipment-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delivery-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-status-stepper.php';
@@ -278,6 +279,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Stripe_Webhook_Controller();
 		new YeffoPrint_Order_Tracking();
 		new YeffoPrint_Order_Production_Status();
+		new YeffoPrint_Order_Design_Status();
 		new YeffoPrint_Order_Shipment_Status();
 		new YeffoPrint_Order_Delivery_Status();
 		new YeffoPrint_Order_Status_Stepper();

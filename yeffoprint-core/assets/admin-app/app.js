@@ -1315,6 +1315,7 @@
 		completed:      'good',
 		shipped:        'good',
 		processing:     'neutral',
+		'in-design':    'neutral',
 		'in-production': 'neutral',
 		'on-hold':      'warn',
 		pending:        'warn',
@@ -1409,8 +1410,8 @@
 
 			refundPanelHtml( order ) +
 
-			wcOrderShippingLabelHtml( order ) +
-			shippoPanelHtml( order ) +
+			// Websites are never shipped, so no label panels.
+			( order.web_design ? '' : wcOrderShippingLabelHtml( order ) + shippoPanelHtml( order ) ) +
 
 			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
 

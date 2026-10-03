@@ -42,6 +42,7 @@
 		completed:       'good',
 		shipped:         'good',
 		processing:      'neutral',
+		'in-design':     'neutral',
 		'in-production': 'neutral',
 		'on-hold':       'warn',
 		pending:         'warn',

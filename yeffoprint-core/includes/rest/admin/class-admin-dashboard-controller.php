@@ -132,6 +132,11 @@ class YeffoPrint_Admin_Dashboard_Controller {
 			'order'   => 'ASC',
 		] );
 
+		// Websites are never printed or shipped (class-order-design-status.php).
+		$orders = array_values( array_filter( $orders, static function ( \WC_Order $order ): bool {
+			return ! YeffoPrint_Web_Design_Project_Meta::is_web_design_order( $order );
+		} ) );
+
 		// Express orders (class-express-order.php) paid to skip the line,
 		// so they go to the top — still oldest first within each group.
 		$express = [];
