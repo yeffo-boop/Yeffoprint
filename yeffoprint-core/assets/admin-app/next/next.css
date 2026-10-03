@@ -59,10 +59,19 @@ body.yp-next .yp-app--next {
 }
 
 .ypn-brand__mark {
-	width: 26px;
-	height: 26px;
-	border-radius: 8px;
-	background: linear-gradient(135deg, var(--ypn-cy), var(--ypn-mag) 55%, #FFF200);
+	width: 20px;
+	height: 29px;
+	flex-shrink: 0;
+}
+
+.ypn-brand__word {
+	font-weight: 500;
+	font-size: 17px;
+	letter-spacing: -0.01em;
+}
+
+.ypn-brand__word strong {
+	font-weight: 800;
 }
 
 .ypn-tabs {

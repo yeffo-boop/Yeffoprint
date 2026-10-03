@@ -102,8 +102,8 @@ class YeffoPrint_Admin_Push {
 		] );
 
 		$message += [
-			'icon'  => YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/icon-192.png',
-			'badge' => YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/badge-96.png',
+			'icon'  => YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/icon-192.png?v=2',
+			'badge' => YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/badge-96.png?v=2',
 		];
 
 		$delivered = 0;

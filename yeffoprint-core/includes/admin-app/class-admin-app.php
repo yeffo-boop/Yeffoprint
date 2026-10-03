@@ -64,7 +64,7 @@ class YeffoPrint_Admin_App {
 			return;
 		}
 		echo '<link rel="manifest" href="' . esc_url( YeffoPrint_Admin_App_Shortcut::manifest_url() ) . '">' . "\n";
-		echo '<link rel="apple-touch-icon" href="' . esc_url( YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/apple-touch-icon.png' ) . '">' . "\n";
+		echo '<link rel="apple-touch-icon" href="' . esc_url( YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/apple-touch-icon.png?v=2' ) . '">' . "\n";
 		echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
 		echo '<meta name="mobile-web-app-capable" content="yes">' . "\n";
 		echo '<meta name="apple-mobile-web-app-title" content="YeffoDesign">' . "\n";
