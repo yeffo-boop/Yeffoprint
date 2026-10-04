@@ -2063,7 +2063,7 @@
 				} }, 'Copy link' ) );
 				if ( navigator.share ) {
 					foot.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block ypt-btn--accent', onclick: function () {
-						navigator.share( { title: p.compound + ' protocol', text: 'Here’s my ' + p.compound + ' schedule. Add it to your Dose Tracker:', url: link.url } ).catch( function () {} );
+						navigator.share( { title: p.compound + ' protocol', text: 'Here’s my ' + p.compound + ' schedule. Add it to your YeffoHealth tracker:', url: link.url } ).catch( function () {} );
 					} }, 'Share…' ) );
 				}
 				return;
@@ -2488,7 +2488,7 @@
 
 	function openWhatsNew() {
 		markNewsSeen();
-		openSheet( 'What’s new', 'Dose Tracker', [ h( 'div', { class: 'ypt-card ypt-list' }, newsList().map( newsItem ) ) ] );
+		openSheet( 'What’s new', 'YeffoHealth', [ h( 'div', { class: 'ypt-card ypt-list' }, newsList().map( newsItem ) ) ] );
 	}
 
 	function installBanner() {
@@ -2505,12 +2505,12 @@
 		} }, '×' );
 		if ( installPrompt ) {
 			return h( 'div', { class: 'ypt-banner ypt-banner--info' },
-				h( 'div', null, h( 'b', null, 'Add Dose Tracker to your home screen' ), ' so it opens like an app.',
+				h( 'div', null, h( 'b', null, 'Add YeffoHealth to your home screen' ), ' so it opens like an app.',
 					h( 'div', { style: { marginTop: '8px' } }, h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: promptInstall }, 'Install app' ) ) ),
 				close );
 		}
 		return h( 'div', { class: 'ypt-banner ypt-banner--info' },
-			h( 'div', null, h( 'b', null, 'Add to your Home Screen' ), ' to use Dose Tracker like an app and get reminders: tap the Share button, then “Add to Home Screen”.' ),
+			h( 'div', null, h( 'b', null, 'Add to your Home Screen' ), ' to use YeffoHealth like an app and get reminders: tap the Share button, then “Add to Home Screen”.' ),
 			close );
 	}
 
@@ -3620,7 +3620,7 @@
 				objs[ 1 ] = '<< /Type /Catalog /Pages 2 0 R >>';
 				objs[ 3 ] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
 				objs[ 4 ] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
-				objs[ 5 ] = '<< /Title (' + pdfBytes( title ).replace( /[\\()]/g, '\\$&' ) + ') /Producer (YeffoDesign Dose Tracker) >>';
+				objs[ 5 ] = '<< /Title (' + pdfBytes( title ).replace( /[\\()]/g, '\\$&' ) + ') /Producer (YeffoHealth) >>';
 				var kids = [];
 				pages.forEach( function ( ops, i ) {
 					var pageId = 6 + i * 2;
@@ -3991,7 +3991,7 @@
 		for ( var i = 0; i < n; i++ ) {
 			doc.onPage( i );
 			doc.line( [ [ M, doc.H - 40 ], [ R, doc.H - 40 ] ], LINE, 0.5 );
-			doc.text( M, doc.H - 26, 'A personal log kept in YeffoDesign Dose Tracker. It isn’t medical advice.', { size: 7.5, color: MUTED } );
+			doc.text( M, doc.H - 26, 'A personal log kept in YeffoHealth. It isn’t medical advice.', { size: 7.5, color: MUTED } );
 			doc.text( R, doc.H - 26, 'Page ' + ( i + 1 ) + ' of ' + n, { size: 7.5, color: MUTED, align: 'right' } );
 		}
 		return doc.bytes( 'Dose report ' + shortDate( from, true ) + ' – ' + shortDate( today, true ) );
@@ -6017,7 +6017,7 @@
 		) );
 
 		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '16px 4px 0' } },
-			'Dose Tracker is a personal log and reminder tool. It isn’t medical advice. Talk to a qualified provider about any peptide, medication, dose or schedule.' ) );
+			'YeffoHealth is a personal log and reminder tool. It isn’t medical advice. Talk to a qualified provider about any peptide, medication, dose or schedule.' ) );
 
 		return wrap;
 	}
@@ -6238,7 +6238,7 @@
 
 		if ( ! supported ) {
 			card.appendChild( h( 'p', { class: 'ypt-small' }, isIOS() && ! isStandalone()
-				? 'On iPhone, reminders work once Dose Tracker is on your Home Screen. Tap the Share button, then “Add to Home Screen”, and open it from there.'
+				? 'On iPhone, reminders work once YeffoHealth is on your Home Screen. Tap the Share button, then “Add to Home Screen”, and open it from there.'
 				: 'This browser doesn’t support reminders. Try Chrome, Safari (from the Home Screen) or Firefox.' ) );
 			return card;
 		}
@@ -7976,15 +7976,15 @@
 				root.appendChild( protoCard( share.protocol ) );
 				root.appendChild( h( 'a', { class: 'ypt-btn ypt-btn--accent ypt-btn--block', style: { marginTop: '16px' }, href: CFG.loginUrl }, 'Sign in to add it' ) );
 				root.appendChild( h( 'p', { class: 'ypt-muted', style: { textAlign: 'center', marginTop: '14px' } },
-					'New here? ', h( 'a', { href: CFG.registerUrl }, 'Create a free account' ), ', then open the Dose Tracker and it’ll be waiting.' ) );
+					'New here? ', h( 'a', { href: CFG.registerUrl }, 'Create a free account' ), ', then open YeffoHealth and it’ll be waiting.' ) );
 				root.appendChild( h( 'div', { class: 'ypt-banner ypt-banner--info', style: { marginTop: '16px' } }, h( 'div', null, 'Doses here come from another person, not from YeffoDesign. Check them with your provider.' ) ) );
 			}
-			root.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label', style: { marginTop: '28px' } }, 'About the Dose Tracker' ) );
+			root.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label', style: { marginTop: '28px' } }, 'About YeffoHealth' ) );
 		} else {
 			root.appendChild( h( 'div', { class: 'ypt-hero' },
 			h( 'a', { class: 'ypt-brand', href: CFG.homeUrl }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), 'YeffoDesign' ),
 			h( 'div', { class: 'ypt-eyebrow', style: { marginTop: '28px' } }, 'Free for customers' ),
-			h( 'h1', null, 'Dose Tracker' ),
+			h( 'h1', null, 'YeffoHealth' ),
 			h( 'p', null, 'Log every peptide and medication dose, see exactly how many units to draw, and get a reminder when it’s time.' )
 		) );
 		}
@@ -8038,7 +8038,7 @@
 		return;
 	}
 	if ( ! CFG.ready ) {
-		renderMessage( 'Almost ready', 'The Dose Tracker is being set up on our end. Please check back soon.', false );
+		renderMessage( 'Almost ready', 'YeffoHealth is being set up on our end. Please check back soon.', false );
 		return;
 	}
 

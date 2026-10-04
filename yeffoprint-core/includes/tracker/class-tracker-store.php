@@ -185,7 +185,7 @@ class YeffoPrint_Tracker_Store {
 	/** WordPress's Tools > Erase Personal Data covers the tracker too. */
 	public function register_eraser( array $erasers ): array {
 		$erasers['yeffoprint-dose-tracker'] = [
-			'eraser_friendly_name' => __( 'Dose Tracker', 'yeffoprint-core' ),
+			'eraser_friendly_name' => __( 'YeffoHealth Dose Tracker', 'yeffoprint-core' ),
 			'callback'             => static function ( string $email ): array {
 				$user    = get_user_by( 'email', $email );
 				$removed = false;

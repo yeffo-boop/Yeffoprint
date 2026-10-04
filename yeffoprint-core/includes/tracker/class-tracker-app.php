@@ -150,9 +150,9 @@ class YeffoPrint_Tracker_App {
 		$icons = YEFFOPRINT_CORE_URL . 'assets/tracker/icons/';
 		echo wp_json_encode( [ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
 			'id'               => self::path(),
-			'name'             => 'YeffoDesign Dose Tracker',
-			'short_name'       => 'Dose Tracker',
-			'description'      => 'Track your peptides and medications: doses, vials and schedule.',
+			'name'             => 'YeffoHealth Dose Tracker',
+			'short_name'       => 'YeffoHealth',
+			'description'      => 'Track your peptides, medications and health: doses, vials, schedule and progress.',
 			'start_url'        => self::path(),
 			'scope'            => self::path(),
 			'display'          => 'standalone',

@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-04b',
+		'date'  => '2026-10-04',
+		'title' => 'Meet YeffoHealth',
+		'text'  => 'The Dose Tracker has a new name: YeffoHealth. Everything you\'ve logged is right where you left it. If it\'s on your Home Screen, the new name shows up the next time your phone refreshes the app, or remove it and add it again to see it now.',
+	],
+	[
 		'id'    => '2026-10-04a',
 		'date'  => '2026-10-04',
 		'title' => 'Stay signed in',

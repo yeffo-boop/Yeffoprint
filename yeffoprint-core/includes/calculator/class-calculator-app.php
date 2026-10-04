@@ -96,8 +96,8 @@ class YeffoPrint_Calculator_App {
 		$icons = self::icons_url();
 		echo wp_json_encode( [ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
 			'id'               => self::path(),
-			'name'             => 'YeffoDesign Peptide Calculator',
-			'short_name'       => 'Peptide Calc',
+			'name'             => 'YeffoHealth Calculator',
+			'short_name'       => 'YH Calculator',
 			'description'      => 'Work out how many units to draw for peptides, HGH/HCG, hormones and blends.',
 			'start_url'        => self::path(),
 			'scope'            => self::path(),
@@ -124,7 +124,7 @@ class YeffoPrint_Calculator_App {
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Peptide Calc">
+<meta name="apple-mobile-web-app-title" content="YH Calculator">
 <link rel="apple-touch-icon" href="<?php echo esc_url( $icons . 'apple-touch-icon.png' ); ?>">
 		<?php
 	}
