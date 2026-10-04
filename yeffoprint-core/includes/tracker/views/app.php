@@ -28,7 +28,7 @@ defined( 'ABSPATH' ) || exit;
 		<meta property="og:image" content="<?php echo esc_url( YEFFOPRINT_CORE_URL . 'assets/tracker/icons/icon-512.png' ); ?>">
 	<?php endif; ?>
 	<link rel="manifest" href="<?php echo esc_url( home_url( '/' . YeffoPrint_Tracker_App::SLUG . '/manifest.webmanifest' ) ); ?>">
-	<link rel="apple-touch-icon" href="<?php echo esc_url( YEFFOPRINT_CORE_URL . 'assets/tracker/icons/apple-touch-icon.png' ); ?>">
+	<link rel="apple-touch-icon" href="<?php echo esc_url( YEFFOPRINT_CORE_URL . 'assets/tracker/icons/apple-touch-icon.png?v=2' ); ?>">
 	<link rel="icon" type="image/png" sizes="192x192" href="<?php echo esc_url( YEFFOPRINT_CORE_URL . 'assets/tracker/icons/icon-192.png' ); ?>">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

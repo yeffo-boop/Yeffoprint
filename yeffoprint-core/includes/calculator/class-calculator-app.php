@@ -106,9 +106,9 @@ class YeffoPrint_Calculator_App {
 			'background_color' => '#FAF9F6',
 			'theme_color'      => '#FAF9F6',
 			'icons'            => [
-				[ 'src' => $icons . 'icon-192.png', 'sizes' => '192x192', 'type' => 'image/png' ],
-				[ 'src' => $icons . 'icon-512.png', 'sizes' => '512x512', 'type' => 'image/png' ],
-				[ 'src' => $icons . 'icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ],
+				[ 'src' => $icons . 'icon-192.png?v=2', 'sizes' => '192x192', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-512.png?v=2', 'sizes' => '512x512', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-maskable-512.png?v=2', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ],
 			],
 		], JSON_UNESCAPED_SLASHES );
 	}
@@ -125,7 +125,7 @@ class YeffoPrint_Calculator_App {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="YH Calculator">
-<link rel="apple-touch-icon" href="<?php echo esc_url( $icons . 'apple-touch-icon.png' ); ?>">
+<link rel="apple-touch-icon" href="<?php echo esc_url( $icons . 'apple-touch-icon.png?v=2' ); ?>">
 		<?php
 	}
 

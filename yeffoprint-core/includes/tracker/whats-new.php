@@ -18,7 +18,7 @@ return [
 		'id'    => '2026-10-04b',
 		'date'  => '2026-10-04',
 		'title' => 'Meet YeffoHealth',
-		'text'  => 'The Dose Tracker has a new name: YeffoHealth. Everything you\'ve logged is right where you left it. If it\'s on your Home Screen, the new name shows up the next time your phone refreshes the app, or remove it and add it again to see it now.',
+		'text'  => 'The Dose Tracker has a new name: YeffoHealth. Everything you\'ve logged is right where you left it. It has a new icon too. If it\'s on your Home Screen, the new name and icon show up the next time your phone refreshes the app, or remove it and add it again to see them now.',
 	],
 	[
 		'id'    => '2026-10-04a',

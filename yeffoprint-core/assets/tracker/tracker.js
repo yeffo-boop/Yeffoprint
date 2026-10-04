@@ -3991,7 +3991,7 @@
 		for ( var i = 0; i < n; i++ ) {
 			doc.onPage( i );
 			doc.line( [ [ M, doc.H - 40 ], [ R, doc.H - 40 ] ], LINE, 0.5 );
-			doc.text( M, doc.H - 26, 'A personal log kept in YeffoHealth. It isn’t medical advice.', { size: 7.5, color: MUTED } );
+			doc.text( M, doc.H - 26, 'A personal log kept in YeffoHealth. YeffoHealth is not a healthcare provider and this isn’t medical advice.', { size: 7.5, color: MUTED } );
 			doc.text( R, doc.H - 26, 'Page ' + ( i + 1 ) + ' of ' + n, { size: 7.5, color: MUTED, align: 'right' } );
 		}
 		return doc.bytes( 'Dose report ' + shortDate( from, true ) + ' – ' + shortDate( today, true ) );
@@ -6017,7 +6017,7 @@
 		) );
 
 		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '16px 4px 0' } },
-			'YeffoHealth is a personal log and reminder tool. It isn’t medical advice. Talk to a qualified provider about any peptide, medication, dose or schedule.' ) );
+			'YeffoHealth is not a healthcare provider and doesn’t give medical advice. It simply keeps track of the information that matters to you. Talk to a qualified healthcare provider before starting, changing or stopping any peptide, medication, dose or schedule.' ) );
 
 		return wrap;
 	}
@@ -8001,7 +8001,7 @@
 				'New here? ', h( 'a', { href: CFG.registerUrl }, 'Create a free account' ) ) );
 		}
 		root.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { textAlign: 'center', marginTop: '24px' } },
-			'A personal log and reminder tool, not medical advice.' ) );
+			'YeffoHealth is not a healthcare provider and doesn’t give medical advice. It simply keeps track of the information that matters to you.' ) );
 	}
 
 	function iconUrl( file ) {
