@@ -258,6 +258,49 @@
 	};
 
 	/**
+	 * Name, contact and address fields for one WooCommerce address
+	 * (`billing` or `shipping`), shared by the order page's Edit details
+	 * form (next/next.js) and the customer drawer (views/customers.js).
+	 * `values` uses WooCommerce's own field names (first_name, address_1,
+	 * postcode, ...); billing also has email and phone.
+	 */
+	var ADDRESS_FIELDS = [
+		[ 'first_name', 'First name', 'given-name' ],
+		[ 'last_name', 'Last name', 'family-name' ],
+		[ 'email', 'Email', 'email', 'billing', true ],
+		[ 'phone', 'Phone', 'tel' ],
+		[ 'company', 'Company', 'organization', null, true ],
+		[ 'address_1', 'Street address', 'address-line1', null, true ],
+		[ 'address_2', 'Apt, suite, unit', 'address-line2', null, true ],
+		[ 'city', 'City', 'address-level2' ],
+		[ 'state', 'State', 'address-level1' ],
+		[ 'postcode', 'ZIP / postal code', 'postal-code' ],
+		[ 'country', 'Country code (US, CA…)', 'country' ]
+	];
+
+	YP.addressFieldsHtml = function ( type, values ) {
+		values = values || {};
+		return '<div class="ypn-form" data-yp-address="' + YP.escapeAttr( type ) + '">' + ADDRESS_FIELDS.filter( function ( f ) {
+			return ! f[ 3 ] || f[ 3 ] === type;
+		} ).map( function ( f ) {
+			return '<label class="ypn-form__field' + ( f[ 4 ] ? ' is-wide' : '' ) + '"><span>' + YP.escapeHtml( f[ 1 ] ) + '</span>' +
+				'<input type="' + ( 'email' === f[ 0 ] ? 'email' : ( 'phone' === f[ 0 ] ? 'tel' : 'text' ) ) + '" data-yp-address-field="' + f[ 0 ] + '" autocomplete="' + f[ 2 ] + '" value="' + YP.escapeAttr( values[ f[ 0 ] ] || '' ) + '"' + ( 'country' === f[ 0 ] ? ' maxlength="2" style="text-transform:uppercase"' : '' ) + '></label>';
+		} ).join( '' ) + '</div>';
+	};
+
+	YP.readAddressFields = function ( container, type ) {
+		var out = {};
+		var wrap = container.querySelector( '[data-yp-address="' + type + '"]' );
+		if ( wrap ) {
+			wrap.querySelectorAll( '[data-yp-address-field]' ).forEach( function ( input ) {
+				var key = input.getAttribute( 'data-yp-address-field' );
+				out[ key ] = 'country' === key ? input.value.trim().toUpperCase() : input.value.trim();
+			} );
+		}
+		return out;
+	};
+
+	/**
 	 * One entry per planned section (docs/ARCHITECTURE.md's phase list).
 	 * `id`s with no matching `YP.views[id]` render the shared
 	 * placeholder view until their own phase ships. Nothing here is a
@@ -266,7 +309,8 @@
 	 */
 	var SECTIONS = [
 		{ group: 'Overview', items: [
-			{ id: 'dashboard', label: 'Dashboard' }
+			{ id: 'dashboard', label: 'Dashboard' },
+			{ id: 'sales', label: 'Sales' }
 		] },
 		{ group: 'Catalog', items: [
 			{ id: 'materials', label: 'Materials' },
@@ -285,6 +329,8 @@
 			{ id: 'abandoned-carts', label: 'Abandoned Carts' },
 			{ id: 'web-design-orders', label: 'Web Design Orders' },
 			{ id: 'customers', label: 'Customers' },
+			{ id: 'messages', label: 'Messages' },
+			{ id: 'disputes', label: 'Disputes' },
 			{ id: 'reviews', label: 'Reviews' },
 			{ id: 'tracker-feedback', label: 'Tracker Feedback' },
 			{ id: 'pricing', label: 'Pricing Rules' },
@@ -298,6 +344,7 @@
 			{ id: 'coupons', label: 'Coupons' },
 			{ id: 'rewards', label: 'Rewards' },
 			{ id: 'surcharge', label: 'Card Surcharge' },
+			{ id: 'payments', label: 'Payments' },
 			{ id: 'settings', label: 'Settings' }
 		] }
 	];
@@ -324,13 +371,14 @@
 	 */
 	var NEXT = 'next' === yeffoprintAdminApp.shell;
 	var NEXT_TABS = [
-		{ id: 'dashboard', label: 'Today', icon: 'sun', sections: [ 'dashboard' ] },
-		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders' ] },
+		{ id: 'dashboard', label: 'Today', icon: 'sun', sections: [ 'dashboard', 'sales' ] },
+		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders', 'disputes' ] },
 		{ id: 'catalog', label: 'Catalog', icon: 'box', sections: [ 'catalog', 'templates', 'sizes', 'sticker-sizes', 'materials', 'label-fields', 'label-colors', 'compound-list', 'prints', 'filament-colors', 'pricing' ] },
-		{ id: 'people', label: 'Customers', icon: 'people', sections: [ 'people', 'customers', 'reviews', 'tracker-feedback', 'rewards', 'coupons', 'maintenance' ] },
-		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'print-station', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
+		{ id: 'people', label: 'Customers', icon: 'people', sections: [ 'people', 'customers', 'messages', 'reviews', 'tracker-feedback', 'rewards', 'coupons', 'maintenance' ] },
+		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'payments', 'print-station', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
 	];
 	var NEXT_SUB_LABELS = {
+		dashboard: 'Today',
 		production: 'Production board',
 		'order-history': 'All orders',
 		catalog: 'Overview',
