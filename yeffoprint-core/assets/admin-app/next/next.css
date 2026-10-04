@@ -1257,6 +1257,151 @@ body.yp-next .ypn-card__title {
 	100% { box-shadow: 0 0 0 3px rgba(236, 0, 140, 0); }
 }
 
+/* ---------- Today: Payouts ---------- */
+
+.ypn-pill--cy { background: #e0f4fd; color: #04679a; }
+.ypn-pill--red { background: #fde4e0; color: #9f2a17; }
+
+.ypn-payouts {
+	margin-bottom: 14px;
+}
+
+.ypn-payouts .ypn-card__title .ypn-more {
+	margin: 0;
+	text-transform: none;
+	letter-spacing: 0;
+}
+
+.ypn-payouts__sub {
+	margin: -6px 0 14px;
+	color: var(--ypn-mute);
+	font-size: 13.5px;
+}
+
+.ypn-payouts__tiles {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 12px;
+	margin-bottom: 18px;
+}
+
+.ypn-payouts__tile {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	padding: 14px 16px;
+	border-radius: 14px;
+	background: var(--ypn-soft);
+}
+
+.ypn-payouts__tile.is-next {
+	background: #fff0f8;
+	box-shadow: inset 0 0 0 1px #ffc9e6;
+}
+
+.ypn-payouts__label,
+.ypn-payouts__note {
+	color: var(--ypn-mute);
+	font-size: 13px;
+}
+
+.ypn-payouts__value {
+	font-size: 26px;
+	font-weight: 800;
+	letter-spacing: -0.01em;
+	color: var(--ypn-ink);
+	overflow-wrap: anywhere;
+}
+
+.ypn-payouts > .ypn-empty {
+	margin-bottom: 18px;
+}
+
+.ypn-payouts__grid {
+	display: grid;
+	grid-template-columns: 1.4fr 1fr;
+	gap: 22px;
+}
+
+.ypn-payouts__grid > div:only-child {
+	grid-column: 1 / -1;
+}
+
+body.yp-next .ypn-payouts__h {
+	margin: 0 0 6px;
+	font: 700 12px var(--wp--preset--font-family--body, Inter, sans-serif);
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: var(--ypn-mute);
+}
+
+.ypn-payouts__table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 14px;
+}
+
+.ypn-payouts__table td {
+	padding: 9px 4px;
+	border-top: 1px solid var(--ypn-line);
+	vertical-align: middle;
+}
+
+.ypn-payouts__table a {
+	color: var(--ypn-ink);
+	text-decoration: none;
+}
+
+.ypn-payouts__table a:hover {
+	color: var(--ypn-mag);
+}
+
+.ypn-payouts__amt {
+	text-align: right;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.ypn-payouts__dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 8px;
+	border-radius: 50%;
+	background: var(--ypn-mute);
+}
+
+.ypn-payouts__dot.is-yeffoprint_venmo { background: #3d95ce; }
+.ypn-payouts__dot.is-yeffoprint_zelle { background: #6d1ed4; }
+.ypn-payouts__dot.is-yeffoprint_nowpayments { background: #26a17b; }
+
+.ypn-payouts__foot {
+	margin: 8px 0 0;
+	color: var(--ypn-mute);
+	font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+	.ypn-payouts__tiles {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.ypn-payouts__grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 860px) {
+	.ypn-payouts__value {
+		font-size: 22px;
+	}
+
+	.ypn-payouts__tile {
+		padding: 12px 14px;
+	}
+}
+
 /* ---------- Today: queue + ship today ---------- */
 
 .ypn-today {
