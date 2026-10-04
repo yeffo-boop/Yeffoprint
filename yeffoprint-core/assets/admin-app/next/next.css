@@ -1647,6 +1647,13 @@ body.yp-next [data-yp-dashboard] > .yp-attn {
 	line-height: 1.3;
 }
 
+.ypn-lab__brand {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ypn-ink);
+	overflow-wrap: anywhere;
+}
+
 .ypn-lab__meta {
 	color: var(--ypn-mute);
 	font-size: 12.5px;
