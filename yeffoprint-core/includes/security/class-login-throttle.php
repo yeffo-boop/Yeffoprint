@@ -63,6 +63,9 @@ class YeffoPrint_Login_Throttle {
 		if ( $error instanceof \WP_Error && self::ERROR_CODE === $error->get_error_code() ) {
 			return; // Already blocked; don't keep extending the block.
 		}
+		if ( $error instanceof \WP_Error && YeffoPrint_Email_Verification::ERROR_CODE === $error->get_error_code() ) {
+			return; // Right password, email just not confirmed yet.
+		}
 
 		self::bump( self::ip_key(), self::IP_WINDOW );
 
