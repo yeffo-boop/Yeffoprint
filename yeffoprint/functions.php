@@ -850,6 +850,15 @@ add_action( 'wp_enqueue_scripts', function () {
 		);
 	}
 
+	if ( is_page() && in_array( get_page_template_slug(), [ 'yeffohealth', 'yeffohealth.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-yeffohealth',
+			get_theme_file_uri( 'assets/css/yeffohealth.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/yeffohealth.css' )
+		);
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'web-design-showcase', 'web-design-showcase.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-showcase',
