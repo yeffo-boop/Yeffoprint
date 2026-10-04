@@ -150,9 +150,9 @@ class YeffoPrint_Tracker_App {
 		$icons = YEFFOPRINT_CORE_URL . 'assets/tracker/icons/';
 		echo wp_json_encode( [ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
 			'id'               => self::path(),
-			'name'             => 'YeffoDesign Dose Tracker',
-			'short_name'       => 'Dose Tracker',
-			'description'      => 'Track your peptides and medications: doses, vials and schedule.',
+			'name'             => 'YeffoHealth Dose Tracker',
+			'short_name'       => 'YeffoHealth',
+			'description'      => 'Track your peptides, medications and health: doses, vials, schedule and progress.',
 			'start_url'        => self::path(),
 			'scope'            => self::path(),
 			'display'          => 'standalone',
@@ -160,9 +160,9 @@ class YeffoPrint_Tracker_App {
 			'background_color' => '#FAF9F6',
 			'theme_color'      => '#FAF9F6',
 			'icons'            => [
-				[ 'src' => $icons . 'icon-192.png', 'sizes' => '192x192', 'type' => 'image/png' ],
-				[ 'src' => $icons . 'icon-512.png', 'sizes' => '512x512', 'type' => 'image/png' ],
-				[ 'src' => $icons . 'icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ],
+				[ 'src' => $icons . 'icon-192.png?v=2', 'sizes' => '192x192', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-512.png?v=2', 'sizes' => '512x512', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-maskable-512.png?v=2', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ],
 			],
 		], JSON_UNESCAPED_SLASHES );
 	}

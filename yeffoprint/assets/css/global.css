@@ -356,8 +356,8 @@ main.wp-block-group {
 	color: var(--wp--preset--color--near-black) !important;
 }
 
-/* "Shop" dropdown (Shop Labels, Custom Stickers, 3D Prints) and "Tools"
-   (Peptide Calculator, Dose Tracker). Desktop only — inside the mobile
+/* "Shop" dropdown (Shop Labels, Custom Stickers, 3D Prints) and
+   "YeffoHealth" (Tracker, Calculator). Desktop only — inside the mobile
    overlay the core block already lists the sub-items expanded, and the
    overlay rules further down style them. */
 .yp-header__nav .yp-header__shop > .wp-block-navigation__submenu-icon,
@@ -424,9 +424,85 @@ main.wp-block-group {
 	vertical-align: 0.1em;
 }
 
+/* YeffoHealth menu (Jeff picked icon direction B, mockups in
+   mockups/yeffohealth/): each app link shows its icon, the name, and a
+   short gray note underneath (the navigation-link "description"). The
+   New tag moves onto the name so it doesn't land after the note. */
+.yp-header__nav .yp-header__app > a.wp-block-navigation-item__content {
+	display: grid !important;
+	grid-template-columns: 2.5rem 1fr;
+	column-gap: 0.75rem;
+	align-items: center;
+	white-space: normal;
+}
+
+.yp-header__nav .yp-header__app > a.wp-block-navigation-item__content::before {
+	content: "";
+	grid-column: 1;
+	grid-row: 1 / span 2;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 0.6rem;
+	background: center / contain no-repeat;
+}
+
+.yp-header__nav .yp-header__app--tracker > a.wp-block-navigation-item__content::before {
+	background-image: url(../images/menu-tracker.png);
+}
+
+.yp-header__nav .yp-header__app--calculator > a.wp-block-navigation-item__content::before {
+	background-image: url(../images/menu-calculator.png);
+}
+
+.yp-header__nav .yp-header__app .wp-block-navigation-item__label {
+	grid-column: 2;
+	grid-row: 1;
+	font-weight: 600;
+}
+
+.yp-header__nav .yp-header__app .wp-block-navigation-item__description {
+	display: block;
+	grid-column: 2;
+	grid-row: 2;
+	margin-top: 0.1rem;
+	font-size: 0.8rem;
+	font-weight: 400;
+	line-height: 1.35;
+	color: #6b6b6e;
+}
+
+.yp-header__nav .yp-header__app.yp-header__new > a.wp-block-navigation-item__content::after {
+	content: none;
+}
+
+.yp-header__nav .yp-header__app.yp-header__new .wp-block-navigation-item__label::after {
+	content: "New";
+	display: inline-block;
+	margin-left: 0.45rem;
+	padding: 0.05rem 0.4rem;
+	border-radius: 999px;
+	background: #fce7f3;
+	color: var(--wp--preset--color--magenta-deep);
+	font-size: 0.65rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	vertical-align: 0.1em;
+}
+
+.yp-header__nav .wp-block-navigation__responsive-container:not(.is-menu-open) .yp-header__tools .wp-block-navigation__submenu-container {
+	min-width: 21rem !important;
+}
+
+/* Phone menu: the note is lighter on the dark overlay. */
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .yp-header__app .wp-block-navigation-item__description {
+	font-size: 0.9rem;
+	color: #a9a7a2;
+}
+
 /* Tighter link padding on smaller laptops. With Shop Labels, Custom
    Stickers and 3D Prints grouped under the one "Shop" menu (and the
-   calculator and tracker under "Tools") below, the
+   calculator and tracker under "YeffoHealth") below, the
    nav is six items, which fits on one row comfortably from here down
    to the mobile menu. Starts below 1440px (was 1280px) since the
    bigger header logo takes the room the roomier links had. */
@@ -665,6 +741,12 @@ body:has(.wp-block-navigation__responsive-container.is-menu-open) .yp-search-bar
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation-item:last-child a.wp-block-navigation-item__content {
 	border-bottom: 0;
+}
+
+/* YeffoHealth app links keep their icon + name + note grid in the
+   phone menu too (the flex rule above would line them up in a row). */
+.yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .yp-header__app > a.wp-block-navigation-item__content {
+	display: grid !important;
 }
 
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open a.wp-block-navigation-item__content:hover,
