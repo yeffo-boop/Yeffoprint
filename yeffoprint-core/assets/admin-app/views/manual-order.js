@@ -78,7 +78,7 @@
 	var FILL_ALL_HTML = '<button type="button" class="yp-fill-all" data-yp-fill-all>&darr; Fill all</button>';
 
 	function batchRowHtml( row, options ) {
-		row = row || { size_id: '', material_id: '', quantity: 100, compound_strength: '' };
+		row = row || { size_id: '', material_id: '', quantity: 100, compound_strength: '', brand_name: '' };
 		return (
 			'<tr>' +
 				'<td data-label="Size"><select data-row-size aria-label="Size">' +
@@ -95,6 +95,8 @@
 				'</select>' + FILL_ALL_HTML + '</td>' +
 				'<td data-label="Quantity" class="yp-tier-table__qty yp-stack-half"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( row.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
 				'<td data-label="Compound/Strength" class="yp-stack-half"><input type="text" data-row-compound aria-label="Compound/Strength" placeholder="e.g. 10mg/mL" value="' + YP.escapeAttr( row.compound_strength ) + '" />' + FILL_ALL_HTML + '</td>' +
+				// Blank uses the order's Brand name above; only a label for a different brand needs one typed.
+				'<td data-label="Brand"><input type="text" data-row-brand aria-label="Brand" placeholder="Same as Brand name" value="' + YP.escapeAttr( row.brand_name || '' ) + '" />' + FILL_ALL_HTML + '</td>' +
 				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
 			'</tr>'
 		);
@@ -141,7 +143,7 @@
 	function lastBatchRow( tbody ) {
 		var rows = readBatchRows( tbody );
 		var last = rows[ rows.length - 1 ];
-		return last ? { size_id: last.size_id || '', material_id: last.material_id || '', quantity: last.quantity || 100, compound_strength: '' } : null;
+		return last ? { size_id: last.size_id || '', material_id: last.material_id || '', quantity: last.quantity || 100, compound_strength: '', brand_name: last.brand_name || '' } : null;
 	}
 
 	function wireRemoveButtons( tbody, onChange ) {
@@ -167,7 +169,8 @@
 				size_id: parseInt( row.querySelector( '[data-row-size]' ).value, 10 ) || 0,
 				material_id: parseInt( row.querySelector( '[data-row-material]' ).value, 10 ) || 0,
 				quantity: parseInt( row.querySelector( '[data-row-quantity]' ).value, 10 ) || 0,
-				compound_strength: row.querySelector( '[data-row-compound]' ).value
+				compound_strength: row.querySelector( '[data-row-compound]' ).value,
+				brand_name: row.querySelector( '[data-row-brand]' ).value
 			};
 		} );
 	}
@@ -402,7 +405,8 @@
 						size_id: row.querySelector( '[data-row-size]' ).value,
 						material_id: row.querySelector( '[data-row-material]' ).value,
 						quantity: row.querySelector( '[data-row-quantity]' ).value,
-						compound_strength: row.querySelector( '[data-row-compound]' ).value
+						compound_strength: row.querySelector( '[data-row-compound]' ).value,
+						brand_name: row.querySelector( '[data-row-brand]' ).value
 					};
 				} );
 			}
@@ -438,7 +442,7 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Custom Design details</h2></div>' +
 					'<div class="yp-field"><label for="yp-mo-brand">Brand name</label><input type="text" id="yp-mo-brand" /></div>' +
-					'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
+					'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th>Brand</th><th></th></tr></thead>' +
 						'<tbody data-yp-batch>' + ( state.draft.batch || [ null ] ).map( function ( row ) { return batchRowHtml( row, state.options ); } ).join( '' ) + '</tbody>' +
 					'</table>' +
 					'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-row>+ Add another label</button>' +

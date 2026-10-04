@@ -764,15 +764,16 @@ class YeffoPrint_Admin_Order_Controller {
 	}
 
 	/**
-	 * The brand name(s) behind a label line. A custom design request
-	 * keeps its brand on the yp_custom_order record (never copied into
-	 * the line's own meta); a Template batch keeps it per label in
-	 * _yp_variants, under whichever field is a "brand" one.
+	 * The brand name(s) behind a label line. A Create Order custom
+	 * design line keeps its own in _yp_brand_name; older lines and
+	 * storefront requests only have the yp_custom_order record's. A
+	 * Template batch keeps it per label in _yp_variants, under
+	 * whichever field is a "brand" one.
 	 */
 	private static function item_brands( \WC_Order_Item_Product $item ): array {
-		$brands          = [];
+		$brands          = [ (string) $item->get_meta( '_yp_brand_name' ) ];
 		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
-		if ( $custom_order_id ) {
+		if ( $custom_order_id && '' === $brands[0] ) {
 			$brands[] = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
 		}
 
