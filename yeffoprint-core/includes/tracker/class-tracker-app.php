@@ -130,6 +130,7 @@ class YeffoPrint_Tracker_App {
 	 * headers, so no other site can read it.
 	 */
 	private function serve_session(): void {
+		YeffoPrint_Stay_Signed_In::extend_current_login();
 		nocache_headers();
 		header( 'Cache-Control: no-store, private' );
 		header( 'Content-Type: application/json; charset=utf-8' );
@@ -167,6 +168,7 @@ class YeffoPrint_Tracker_App {
 	}
 
 	private function serve_app(): void {
+		YeffoPrint_Stay_Signed_In::extend_current_login();
 		nocache_headers();
 		header( 'Cache-Control: no-store, private' );
 		header( 'X-Robots-Tag: noindex' );
