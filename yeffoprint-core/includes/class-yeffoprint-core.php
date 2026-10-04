@@ -65,6 +65,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-abandoned-cart-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-dashboard-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-next-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-payouts-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-print-queue-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-settings-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-surcharge-controller.php';
@@ -260,6 +261,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Shippo_Webhook_Controller();
 		new YeffoPrint_Admin_Dashboard_Controller();
 		new YeffoPrint_Admin_Next_Controller();
+		new YeffoPrint_Admin_Payouts_Controller();
 		new YeffoPrint_Admin_Print_Queue_Controller();
 		new YeffoPrint_Admin_Push();
 		new YeffoPrint_Admin_Settings_Controller();

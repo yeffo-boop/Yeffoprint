@@ -86,8 +86,10 @@
 			'<div class="ypn-today">' +
 				'<section class="ypn-card ypn-queue"><h3 class="ypn-card__title">Your queue <span data-ypn-queue-count></span></h3><div data-ypn-queue><p class="yp-field__hint">Loading&hellip;</p></div></section>' +
 				'<section class="ypn-card ypn-ship"><h3 class="ypn-card__title">Ship today <span data-ypn-ship-count></span></h3><div data-ypn-ship><p class="yp-field__hint">Loading&hellip;</p></div></section>' +
-			'</div>'
+			'</div>' +
+			'<section class="ypn-card ypn-payouts" data-ypn-payouts><h3 class="ypn-card__title">Payouts</h3><p class="yp-field__hint">Loading&hellip;</p></section>'
 		);
+		loadPayouts( el.querySelector( '[data-ypn-payouts]' ), false );
 		todayEl = el;
 		todayBoard = null;
 		todayProblems = [];
@@ -119,6 +121,107 @@
 			el.querySelector( '.ypn-kpis' ).innerHTML = '<p class="yp-form__error">Couldn’t load today’s numbers: ' + esc( error.message ) + '</p>';
 		} );
 	};
+
+	/* ---------- Today: Payouts (WooPayments balance + payouts) ---------- */
+
+	var PAYOUT_STATUS = {
+		pending: [ 'Scheduled', 'ypn-pill--yel' ],
+		in_transit: [ 'On the way', 'ypn-pill--cy' ],
+		paid: [ 'Paid', 'ypn-pill--grn' ],
+		failed: [ 'Failed', 'ypn-pill--red' ],
+		canceled: [ 'Canceled', '' ]
+	};
+
+	function payoutDay( iso ) {
+		var d = iso ? new Date( iso ) : null;
+		return d && ! isNaN( d.getTime() ) ? d.toLocaleDateString( undefined, { weekday: 'short', month: 'short', day: 'numeric' } ) : '—';
+	}
+
+	function payoutTile( label, value, note, extra ) {
+		return '<div class="ypn-payouts__tile' + ( extra || '' ) + '">' +
+			'<span class="ypn-payouts__label">' + esc( label ) + '</span>' +
+			'<span class="ypn-payouts__value">' + esc( value ) + '</span>' +
+			'<span class="ypn-payouts__note">' + esc( note ) + '</span>' +
+		'</div>';
+	}
+
+	function loadPayouts( card, refresh ) {
+		YP.request( api( 'admin/next/payouts' + ( refresh ? '?refresh=1' : '' ) ) ).then( function ( data ) {
+			if ( document.body.contains( card ) ) {
+				drawPayouts( card, data );
+			}
+		} ).catch( function ( error ) {
+			if ( document.body.contains( card ) ) {
+				card.innerHTML = '<h3 class="ypn-card__title">Payouts</h3><p class="yp-form__error">Couldn’t load payouts: ' + esc( error.message ) + '</p>';
+			}
+		} );
+	}
+
+	function drawPayouts( card, data ) {
+		var wc = data.woopayments || {};
+		var symbol = data.currency_symbol;
+		var head = '<h3 class="ypn-card__title">Payouts' +
+			( wc.manage_url ? '<a class="ypn-more" href="' + escAttr( wc.manage_url ) + '">Open in WooPayments &rarr;</a>' : '' ) +
+		'</h3>';
+		var body;
+
+		if ( ! wc.connected ) {
+			body = '<div class="ypn-empty"><b>Payouts aren’t available</b>' + esc( wc.error || 'WooPayments didn’t answer.' ) + '</div>';
+		} else {
+			var next = wc.next;
+			var last = wc.last_paid;
+			var nextTile = next
+				? payoutTile( 'Next payout', money( next.amount, symbol ), ( 'in_transit' === next.status ? 'On the way, ' : 'Scheduled for ' ) + payoutDay( next.date ) + ( wc.bank ? ' · ' + wc.bank : '' ), ' is-next' )
+				: payoutTile( 'Next payout', money( wc.available, symbol ), wc.available > 0 ? 'Goes out on the next payout' + ( wc.bank ? ' · ' + wc.bank : '' ) : 'Nothing ready to pay out yet', ' is-next' );
+
+			var rows = ( wc.payouts || [] ).map( function ( p ) {
+				var st = PAYOUT_STATUS[ p.status ] || [ p.status, '' ];
+				var label = 'withdrawal' === p.type ? ( 'paid' === p.status ? 'Deducted' : 'Withdrawal' ) : st[ 0 ];
+				return '<tr>' +
+					'<td>' + ( p.url ? '<a href="' + escAttr( p.url ) + '">' + esc( payoutDay( p.date ) ) + '</a>' : esc( payoutDay( p.date ) ) ) + '</td>' +
+					'<td><span class="ypn-pill ' + st[ 1 ] + '">' + esc( label ) + '</span></td>' +
+					'<td class="ypn-payouts__amt">' + ( 'withdrawal' === p.type ? '−' : '' ) + esc( money( p.amount, symbol ) ) + '</td>' +
+				'</tr>';
+			} ).join( '' );
+
+			body =
+				'<p class="ypn-payouts__sub">Card, Klarna, Afterpay and Affirm money from WooPayments' + ( wc.schedule ? ' · ' + esc( wc.schedule ) : '' ) + '. ' +
+					'<button type="button" class="ypn-link" data-ypn-payouts-refresh>Refresh</button></p>' +
+				'<div class="ypn-payouts__tiles">' +
+					nextTile +
+					payoutTile( 'Available', money( wc.available, symbol ), 'Ready for the next payout' ) +
+					payoutTile( 'Pending', money( wc.pending, symbol ), 'Still clearing from recent sales' ) +
+					payoutTile( 'Last payout', last ? money( last.amount, symbol ) : '—', last ? 'Paid ' + payoutDay( last.date ) : 'No payouts yet' ) +
+				'</div>';
+		}
+
+		var other = ( data.other || [] );
+		var otherRows = other.map( function ( o ) {
+			return '<tr><td><span class="ypn-payouts__dot is-' + escAttr( o.id ) + '"></span>' + esc( o.label ) + ( o.orders ? ' <span class="ypn-muted">· ' + o.orders + ( 1 === o.orders ? ' order' : ' orders' ) + '</span>' : '' ) + '</td><td class="ypn-payouts__amt">' + esc( money( o.total, symbol ) ) + '</td></tr>';
+		} ).join( '' );
+
+		card.innerHTML = head + body +
+			'<div class="ypn-payouts__grid">' +
+				( wc.connected
+					? '<div><h4 class="ypn-payouts__h">Recent payouts</h4>' +
+						( rows ? '<table class="ypn-payouts__table">' + rows + '</table>' : '<p class="ypn-muted">No payouts yet.</p>' ) +
+					'</div>'
+					: '' ) +
+				'<div><h4 class="ypn-payouts__h">Other money in, last ' + esc( String( data.other_days || 7 ) ) + ' days</h4>' +
+					'<table class="ypn-payouts__table">' + otherRows + '</table>' +
+					'<p class="ypn-payouts__foot">These go straight to you, so there’s no payout to track.</p>' +
+				'</div>' +
+			'</div>';
+
+		var refresh = card.querySelector( '[data-ypn-payouts-refresh]' );
+		if ( refresh ) {
+			refresh.addEventListener( 'click', function () {
+				refresh.disabled = true;
+				refresh.textContent = 'Refreshing…';
+				loadPayouts( card, true );
+			} );
+		}
+	}
 
 	/* ---------- Today: Your queue + Ship today ---------- */
 
