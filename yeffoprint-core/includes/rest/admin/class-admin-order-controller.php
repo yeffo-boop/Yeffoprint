@@ -589,6 +589,9 @@ class YeffoPrint_Admin_Order_Controller {
 			// The custom design request (yp_custom_order) behind this line,
 			// if any — the new admin's order page shows its proof there.
 			'custom_order_id' => (int) $item->get_meta( '_yp_custom_order_id' ),
+			// Shown on the label card itself so an order with several
+			// brands can be told apart without opening Details.
+			'brands'    => self::item_brands( $item ),
 			// display_value is already wp_kses_post()-safe HTML by the
 			// time get_formatted_meta_data() returns it (WC_Order_Item's
 			// own method) — the same batch tables/variant summaries/QR
@@ -609,6 +612,31 @@ class YeffoPrint_Admin_Order_Controller {
 				return [ 'label' => (string) $entry->display_key, 'value' => (string) $entry->display_value ];
 			}, self::formatted_meta_data( $item ) ) ),
 		];
+	}
+
+	/**
+	 * The brand name(s) behind a label line. A custom design request
+	 * keeps its brand on the yp_custom_order record (never copied into
+	 * the line's own meta); a Template batch keeps it per label in
+	 * _yp_variants, under whichever field is a "brand" one.
+	 */
+	private static function item_brands( \WC_Order_Item_Product $item ): array {
+		$brands          = [];
+		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
+		if ( $custom_order_id ) {
+			$brands[] = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
+		}
+
+		$variants = json_decode( (string) $item->get_meta( '_yp_variants' ), true );
+		foreach ( is_array( $variants ) ? $variants : [] as $variant ) {
+			foreach ( (array) ( $variant['values'] ?? [] ) as $key => $value ) {
+				if ( false !== stripos( (string) $key, 'brand' ) && is_scalar( $value ) ) {
+					$brands[] = (string) $value;
+				}
+			}
+		}
+
+		return array_values( array_unique( array_filter( array_map( 'trim', $brands ), 'strlen' ) ) );
 	}
 
 	/** @see item_payload()'s own call site above for why this wraps get_formatted_meta_data() instead of calling it directly. */
