@@ -372,7 +372,7 @@ class YeffoPrint_Admin_Next_Controller {
 				$product_id = (int) $item->get_product_id();
 				$key        = $product_id ?: 'name:' . $item->get_name();
 				if ( ! isset( $rows[ $key ] ) ) {
-					$rows[ $key ] = $this->best_seller_row( $product_id, $item->get_name() );
+					$rows[ $key ] = self::best_seller_row( $product_id, $item->get_name() );
 				}
 				$rows[ $key ]['orders'][ $order->get_id() ] = true;
 				$rows[ $key ]['units']                    += (int) $item->get_quantity();
@@ -393,7 +393,8 @@ class YeffoPrint_Admin_Next_Controller {
 		return array_slice( $rows, 0, 8 );
 	}
 
-	private function best_seller_row( int $product_id, string $fallback_name ): array {
+	/** Also used by the Sales screen (class-admin-sales-controller.php). */
+	public static function best_seller_row( int $product_id, string $fallback_name ): array {
 		$template_id = $product_id ? (int) get_post_meta( $product_id, YeffoPrint_Linked_Product::META_TEMPLATE_ID, true ) : 0;
 		$print_id    = $product_id ? (int) get_post_meta( $product_id, YeffoPrint_Print_Product::META_PRINT_ID, true ) : 0;
 

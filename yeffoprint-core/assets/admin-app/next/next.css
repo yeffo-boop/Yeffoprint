@@ -2445,3 +2445,279 @@ body.yp-next .ypn-dims input {
 	color: var(--ypn-mag);
 	font-weight: 600;
 }
+
+/* ---------- Forms: order Edit details, customer edit, disputes, payments ---------- */
+
+.ypn-form {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px 12px;
+	margin-bottom: 12px;
+}
+
+.ypn-form__field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.ypn-form__field.is-wide {
+	grid-column: 1 / -1;
+}
+
+.ypn-form__field > span {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ypn-mute);
+}
+
+.ypn-form__field small {
+	font-size: 12px;
+	color: var(--ypn-mute);
+}
+
+body.yp-next .ypn-form__field input,
+body.yp-next .ypn-form__field textarea,
+body.yp-next .ypn-note-add textarea {
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+
+.ypn-form__h {
+	margin: 14px 0 8px;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.ypn-form__acts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 12px 0 8px;
+}
+
+.ypn-check {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	margin-bottom: 10px;
+	font-size: 13px;
+}
+
+@media (max-width: 640px) {
+	.ypn-form {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* ---------- Order notes (order page) ---------- */
+
+.ypn-note-add {
+	margin-bottom: 14px;
+}
+
+.ypn-note-add__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 8px;
+}
+
+.ypn-note-add__row .ypn-check {
+	margin: 0;
+}
+
+.ypn-notes {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 420px;
+	overflow-y: auto;
+}
+
+.ypn-note {
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: var(--ypn-soft);
+	font-size: 13px;
+}
+
+.ypn-note.is-customer {
+	background: #e0f4fd;
+}
+
+.ypn-note.is-system {
+	background: transparent;
+	border: 1px solid var(--ypn-line);
+}
+
+.ypn-note__text {
+	overflow-wrap: anywhere;
+}
+
+.ypn-note__text p {
+	margin: 0;
+}
+
+.ypn-note__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-top: 6px;
+	font-size: 12px;
+	color: var(--ypn-mute);
+}
+
+.ypn-note__meta .ypn-link {
+	margin-left: auto;
+	font-size: 12px;
+}
+
+/* ---------- Sales ---------- */
+
+.ypn-sales__ranges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 14px;
+}
+
+.ypn-sales__readout {
+	min-height: 20px;
+	margin-bottom: 8px;
+	font-size: 13px;
+	color: var(--ypn-mute);
+}
+
+.ypn-sales__readout b {
+	color: var(--ypn-ink);
+}
+
+.ypn-sales__chart {
+	display: block;
+	width: 100%;
+	height: 180px;
+	overflow: visible;
+}
+
+.ypn-sales__bar {
+	fill: var(--ypn-mag);
+}
+
+.ypn-sales__hit {
+	fill: transparent;
+	cursor: pointer;
+}
+
+[data-ypn-bar].is-hover .ypn-sales__hit {
+	fill: var(--ypn-soft);
+}
+
+.ypn-sales__base {
+	stroke: var(--ypn-line);
+	stroke-width: 1;
+}
+
+.ypn-sales__ticks {
+	position: relative;
+	height: 18px;
+	margin-top: 6px;
+	font-size: 11px;
+	color: var(--ypn-mute);
+}
+
+.ypn-sales__ticks span {
+	position: absolute;
+	transform: translateX(-50%);
+	white-space: nowrap;
+}
+
+.ypn-sales__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+	gap: 14px;
+	margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+	.ypn-sales__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* ---------- Disputes ---------- */
+
+.ypn-banner--warn {
+	background: #fde4e0;
+	color: #7a1f10;
+}
+
+.ypn-banner--warn span {
+	color: #7a1f10;
+}
+
+.ypn-dispute__file > div {
+	font-size: 13px;
+}
+
+.ypn-dispute__acts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	margin-top: 8px;
+}
+
+.ypn-dispute__acts .ypn-link {
+	margin-left: auto;
+}
+
+/* ---------- Settings › Payments ---------- */
+
+.ypn-paycard {
+	margin-bottom: 12px;
+}
+
+.ypn-paycard__head {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.ypn-paycard__head b {
+	display: block;
+	font-size: 15px;
+}
+
+.ypn-paycard__head .ypn-muted {
+	font-size: 13px;
+}
+
+.ypn-paycard__more {
+	margin-top: 10px;
+}
+
+.ypn-paycard__more summary {
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 600;
+	margin-bottom: 10px;
+}
+
+.ypn-paycard__note {
+	margin: 8px 0 0;
+	font-size: 13px;
+}
+
+.ypn-paycard .ypn-switch {
+	padding: 0;
+	border: 0;
+	background: none;
+}

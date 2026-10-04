@@ -19,6 +19,8 @@ class YeffoPrint_Telegram_Admin_Alerts {
 		add_action( 'yeffoprint_contact_form_submitted', [ $this, 'on_contact_form_submitted' ], 10, 5 );
 		add_action( 'yeffoprint_web_design_quote_submitted', [ $this, 'on_web_design_quote_submitted' ] );
 		add_action( 'woocommerce_payment_complete', [ $this, 'on_payment_complete' ] );
+		add_action( 'woocommerce_order_status_pending_to_on-hold', [ $this, 'on_awaiting_payment' ], 10, 2 );
+		add_action( 'woocommerce_order_status_changed', [ $this, 'on_possible_dispute' ], 10, 4 );
 	}
 
 	public function on_contact_form_submitted( string $name, string $email, string $method, string $handle, string $message ): void {
@@ -28,7 +30,7 @@ class YeffoPrint_Telegram_Admin_Alerts {
 			$name,
 			$email,
 			$message
-		) );
+		), [ 'section' => 'messages' ] );
 	}
 
 	/**
@@ -46,7 +48,7 @@ class YeffoPrint_Telegram_Admin_Alerts {
 			YeffoPrint_Web_Design_Quote_Controller::format_answers( $answers )
 		);
 
-		self::notify( implode( "\n", $lines ) );
+		self::notify( implode( "\n", $lines ), [ 'section' => 'messages' ] );
 	}
 
 	public function on_payment_complete( int $order_id ): void {
@@ -55,13 +57,76 @@ class YeffoPrint_Telegram_Admin_Alerts {
 			return;
 		}
 
-		$is_custom_design = false;
-		$item_lines        = [];
+		$heading = $this->has_custom_design( $order )
+			/* translators: 1: order number, 2: formatted order total */
+			? __( 'New custom design request paid: %1$s (%2$s)', 'yeffoprint-core' )
+			/* translators: 1: order number, 2: formatted order total */
+			: __( 'New order paid: %1$s (%2$s)', 'yeffoprint-core' );
 
+		$this->notify_order( $order, $heading );
+	}
+
+	/**
+	 * Direct request: "uninstall the [WooCommerce] app ... and just use
+	 * the yeffodesign dashboard" — the Woo app pinged on every new order,
+	 * but a Venmo, Zelle or crypto checkout only parks the order on hold
+	 * (class-manual-payment-gateway.php, class-nowpayments-gateway.php), so woocommerce_payment_complete
+	 * doesn't fire until the money is matched. This sends the alert as
+	 * soon as the order is placed; the paid alert follows later under the
+	 * same phone notification tag, so it replaces this one.
+	 */
+	public function on_awaiting_payment( int $order_id, $order = null ): void {
+		$order = $order instanceof \WC_Order ? $order : wc_get_order( $order_id );
+		if ( ! $order instanceof \WC_Order || ! in_array( $order->get_payment_method(), [ 'yeffoprint_venmo', 'yeffoprint_zelle', 'yeffoprint_nowpayments' ], true ) ) {
+			return;
+		}
+
+		/* translators: 1: order number, 2: formatted order total, 3: payment method title, e.g. "Venmo" */
+		$heading = __( 'New order: %1$s (%2$s), waiting on %3$s payment', 'yeffoprint-core' );
+
+		$this->notify_order( $order, $heading, $order->get_payment_method_title() ?: __( 'their', 'yeffoprint-core' ) );
+	}
+
+	/**
+	 * WooPayments puts a paid order back On hold when the customer's bank
+	 * opens a dispute. Alerts with a link to the dashboard's Disputes
+	 * screen, where it can be answered before the deadline.
+	 */
+	public function on_possible_dispute( int $order_id, string $from, string $to, $order = null ): void {
+		if ( 'on-hold' !== $to || ! in_array( $from, [ 'processing', 'in-design', 'in-production', 'shipped', 'completed' ], true ) ) {
+			return;
+		}
+		$order = $order instanceof \WC_Order ? $order : wc_get_order( $order_id );
+		if ( ! $order instanceof \WC_Order || 'woocommerce_payments' !== $order->get_payment_method() ) {
+			return;
+		}
+
+		delete_transient( 'yeffoprint_admin_disputes' );
+
+		self::notify(
+			sprintf(
+				/* translators: 1: order number, 2: formatted order total */
+				__( 'Card payment disputed: %1$s (%2$s)', 'yeffoprint-core' ),
+				$order->get_order_number(),
+				YeffoPrint_Telegram_Order_Lookup::plain_total( $order )
+			) . "\n" . trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ) . "\n" . __( 'Answer it in the dashboard under Orders > Disputes before the deadline.', 'yeffoprint-core' ),
+			[ 'section' => 'disputes' ]
+		);
+	}
+
+	private function has_custom_design( \WC_Order $order ): bool {
 		foreach ( $order->get_items() as $item ) {
 			if ( $item->get_meta( '_yp_custom_order_id' ) ) {
-				$is_custom_design = true;
+				return true;
 			}
+		}
+		return false;
+	}
+
+	/** @param string $heading sprintf() format: 1 = order number, 2 = order total, then $extra in order. */
+	private function notify_order( \WC_Order $order, string $heading, string ...$extra ): void {
+		$item_lines = [];
+		foreach ( $order->get_items() as $item ) {
 			$item_lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), $item->get_quantity() );
 		}
 
@@ -69,25 +134,10 @@ class YeffoPrint_Telegram_Admin_Alerts {
 		// wp_strip_all_tags() — decodes WooCommerce's HTML-entity
 		// currency symbol (e.g. USD's "&#36;") back into a real "$" for
 		// this plain-text message; see that method's own docblock.
-		$total = YeffoPrint_Telegram_Order_Lookup::plain_total( $order );
+		$heading = sprintf( $heading, $order->get_order_number(), YeffoPrint_Telegram_Order_Lookup::plain_total( $order ), ...$extra );
+		$name    = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
 
-		$heading = $is_custom_design
-			? sprintf(
-				/* translators: 1: order number, 2: formatted order total */
-				__( 'New custom design request paid: %1$s (%2$s)', 'yeffoprint-core' ),
-				$order->get_order_number(),
-				$total
-			)
-			: sprintf(
-				/* translators: 1: order number, 2: formatted order total */
-				__( 'New order paid: %1$s (%2$s)', 'yeffoprint-core' ),
-				$order->get_order_number(),
-				$total
-			);
-
-		$name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
-
-		self::notify( implode( "\n", array_merge( [ $heading, $name, '' ], $item_lines ) ), [ 'order_id' => $order_id ] );
+		self::notify( implode( "\n", array_merge( [ $heading, $name, '' ], $item_lines ) ), [ 'order_id' => $order->get_id() ] );
 	}
 
 	/**

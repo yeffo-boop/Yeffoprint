@@ -70,6 +70,24 @@ class YeffoPrint_Admin_Order_Controller {
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/notes', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'add_note' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/notes/(?P<note_id>\d+)', [
+			'methods'             => \WP_REST_Server::DELETABLE,
+			'callback'            => [ $this, 'delete_note' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/details', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'save_details' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/orders', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'list_orders' ],
@@ -374,6 +392,133 @@ class YeffoPrint_Admin_Order_Controller {
 		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
 	}
 
+	/**
+	 * Adds a WooCommerce order note — the same notes the classic order
+	 * screen's Order notes box shows. A customer note is emailed to the
+	 * customer by WooCommerce's own Customer note email.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function add_note( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$params = $request->get_json_params() ?: [];
+		$note   = trim( wp_kses_post( (string) ( $params['note'] ?? '' ) ) );
+		if ( '' === $note ) {
+			return new \WP_Error( 'yeffoprint_note_empty', __( 'Write a note first.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		// true = record the signed-in staff member as the author, same as the classic screen.
+		$order->add_order_note( $note, ! empty( $params['customer'] ) ? 1 : 0, true );
+
+		return rest_ensure_response( $this->order_notes_payload( $order ) );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function delete_note( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$note = wc_get_order_note( (int) $request['note_id'] );
+		if ( ! $note || (int) get_comment( (int) $request['note_id'] )->comment_post_ID !== $order->get_id() ) {
+			return new \WP_Error( 'yeffoprint_note_not_found', __( 'That note could not be found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		wc_delete_order_note( (int) $request['note_id'] );
+
+		return rest_ensure_response( $this->order_notes_payload( $order ) );
+	}
+
+	/**
+	 * Saves the customer's contact details and addresses on any order,
+	 * paid or not (unpaid orders can also have their items edited, in
+	 * class-admin-manual-order-controller.php). Only the fields sent are
+	 * changed. Leaves an order note listing what changed.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function save_details( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$params  = $request->get_json_params() ?: [];
+		$changed = [];
+
+		foreach ( [ 'billing', 'shipping' ] as $type ) {
+			if ( ! isset( $params[ $type ] ) || ! is_array( $params[ $type ] ) ) {
+				continue;
+			}
+			foreach ( self::address_fields( $type ) as $field ) {
+				if ( ! array_key_exists( $field, $params[ $type ] ) ) {
+					continue;
+				}
+				$value = 'email' === $field
+					? sanitize_email( (string) $params[ $type ][ $field ] )
+					: sanitize_text_field( (string) $params[ $type ][ $field ] );
+
+				if ( 'email' === $field && '' !== trim( (string) $params[ $type ][ $field ] ) && ! is_email( $value ) ) {
+					return new \WP_Error( 'yeffoprint_invalid_email', __( 'That email address doesn’t look right.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+				}
+
+				$getter = "get_{$type}_{$field}";
+				if ( (string) $order->{$getter}() === $value ) {
+					continue;
+				}
+				$order->{"set_{$type}_{$field}"}( $value );
+				$changed[ $type ] = true;
+			}
+		}
+
+		if ( $changed ) {
+			$order->add_order_note( sprintf(
+				/* translators: %s: "billing details", "shipping address", or both */
+				__( 'Customer %s edited from the dashboard.', 'yeffoprint-core' ),
+				implode( __( ' and ', 'yeffoprint-core' ), array_map( static function ( string $type ): string {
+					return 'billing' === $type ? __( 'contact details', 'yeffoprint-core' ) : __( 'shipping address', 'yeffoprint-core' );
+				}, array_keys( $changed ) ) )
+			), 0, true );
+			$order->save();
+		}
+
+		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
+	}
+
+	/** @return string[] Editable WC_Order address fields (billing also has email and phone). */
+	public static function address_fields( string $type ): array {
+		$fields = [ 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone' ];
+		return 'billing' === $type ? array_merge( $fields, [ 'email' ] ) : $fields;
+	}
+
+	private function address_payload( \WC_Order $order, string $type ): array {
+		$out = [];
+		foreach ( self::address_fields( $type ) as $field ) {
+			$getter        = "get_{$type}_{$field}";
+			$out[ $field ] = (string) $order->{$getter}();
+		}
+		return $out;
+	}
+
+	/** Every WooCommerce order note, newest first: system notes, private staff notes, and notes sent to the customer. */
+	private function order_notes_payload( \WC_Order $order ): array {
+		return array_values( array_map( static function ( $note ): array {
+			$added_by = (string) $note->added_by;
+			return [
+				'id'       => (int) $note->id,
+				'content'  => wp_kses_post( (string) $note->content ),
+				'date'     => $note->date_created instanceof \WC_DateTime ? $note->date_created->date( 'c' ) : null,
+				'customer' => (bool) $note->customer_note,
+				'by'       => 'system' === $added_by ? '' : $added_by,
+			];
+		}, wc_get_order_notes( [ 'order_id' => $order->get_id() ] ) ) );
+	}
+
 	/** @return \WC_Order|\WP_Error */
 	private function validate_order( int $order_id ) {
 		if ( ! function_exists( 'wc_get_order' ) ) {
@@ -402,6 +547,10 @@ class YeffoPrint_Admin_Order_Controller {
 			'customer_email'       => $order->get_billing_email(),
 			'customer_phone'       => $order->get_billing_phone(),
 			'customer_note'        => $order->get_customer_note(),
+			// Raw address fields for the order page's Edit details form.
+			'billing'              => $this->address_payload( $order, 'billing' ),
+			'shipping'             => $this->address_payload( $order, 'shipping' ),
+			'order_notes'          => $this->order_notes_payload( $order ),
 			'express'              => YeffoPrint_Express_Order::is_express( $order ),
 			// Falls back to billing when there's no separate shipping
 			// address — same behavior WooCommerce's own order screen and

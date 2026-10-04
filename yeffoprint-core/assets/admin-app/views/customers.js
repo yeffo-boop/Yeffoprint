@@ -5,7 +5,9 @@
  * (`/admin/customers`, class-admin-customer-controller.php), searchable
  * and paginated server-side, same pattern as views/order-history.js.
  *
- * Clicking a row opens a drawer with that customer's stats, their notes
+ * Clicking a row opens a drawer with that customer's stats, contact
+ * details and saved addresses (Edit details, Send password reset email),
+ * their notes
  * (add/delete right there), and their 10 most recent orders — each of
  * which opens the same familiar order drawer (YP.openWcOrderDrawer())
  * every other screen already uses. Adding/removing a note here and
@@ -204,10 +206,23 @@
 				} ).join( '' ) + '</div>'
 				: '<p class="yp-field__hint">No orders yet.</p>';
 
+			var addressLines = function ( a ) {
+				return [ [ a.first_name, a.last_name ].join( ' ' ).trim(), a.company, a.address_1, a.address_2, [ a.city, a.state, a.postcode ].filter( Boolean ).join( ' ' ), a.country ].filter( Boolean ).map( YP.escapeHtml ).join( '<br>' ) || '—';
+			};
+
 			bodyEl.innerHTML =
+				'<div class="yp-split__field"><span class="k">Name</span><span class="v">' + YP.escapeHtml( [ customer.first_name, customer.last_name ].join( ' ' ).trim() || customer.name || '—' ) + '</span></div>' +
 				'<div class="yp-split__field"><span class="k">Email</span><span class="v"><a href="mailto:' + YP.escapeAttr( customer.email ) + '">' + YP.escapeHtml( customer.email ) + '</a></span></div>' +
 				'<div class="yp-split__field"><span class="k">Customer since</span><span class="v">' + formatDate( customer.registered ) + '</span></div>' +
 				'<div class="yp-split__field"><span class="k">Orders / Lifetime spend</span><span class="v">' + customer.order_count + ' / ' + formatMoney( customer.total_spent ) + '</span></div>' +
+				'<div class="yp-split__field"><span class="k">Phone</span><span class="v">' + ( customer.billing.phone ? '<a href="tel:' + YP.escapeAttr( customer.billing.phone ) + '">' + YP.escapeHtml( customer.billing.phone ) + '</a>' : '—' ) + '</span></div>' +
+				'<div class="yp-split__field"><span class="k">Billing address</span><span class="v">' + addressLines( customer.billing ) + '</span></div>' +
+				'<div class="yp-split__field"><span class="k">Shipping address</span><span class="v">' + addressLines( customer.shipping ) + '</span></div>' +
+				'<div class="ypn-form__acts">' +
+					'<button type="button" class="ypn-btn" data-yp-edit-customer>Edit details</button>' +
+					'<button type="button" class="ypn-btn" data-yp-reset-password>Send password reset email</button>' +
+				'</div>' +
+				'<div data-yp-customer-status></div>' +
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Recent Orders</h2></div>' +
 					ordersBody +
@@ -228,6 +243,71 @@
 			} );
 
 			bindNoteActions( customer, bodyEl );
+
+			var statusEl = bodyEl.querySelector( '[data-yp-customer-status]' );
+
+			bodyEl.querySelector( '[data-yp-reset-password]' ).addEventListener( 'click', function ( event ) {
+				var button = event.currentTarget;
+				YP.confirmModal( {
+					title: 'Email a password reset link?',
+					message: customer.email + ' gets a link to choose a new password. Their current password keeps working until they do.',
+					confirmLabel: 'Send link',
+					onConfirm: function () {
+						button.disabled = true;
+						YP.request( endpoint( 'customer/' + customer.id + '/password-reset' ), { method: 'POST' } ).then( function () {
+							statusEl.innerHTML = '<p class="yp-field__hint">Password reset link sent to ' + YP.escapeHtml( customer.email ) + '.</p>';
+						} ).catch( function ( error ) {
+							statusEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+						} ).then( function () { button.disabled = false; } );
+					}
+				} );
+			} );
+
+			bodyEl.querySelector( '[data-yp-edit-customer]' ).addEventListener( 'click', function () {
+				editCustomer( customer, drawer, bodyEl );
+			} );
+		}
+
+		/* Name, account email and the saved billing/shipping addresses
+		   checkout fills in for them. Past orders keep the address they
+		   were placed with (edit those on the order page). */
+		function editCustomer( customer, drawer, bodyEl ) {
+			bodyEl.innerHTML =
+				'<div class="ypn-form">' +
+					'<label class="ypn-form__field"><span>First name</span><input type="text" data-yp-c="first_name" value="' + YP.escapeAttr( customer.first_name || '' ) + '"></label>' +
+					'<label class="ypn-form__field"><span>Last name</span><input type="text" data-yp-c="last_name" value="' + YP.escapeAttr( customer.last_name || '' ) + '"></label>' +
+					'<label class="ypn-form__field is-wide"><span>Account email (what they sign in with)</span><input type="email" data-yp-c="email" value="' + YP.escapeAttr( customer.email || '' ) + '"></label>' +
+				'</div>' +
+				'<h4 class="ypn-form__h">Billing</h4>' + YP.addressFieldsHtml( 'billing', customer.billing ) +
+				'<h4 class="ypn-form__h">Shipping</h4>' + YP.addressFieldsHtml( 'shipping', customer.shipping ) +
+				'<div data-yp-edit-error></div>' +
+				'<div class="ypn-form__acts"><button type="button" class="ypn-btn ypn-btn--primary" data-yp-save-customer>Save</button><button type="button" class="ypn-btn" data-yp-cancel-edit>Cancel</button></div>' +
+				'<p class="ypn-muted">Past orders keep the address they were placed with. Change those on the order page.</p>';
+
+			bodyEl.querySelector( '[data-yp-cancel-edit]' ).addEventListener( 'click', function () {
+				renderCustomerDetail( customer, drawer, bodyEl );
+			} );
+			bodyEl.querySelector( '[data-yp-save-customer]' ).addEventListener( 'click', function ( event ) {
+				var button = event.currentTarget;
+				var payload = { billing: YP.readAddressFields( bodyEl, 'billing' ), shipping: YP.readAddressFields( bodyEl, 'shipping' ) };
+				bodyEl.querySelectorAll( '[data-yp-c]' ).forEach( function ( input ) {
+					payload[ input.getAttribute( 'data-yp-c' ) ] = input.value.trim();
+				} );
+				button.disabled = true;
+				button.textContent = 'Saving…';
+				YP.request( endpoint( 'customer/' + customer.id ), {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( payload )
+				} ).then( function ( saved ) {
+					renderCustomerDetail( saved, drawer, bodyEl );
+					load();
+				} ).catch( function ( error ) {
+					button.disabled = false;
+					button.textContent = 'Save';
+					bodyEl.querySelector( '[data-yp-edit-error]' ).innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
+			} );
 		}
 
 		function bindNoteActions( customer, bodyEl ) {

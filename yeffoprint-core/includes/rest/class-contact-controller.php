@@ -3,8 +3,8 @@
  * The Contact form's submission endpoint. Direct request, for a
  * brand-new site: a low-friction way for a visitor who hits a bug to
  * reach the store owner, without needing an account or a real support
- * ticket system. No CPT/admin list of past submissions — this is a
- * notification, not a record; email is the record.
+ * ticket system. Each submission is emailed, and a copy is kept for
+ * the admin app's Messages screen (includes/messages/class-messages.php).
  *
  * Same "guest is fine, a logged-in request needs a valid nonce"
  * permission and per-IP rate-limit shape as class-custom-order-
