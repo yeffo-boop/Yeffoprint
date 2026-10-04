@@ -784,6 +784,14 @@ class YeffoPrint_Manual_Order_Creator {
 			if ( is_wp_error( $batch ) ) {
 				return $batch;
 			}
+			// A label left without its own brand uses the order's one,
+			// so an order mixing brands only types the odd ones out.
+			foreach ( $batch as &$batch_row ) {
+				if ( '' === $batch_row['brand_name'] ) {
+					$batch_row['brand_name'] = $brand_name;
+				}
+			}
+			unset( $batch_row );
 
 			$groups[] = [ 'custom_design', [
 				'brand_name'       => $brand_name,
@@ -968,6 +976,10 @@ class YeffoPrint_Manual_Order_Creator {
 			$item = $order->get_item( $item_id );
 			if ( $item instanceof \WC_Order_Item_Product ) {
 				YeffoPrint_Order_Item_Meta::apply( $item, $values, $tier_quantity );
+				// Kept on the line itself: an order made without proof
+				// approval has no yp_custom_order record to hold it, and
+				// each label can carry its own brand.
+				$item->add_meta_data( '_yp_brand_name', $row['brand_name'], true );
 				$item->save();
 			}
 		}
@@ -1256,7 +1268,7 @@ class YeffoPrint_Manual_Order_Creator {
 	 * method's own docblock notes is_published()/record_adjustment() are
 	 * deliberately not shared either).
 	 *
-	 * @return array<int, array{size_id:int, material_id:int, quantity:int, compound_strength:string}>|\WP_Error
+	 * @return array<int, array{size_id:int, material_id:int, quantity:int, compound_strength:string, brand_name:string}>|\WP_Error
 	 */
 	private static function validate_batch_rows( $raw ) {
 		if ( ! is_array( $raw ) || ! $raw ) {
@@ -1294,6 +1306,7 @@ class YeffoPrint_Manual_Order_Creator {
 				'material_id'       => $material_id,
 				'quantity'          => $quantity,
 				'compound_strength' => sanitize_text_field( (string) ( $row['compound_strength'] ?? '' ) ),
+				'brand_name'        => sanitize_text_field( (string) ( $row['brand_name'] ?? '' ) ),
 			];
 		}
 
