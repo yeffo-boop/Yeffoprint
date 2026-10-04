@@ -580,6 +580,7 @@ class YeffoPrint_Social_Login {
 		$by_email = get_user_by( 'email', $identity['email'] );
 		if ( $by_email ) {
 			update_user_meta( $by_email->ID, $meta_key, $identity['external_id'] );
+			YeffoPrint_Email_Verification::mark_verified( $by_email->ID ); // The provider verified this address.
 			return $by_email;
 		}
 
