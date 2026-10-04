@@ -1,7 +1,8 @@
 <?php
 /**
- * Keeps the admin signed in on the phone app (direct request: "I'm
- * logged out every time I open it").
+ * Keeps people signed in to the Home Screen apps (direct requests: "I'm
+ * logged out every time I open it" for the admin app, then "make sure
+ * the same stay login fix applies to the tracker web app").
  *
  * wp-login.php's "Remember Me" box is unticked by default, which makes
  * WordPress's login cookie a session cookie (no expiry date). Safari
@@ -10,29 +11,40 @@
  * launch landed back on the login screen. Even a "Remember Me" login
  * only lasted 14 days.
  *
- * Whenever an admin opens the admin app, this re-issues the login
- * cookie for the same session (same token, so nonces and other devices
- * are untouched) as a dated cookie good for LIFETIME from now, at most
- * once a day. Opening the app at least once every LIFETIME keeps it
- * signed in indefinitely; signing out still ends the session at once.
+ * Whenever someone signed in opens the admin app or the Dose Tracker
+ * (/tracker/ and its /tracker/session check, class-tracker-app.php),
+ * extend_current_login() re-issues the login cookie for the same session
+ * (same token, so nonces and other devices are untouched) as a dated
+ * cookie good for LIFETIME from now, at most once a day. Opening the app
+ * at least once every LIFETIME keeps it signed in indefinitely; signing
+ * out still ends the session at once (and still clears the tracker's
+ * device copy).
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class YeffoPrint_Admin_Stay_Signed_In {
+class YeffoPrint_Stay_Signed_In {
 
 	private const LIFETIME = 90 * DAY_IN_SECONDS;
 
 	public function __construct() {
-		add_action( 'admin_init', [ $this, 'maybe_extend' ] );
+		add_action( 'admin_init', [ $this, 'on_admin_app' ] );
 	}
 
-	public function maybe_extend(): void {
+	public function on_admin_app(): void {
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing check.
 		if ( ! in_array( $page, [ 'yeffoprint', YeffoPrint_Admin_Push::APP_SLUG ], true ) ) {
 			return;
 		}
-		if ( wp_doing_ajax() || headers_sent() || ! current_user_can( 'manage_options' ) ) {
+		if ( wp_doing_ajax() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		self::extend_current_login();
+	}
+
+	/** Must run before any output (it sets cookies). */
+	public static function extend_current_login(): void {
+		if ( headers_sent() || ! is_user_logged_in() ) {
 			return;
 		}
 
@@ -53,8 +65,7 @@ class YeffoPrint_Admin_Stay_Signed_In {
 			return; // Already extended within the last day.
 		}
 
-		$expiration            = $now + self::LIFETIME;
-		$session['expiration'] = $expiration;
+		$session['expiration'] = $now + self::LIFETIME;
 		$manager->update( $token, $session );
 
 		$lifetime = static function () {

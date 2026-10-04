@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-04a',
+		'date'  => '2026-10-04',
+		'title' => 'Stay signed in',
+		'text'  => 'If you added the tracker to your Home Screen, it now keeps you signed in instead of asking you to log in every time you open it. Sign in once more and you\'re set. Signing out still works the same and clears your data from the phone.',
+	],
+	[
 		'id'    => '2026-10-03b',
 		'date'  => '2026-10-03',
 		'title' => 'New Progress tab and Add menu',
