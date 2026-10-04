@@ -1,0 +1,14 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "yeffoprint/legal-document",
+	"title": "Legal Document",
+	"category": "theme",
+	"description": "Renders the store policy (Privacy, Terms, Refunds, Shipping) that matches the current page's slug, from docs/<slug>.html.",
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"render": "file:./render.php",
+	"textdomain": "yeffoprint"
+}
