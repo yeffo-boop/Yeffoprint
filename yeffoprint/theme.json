@@ -179,6 +179,13 @@
 			"postTypes": [ "page" ]
 		},
 		{
+			"name": "legal-page",
+			"title": "Legal Page",
+			"postTypes": [
+				"page"
+			]
+		},
+		{
 			"name": "web-design-showcase",
 			"title": "Web Design Showcase",
 			"postTypes": [ "page" ]

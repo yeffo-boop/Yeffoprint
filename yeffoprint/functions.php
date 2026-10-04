@@ -841,6 +841,15 @@ add_action( 'wp_enqueue_scripts', function () {
 		] );
 	}
 
+	if ( is_page() && in_array( get_page_template_slug(), [ 'legal-page', 'legal-page.html' ], true ) ) {
+		wp_enqueue_style(
+			'yeffoprint-legal',
+			get_theme_file_uri( 'assets/css/legal.css' ),
+			[ 'yeffoprint-global' ],
+			yeffoprint_asset_version( 'assets/css/legal.css' )
+		);
+	}
+
 	if ( is_page() && in_array( get_page_template_slug(), [ 'web-design-showcase', 'web-design-showcase.html' ], true ) ) {
 		wp_enqueue_style(
 			'yeffoprint-showcase',
@@ -945,6 +954,7 @@ add_action( 'init', function () {
 	register_block_type( get_theme_file_path( 'blocks/print-product' ) );
 	register_block_type( get_theme_file_path( 'blocks/print-card' ) );
 	register_block_type( get_theme_file_path( 'blocks/showcase' ) );
+	register_block_type( get_theme_file_path( 'blocks/legal-document' ) );
 } );
 
 /**
