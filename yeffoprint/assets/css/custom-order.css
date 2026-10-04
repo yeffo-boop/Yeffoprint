@@ -691,3 +691,186 @@
 		font-size: 1.05rem;
 	}
 }
+
+/*
+ * Two-column layout for the Create a Custom Label page (Jeff picked
+ * mockup A, mockups/custom-label-2col/): labels and brand details on the
+ * left, a "Your order" box on the right that stays in view while
+ * scrolling. Phones stack into one column and get a bottom bar with the
+ * total + Continue to Payment instead (custom-order-form.js).
+ */
+.yp-custom-order__intro,
+.yp-custom-order .yp-label-designer,
+.yp-custom-order [data-yp-co-reorder-picker] {
+	max-width: 760px;
+}
+
+.yp-custom-order__step {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin: 0 0 0.9rem;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.yp-custom-order__step span {
+	display: inline-grid;
+	place-items: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 50%;
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	font-size: 0.75rem;
+	letter-spacing: 0;
+}
+
+.yp-custom-order__main > .yp-custom-order__step:not(:first-child) {
+	margin-top: 2rem;
+}
+
+.yp-custom-order__layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 2rem;
+	align-items: start;
+	margin-top: 1.5rem;
+}
+
+.yp-custom-order__main {
+	min-width: 0;
+}
+
+.yp-custom-order__pair {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.yp-custom-order__summary {
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	box-shadow: var(--wp--custom--shadow-elevation--medium);
+	padding: 1.4rem;
+}
+
+.yp-custom-order__summary .yp-custom-order__pricing {
+	margin-top: 0;
+}
+
+.yp-custom-order__summary > p.description {
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.45;
+}
+
+.yp-custom-order__summary .yp-custom-order__fee--total {
+	font-size: var(--wp--preset--font-size--medium);
+	white-space: nowrap;
+}
+
+.yp-custom-order__summary [data-yp-co-submit] {
+	width: 100%;
+}
+
+.yp-custom-order__summary-list {
+	list-style: none;
+	margin: 0 0 1rem;
+	padding: 0 0 0.9rem;
+	border-bottom: 1px dashed var(--wp--preset--color--light-gray);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.yp-custom-order__summary-list:empty {
+	display: none;
+}
+
+.yp-custom-order__summary-list li {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.25rem 0;
+}
+
+.yp-custom-order__summary-list small {
+	display: block;
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.75rem;
+}
+
+.yp-custom-order__summary-qty {
+	white-space: nowrap;
+}
+
+/* Phone bottom bar: total + Continue to Payment, tucked away while the
+   "Your order" box itself is on screen. */
+.yp-custom-order__bar {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 50;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--white);
+	font-size: var(--wp--preset--font-size--small);
+	box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.2);
+	transition: transform 200ms ease;
+}
+
+.yp-custom-order__bar.is-tucked {
+	transform: translateY(110%);
+}
+
+.yp-custom-order__bar-total strong {
+	display: block;
+	font-size: 1.25rem;
+}
+
+.yp-custom-order__bar .wp-block-button__link {
+	padding: 0.7rem 1rem;
+	font-size: 1rem;
+	white-space: nowrap;
+}
+
+/* The bar sits inside the form, so it goes away with it (Designer mode). */
+.yp-custom-order form[hidden] .yp-custom-order__bar {
+	display: none;
+}
+
+@media (min-width: 640px) {
+	.yp-custom-order__pair {
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+	}
+}
+
+@media (min-width: 900px) {
+	.yp-custom-order__mode {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.yp-custom-order__layout {
+		grid-template-columns: minmax(0, 1fr) 360px;
+		gap: 2.5rem;
+	}
+
+	.yp-custom-order__summary {
+		position: sticky;
+		top: 1.5rem;
+	}
+
+	.yp-custom-order__bar {
+		display: none;
+	}
+}
+
+.yp-batch-row .yp-custom-order__pair > .yp-field {
+	min-width: 0;
+}
