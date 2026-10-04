@@ -169,6 +169,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-push.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-stay-signed-in.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-email-verification.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-core-email-theme.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-settings.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-client.php';
@@ -308,6 +309,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_App_Shortcut();
 		new YeffoPrint_Stay_Signed_In();
 		new YeffoPrint_Email_Verification();
+		new YeffoPrint_Core_Email_Theme();
 		new YeffoPrint_Telegram_Webhook_Sync();
 		new YeffoPrint_Telegram_Webhook_Controller();
 		new YeffoPrint_Web_Chat_Controller();

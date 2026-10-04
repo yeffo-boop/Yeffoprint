@@ -10,8 +10,11 @@
  * new password" link, and that email doubled as the proof they owned the
  * address. Now:
  *
- * - WooCommerce's generate-password option is forced off, so every
- *   self-service sign-up form shows a password field: My Account's
+ * - wp-login.php's Register form (where My Account sends people while
+ *   WooCommerce's own registration is off, as it is on the live site)
+ *   gets Password / Confirm password fields.
+ * - WooCommerce's generate-password option is forced off, so its
+ *   sign-up forms show a password field too: My Account's
  *   Register form (also where the Dose Tracker's "Create a free account"
  *   goes), "Create an account" at checkout (block or classic), and the
  *   order confirmation page's create-account box.
@@ -57,6 +60,10 @@ class YeffoPrint_Email_Verification {
 		add_action( 'wp', [ $this, 'show_result_notice' ] );
 		add_filter( 'login_message', [ $this, 'login_message' ] );
 		add_filter( 'register_url', [ $this, 'register_url' ] );
+		add_action( 'register_form', [ $this, 'wp_login_password_fields' ] );
+		add_filter( 'registration_errors', [ $this, 'wp_login_check_password' ] );
+		add_action( 'register_new_user', [ $this, 'on_wp_login_register' ], 1 );
+		add_filter( 'wp_login_errors', [ $this, 'wp_login_registered_message' ] );
 	}
 
 	public function customer_picks_password(): string {
@@ -95,6 +102,77 @@ class YeffoPrint_Email_Verification {
 		}
 		// phpcs:enable
 		return defined( 'WOOCOMMERCE_CHECKOUT' ) && WOOCOMMERCE_CHECKOUT; // Classic checkout.
+	}
+
+	/**
+	 * wp-login.php's Register form, which is where the site actually sends
+	 * people (My Account redirects there while WooCommerce's own
+	 * registration is off). Core's form has no password field and emails a
+	 * "Login Details" set-password link; this adds the fields, and
+	 * on_wp_login_register() swaps that email for Confirm your email.
+	 */
+	public function wp_login_password_fields(): void {
+		?>
+		<p>
+			<label for="yp_pass1"><?php esc_html_e( 'Password', 'yeffoprint-core' ); ?></label>
+			<input type="password" name="yp_pass1" id="yp_pass1" class="input" size="25" autocomplete="new-password" minlength="8" required />
+		</p>
+		<p>
+			<label for="yp_pass2"><?php esc_html_e( 'Confirm password', 'yeffoprint-core' ); ?></label>
+			<input type="password" name="yp_pass2" id="yp_pass2" class="input" size="25" autocomplete="new-password" minlength="8" required />
+		</p>
+		<p class="description" style="margin-bottom:16px;"><?php esc_html_e( 'At least 8 characters. We’ll email you a link to confirm your address.', 'yeffoprint-core' ); ?></p>
+		<style>#reg_passmail{display:none}</style>
+		<?php
+	}
+
+	/** @param \WP_Error $errors */
+	public function wp_login_check_password( $errors ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput -- Core's register form has no nonce; passwords aren't sanitized.
+		if ( ! isset( $_POST['yp_pass1'] ) ) {
+			return $errors;
+		}
+		$pass1 = (string) wp_unslash( $_POST['yp_pass1'] );
+		$pass2 = (string) wp_unslash( $_POST['yp_pass2'] ?? '' );
+		// phpcs:enable
+		if ( strlen( $pass1 ) < 8 ) {
+			$errors->add( 'yp_pass_short', __( '<strong>Error:</strong> Please choose a password with at least 8 characters.', 'yeffoprint-core' ) );
+		} elseif ( $pass1 !== $pass2 ) {
+			$errors->add( 'yp_pass_mismatch', __( '<strong>Error:</strong> The two passwords don’t match.', 'yeffoprint-core' ) );
+		}
+		return $errors;
+	}
+
+	public function on_wp_login_register( $user_id ): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput -- Validated in wp_login_check_password(); passwords aren't sanitized.
+		$pass = isset( $_POST['yp_pass1'] ) ? (string) wp_unslash( $_POST['yp_pass1'] ) : '';
+		if ( '' === $pass ) {
+			return;
+		}
+
+		wp_set_password( $pass, (int) $user_id );
+		delete_user_meta( (int) $user_id, 'default_password_nag' );
+
+		// Core's "Login Details" set-password email is replaced by Confirm
+		// your email; the "New user registration" note to the admin stays.
+		remove_action( 'register_new_user', 'wp_send_new_user_notifications' );
+		wp_new_user_notification( (int) $user_id, null, 'admin' );
+
+		self::send_link( (int) $user_id );
+	}
+
+	/** @param \WP_Error $errors */
+	public function wp_login_registered_message( $errors ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display only.
+		if ( $errors instanceof \WP_Error && 'registered' === ( $_GET['checkemail'] ?? '' ) && $errors->get_error_message( 'registered' ) ) {
+			$errors->remove( 'registered' );
+			$errors->add( 'registered', sprintf(
+				/* translators: %s: login page URL */
+				__( 'Almost done! We emailed you a link. Click it to confirm your email, then <a href="%s">sign in</a> with the password you just chose.', 'yeffoprint-core' ),
+				esc_url( wp_login_url() )
+			), 'message' );
+		}
+		return $errors;
 	}
 
 	/** @param bool $enabled */
@@ -286,8 +364,14 @@ class YeffoPrint_Email_Verification {
 		?>
 		<p><?php echo esc_html( sprintf( /* translators: %s: first name */ __( 'Hi %s,', 'yeffoprint-core' ), $name ) ); ?></p>
 		<p><?php esc_html_e( 'Thanks for creating your YeffoDesign account. Please confirm this is your email address so you can sign in with the password you chose.', 'yeffoprint-core' ); ?></p>
-		<p style="margin:24px 0;"><a href="<?php echo esc_url( $url ); ?>" style="display:inline-block;padding:12px 22px;border-radius:8px;background:#111;color:#fff;font-weight:600;text-decoration:none;"><?php esc_html_e( 'Confirm my email', 'yeffoprint-core' ); ?></a></p>
-		<p><?php esc_html_e( 'This link works for 7 days. If you didn’t create an account, you can ignore this email.', 'yeffoprint-core' ); ?></p>
+		<table class="yp-payment-cta" role="presentation" cellpadding="0" cellspacing="0" width="100%">
+			<tbody><tr><td>
+				<span class="yp-payment-cta-label"><?php esc_html_e( 'One last step', 'yeffoprint-core' ); ?></span>
+				<a class="yp-payment-cta-button" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Confirm my email →', 'yeffoprint-core' ); ?></a>
+				<span class="yp-payment-cta-sub"><?php esc_html_e( 'This link works for 7 days.', 'yeffoprint-core' ); ?></span>
+			</td></tr></tbody>
+		</table>
+		<p><?php esc_html_e( 'If you didn’t create an account, you can ignore this email.', 'yeffoprint-core' ); ?></p>
 		<?php
 		$body = ob_get_clean();
 
