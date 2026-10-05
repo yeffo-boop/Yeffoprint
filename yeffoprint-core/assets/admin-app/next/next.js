@@ -1000,9 +1000,11 @@
 					'<div class="ypn-card ypn-op__track">' + progressHtml( order, proof, customOrders.length > 0 ) + '</div>' +
 					'<div class="ypn-op__grid">' +
 						'<div class="ypn-op__main">' +
+							// Agreement, milestones, staging, go-live, showcase and progress reports (app.js).
+							( website ? '<div class="ypn-wd" data-ypn-wd></div>' : '' ) +
 							customOrders.map( proofCardHtml ).join( '' ) +
 							'<section class="ypn-card">' +
-								'<h3 class="ypn-card__title">Labels &amp; items <span>' + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ' · ' + units + ' total</span></h3>' +
+								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ' · ' + units + ' total</span></h3>' +
 								( order.items.length ? '<div class="ypn-labs">' + order.items.map( labelCardHtml ).join( '' ) + '</div>' : '<p class="yp-field__hint">No items on this order.</p>' ) +
 							'</section>' +
 							( order.customer_note
@@ -1064,6 +1066,10 @@
 
 		function bind( order, needsProofFor ) {
 			bindNotes( order );
+			var wd = viewEl.querySelector( '[data-ypn-wd]' );
+			if ( wd && YP.loadWebDesignPanel ) {
+				YP.loadWebDesignPanel( order, wd );
+			}
 			viewEl.querySelector( '[data-ypn-edit-details]' ).addEventListener( 'click', function () { editDetails( order ); } );
 
 			viewEl.querySelectorAll( '[data-ypn-act]' ).forEach( function ( button ) {

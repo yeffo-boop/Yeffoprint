@@ -1506,7 +1506,8 @@
 
 			recordPaymentPanelHtml( order ) +
 
-			webDesignPanelHtml( order ) +
+			// Opened from the new app's order page, which already shows it.
+			( NEXT && /^#\/order\//.test( window.location.hash ) ? '' : webDesignPanelHtml( order ) ) +
 
 			refundPanelHtml( order ) +
 
@@ -1762,6 +1763,13 @@
 		bindWebDesignShowcase( project, panel, order );
 		bindWebDesignUpdates( project, panel, order );
 	}
+
+	// The new app's order page (next/next.js) shows this same panel in
+	// its main column, so web design orders are managed right there.
+	YP.loadWebDesignPanel = function ( order, containerEl ) {
+		containerEl.innerHTML = webDesignPanelHtml( order );
+		loadWebDesignPanel( order, containerEl );
+	};
 
 	/* ---------- Agreement ---------- */
 
