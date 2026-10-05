@@ -171,6 +171,9 @@
 					checkbox( 'yp-rv-enabled', settings.enabled, 'Ask for a review in the Delivered email and on My Account orders' ) +
 					checkbox( 'yp-rv-auto', settings.auto_publish, 'Publish new reviews right away (skip approval)' ) +
 					'<p class="yp-panel__hint">You get a Telegram message for every new review either way.</p>' +
+					checkbox( 'yp-rv-request', settings.request_email, 'Email a review request after delivery' ) +
+					'<div class="yp-field"><label for="yp-rv-days">Days after delivery</label><input type="number" min="1" max="30" id="yp-rv-days" value="' + YP.escapeAttr( String( settings.request_days ) ) + '" /></div>' +
+					'<p class="yp-panel__hint">Sent once per order, only for the customer’s most recent delivered order, and never if they already left a review.</p>' +
 					'<div class="yp-form__actions"><button type="button" class="wp-block-button__link is-style-accent" data-yp-rv-save>Save settings</button></div>' +
 					'<div data-yp-rv-save-status></div>' +
 				'</div>';
@@ -186,7 +189,9 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify( {
 						enabled: el.querySelector( '#yp-rv-enabled' ).checked,
-						auto_publish: el.querySelector( '#yp-rv-auto' ).checked
+						auto_publish: el.querySelector( '#yp-rv-auto' ).checked,
+						request_email: el.querySelector( '#yp-rv-request' ).checked,
+						request_days: el.querySelector( '#yp-rv-days' ).value
 					} )
 				} )
 					.then( function ( response ) {

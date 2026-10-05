@@ -2,7 +2,7 @@
 /**
  * Admin REST endpoints for the admin app's Reviews screen
  * (views/reviews.js): list reviews with their photos, publish /
- * unpublish / delete one, and the two review settings. The review
+ * unpublish / delete one, and the review settings. The review
  * logic itself lives in class-order-reviews.php.
  */
 
