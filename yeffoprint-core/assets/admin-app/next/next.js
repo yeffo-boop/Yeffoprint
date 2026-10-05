@@ -1627,8 +1627,28 @@
 		var testBtn  = viewEl.querySelector( '[data-ypn-station-test]' );
 		var jobsEl   = viewEl.querySelector( '[data-ypn-jobs]' );
 
-		function fileUrl( job ) {
-			return api( 'admin/next/print-queue/' + job.id + '/file' ) + ( api( '' ).indexOf( '?' ) === -1 ? '?' : '&' ) + '_wpnonce=' + encodeURIComponent( yeffoprintAdminApp.nonce );
+		/* Loads the job's PDF with the nonce header (refreshed if the
+		   page's own has expired) and resolves to a local blob URL, or
+		   rejects if the site sent anything but a PDF. The station only
+		   ever prints that blob, so an error message can never reach
+		   the printer. */
+		function loadPdf( job, isRetry ) {
+			return fetch( api( 'admin/next/print-queue/' + job.id + '/file' ), {
+				credentials: 'same-origin',
+				cache: 'no-store',
+				headers: { 'X-WP-Nonce': yeffoprintAdminApp.nonce }
+			} ).then( function ( response ) {
+				if ( 403 === response.status && ! isRetry ) {
+					return YP.refreshNonce().then( function () { return loadPdf( job, true ); } );
+				}
+				var type = response.headers.get( 'Content-Type' ) || '';
+				if ( ! response.ok || type.indexOf( 'pdf' ) === -1 ) {
+					throw new Error( 'not a pdf' );
+				}
+				return response.blob().then( function ( blob ) {
+					return URL.createObjectURL( new Blob( [ blob ], { type: 'application/pdf' } ) );
+				} );
+			} );
 		}
 
 		function setJob( job, status ) {
@@ -1640,32 +1660,36 @@
 		}
 
 		function printJob( job ) {
-			return new Promise( function ( resolve ) {
-				var frame = document.createElement( 'iframe' );
-				frame.className = 'ypn-print-frame';
-				frame.src = fileUrl( job );
-				var done = false;
-				function finish( status ) {
-					if ( done ) {
-						return;
-					}
-					done = true;
-					setJob( job, status ).then( resolve );
-					window.setTimeout( function () { frame.remove(); }, 60000 );
-				}
-				frame.addEventListener( 'load', function () {
-					window.setTimeout( function () {
-						try {
-							frame.contentWindow.focus();
-							frame.contentWindow.print();
-							finish( 'printed' );
-						} catch ( e ) {
-							finish( 'failed' );
+			return loadPdf( job ).then( function ( pdfUrl ) {
+				return new Promise( function ( resolve ) {
+					var frame = document.createElement( 'iframe' );
+					frame.className = 'ypn-print-frame';
+					frame.src = pdfUrl;
+					var done = false;
+					function finish( status ) {
+						if ( done ) {
+							return;
 						}
-					}, 700 );
+						done = true;
+						setJob( job, status ).then( resolve );
+						window.setTimeout( function () { frame.remove(); URL.revokeObjectURL( pdfUrl ); }, 60000 );
+					}
+					frame.addEventListener( 'load', function () {
+						window.setTimeout( function () {
+							try {
+								frame.contentWindow.focus();
+								frame.contentWindow.print();
+								finish( 'printed' );
+							} catch ( e ) {
+								finish( 'failed' );
+							}
+						}, 700 );
+					} );
+					window.setTimeout( function () { finish( 'failed' ); }, 30000 );
+					document.body.appendChild( frame );
 				} );
-				window.setTimeout( function () { finish( 'failed' ); }, 30000 );
-				document.body.appendChild( frame );
+			}, function () {
+				return setJob( job, 'failed' );
 			} );
 		}
 

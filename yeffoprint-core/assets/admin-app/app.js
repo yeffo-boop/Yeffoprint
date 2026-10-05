@@ -68,13 +68,10 @@
 
 		return fetch( url, fetchOptions ).then( function ( response ) {
 			if ( 403 === response.status && ! isRetry ) {
-				// Same stale-nonce recovery the storefront's own REST calls
-				// already rely on (class-nonce-controller.php) — the page
-				// itself might have been served from a cache that predates
-				// this session.
-				return fetch( yeffoprintAdminApp.restUrl + 'session/nonce' )
-					.then( function ( r ) { return r.json(); } )
-					.then( function ( data ) { return YP.request( url, options, data.nonce, true ); } );
+				// The page's nonce expired (left open overnight, or reopened
+				// from the Home Screen). Get a fresh one and keep it, so
+				// later calls don't each fail first.
+				return YP.refreshNonce().then( function ( fresh ) { return YP.request( url, options, fresh, true ); } );
 			}
 
 			if ( 204 === response.status ) {
@@ -92,6 +89,27 @@
 				return body;
 			} );
 		} );
+	};
+
+	/**
+	 * Fetches a fresh wp_rest nonce from admin-ajax (class-admin-app.php's
+	 * ajax_fresh_nonce(); REST's own /session/nonce only ever returns a
+	 * guest nonce once the page's nonce is stale) and stores it for every
+	 * later call. Resolves to the nonce, or the old one if it can't.
+	 */
+	YP.refreshNonce = function () {
+		if ( ! yeffoprintAdminApp.nonceUrl ) {
+			return Promise.resolve( yeffoprintAdminApp.nonce );
+		}
+		return fetch( yeffoprintAdminApp.nonceUrl, { credentials: 'same-origin', cache: 'no-store' } )
+			.then( function ( r ) { return r.json(); } )
+			.then( function ( data ) {
+				if ( data && data.success && data.data && data.data.nonce ) {
+					yeffoprintAdminApp.nonce = data.data.nonce;
+				}
+				return yeffoprintAdminApp.nonce;
+			} )
+			.catch( function () { return yeffoprintAdminApp.nonce; } );
 	};
 
 	/**
