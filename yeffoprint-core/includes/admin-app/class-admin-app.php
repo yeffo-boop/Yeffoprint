@@ -49,6 +49,26 @@ class YeffoPrint_Admin_App {
 		add_filter( 'admin_body_class', [ $this, 'add_body_class' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 		add_action( 'admin_head', [ $this, 'print_install_tags' ] );
+		add_action( 'wp_ajax_yeffoprint_admin_nonce', [ $this, 'ajax_fresh_nonce' ] );
+	}
+
+	/**
+	 * A fresh wp_rest nonce for an app page left open longer than its
+	 * baked-in nonce lives (the print station runs all day, and logins now
+	 * last 90 days). Not the REST /session/nonce route: WordPress treats a
+	 * REST request without a valid nonce as signed out, so that route only
+	 * hands back a guest nonce. admin-ajax reads the login cookie itself,
+	 * and the JSON has no CORS headers, so no other site can read it.
+	 */
+	public function ajax_fresh_nonce(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( null, 403 );
+		}
+		if ( class_exists( 'YeffoPrint_Stay_Signed_In' ) ) {
+			YeffoPrint_Stay_Signed_In::extend_current_login();
+		}
+		nocache_headers();
+		wp_send_json_success( [ 'nonce' => wp_create_nonce( 'wp_rest' ) ] );
 	}
 
 	public function add_body_class( string $classes ): string {
@@ -176,6 +196,7 @@ class YeffoPrint_Admin_App {
 			'restUrl'         => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'wpApiUrl'        => esc_url_raw( rest_url( 'wp/v2/' ) ),
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
+			'nonceUrl'        => esc_url_raw( admin_url( 'admin-ajax.php?action=yeffoprint_admin_nonce' ) ),
 			'exitUrl'         => esc_url_raw( admin_url() ),
 			'currentUserName' => wp_get_current_user()->display_name,
 			// 'next' on the redesigned app's page — app.js builds that
