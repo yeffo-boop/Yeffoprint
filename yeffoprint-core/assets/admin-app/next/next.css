@@ -1494,6 +1494,17 @@ body.yp-next [data-yp-dashboard] > .yp-attn {
 	align-items: start;
 }
 
+/* Web design orders: the project panel from the order window (app.js). */
+.ypn-wd > .yp-panel {
+	margin: 0;
+	background: #fff;
+}
+
+.ypn-wd .yp-panel--compact {
+	background: var(--ypn-bg);
+	border-radius: 10px;
+}
+
 .ypn-op__main,
 .ypn-op__side {
 	display: flex;
