@@ -61,19 +61,29 @@ class YeffoPrint_Order_Reviews {
 
 	/* ---------- Settings ---------- */
 
+	/**
+	 * request_email / request_days drive the follow-up review request
+	 * email (class-review-request.php).
+	 *
+	 * @return array{enabled:bool, auto_publish:bool, request_email:bool, request_days:int}
+	 */
 	public static function settings(): array {
 		$saved = get_option( self::SETTINGS_OPTION, [] );
 		$s     = array_merge(
 			[
-				'enabled'      => true,
-				'auto_publish' => false,
+				'enabled'       => true,
+				'auto_publish'  => false,
+				'request_email' => true,
+				'request_days'  => 2,
 			],
 			is_array( $saved ) ? $saved : []
 		);
 
 		return [
-			'enabled'      => (bool) $s['enabled'],
-			'auto_publish' => (bool) $s['auto_publish'],
+			'enabled'       => (bool) $s['enabled'],
+			'auto_publish'  => (bool) $s['auto_publish'],
+			'request_email' => (bool) $s['request_email'],
+			'request_days'  => min( 30, max( 1, (int) $s['request_days'] ) ),
 		];
 	}
 
@@ -81,7 +91,7 @@ class YeffoPrint_Order_Reviews {
 		$current = self::settings();
 		foreach ( $current as $key => $value ) {
 			if ( array_key_exists( $key, $input ) ) {
-				$current[ $key ] = (bool) $input[ $key ];
+				$current[ $key ] = is_bool( $value ) ? (bool) $input[ $key ] : (int) $input[ $key ];
 			}
 		}
 		update_option( self::SETTINGS_OPTION, $current, false );

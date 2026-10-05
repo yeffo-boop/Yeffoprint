@@ -217,6 +217,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/calculator/class-calculator-app.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-tracker-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-order-reviews.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-review-request.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-review-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-review-controller.php';
 
@@ -353,6 +354,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Abandoned_Carts();
 		new YeffoPrint_Admin_Abandoned_Cart_Controller();
 		new YeffoPrint_Order_Reviews();
+		new YeffoPrint_Review_Request();
 		new YeffoPrint_Review_Controller();
 		new YeffoPrint_Admin_Review_Controller();
 		new YeffoPrint_Tracker_Feedback();

@@ -93,4 +93,8 @@ register_deactivation_hook( __FILE__, function () {
 	// Same reasoning again — the abandoned cart reminder sweep.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
 	YeffoPrint_Abandoned_Carts::unschedule();
+
+	// Same reasoning again — the review request email sweep.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-review-request.php';
+	YeffoPrint_Review_Request::unschedule();
 } );
