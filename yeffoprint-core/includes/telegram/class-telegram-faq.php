@@ -38,6 +38,11 @@ class YeffoPrint_Telegram_Faq {
 				'answer'   => self::home_screen_answer(),
 			],
 			[
+				// Direct request: customers asked where to put a QR code on an order and the bot couldn't answer.
+				'keywords' => [ 'qr', 'q.r', 'scan', 'scannable', 'barcode', 'bar code' ],
+				'answer'   => self::qr_code_answer(),
+			],
+			[
 				'keywords' => [ 'size', 'sizes', 'material', 'materials', 'finish', 'finishes', 'ml', 'glossy', 'matte', 'holographic', 'metallic' ],
 				'answer'   => __( 'We launch with 3 mL and 10 mL sizes across five finishes: Glossy White, Matte White, Holographic, Clear, and Metallic. Availability is shown per design in the configurator.', 'yeffoprint-core' ),
 			],
@@ -66,6 +71,15 @@ class YeffoPrint_Telegram_Faq {
 				'answer'   => __( "Send me your order number and the email you used at checkout — for example:\nYP-1042 jane@example.com\n— and I'll pull up its status.", 'yeffoprint-core' ),
 			],
 		];
+	}
+
+	/** Matches the "QR code" box on the Custom Labels form (yeffoprint/assets/js/custom-order-form.js) and on templates with a QR code field. */
+	private static function qr_code_answer(): string {
+		return sprintf(
+			/* translators: %s: Custom Labels page URL */
+			__( "You can add a QR code to your labels. Just paste the web address you want it to open, and we turn it into the QR code for you.\n\n✏️ Custom Labels (%s)\nEach label has a \"QR code\" box under Quantity, next to Product details. Paste the full web address there, starting with https://. Each label can have its own QR code, or leave the box empty for none.\n\n🏷️ Templates\nOn a template's page, look for the \"QR code\" box with the other label details and paste the web address there. You'll see the code on the label preview.\n\nTips: copy the address from your browser's address bar so it's exact, and open it once on your phone to make sure it works before you order. Already have a QR code image, or need it to hold something other than a web address? Tell me here and I'll pass it to our team.", 'yeffoprint-core' ),
+			home_url( '/custom-design/' )
+		);
 	}
 
 	/** Picture version: /home-screen/ (class-home-screen-help.php). Steps match the install cards on the pages themselves (assets/tracker/tracker.js, yeffoprint/assets/js/peptide-calculator.js). */
@@ -159,6 +173,6 @@ class YeffoPrint_Telegram_Faq {
 	}
 
 	public static function topics_text(): string {
-		return __( "Ask me about:\n• Sizes & materials\n• Bulk pricing & discounts\n• Multi-design batches\n• The \$25 custom design fee\n• Shipping\n• Guest checkout & accounts\n• Adding the Peptide Calculator or Dose Tracker to your Home Screen\n\nOr send your order number and checkout email to check an order's status.", 'yeffoprint-core' );
+		return __( "Ask me about:\n• Sizes & materials\n• Bulk pricing & discounts\n• Multi-design batches\n• The \$25 custom design fee\n• Shipping\n• Guest checkout & accounts\n• Adding a QR code to your labels\n• Adding the Peptide Calculator or Dose Tracker to your Home Screen\n\nOr send your order number and checkout email to check an order's status.", 'yeffoprint-core' );
 	}
 }
