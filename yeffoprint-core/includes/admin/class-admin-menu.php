@@ -248,6 +248,17 @@ class YeffoPrint_Admin_Menu {
 	const TELEGRAM_ADMIN_CHAT_ID_OPTION = 'yeffoprint_telegram_admin_chat_id';
 
 	/**
+	 * Direct request: "Now that I have push notifications from my web app,
+	 * can we disable all of the admin notifications going to telegram? So
+	 * I don't get duplicates." Off by default: owner alerts (new orders,
+	 * express reminders, abandoned carts, messages, reviews, tracker
+	 * feedback) go to the admin app's phone push only. Turning it on
+	 * copies them to the chat above as well. The chat ID stays in use
+	 * either way for /ack, /pending and the other owner commands.
+	 */
+	const TELEGRAM_OWNER_ALERTS_OPTION = 'yeffoprint_telegram_owner_alerts';
+
+	/**
 	 * Also read by includes/telegram/class-telegram-login.php. Direct
 	 * request: "allow users to login to the site using their telegram
 	 * account" — Telegram's own official Login Widget, not a hand-rolled
@@ -364,6 +375,22 @@ class YeffoPrint_Admin_Menu {
 		// div for it to style. Settings is still a plain Settings-API
 		// page, so it keeps using the classic reskin as before.
 		YeffoPrint_Admin_App::set_hook_suffix( $dashboard_hook );
+
+		// The redesigned admin app used to live at its own "YeffoDesign
+		// (new)" menu page beside the classic one until Jeff confirmed it
+		// (direct request: "we can retire the old admin dashboard and move
+		// the new one in place. remove the (new) from it"). The page above
+		// now renders the new app. Its old slug stays registered, unlinked,
+		// because the installed iPhone app, push alerts and older links
+		// open admin.php?page=yeffoprint-next; it shows the same app.
+		YeffoPrint_Admin_App::set_next_hook_suffix( (string) add_submenu_page(
+			null,
+			__( 'YeffoDesign', 'yeffoprint-core' ),
+			__( 'YeffoDesign', 'yeffoprint-core' ),
+			'manage_options',
+			YeffoPrint_Admin_Push::APP_SLUG,
+			[ 'YeffoPrint_Admin_App', 'render' ]
+		) );
 		YeffoPrint_Admin_Shell::register_page_hook( $this->settings_page_hook );
 	}
 

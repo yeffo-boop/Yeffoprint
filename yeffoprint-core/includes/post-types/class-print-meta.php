@@ -42,12 +42,27 @@ class YeffoPrint_Print_Meta {
 	public const FINISH       = '_yp_filament_finish';
 	public const EXTRA_CHARGE = '_yp_filament_extra_charge';
 	public const IN_STOCK     = '_yp_filament_in_stock';
+	public const BRAND        = '_yp_filament_brand';
+	public const LINE         = '_yp_filament_line';
+	public const IMAGE        = '_yp_filament_image';
+	public const FOCUS        = '_yp_filament_focus';
 
-	/** Silk draws with a sheen on the swatch; everything else is a flat dot. */
+	/**
+	 * The groups the product page's filament picker sorts into (and
+	 * filters by). Silk also draws with a sheen on a photo-less swatch.
+	 * Existing filaments were saved as Matte/Silk before Solid and
+	 * Specialty existed, so Matte keeps its key.
+	 */
 	public const FINISHES = [
-		'matte' => 'Matte',
-		'silk'  => 'Silk',
+		'solid'     => 'Solid',
+		'matte'     => 'Matte',
+		'silk'      => 'Silk',
+		'specialty' => 'Specialty',
 	];
+
+	/** How far a filament photo can be zoomed into its focus point (100 = whole photo). */
+	public const ZOOM_MIN = 100;
+	public const ZOOM_MAX = 800;
 
 	public function __construct() {
 		add_action( 'init', [ $this, 'register_meta' ] );
@@ -194,9 +209,9 @@ class YeffoPrint_Print_Meta {
 		register_post_meta( 'yp_filament', self::FINISH, [
 			'type'              => 'string',
 			'single'            => true,
-			'default'           => 'matte',
+			'default'           => 'solid',
 			'sanitize_callback' => static function ( $value ) {
-				return isset( self::FINISHES[ $value ] ) ? $value : 'matte';
+				return isset( self::FINISHES[ $value ] ) ? $value : 'solid';
 			},
 			'show_in_rest'      => true,
 			'auth_callback'     => [ $this, 'can_edit' ],
@@ -217,6 +232,76 @@ class YeffoPrint_Print_Meta {
 			'show_in_rest'  => true,
 			'auth_callback' => [ $this, 'can_edit' ],
 		] );
+
+		// Brand ("Bambu Lab") and product line ("PLA Silk+") show under
+		// the filament's name so the customer (and Jeff, on the order)
+		// knows exactly which spool it is.
+		foreach ( [ self::BRAND, self::LINE ] as $key ) {
+			register_post_meta( 'yp_filament', $key, [
+				'type'              => 'string',
+				'single'            => true,
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+				'show_in_rest'      => true,
+				'auth_callback'     => [ $this, 'can_edit' ],
+			] );
+		}
+
+		// Direct request: "grab a preview for the selector" — a photo of
+		// the filament (usually the brand's own product shot). Without
+		// one the picker falls back to the hex swatch.
+		register_post_meta( 'yp_filament', self::IMAGE, [
+			'type'              => 'integer',
+			'single'            => true,
+			'default'           => 0,
+			'sanitize_callback' => 'absint',
+			'show_in_rest'      => true,
+			'auth_callback'     => [ $this, 'can_edit' ],
+		] );
+
+		// Brand photos show a whole spool; the picker's small tile zooms
+		// into the spot that shows the filament itself. x/y are % of the
+		// photo, zoom is % (100 = whole photo).
+		register_post_meta( 'yp_filament', self::FOCUS, [
+			'type'              => 'object',
+			'single'            => true,
+			'default'           => self::sanitize_focus( [] ),
+			'sanitize_callback' => [ __CLASS__, 'sanitize_focus' ],
+			'auth_callback'     => [ $this, 'can_edit' ],
+			'show_in_rest'      => [
+				'schema' => [
+					'type'                 => 'object',
+					'additionalProperties' => false,
+					'properties'           => [
+						'x'    => [ 'type' => 'number' ],
+						'y'    => [ 'type' => 'number' ],
+						'zoom' => [ 'type' => 'number' ],
+					],
+				],
+			],
+		] );
+
+		// The admin list and the 3D Prints editor show the photo tile too.
+		register_rest_field( 'yp_filament', 'filament_image_url', [
+			'get_callback' => static function ( array $post ): string {
+				$image_id = absint( get_post_meta( (int) $post['id'], self::IMAGE, true ) );
+				return $image_id ? (string) wp_get_attachment_image_url( $image_id, 'medium_large' ) : '';
+			},
+			'schema'       => [ 'type' => 'string', 'context' => [ 'view', 'edit' ], 'readonly' => true ],
+		] );
+	}
+
+	public static function sanitize_focus( $value ): array {
+		$value = is_array( $value ) ? $value : [];
+		$num   = static function ( $n, float $fallback, float $min, float $max ): float {
+			return is_numeric( $n ) ? max( $min, min( $max, round( (float) $n, 1 ) ) ) : $fallback;
+		};
+
+		return [
+			'x'    => $num( $value['x'] ?? null, 50.0, 0.0, 100.0 ),
+			'y'    => $num( $value['y'] ?? null, 50.0, 0.0, 100.0 ),
+			'zoom' => $num( $value['zoom'] ?? null, (float) self::ZOOM_MIN, (float) self::ZOOM_MIN, (float) self::ZOOM_MAX ),
+		];
 	}
 
 	public function can_edit(): bool {
@@ -403,18 +488,31 @@ class YeffoPrint_Print_Meta {
 	}
 
 	public static function filament_data( \WP_Post $post ): array {
-		$finish = (string) get_post_meta( $post->ID, self::FINISH, true );
+		$finish   = (string) get_post_meta( $post->ID, self::FINISH, true );
+		$image_id = absint( get_post_meta( $post->ID, self::IMAGE, true ) );
 
 		return [
 			'id'           => $post->ID,
 			// Raw post_title, not get_the_title() — see class-custom-sticker-
 			// controller.php's options() for the double-escape this avoids.
 			'name'         => $post->post_title,
+			'brand'        => (string) get_post_meta( $post->ID, self::BRAND, true ),
+			'line'         => (string) get_post_meta( $post->ID, self::LINE, true ),
 			'hex'          => self::sanitize_hex( get_post_meta( $post->ID, self::HEX, true ) ),
-			'finish'       => isset( self::FINISHES[ $finish ] ) ? $finish : 'matte',
+			'finish'       => isset( self::FINISHES[ $finish ] ) ? $finish : 'solid',
 			'extra_charge' => (float) get_post_meta( $post->ID, self::EXTRA_CHARGE, true ),
 			'in_stock'     => (bool) get_post_meta( $post->ID, self::IN_STOCK, true ),
+			'image_url'    => $image_id ? (string) wp_get_attachment_image_url( $image_id, 'medium_large' ) : '',
+			'focus'        => self::sanitize_focus( get_post_meta( $post->ID, self::FOCUS, true ) ),
 		];
+	}
+
+	/**
+	 * How a filament reads on a cart line and an order: "Rose Gold Silk
+	 * (Bambu Lab)", so the order names the exact spool to print with.
+	 */
+	public static function filament_label( array $filament ): string {
+		return '' !== $filament['brand'] ? sprintf( '%s (%s)', $filament['name'], $filament['brand'] ) : $filament['name'];
 	}
 
 	/**
@@ -501,7 +599,7 @@ class YeffoPrint_Print_Meta {
 			$resolved[] = [
 				'slot'        => $slot['name'],
 				'filament_id' => $match['id'],
-				'name'        => $match['name'],
+				'name'        => self::filament_label( $match ),
 				'extra'       => $match['extra_charge'],
 			];
 		}
@@ -609,7 +707,7 @@ class YeffoPrint_Print_Meta {
 
 		return [
 			'filament_id' => $filament_id,
-			'name'        => $filaments[ $filament_id ]['name'],
+			'name'        => self::filament_label( $filaments[ $filament_id ] ),
 		];
 	}
 

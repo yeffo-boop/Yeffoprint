@@ -7,9 +7,19 @@
 	<div class="yp-pcalc">
 
 		<section class="yp-pcalc__intro">
-			<p class="yp-eyebrow-label">Free tool</p>
+			<p class="yp-eyebrow-label">YeffoHealth · Free tool</p>
 			<h1>Peptide &amp; Hormone Calculator</h1>
 			<p class="yp-pcalc__lede">Pick a calculator, fill in what's on the vial and your dose, and see exactly where to draw on a U-100 insulin syringe.</p>
+
+			<div class="yp-pcalc__install" data-yp-pcalc="install" hidden>
+				<img class="yp-pcalc__install-icon" data-yp-pcalc="install-icon" alt="" width="44" height="44">
+				<div class="yp-pcalc__install-text">
+					<b>Add YeffoHealth Calculator to your Home Screen</b>
+					<span data-yp-pcalc="install-how">It opens like an app, even with no signal.</span>
+				</div>
+				<button type="button" class="yp-pcalc__install-btn" data-yp-pcalc="install-btn" hidden>Install</button>
+				<button type="button" class="yp-pcalc__install-close" data-yp-pcalc="install-close" aria-label="Dismiss">×</button>
+			</div>
 
 			<div class="yp-pcalc__modes-wrap">
 				<span class="yp-pcalc__modes-label" id="yp-pcalc-modes-label">Choose a calculator</span>
@@ -228,13 +238,21 @@
 
 					<p class="yp-pcalc__note">
 						<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>
-						<span>For informational purposes only. This tool does the math; it isn't medical advice. Confirm your dose and mixing with your healthcare provider.</span>
+						<span>The YeffoHealth Calculator only does math: it converts the numbers you enter into syringe units. It isn't medical advice or dosage advice, and it doesn't tell you what dose to take. YeffoHealth is not a healthcare provider. Confirm your dose and mixing with your healthcare provider.</span>
 					</p>
 
-					<a class="yp-pcalc__track" href="/tracker/"><b>Taking this regularly?</b> Save your vial and schedule in the free Dose Tracker, with reminders when each dose is due. →</a>
+					<a class="yp-pcalc__track" href="/tracker/"><b>Taking this regularly?</b> Save your vial and schedule in the free YeffoHealth Tracker, with reminders when each dose is due. →</a>
 				</div>
 			</section>
 		</section>
+
+		<div class="yp-pcalc__dock" data-yp-pcalc="dock" hidden>
+			<button type="button" class="yp-pcalc__dock-btn" data-yp-pcalc="dock-btn">
+				<span class="yp-pcalc__dock-label">Draw to</span>
+				<span class="yp-pcalc__dock-value"><b data-yp-pcalc="dock-units">10</b> units</span>
+				<span class="yp-pcalc__dock-go" data-yp-pcalc="dock-go">See result ↓</span>
+			</button>
+		</div>
 
 		<section class="yp-pcalc__method" aria-labelledby="yp-pcalc-method-heading">
 			<div>

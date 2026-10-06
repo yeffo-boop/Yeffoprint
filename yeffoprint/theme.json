@@ -172,6 +172,28 @@
 			"name": "peptide-calculator",
 			"title": "Peptide & Hormone Calculator",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "leave-a-review",
+			"title": "Leave a Review",
+			"postTypes": [ "page" ]
+		},
+		{
+			"name": "legal-page",
+			"title": "Legal Page",
+			"postTypes": [
+				"page"
+			]
+		},
+		{
+			"name": "web-design-showcase",
+			"title": "Web Design Showcase",
+			"postTypes": [ "page" ]
+		},
+		{
+			"name": "yeffohealth",
+			"title": "YeffoHealth",
+			"postTypes": [ "page" ]
 		}
 	]
 }

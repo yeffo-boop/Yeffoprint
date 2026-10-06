@@ -43,14 +43,14 @@
 		var regions = [ [ 'domestic', 'US only' ], [ 'international', 'International only' ], [ 'any', 'Everywhere' ] ];
 		return (
 			'<tr>' +
-				'<td><input type="text" data-shipping-option-label placeholder="e.g. USPS Ground Advantage" value="' + YP.escapeAttr( option.label ) + '" /></td>' +
-				'<td><input type="number" min="0" step="0.01" data-shipping-option-amount value="' + YP.escapeAttr( option.amount ) + '" /></td>' +
-				'<td><select data-shipping-option-region>' +
+				'<td data-label="Label" class="yp-stack-grow"><input type="text" data-shipping-option-label aria-label="Label" placeholder="e.g. USPS Ground Advantage" value="' + YP.escapeAttr( option.label ) + '" /></td>' +
+				'<td data-label="Price ($)" class="yp-stack-half"><input type="number" min="0" step="0.01" inputmode="decimal" data-shipping-option-amount aria-label="Price" value="' + YP.escapeAttr( option.amount ) + '" /></td>' +
+				'<td data-label="Ships to" class="yp-stack-half yp-stack-wide-select"><select data-shipping-option-region aria-label="Ships to">' +
 					regions.map( function ( region ) {
 						return '<option value="' + region[ 0 ] + '"' + ( region[ 0 ] === option.region ? ' selected' : '' ) + '>' + region[ 1 ] + '</option>';
 					} ).join( '' ) +
 				'</select></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove shipping option">&times;</button></td>' +
+				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove shipping option">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -77,11 +77,12 @@
 		} ).filter( function ( option ) { return '' !== option.label.trim(); } );
 	}
 
-	YP.views.settings = function ( viewEl ) {
+	// `subId` opens a tab directly (`#/settings/shipping`), used by the new app's Settings hub.
+	YP.views.settings = function ( viewEl, subId ) {
 		viewEl.innerHTML = '<p class="yp-app__intro">Loading settings&hellip;</p>';
 
 		YP.request( endpoint() )
-			.then( function ( settings ) { render( settings ); } )
+			.then( function ( settings ) { render( settings, subId ); } )
 			.catch( function ( error ) {
 				viewEl.innerHTML = '<p class="yp-app__intro">Couldn’t load settings: ' + YP.escapeHtml( error.message ) + '</p>';
 			} );
@@ -129,14 +130,14 @@
 					'<div class="yp-panel__head"><h2>Homepage Promo</h2></div>' +
 					'<p class="yp-panel__hint">Themed banners between the header and the hero. Fill in an Offer and Promo code for any theme below to make it active — two or more active themes rotate automatically. 3D Prints Are Back needs no code: put the starting price (e.g. $14) in its Offer box. Shown exactly as typed, so make sure a matching active WooCommerce coupon exists for each code before turning this on.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-promo-enabled"' + ( settings.promo_enabled ? ' checked' : '' ) + ' /><label for="yp-set-promo-enabled">Show it on the homepage</label></div>' +
-					'<table class="yp-tier-table"><thead><tr><th>Theme</th><th>Offer</th><th>Promo code</th></tr></thead><tbody>' +
+					'<table class="yp-tier-table yp-stack-rows"><thead><tr><th>Theme</th><th>Offer</th><th>Promo code</th></tr></thead><tbody>' +
 						Object.keys( settings.promo_themes ).map( function ( slug ) {
 							var banner = settings.promo_banners[ slug ] || {};
 							var codeOptional = ( settings.promo_code_optional || [] ).indexOf( slug ) !== -1;
 							return '<tr>' +
-								'<td>' + YP.escapeHtml( settings.promo_themes[ slug ] ) + '</td>' +
-								'<td><input type="text" data-yp-promo-offer="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.offer || '' ) + '" placeholder="' + ( codeOptional ? '$14' : '15% off' ) + '" /></td>' +
-								'<td><input type="text" data-yp-promo-code="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.code || '' ) + '" placeholder="' + ( codeOptional ? 'Not needed' : 'SUMMERWEEN26' ) + '" /></td>' +
+								'<td><strong>' + YP.escapeHtml( settings.promo_themes[ slug ] ) + '</strong></td>' +
+								'<td data-label="Offer" class="yp-stack-half"><input type="text" aria-label="Offer" data-yp-promo-offer="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.offer || '' ) + '" placeholder="' + ( codeOptional ? '$14' : '15% off' ) + '" /></td>' +
+								'<td data-label="Promo code" class="yp-stack-half"><input type="text" aria-label="Promo code" data-yp-promo-code="' + YP.escapeAttr( slug ) + '" value="' + YP.escapeAttr( banner.code || '' ) + '" placeholder="' + ( codeOptional ? 'Not needed' : 'SUMMERWEEN26' ) + '" /></td>' +
 							'</tr>';
 						} ).join( '' ) +
 					'</tbody></table>' +
@@ -152,7 +153,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Express Orders</h2></div>' +
-					'<p class="yp-panel__hint">Customers can tick "Express: skip the line" at checkout for a flat fee per order. Once an express order is paid, your Telegram alerts chat (Telegram Bot below) gets pinged right away and every 30 minutes until you tap "Got it" or reply /ack, or the order moves to In Production or Shipped. Express is paused automatically while Away Mode is on.</p>' +
+					'<p class="yp-panel__hint">Customers can tick "Express: skip the line" at checkout for a flat fee per order. Once an express order is paid, you get a phone alert right away and every 30 minutes until you tap Acknowledge on the order (or "Got it" on the alert), or the order moves to In Production or Shipped. Express is paused automatically while Away Mode is on.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-express-enabled"' + ( settings.express_enabled ? ' checked' : '' ) + ' /><label for="yp-set-express-enabled">Offer Express at checkout</label></div>' +
 					'<div class="yp-field"><label for="yp-set-express-fee">Express fee ($ per order)</label><input type="number" min="0" step="0.01" id="yp-set-express-fee" value="' + YP.escapeAttr( String( settings.express_fee ) ) + '" /></div>' +
 				'</div>' +
@@ -215,7 +216,7 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Manual order shipping options</h2></div>' +
 					'<p class="yp-panel__hint">Direct request: "I don’t need to rate shop to add shipping, just use my default shipping options." Staff pick one of these flat rates on the Manual Order screen instead of live rate-shopping — works whether or not Shippo above is configured. Customers also pick from these on their payment link when the order’s shipping is left on “Customer picks”. “Ships to” limits each one to US addresses or international ones.</p>' +
-					'<table class="yp-tier-table"><thead><tr><th>Label</th><th>Price</th><th>Ships to</th><th></th></tr></thead>' +
+					'<table class="yp-tier-table yp-stack-rows"><thead><tr><th>Label</th><th>Price</th><th>Ships to</th><th></th></tr></thead>' +
 						'<tbody data-yp-shipping-option-rows>' +
 							( settings.manual_order_shipping_options || [] ).map( manualOrderShippingOptionRowHtml ).join( '' ) +
 						'</tbody>' +
@@ -251,8 +252,10 @@
 					( settings.telegram_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.telegram_status ) + '</p>' : '' ) +
 					'<div class="yp-field"><label for="yp-set-telegram-username">Public @username</label><input type="text" id="yp-set-telegram-username" value="' + YP.escapeAttr( settings.telegram_bot_username ) + '" placeholder="yeffoprint_bot" /></div>' +
 					'<p class="yp-panel__hint">The bot\'s public handle from @BotFather (no "@") — powers the "Chat on Telegram" link on the homepage and in order emails. Separate from the token above, which is private and never shown to customers.</p>' +
-					'<div class="yp-field"><label for="yp-set-telegram-admin-chat-id">Your chat ID (for alerts)</label><input type="text" id="yp-set-telegram-admin-chat-id" value="' + YP.escapeAttr( settings.telegram_admin_chat_id ) + '" placeholder="123456789" /></div>' +
-					'<p class="yp-panel__hint">Message <code>/whoami</code> to the bot from your own Telegram to get this number. New paid orders, custom design requests, and Contact form messages get sent here.</p>' +
+					'<div class="yp-field"><label for="yp-set-telegram-admin-chat-id">Your chat ID</label><input type="text" id="yp-set-telegram-admin-chat-id" value="' + YP.escapeAttr( settings.telegram_admin_chat_id ) + '" placeholder="123456789" /></div>' +
+					'<p class="yp-panel__hint">Message <code>/whoami</code> to the bot from your own Telegram to get this number. Lets you use the owner commands like <code>/pending</code> and <code>/ack</code>.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-owner-alerts"' + ( settings.telegram_owner_alerts ? ' checked' : '' ) + ' /><label for="yp-set-telegram-owner-alerts">Also send my store alerts to Telegram</label></div>' +
+					'<p class="yp-panel__hint">New orders, express reminders, abandoned carts, messages, reviews and tracker feedback always come to the phone app as push alerts. Tick this to get a copy in your Telegram chat too. Customers\' Telegram messages and order updates aren\'t affected.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-login-enabled"' + ( settings.telegram_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-login-enabled">Log in with Telegram</label></div>' +
 					'<p class="yp-panel__hint">Shows a "Log in with Telegram" button on the login/account pages, using the same bot token above — no separate app registration needed. One extra step on Telegram\'s side: message @BotFather with <code>/setdomain</code> and authorize this site\'s domain, or Telegram refuses to render the button.</p>' +
 				'</div>' +
@@ -400,6 +403,7 @@
 				telegram_bot_username: viewEl.querySelector( '#yp-set-telegram-username' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,
 				telegram_admin_chat_id: viewEl.querySelector( '#yp-set-telegram-admin-chat-id' ).value,
+				telegram_owner_alerts: viewEl.querySelector( '#yp-set-telegram-owner-alerts' ).checked,
 				telegram_login_enabled: viewEl.querySelector( '#yp-set-telegram-login-enabled' ).checked,
 				google_login_enabled: viewEl.querySelector( '#yp-set-google-enabled' ).checked,
 				google_client_id: viewEl.querySelector( '#yp-set-google-id' ).value,

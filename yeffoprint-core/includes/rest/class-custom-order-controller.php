@@ -424,6 +424,12 @@ class YeffoPrint_Custom_Order_Controller {
 			wc_load_cart();
 		}
 
+		// Load the saved cart before adding, or the add is lost (see
+		// YeffoPrint_Cart_Controller::ensure_cart_loaded()).
+		if ( function_exists( 'WC' ) && WC()->cart ) {
+			WC()->cart->get_cart();
+		}
+
 		$mode = $this->parse_mode( $request );
 
 		// Label Designer: a customer-entered width/height instead of a
@@ -500,16 +506,18 @@ class YeffoPrint_Custom_Order_Controller {
 		$first_row = $batch[0];
 
 		// Publishes once the $25 fee is paid (or immediately eligible once
-		// paid, for a fee-skipped order) — see class-custom-order-payment.php.
-		// Customer identity stays empty here, exactly as before this was
-		// extracted into create_shell() — filled in later from the WC
-		// order's billing details once payment completes.
+		// paid, for a fee-skipped order) — see class-custom-order-payment.php,
+		// which also overwrites customer identity from the WC order's
+		// billing details at that point. A logged-in customer's account is
+		// recorded now, so a request that's never checked out (Order
+		// History → Drafts) still says who it was; guests stay blank.
+		$submitter = wp_get_current_user();
 		$custom_order_id = YeffoPrint_Custom_Order_Meta::create_shell(
 			'label',
 			sprintf( '%s — %s', $brand_name, current_time( 'Y-m-d H:i' ) ),
-			0,
-			'',
-			''
+			(int) $submitter->ID,
+			$submitter->ID ? (string) $submitter->user_email : '',
+			$submitter->ID ? ( trim( $submitter->first_name . ' ' . $submitter->last_name ) ?: (string) $submitter->display_name ) : ''
 		);
 
 		if ( ! $custom_order_id ) {
@@ -603,6 +611,10 @@ class YeffoPrint_Custom_Order_Controller {
 				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ROW_INDEX => $row_index,
 				YeffoPrint_Cart_Item_Keys::COMPOUND_STRENGTH      => $row['compound_strength'],
 			];
+
+			if ( ! empty( $row['qr_url'] ) ) {
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::QR_URL ] = $row['qr_url'];
+			}
 
 			// Label Designer row: no SIZE_ID (0, harmlessly ignored by
 			// class-cart-pricing.php's adjustment() lookup) — these two
@@ -698,11 +710,21 @@ class YeffoPrint_Custom_Order_Controller {
 				}
 			}
 
+			// Optional QR code (same URL rules as a Template's qr_code field).
+			$raw_qr = trim( (string) ( $row['qr_url'] ?? '' ) );
+			$qr_url = '' !== $raw_qr ? esc_url_raw( substr( $raw_qr, 0, YeffoPrint_Field_Schema::QR_MAX_CHARS ) ) : '';
+			// Only the real submission rejects a bad address; the live price
+			// preview runs while the customer is still typing it.
+			if ( $require_custom_size && '' !== $raw_qr && ( '' === $qr_url || ! wp_http_validate_url( $qr_url ) ) ) {
+				return new \WP_Error( 'yeffoprint_invalid_qr_url', __( 'The QR code needs a valid web address (starting with https://).', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+
 			$rows[] = [
 				'size_id'           => $size_id,
 				'material_id'       => $material_id,
 				'quantity'          => $quantity,
 				'compound_strength' => sanitize_text_field( (string) ( $row['compound_strength'] ?? '' ) ),
+				'qr_url'            => $qr_url,
 				'custom_width_in'   => $custom_width_in,
 				'custom_height_in'  => $custom_height_in,
 			];

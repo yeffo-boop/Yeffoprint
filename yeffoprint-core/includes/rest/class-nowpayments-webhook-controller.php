@@ -136,6 +136,17 @@ class YeffoPrint_NOWPayments_Webhook_Controller {
 		return $order_ids ? wc_get_order( $order_ids[0] ) ?: null : null;
 	}
 
+	/**
+	 * Not WC_Order::needs_payment() — that only counts pending/failed, and
+	 * the gateway parks these orders on-hold, so it was always false here
+	 * and paid IPNs were skipped. These are the statuses payment_complete()
+	 * itself will move to Processing (pending, on-hold, failed, cancelled).
+	 */
+	private static function awaiting_payment( \WC_Order $order ): bool {
+		$statuses = apply_filters( 'woocommerce_valid_order_statuses_for_payment_complete', [ 'on-hold', 'pending', 'failed', 'cancelled' ], $order );
+		return $order->has_status( $statuses );
+	}
+
 	private function handle_paid( array $data ) {
 		$order = $this->find_order( $data );
 		if ( ! $order ) {
@@ -144,7 +155,7 @@ class YeffoPrint_NOWPayments_Webhook_Controller {
 
 		// NOWPayments sends several paid statuses per payment (confirmed,
 		// sending, finished) — only the first one needs to do anything.
-		if ( ! $order->needs_payment() ) {
+		if ( ! self::awaiting_payment( $order ) ) {
 			return rest_ensure_response( [ 'status' => 'already_paid', 'order_id' => $order->get_id() ] );
 		}
 
@@ -183,7 +194,7 @@ class YeffoPrint_NOWPayments_Webhook_Controller {
 
 	private function handle_problem( array $data, string $note, bool $email ) {
 		$order = $this->find_order( $data );
-		if ( ! $order || ! $order->needs_payment() ) {
+		if ( ! $order || ! self::awaiting_payment( $order ) ) {
 			return rest_ensure_response( [ 'status' => 'ignored' ] );
 		}
 

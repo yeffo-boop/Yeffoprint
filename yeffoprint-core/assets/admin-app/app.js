@@ -68,13 +68,10 @@
 
 		return fetch( url, fetchOptions ).then( function ( response ) {
 			if ( 403 === response.status && ! isRetry ) {
-				// Same stale-nonce recovery the storefront's own REST calls
-				// already rely on (class-nonce-controller.php) — the page
-				// itself might have been served from a cache that predates
-				// this session.
-				return fetch( yeffoprintAdminApp.restUrl + 'session/nonce' )
-					.then( function ( r ) { return r.json(); } )
-					.then( function ( data ) { return YP.request( url, options, data.nonce, true ); } );
+				// The page's nonce expired (left open overnight, or reopened
+				// from the Home Screen). Get a fresh one and keep it, so
+				// later calls don't each fail first.
+				return YP.refreshNonce().then( function ( fresh ) { return YP.request( url, options, fresh, true ); } );
 			}
 
 			if ( 204 === response.status ) {
@@ -92,6 +89,27 @@
 				return body;
 			} );
 		} );
+	};
+
+	/**
+	 * Fetches a fresh wp_rest nonce from admin-ajax (class-admin-app.php's
+	 * ajax_fresh_nonce(); REST's own /session/nonce only ever returns a
+	 * guest nonce once the page's nonce is stale) and stores it for every
+	 * later call. Resolves to the nonce, or the old one if it can't.
+	 */
+	YP.refreshNonce = function () {
+		if ( ! yeffoprintAdminApp.nonceUrl ) {
+			return Promise.resolve( yeffoprintAdminApp.nonce );
+		}
+		return fetch( yeffoprintAdminApp.nonceUrl, { credentials: 'same-origin', cache: 'no-store' } )
+			.then( function ( r ) { return r.json(); } )
+			.then( function ( data ) {
+				if ( data && data.success && data.data && data.data.nonce ) {
+					yeffoprintAdminApp.nonce = data.data.nonce;
+				}
+				return yeffoprintAdminApp.nonce;
+			} )
+			.catch( function () { return yeffoprintAdminApp.nonce; } );
 	};
 
 	/**
@@ -258,6 +276,49 @@
 	};
 
 	/**
+	 * Name, contact and address fields for one WooCommerce address
+	 * (`billing` or `shipping`), shared by the order page's Edit details
+	 * form (next/next.js) and the customer drawer (views/customers.js).
+	 * `values` uses WooCommerce's own field names (first_name, address_1,
+	 * postcode, ...); billing also has email and phone.
+	 */
+	var ADDRESS_FIELDS = [
+		[ 'first_name', 'First name', 'given-name' ],
+		[ 'last_name', 'Last name', 'family-name' ],
+		[ 'email', 'Email', 'email', 'billing', true ],
+		[ 'phone', 'Phone', 'tel' ],
+		[ 'company', 'Company', 'organization', null, true ],
+		[ 'address_1', 'Street address', 'address-line1', null, true ],
+		[ 'address_2', 'Apt, suite, unit', 'address-line2', null, true ],
+		[ 'city', 'City', 'address-level2' ],
+		[ 'state', 'State', 'address-level1' ],
+		[ 'postcode', 'ZIP / postal code', 'postal-code' ],
+		[ 'country', 'Country code (US, CA…)', 'country' ]
+	];
+
+	YP.addressFieldsHtml = function ( type, values ) {
+		values = values || {};
+		return '<div class="ypn-form" data-yp-address="' + YP.escapeAttr( type ) + '">' + ADDRESS_FIELDS.filter( function ( f ) {
+			return ! f[ 3 ] || f[ 3 ] === type;
+		} ).map( function ( f ) {
+			return '<label class="ypn-form__field' + ( f[ 4 ] ? ' is-wide' : '' ) + '"><span>' + YP.escapeHtml( f[ 1 ] ) + '</span>' +
+				'<input type="' + ( 'email' === f[ 0 ] ? 'email' : ( 'phone' === f[ 0 ] ? 'tel' : 'text' ) ) + '" data-yp-address-field="' + f[ 0 ] + '" autocomplete="' + f[ 2 ] + '" value="' + YP.escapeAttr( values[ f[ 0 ] ] || '' ) + '"' + ( 'country' === f[ 0 ] ? ' maxlength="2" style="text-transform:uppercase"' : '' ) + '></label>';
+		} ).join( '' ) + '</div>';
+	};
+
+	YP.readAddressFields = function ( container, type ) {
+		var out = {};
+		var wrap = container.querySelector( '[data-yp-address="' + type + '"]' );
+		if ( wrap ) {
+			wrap.querySelectorAll( '[data-yp-address-field]' ).forEach( function ( input ) {
+				var key = input.getAttribute( 'data-yp-address-field' );
+				out[ key ] = 'country' === key ? input.value.trim().toUpperCase() : input.value.trim();
+			} );
+		}
+		return out;
+	};
+
+	/**
 	 * One entry per planned section (docs/ARCHITECTURE.md's phase list).
 	 * `id`s with no matching `YP.views[id]` render the shared
 	 * placeholder view until their own phase ships. Nothing here is a
@@ -266,7 +327,8 @@
 	 */
 	var SECTIONS = [
 		{ group: 'Overview', items: [
-			{ id: 'dashboard', label: 'Dashboard' }
+			{ id: 'dashboard', label: 'Dashboard' },
+			{ id: 'sales', label: 'Sales' }
 		] },
 		{ group: 'Catalog', items: [
 			{ id: 'materials', label: 'Materials' },
@@ -277,7 +339,7 @@
 			{ id: 'label-colors', label: 'Label Colors' },
 			{ id: 'compound-list', label: 'Compound List' },
 			{ id: 'prints', label: '3D Prints' },
-			{ id: 'filament-colors', label: 'Filament Colors' }
+			{ id: 'filament-colors', label: 'Filaments' }
 		] },
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },
@@ -285,6 +347,10 @@
 			{ id: 'abandoned-carts', label: 'Abandoned Carts' },
 			{ id: 'web-design-orders', label: 'Web Design Orders' },
 			{ id: 'customers', label: 'Customers' },
+			{ id: 'messages', label: 'Messages' },
+			{ id: 'disputes', label: 'Disputes' },
+			{ id: 'reviews', label: 'Reviews' },
+			{ id: 'tracker-feedback', label: 'Tracker Feedback' },
 			{ id: 'pricing', label: 'Pricing Rules' },
 			{ id: 'orders', label: 'Custom Orders' },
 			{ id: 'proofs', label: 'Proofs' },
@@ -296,6 +362,7 @@
 			{ id: 'coupons', label: 'Coupons' },
 			{ id: 'rewards', label: 'Rewards' },
 			{ id: 'surcharge', label: 'Card Surcharge' },
+			{ id: 'payments', label: 'Payments' },
 			{ id: 'settings', label: 'Settings' }
 		] }
 	];
@@ -312,7 +379,99 @@
 		} );
 	} );
 
-	root.innerHTML =
+	/**
+	 * The redesigned app ("YeffoDesign (new)", class-admin-app.php) uses
+	 * the same router, views and order window with a different shell: five
+	 * top tabs (a bottom tab bar on phones), each covering a set of the
+	 * sections above, shown as a strip of sub-tabs under the page title.
+	 * `dashboard` is Today; `production`, `catalog`, `people` and `store`
+	 * are the new screens next/next.js adds to YP.views.
+	 */
+	var NEXT = 'next' === yeffoprintAdminApp.shell;
+	var NEXT_TABS = [
+		{ id: 'dashboard', label: 'Today', icon: 'sun', sections: [ 'dashboard', 'sales' ] },
+		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders', 'disputes' ] },
+		{ id: 'catalog', label: 'Catalog', icon: 'box', sections: [ 'catalog', 'templates', 'sizes', 'sticker-sizes', 'materials', 'label-fields', 'label-colors', 'compound-list', 'prints', 'filament-colors', 'pricing' ] },
+		{ id: 'people', label: 'Customers', icon: 'people', sections: [ 'people', 'customers', 'messages', 'reviews', 'tracker-feedback', 'rewards', 'coupons', 'maintenance' ] },
+		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'payments', 'print-station', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
+	];
+	var NEXT_SUB_LABELS = {
+		dashboard: 'Today',
+		production: 'Production board',
+		'order-history': 'All orders',
+		catalog: 'Overview',
+		people: 'Overview',
+		store: 'Overview',
+		settings: 'All settings'
+	};
+
+	if ( NEXT ) {
+		labelsById.dashboard  = 'Today';
+		labelsById.production = 'Production';
+		labelsById.catalog    = 'Catalog';
+		labelsById.people     = 'Customers';
+		labelsById.store      = 'Settings';
+		labelsById.settings   = 'All settings';
+		// `#/order/{id}`: one order's full page (next/next.js), under Orders.
+		labelsById.order      = 'Order';
+		// `#/ship/{id}`: buy and print that order's shipping label (next/next.js).
+		labelsById.ship       = 'Shipping label';
+		labelsById[ 'print-station' ] = 'Print station';
+	}
+
+	function nextTabFor( id ) {
+		if ( 'order' === id || 'ship' === id ) {
+			id = 'production';
+		}
+		for ( var i = 0; i < NEXT_TABS.length; i++ ) {
+			if ( NEXT_TABS[ i ].sections.indexOf( id ) !== -1 ) {
+				return NEXT_TABS[ i ];
+			}
+		}
+		return NEXT_TABS[ 0 ];
+	}
+
+	var NEXT_ICONS = {
+		sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+		board: '<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/>',
+		box: '<path d="M4 7l8-4 8 4-8 4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/>',
+		people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.5-5 6.5-5s5.7 1.5 6.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.2 0 4 1.3 4.5 4"/>',
+		gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+		plus: '<path d="M12 5v14M5 12h14"/>'
+	};
+
+	function nextIcon( name ) {
+		return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + NEXT_ICONS[ name ] + '</svg>';
+	}
+
+	root.innerHTML = NEXT ? (
+		'<div class="yp-app yp-app--next">' +
+			'<header class="ypn-header">' +
+				'<a class="ypn-brand" href="#/dashboard" aria-label="YeffoDesign home">' +
+					'<svg class="ypn-brand__mark" viewBox="4 2 22 32" aria-hidden="true" focusable="false"><clipPath id="ypnBrandMarkClip"><path d="M4 6C4 3.79 5.79 2 8 2h14c2.21 0 4 1.79 4 4v22c0 3.31-2.69 6-6 6h-10c-3.31 0-6-2.69-6-6V6z"/></clipPath><g clip-path="url(#ypnBrandMarkClip)"><rect x="4" y="2" width="6.63" height="34" fill="#00AEEF"/><rect x="11.63" y="2" width="6.63" height="34" fill="#EC008C"/><rect x="19.26" y="2" width="6.63" height="34" fill="#FFF200"/></g></svg>' +
+					'<span class="ypn-brand__word"><strong>Yeffo</strong>Design</span>' +
+				'</a>' +
+				'<nav class="ypn-tabs" data-yp-nav aria-label="Sections"></nav>' +
+				'<div class="ypn-header__end">' +
+					'<label class="ypn-jump"><span class="screen-reader-text">Jump to</span><input type="search" list="ypn-jump-list" placeholder="Jump to…" data-ypn-jump autocomplete="off"><datalist id="ypn-jump-list"></datalist></label>' +
+					'<a class="ypn-btn ypn-btn--primary" href="#/manual-order">+ New order</a>' +
+					'<a class="ypn-exit-link" href="' + YP.escapeAttr( yeffoprintAdminApp.exitUrl ) + '">&larr; Exit to WordPress</a>' +
+				'</div>' +
+				// The classic shell's off-canvas nav pieces, kept (hidden)
+				// so the shared code below works unchanged on both pages.
+				'<div hidden data-yp-nav-panel></div><div hidden data-yp-nav-backdrop></div><button type="button" hidden data-yp-menu-toggle></button>' +
+			'</header>' +
+			'<main class="ypn-main">' +
+				'<div class="ypn-pagehead">' +
+					'<div><div class="ypn-crumb" data-ypn-crumb></div><h1 class="ypn-title" data-yp-title></h1></div>' +
+					'<div class="yp-app__status" data-yp-status data-state="loading"><span class="yp-app__status-dot"></span><span data-yp-status-text>Connecting&hellip;</span></div>' +
+				'</div>' +
+				'<div class="ypn-subnav" data-ypn-subnav></div>' +
+				'<div class="yp-app__view" data-yp-view></div>' +
+			'</main>' +
+			'<nav class="ypn-bottom" data-ypn-bottom aria-label="Sections"></nav>' +
+		'</div>'
+	) :
 		'<div class="yp-app">' +
 			'<div class="yp-app__nav-backdrop" data-yp-nav-backdrop></div>' +
 			'<nav class="yp-app__nav" data-yp-nav-panel>' +
@@ -322,6 +481,7 @@
 				'</div>' +
 				'<div class="yp-app__groups" data-yp-nav></div>' +
 				'<div class="yp-app__foot">' +
+					'<a class="yp-app__exit" href="' + YP.escapeAttr( yeffoprintAdminApp.nextUrl ) + '">Try the new admin &rarr;</a>' +
 					'<a class="yp-app__exit" href="' + YP.escapeAttr( yeffoprintAdminApp.exitUrl ) + '">&larr; Exit to WordPress</a>' +
 				'</div>' +
 			'</nav>' +
@@ -378,7 +538,35 @@
 
 	/* ---------- Nav ---------- */
 
-	navEl.innerHTML = SECTIONS.map( function ( group ) {
+	if ( NEXT ) {
+		navEl.innerHTML = NEXT_TABS.map( function ( tab ) {
+			return '<button type="button" class="ypn-tab" data-yp-nav-item="' + tab.id + '">' + YP.escapeHtml( tab.label ) + '</button>';
+		} ).join( '' );
+
+		root.querySelector( '[data-ypn-bottom]' ).innerHTML = [ NEXT_TABS[ 0 ], NEXT_TABS[ 1 ], null, NEXT_TABS[ 2 ], NEXT_TABS[ 4 ] ].map( function ( tab ) {
+			if ( ! tab ) {
+				return '<a class="ypn-bottom__add" href="#/manual-order" aria-label="New order">' + nextIcon( 'plus' ) + '</a>';
+			}
+			return '<button type="button" class="ypn-bottom__item" data-yp-nav-item="' + tab.id + '">' + nextIcon( tab.icon ) + '<span>' + YP.escapeHtml( 'store' === tab.id ? 'More' : tab.label ) + '</span></button>';
+		} ).join( '' );
+
+		var jumpEl = root.querySelector( '[data-ypn-jump]' );
+		root.querySelector( '#ypn-jump-list' ).innerHTML = Object.keys( labelsById ).filter( function ( id ) { return 'order' !== id && 'ship' !== id; } ).map( function ( id ) {
+			return '<option value="' + YP.escapeAttr( labelsById[ id ] ) + '"></option>';
+		} ).join( '' );
+		jumpEl.addEventListener( 'change', function () {
+			var wanted = jumpEl.value.trim().toLowerCase();
+			Object.keys( labelsById ).some( function ( id ) {
+				if ( labelsById[ id ].toLowerCase() === wanted ) {
+					window.location.hash = '#/' + id;
+					jumpEl.value = '';
+					jumpEl.blur();
+					return true;
+				}
+				return false;
+			} );
+		} );
+	} else navEl.innerHTML = SECTIONS.map( function ( group ) {
 		var items = group.items.map( function ( item ) {
 			return (
 				'<button type="button" class="yp-nav-item" data-yp-nav-item="' + item.id + '">' +
@@ -395,7 +583,7 @@
 		);
 	} ).join( '' );
 
-	navEl.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
+	root.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
 		button.addEventListener( 'click', function () {
 			window.location.hash = '#/' + button.getAttribute( 'data-yp-nav-item' );
 			closeMobileNav(); // No-op above the mobile breakpoint — is-open is never set there.
@@ -422,9 +610,14 @@
 	function renderView( id, subId ) {
 		titleEl.textContent = labelsById[ id ] || 'Dashboard';
 
-		navEl.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
-			button.classList.toggle( 'is-active', button.getAttribute( 'data-yp-nav-item' ) === id );
+		var activeNavId = NEXT ? nextTabFor( id ).id : id;
+		root.querySelectorAll( '[data-yp-nav-item]' ).forEach( function ( button ) {
+			button.classList.toggle( 'is-active', button.getAttribute( 'data-yp-nav-item' ) === activeNavId );
 		} );
+
+		if ( NEXT ) {
+			renderNextChrome( id );
+		}
 
 		if ( 'dashboard' === id ) {
 			renderDashboard();
@@ -441,6 +634,34 @@
 				'<strong>' + YP.escapeHtml( labelsById[ id ] ) + '</strong>' +
 				'<span>This section’s screen ships in a later phase — the nav item is live now so the whole map is navigable from day one.</span>' +
 			'</div>';
+	}
+
+	/** Breadcrumb and the sub-tab strip for the tab `id` belongs to (new app only). */
+	function renderNextChrome( id ) {
+		var tab      = nextTabFor( id );
+		var crumbEl  = root.querySelector( '[data-ypn-crumb]' );
+		var subnavEl = root.querySelector( '[data-ypn-subnav]' );
+
+		crumbEl.innerHTML = tab.id !== id
+			? '<a href="#/' + tab.id + '">' + YP.escapeHtml( tab.label ) + '</a>'
+			: '';
+
+		if ( tab.sections.length < 2 ) {
+			subnavEl.innerHTML = '';
+			subnavEl.hidden = true;
+			return;
+		}
+
+		subnavEl.hidden = false;
+		subnavEl.innerHTML = tab.sections.map( function ( sectionId ) {
+			return '<a class="ypn-subtab' + ( sectionId === id ? ' is-active' : '' ) + '" href="#/' + sectionId + '">' + YP.escapeHtml( NEXT_SUB_LABELS[ sectionId ] || labelsById[ sectionId ] ) + '</a>';
+		} ).join( '' );
+
+		var active = subnavEl.querySelector( '.is-active' );
+		if ( active && active.scrollIntoView && subnavEl.scrollWidth > subnavEl.clientWidth ) {
+			subnavEl.scrollLeft = active.offsetLeft - 16;
+		}
+		window.scrollTo( 0, 0 );
 	}
 
 	function route() {
@@ -485,8 +706,14 @@
 
 	function renderDashboard() {
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Welcome back' + ( yeffoprintAdminApp.currentUserName ? ', ' + YP.escapeHtml( yeffoprintAdminApp.currentUserName ) : '' ) + '. Here’s what needs attention today.</p>' +
+			( NEXT
+				? '<div data-ypn-today></div>'
+				: '<p class="yp-app__intro">Welcome back' + ( yeffoprintAdminApp.currentUserName ? ', ' + YP.escapeHtml( yeffoprintAdminApp.currentUserName ) : '' ) + '. Here’s what needs attention today.</p>' ) +
 			'<div data-yp-dashboard><p class="yp-field__hint">Loading&hellip;</p></div>';
+
+		if ( NEXT && YP.next && YP.next.today ) {
+			YP.next.today( viewEl.querySelector( '[data-ypn-today]' ) );
+		}
 
 		ping();
 		loadDashboard();
@@ -795,6 +1022,38 @@
 		);
 	}
 
+	/**
+	 * "Arrives Tue, Oct 7" from the carrier's estimate, or "Was due Oct 2"
+	 * once that day has passed without a delivery. '' when the carrier gave
+	 * no estimate or the package is already delivered/returned.
+	 */
+	function estimatedDeliveryLabel( pkg ) {
+		if ( ! pkg.estimated_delivery || [ 'DELIVERED', 'RETURNED' ].indexOf( pkg.tracking_status ) !== -1 ) {
+			return '';
+		}
+		// Carriers estimate a day, not a time, and Shippo sends it as
+		// midnight UTC — read just the date part as a local date so it
+		// doesn't show as the day before here.
+		var parts = /^(\d{4})-(\d{2})-(\d{2})/.exec( pkg.estimated_delivery );
+		if ( ! parts ) {
+			return '';
+		}
+		var eta = new Date( +parts[ 1 ], +parts[ 2 ] - 1, +parts[ 3 ] );
+		var today = new Date();
+		today.setHours( 0, 0, 0, 0 );
+		var diff = Math.round( ( eta - today ) / 86400000 );
+		if ( diff < 0 ) {
+			return 'Was due ' + eta.toLocaleDateString( undefined, { month: 'short', day: 'numeric' } );
+		}
+		if ( 0 === diff ) {
+			return 'Arrives today';
+		}
+		if ( 1 === diff ) {
+			return 'Arrives tomorrow';
+		}
+		return 'Arrives ' + eta.toLocaleDateString( undefined, { weekday: 'short', month: 'short', day: 'numeric' } );
+	}
+
 	function renderDashboardSummary( summary, el ) {
 		var dueDateDays = summary.due_date_days;
 
@@ -804,6 +1063,7 @@
 						? '<a href="' + YP.escapeAttr( pkg.tracking_url ) + '" target="_blank" rel="noopener noreferrer" class="mono">' + YP.escapeHtml( pkg.tracking_number ) + '</a>'
 						: '<span class="mono">' + YP.escapeHtml( pkg.tracking_number ) + '</span>';
 					var checkedAgo = timeAgoLabel( pkg.tracking_checked_at );
+					var eta = estimatedDeliveryLabel( pkg );
 					return (
 						'<div class="yp-list-row">' +
 							'<div class="yp-list-row__text">' +
@@ -818,6 +1078,7 @@
 							'</div>' +
 							'<div class="yp-list-row__meta">' +
 								trackingStatusPillHtml( pkg.tracking_status ) +
+								( eta ? '<span class="yp-list-row__eta">' + YP.escapeHtml( eta ) + '</span>' : '' ) +
 								( checkedAgo ? '<span class="yp-list-row__age">' + YP.escapeHtml( checkedAgo ) + '</span>' : '' ) +
 							'</div>' +
 						'</div>'
@@ -937,13 +1198,18 @@
 
 		el.querySelectorAll( '[data-yp-wc-order]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
-				openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-wc-order' ), 10 ) );
+				YP.openOrder( parseInt( button.getAttribute( 'data-yp-wc-order' ), 10 ) );
 			} );
 		} );
 
 		el.querySelectorAll( '[data-yp-print-label-row]' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
-				openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-print-label-row' ), 10 ), true );
+				var labelOrderId = parseInt( button.getAttribute( 'data-yp-print-label-row' ), 10 );
+				if ( NEXT && YP.views.ship ) {
+					window.location.hash = '#/ship/' + labelOrderId; // The new app's own label screen (next/next.js).
+					return;
+				}
+				openWcOrderDrawer( labelOrderId, true );
 			} );
 		} );
 
@@ -961,6 +1227,11 @@
 					} );
 			} );
 		} );
+
+		// The new app's Today screen builds its queue from this summary too (next/next.js).
+		if ( NEXT && YP.next && YP.next.onDashboard ) {
+			YP.next.onDashboard( summary, el );
+		}
 
 		var refreshTrackingButton = el.querySelector( '[data-yp-refresh-tracking]' );
 		if ( refreshTrackingButton ) {
@@ -1037,6 +1308,21 @@
 	// in a new tab; it opens this same drawer in place instead, so staff
 	// never have to leave the app's own order view.
 	YP.openWcOrderDrawer = openWcOrderDrawer;
+
+	// The new app's shipping label screen (next/next.js) reuses these.
+	YP.printLabelUrl = function ( url ) { printLabelUrl( url ); };
+	YP.findBestMatchingRateId = function ( rates, method ) { return findBestMatchingRateId( rates, method ); };
+
+	// A list row's "open this order": its full page in the new app
+	// (next/next.js, #/order/{id}), the order window everywhere else.
+	YP.openOrder = function ( id ) {
+		if ( NEXT && YP.views.order ) {
+			document.querySelectorAll( '.yp-drawer[data-open="true"]' ).forEach( function ( drawer ) { YP.closeDrawer( drawer ); } );
+			window.location.hash = '#/order/' + id;
+			return;
+		}
+		openWcOrderDrawer( id );
+	};
 
 	function loadWcOrderDetail( id, drawer, autoPrintLabel ) {
 		var bodyEl = drawer.querySelector( '[data-yp-body]' );
@@ -1129,6 +1415,7 @@
 		completed:      'good',
 		shipped:        'good',
 		processing:     'neutral',
+		'in-design':    'neutral',
 		'in-production': 'neutral',
 		'on-hold':      'warn',
 		pending:        'warn',
@@ -1191,6 +1478,9 @@
 						return '<option value="' + YP.escapeAttr( key ) + '"' + ( order.status === key ? ' selected' : '' ) + '>' + YP.escapeHtml( order.statuses[ key ] ) + '</option>';
 					} ).join( '' ) +
 				'</select></div><div><button type="button" class="wp-block-button__link is-style-accent" data-yp-wc-save-status>Save Status</button></div></div>' +
+				( isUnpaidWcOrder( order )
+					? '<p class="yp-field__hint">Customer changed their mind? <button type="button" class="yp-row-action" style="color:#b3311c;" data-yp-wc-cancel-order>Cancel order</button></p>'
+					: '' ) +
 				'<div data-yp-wc-status-error></div>' +
 			'</div>' +
 
@@ -1203,8 +1493,8 @@
 
 			'<div class="yp-panel" data-yp-items-panel>' +
 				'<div class="yp-panel__head"><h2>Items</h2>' +
-					( order.editable
-						? '<span><button type="button" class="yp-row-action" data-yp-edit-order>Edit order</button> <button type="button" class="yp-row-action" data-yp-add-items>Add items</button></span>'
+					( order.editable || order.can_add_items
+						? '<span>' + ( order.editable ? '<button type="button" class="yp-row-action" data-yp-edit-order>Edit order</button> ' : '' ) + '<button type="button" class="yp-row-action" data-yp-add-items>Add items</button></span>'
 						: '' ) +
 				'</div>' +
 				'<div data-yp-items-view>' +
@@ -1214,16 +1504,35 @@
 				'</div>' +
 			'</div>' +
 
-			webDesignPanelHtml( order ) +
+			recordPaymentPanelHtml( order ) +
+
+			// Opened from the new app's order page, which already shows it.
+			( NEXT && /^#\/order\//.test( window.location.hash ) ? '' : webDesignPanelHtml( order ) ) +
 
 			refundPanelHtml( order ) +
 
-			wcOrderShippingLabelHtml( order ) +
-			shippoPanelHtml( order ) +
+			// Websites are never shipped, so no label panels.
+			( order.web_design ? '' : wcOrderShippingLabelHtml( order ) + shippoPanelHtml( order ) ) +
 
 			'<p class="yp-field__hint"><a href="' + YP.escapeAttr( order.edit_url ) + '" target="_blank" rel="noopener noreferrer">Open in WooCommerce &rarr;</a></p>';
 
 		bodyEl.querySelector( '[data-yp-wc-save-status]' ).addEventListener( 'click', function () { saveWcOrderStatus( order, drawer, bodyEl ); } );
+
+		var cancelOrderButton = bodyEl.querySelector( '[data-yp-wc-cancel-order]' );
+		if ( cancelOrderButton ) {
+			cancelOrderButton.addEventListener( 'click', function () {
+				YP.confirmModal( {
+					title: 'Cancel order #' + order.number + '?',
+					message: 'The pay link stops working and any unpaid custom proof on this order is removed. Nothing has been charged, so there is nothing to refund.',
+					confirmLabel: 'Cancel order',
+					danger: true,
+					onConfirm: function () {
+						bodyEl.querySelector( '[data-yp-wc-status]' ).value = 'cancelled';
+						saveWcOrderStatus( order, drawer, bodyEl );
+					}
+				} );
+			} );
+		}
 
 		var printButton = bodyEl.querySelector( '[data-yp-print-label]' );
 		if ( printButton ) {
@@ -1237,7 +1546,13 @@
 		bindShippoPanel( order, bodyEl );
 		bindCustomerNotesPanel( order, bodyEl );
 		bindRefundPanel( order, bodyEl, drawer );
+		bindRecordPaymentPanel( order, bodyEl, drawer );
 		loadWebDesignPanel( order, bodyEl );
+
+		// The new app's progress tracker and quick actions (next/next.js).
+		if ( YP.onOrderDetail ) {
+			YP.onOrderDetail( order, drawer, bodyEl );
+		}
 	}
 
 	/**
@@ -1251,18 +1566,23 @@
 	 * the Create Order screen in "add to this order" mode
 	 * (#/manual-order/{id}), so new items get the exact same pickers and
 	 * pricing. The pay link never changes; it just charges the new total.
+	 * A paid order that hasn't shipped (order.can_add_items) offers Add
+	 * items only: those go on a linked add-on order with its own pay link.
 	 */
 	function bindOrderEditor( order, drawer, bodyEl ) {
 		var editButton = bodyEl.querySelector( '[data-yp-edit-order]' );
 		var addButton  = bodyEl.querySelector( '[data-yp-add-items]' );
+
+		if ( addButton ) {
+			addButton.addEventListener( 'click', function () {
+				YP.closeDrawer( drawer );
+				window.location.hash = '#/manual-order/' + order.id;
+			} );
+		}
+
 		if ( ! editButton ) {
 			return;
 		}
-
-		addButton.addEventListener( 'click', function () {
-			YP.closeDrawer( drawer );
-			window.location.hash = '#/manual-order/' + order.id;
-		} );
 
 		editButton.addEventListener( 'click', function () {
 			editButton.hidden = true;
@@ -1301,14 +1621,14 @@
 
 		viewEl.innerHTML =
 			'<p class="yp-panel__hint">Change a price or remove an item. To change a quantity, remove the item and use Add items to add it again. The customer’s payment link stays the same and charges the new total.</p>' +
-			'<table class="yp-record-table yp-record-table--top"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>' +
+			'<table class="yp-record-table yp-record-table--top yp-stack-rows"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>' +
 				order.items.map( function ( item ) {
 					return (
 						'<tr data-yp-edit-item="' + item.id + '">' +
-							'<td>' + YP.escapeHtml( item.name ) + '</td>' +
-							'<td>' + item.quantity + '</td>' +
-							'<td><input type="number" step="0.01" min="0" style="width:7rem;" data-yp-edit-total value="' + item.total.toFixed( 2 ) + '" /></td>' +
-							'<td><label style="white-space:nowrap;"><input type="checkbox" data-yp-edit-remove /> Remove</label></td>' +
+							'<td class="yp-stack-grow"><strong>' + YP.escapeHtml( item.name ) + '</strong></td>' +
+							'<td data-label="Qty" class="yp-stack-half">' + item.quantity + '</td>' +
+							'<td data-label="Price ($)" class="yp-stack-half"><input type="number" step="0.01" min="0" inputmode="decimal" style="width:7rem;" data-yp-edit-total aria-label="Price" value="' + item.total.toFixed( 2 ) + '" /></td>' +
+							'<td><label class="yp-field yp-field--checkbox" style="margin:0;white-space:nowrap;"><input type="checkbox" data-yp-edit-remove /><span>Remove</span></label></td>' +
 						'</tr>'
 					);
 				} ).join( '' ) +
@@ -1438,14 +1758,23 @@
 			webDesignMilestonesHtml( project ) +
 			webDesignStagingHtml( project ) +
 			webDesignGoLiveHtml( project ) +
+			webDesignShowcaseHtml( project ) +
 			webDesignUpdatesHtml( project );
 
 		bindWebDesignAgreement( project, panel, order );
 		bindWebDesignMilestones( project, panel, order );
 		bindWebDesignStaging( project, panel, order );
 		bindWebDesignGoLive( project, panel, order, bodyEl );
+		bindWebDesignShowcase( project, panel, order );
 		bindWebDesignUpdates( project, panel, order );
 	}
+
+	// The new app's order page (next/next.js) shows this same panel in
+	// its main column, so web design orders are managed right there.
+	YP.loadWebDesignPanel = function ( order, containerEl ) {
+		containerEl.innerHTML = webDesignPanelHtml( order );
+		loadWebDesignPanel( order, containerEl );
+	};
 
 	/* ---------- Agreement ---------- */
 
@@ -1453,10 +1782,10 @@
 		row = row || { label: '', due_date: '', done: false };
 		return (
 			'<tr>' +
-				'<td><label class="yp-field--checkbox yp-field" style="margin:0;"><input type="checkbox" data-wd-milestone-done' + ( row.done ? ' checked' : '' ) + ' /></label></td>' +
-				'<td><input type="text" data-wd-milestone-label value="' + YP.escapeAttr( row.label ) + '" placeholder="Milestone" /></td>' +
-				'<td><input type="date" data-wd-milestone-date value="' + YP.escapeAttr( row.due_date ) + '" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove milestone">&times;</button></td>' +
+				'<td class="yp-stack-half yp-wd-milestone-done"><label class="yp-field--checkbox yp-field" style="margin:0;"><input type="checkbox" data-wd-milestone-done' + ( row.done ? ' checked' : '' ) + ' /><span>Done</span></label></td>' +
+				'<td data-label="Milestone" class="yp-stack-grow yp-stack-first"><input type="text" data-wd-milestone-label aria-label="Milestone" value="' + YP.escapeAttr( row.label ) + '" placeholder="Milestone" /></td>' +
+				'<td data-label="Due date" class="yp-wd-milestone-date"><input type="date" data-wd-milestone-date aria-label="Due date" value="' + YP.escapeAttr( row.due_date ) + '" /></td>' +
+				'<td class="yp-stack-remove yp-stack-half"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove milestone">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -1465,9 +1794,9 @@
 		row = row || { label: '', price: '' };
 		return (
 			'<tr>' +
-				'<td><input type="text" data-wd-addon-label value="' + YP.escapeAttr( row.label ) + '" placeholder="Add-on" /></td>' +
-				'<td><input type="number" step="0.01" min="0" data-wd-addon-price value="' + YP.escapeAttr( row.price ) + '" placeholder="0.00" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove add-on">&times;</button></td>' +
+				'<td data-label="Add-on" class="yp-stack-grow"><input type="text" data-wd-addon-label aria-label="Add-on" value="' + YP.escapeAttr( row.label ) + '" placeholder="Add-on" /></td>' +
+				'<td data-label="Price ($)" class="yp-stack-half yp-wd-addon-price"><input type="number" step="0.01" min="0" inputmode="decimal" data-wd-addon-price aria-label="Price" value="' + YP.escapeAttr( row.price ) + '" placeholder="0.00" /></td>' +
+				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove add-on">&times;</button></td>' +
 			'</tr>'
 		);
 	}
@@ -1503,7 +1832,7 @@
 					'<div class="yp-field"><label>Go-live due</label><input type="date" data-wd-golive-due value="' + YP.escapeAttr( a.golive_due ) + '"' + ( signed ? ' disabled' : '' ) + ' /></div>' +
 				'</div>' +
 				'<p class="yp-field__hint">Add-ons</p>' +
-				'<table class="yp-record-table"><tbody data-wd-addons>' + addons.map( addonRowHtml ).join( '' ) + '</tbody></table>' +
+				'<table class="yp-record-table yp-stack-rows yp-edit-rows"><thead><tr><th>Add-on</th><th>Price ($)</th><th></th></tr></thead><tbody data-wd-addons>' + addons.map( addonRowHtml ).join( '' ) + '</tbody></table>' +
 				( signed ? '' : '<button type="button" class="yp-row-action" data-yp-wd-add-addon>+ Add add-on</button>' ) +
 				'<div class="yp-field" style="margin-top:0.75rem;"><label>Scope &amp; expectations</label><textarea rows="4" data-wd-scope' + ( signed ? ' disabled' : '' ) + '>' + YP.escapeHtml( a.scope_text ) + '</textarea></div>' +
 				( signed
@@ -1551,6 +1880,17 @@
 
 		var errorEl = panel.querySelector( '[data-yp-wd-agreement-error]' );
 
+		// Save Draft and Send also save the milestone rows on screen, so
+		// milestones typed in but not yet saved on their own aren't lost
+		// when the panel re-renders after sending.
+		function agreementPayload() {
+			var fields = readWebDesignAgreementForm( panel );
+			if ( panel.querySelector( '[data-yp-wd-milestones-panel] [data-wd-milestones]' ) ) {
+				fields.milestones = readWebDesignMilestonesForm( panel.querySelector( '[data-yp-wd-milestones-panel]' ) );
+			}
+			return fields;
+		}
+
 		var saveButton = panel.querySelector( '[data-yp-wd-save-agreement]' );
 		if ( saveButton ) {
 			saveButton.addEventListener( 'click', function () {
@@ -1559,7 +1899,7 @@
 				YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( readWebDesignAgreementForm( panel ) )
+					body: JSON.stringify( agreementPayload() )
 				} )
 					.then( function () { saveButton.disabled = false; } )
 					.catch( function ( error ) {
@@ -1577,7 +1917,7 @@
 				YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( readWebDesignAgreementForm( panel ) )
+					body: JSON.stringify( agreementPayload() )
 				} )
 					.then( function () {
 						return YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/agreement/send', { method: 'POST' } );
@@ -1612,7 +1952,7 @@
 			'<div class="yp-panel yp-panel--compact" data-yp-wd-milestones-panel>' +
 				'<div class="yp-panel__head"><h3>Milestones</h3></div>' +
 				'<p class="yp-panel__hint">Visible to the customer on their agreement page as the project progresses.</p>' +
-				'<table class="yp-record-table"><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
+				'<table class="yp-record-table yp-stack-rows yp-edit-rows"><thead><tr><th></th><th>Milestone</th><th>Due date</th><th></th></tr></thead><tbody data-wd-milestones>' + milestones.map( milestoneRowHtml ).join( '' ) + '</tbody></table>' +
 				'<button type="button" class="yp-row-action" data-yp-wd-add-milestone>+ Add milestone</button>' +
 				'<div class="yp-form__row">' +
 					'<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-save-milestones>Save Milestones</button>' +
@@ -1869,6 +2209,162 @@
 		} );
 	}
 
+	/* ---------- Showcase ---------- */
+
+	/**
+	 * Direct request: a public "Our Work" Showcase of finished sites
+	 * (class-web-design-showcase.php). One entry per order; it only
+	 * shows on the website once the customer said yes (asked on the
+	 * agreement), "Show on website" is ticked, and it has a name and a
+	 * desktop screenshot.
+	 */
+	function showcaseShotHtml( kind, label, url ) {
+		return (
+			'<div class="yp-wd-showcase__shot yp-wd-showcase__shot--' + kind + '" data-yp-wd-shot="' + kind + '">' +
+				( url ? '<img src="' + YP.escapeAttr( url ) + '" alt="" />' : '<span>No ' + label.toLowerCase() + ' screenshot yet</span>' ) +
+				'<div class="yp-wd-showcase__shot-actions">' +
+					'<strong>' + label + '</strong>' +
+					'<button type="button" class="yp-row-action" data-yp-wd-shot-pick="' + kind + '">' + ( url ? 'Replace' : 'Add' ) + '</button>' +
+					( url ? '<button type="button" class="yp-row-action" data-yp-wd-shot-clear="' + kind + '">Remove</button>' : '' ) +
+				'</div>' +
+			'</div>'
+		);
+	}
+
+	function webDesignShowcaseHtml( project ) {
+		var s = project.showcase || {};
+		var ok = ( project.feature_ok || {} ).answer || '';
+		var from = ( project.feature_ok || {} ).from || '';
+		var okHint = 'yes' === ok
+			? ( 'agreement' === from ? 'They said yes on their agreement.' : 'Marked yes by you.' )
+			: ( 'no' === ok
+				? ( 'agreement' === from ? 'They said no on their agreement.' : 'Marked no by you.' )
+				: 'Not asked yet. Their agreement asks this when they sign.' );
+
+		return (
+			'<div class="yp-panel yp-panel--compact yp-wd-showcase' + ( project.is_live && ! s.on && 'no' !== ok ? ' yp-wd-showcase--prompt' : '' ) + '" data-yp-wd-showcase>' +
+				'<div class="yp-panel__head"><h3>Showcase</h3>' +
+					'<span class="yp-pill yp-pill--' + ( s.on ? 'good' : 'neutral' ) + '">' + ( s.on ? 'On the website' : 'Hidden' ) + '</span>' +
+				'</div>' +
+				'<p class="yp-panel__hint">' +
+					( project.is_live && ! s.on && 'no' !== ok ? '<strong>This site is live.</strong> Add it to the <a href="' + YP.escapeAttr( project.showcase_page ) + '" target="_blank" rel="noopener noreferrer">Our Work</a> page for future customers? ' : 'Shows on the <a href="' + YP.escapeAttr( project.showcase_page ) + '" target="_blank" rel="noopener noreferrer">Our Work</a> page once it’s switched on. ' ) +
+				'</p>' +
+
+				'<div class="yp-field"><label>Customer said OK to feature their site</label>' +
+					'<select data-wd-sc-permission>' +
+						'<option value=""' + ( '' === ok ? ' selected' : '' ) + '>Not answered</option>' +
+						'<option value="yes"' + ( 'yes' === ok ? ' selected' : '' ) + '>Yes</option>' +
+						'<option value="no"' + ( 'no' === ok ? ' selected' : '' ) + '>No</option>' +
+					'</select>' +
+					'<p class="yp-field__hint">' + okHint + '</p>' +
+				'</div>' +
+
+				'<div class="yp-wd-showcase__shots">' +
+					showcaseShotHtml( 'desktop', 'Desktop', s.desktop_url ) +
+					showcaseShotHtml( 'phone', 'Phone', s.phone_url ) +
+				'</div>' +
+				'<p class="yp-field__hint">Full-page or top-of-page screenshots work best. Phone is optional.</p>' +
+
+				'<div class="yp-field"><label>Name shown</label><input type="text" maxlength="80" data-wd-sc-name value="' + YP.escapeAttr( s.name || '' ) + '" placeholder="e.g. Northline Peptides" /></div>' +
+				'<div class="yp-field"><label>Live site link</label><input type="url" data-wd-sc-url value="' + YP.escapeAttr( s.url || '' ) + '" placeholder="https://" /></div>' +
+				'<div class="yp-field"><label>One-line description</label><input type="text" maxlength="200" data-wd-sc-blurb value="' + YP.escapeAttr( s.blurb || '' ) + '" placeholder="e.g. Dark, clinical storefront with COA links on every product." /></div>' +
+				'<div class="yp-field"><label>Their story <span class="description">(optional)</span></label><textarea rows="3" data-wd-sc-story placeholder="What they needed and how we solved it">' + YP.escapeHtml( s.story || '' ) + '</textarea></div>' +
+				'<div class="yp-field"><label>What we did <span class="description">(one per line, filled in from the package)</span></label><textarea rows="5" data-wd-sc-did>' + YP.escapeHtml( ( s.did || [] ).join( '\n' ) ) + '</textarea></div>' +
+				'<div class="yp-field"><label>Customer quote <span class="description">(optional)</span></label><textarea rows="2" maxlength="600" data-wd-sc-quote>' + YP.escapeHtml( s.quote || '' ) + '</textarea></div>' +
+				'<div class="yp-field"><label>Quote credited as</label><input type="text" maxlength="80" data-wd-sc-quote-by value="' + YP.escapeAttr( s.quote_by || '' ) + '" placeholder="e.g. Marcus, owner" /></div>' +
+
+				'<label class="yp-field--checkbox yp-field"><input type="checkbox" data-wd-sc-on' + ( s.on ? ' checked' : '' ) + ' /> Show on website</label>' +
+				'<label class="yp-field--checkbox yp-field"><input type="checkbox" data-wd-sc-featured' + ( s.featured ? ' checked' : '' ) + ' /> Show first on the page</label>' +
+				'<div class="yp-form__row">' +
+					'<button type="button" class="wp-block-button__link is-style-accent" data-yp-wd-save-showcase>Save Showcase</button>' +
+				'</div>' +
+				'<div data-yp-wd-showcase-error></div>' +
+			'</div>'
+		);
+	}
+
+	function bindWebDesignShowcase( project, panel, order ) {
+		var box = panel.querySelector( '[data-yp-wd-showcase]' );
+		if ( ! box ) {
+			return;
+		}
+
+		var shots = {
+			desktop: { id: ( project.showcase || {} ).desktop_id || 0, url: ( project.showcase || {} ).desktop_url || '' },
+			phone: { id: ( project.showcase || {} ).phone_id || 0, url: ( project.showcase || {} ).phone_url || '' }
+		};
+
+		function redrawShot( kind ) {
+			var el = box.querySelector( '[data-yp-wd-shot="' + kind + '"]' );
+			el.outerHTML = showcaseShotHtml( kind, 'desktop' === kind ? 'Desktop' : 'Phone', shots[ kind ].url );
+			wireShot( kind );
+		}
+
+		function wireShot( kind ) {
+			var pick = box.querySelector( '[data-yp-wd-shot-pick="' + kind + '"]' );
+			pick.addEventListener( 'click', function () {
+				if ( typeof wp === 'undefined' || ! wp.media ) {
+					return;
+				}
+				var frame = wp.media( {
+					title: ( 'desktop' === kind ? 'Desktop' : 'Phone' ) + ' screenshot',
+					multiple: false,
+					library: { type: 'image' },
+					button: { text: 'Use this screenshot' }
+				} );
+				frame.on( 'select', function () {
+					var attachment = frame.state().get( 'selection' ).first().toJSON();
+					shots[ kind ] = { id: attachment.id, url: ( attachment.sizes && attachment.sizes.large && attachment.sizes.large.url ) || attachment.url };
+					redrawShot( kind );
+				} );
+				frame.open();
+			} );
+
+			var clear = box.querySelector( '[data-yp-wd-shot-clear="' + kind + '"]' );
+			if ( clear ) {
+				clear.addEventListener( 'click', function () {
+					shots[ kind ] = { id: 0, url: '' };
+					redrawShot( kind );
+				} );
+			}
+		}
+
+		wireShot( 'desktop' );
+		wireShot( 'phone' );
+
+		var errorEl = box.querySelector( '[data-yp-wd-showcase-error]' );
+		var saveButton = box.querySelector( '[data-yp-wd-save-showcase]' );
+		var field = function ( name ) { return box.querySelector( '[data-wd-sc-' + name + ']' ); };
+
+		saveButton.addEventListener( 'click', function () {
+			saveButton.disabled = true;
+			errorEl.innerHTML = '';
+			YP.request( yeffoprintAdminApp.restUrl + 'admin/web-design/' + order.id + '/showcase', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( {
+					permission: field( 'permission' ).value,
+					on: field( 'on' ).checked,
+					featured: field( 'featured' ).checked,
+					name: field( 'name' ).value.trim(),
+					url: field( 'url' ).value.trim(),
+					blurb: field( 'blurb' ).value.trim(),
+					story: field( 'story' ).value.trim(),
+					did: field( 'did' ).value.split( '\n' ).map( function ( line ) { return line.trim(); } ).filter( Boolean ),
+					quote: field( 'quote' ).value.trim(),
+					quote_by: field( 'quote-by' ).value.trim(),
+					desktop_id: shots.desktop.id,
+					phone_id: shots.phone.id
+				} )
+			} )
+				.then( function ( refreshed ) { renderWebDesignPanel( refreshed, panel, order, panel.closest( '[data-yp-body]' ) ); } )
+				.catch( function ( error ) {
+					saveButton.disabled = false;
+					errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+				} );
+		} );
+	}
+
 	/* ---------- Progress reports & site activity ---------- */
 
 	/**
@@ -2099,6 +2595,120 @@
 	}
 
 	/**
+	 * Direct request: "alert a customer that they accidentally underpaid
+	 * if a zelle/venmo comes in that's slightly short." Unpaid orders
+	 * only. Staff enter what actually came in; the full balance marks the
+	 * order paid, less than that keeps it unpaid and (by default) emails
+	 * the customer what's still owed and where to send it. Payments the
+	 * Venmo/Zelle webhook matched show up in the same list.
+	 */
+	var RECORD_PAYMENT_METHODS = { venmo: 'Venmo', zelle: 'Zelle', cash: 'Cash', other: 'Other' };
+
+	function recordPaymentPanelHtml( order ) {
+		var received = order.payments_received || [];
+		if ( ! order.can_record_payment && ! received.length ) {
+			return '';
+		}
+
+		var listHtml = received.length
+			? '<div class="yp-list-rows">' + received.map( function ( payment ) {
+				return (
+					'<div class="yp-list-row">' +
+						'<div class="yp-list-row__text">' +
+							'<span class="t">$' + Number( payment.amount ).toFixed( 2 ) + ' ' + YP.escapeHtml( RECORD_PAYMENT_METHODS[ payment.method ] || payment.method ) + '</span>' +
+							'<span class="s">' + YP.escapeHtml( payment.source || '' ) + ( payment.date ? ' — ' + new Date( payment.date ).toLocaleString() : '' ) + '</span>' +
+						'</div>' +
+					'</div>'
+				);
+			} ).join( '' ) + '</div>'
+			: '';
+
+		var summary = order.amount_received > 0
+			? '<p class="yp-panel__hint">Received $' + order.amount_received.toFixed( 2 ) + ' of $' + order.total.toFixed( 2 ) +
+				( order.balance_due > 0 ? ' &nbsp;·&nbsp; <span class="yp-pill yp-pill--warn">$' + order.balance_due.toFixed( 2 ) + ' still due</span>' : '' ) + '</p>'
+			: '<p class="yp-panel__hint">Got a Venmo, Zelle or cash payment for this order? Enter what actually came in. If it’s short, the customer is emailed the balance.</p>';
+
+		var defaultMethod = order.payment_method === 'yeffoprint_zelle' ? 'zelle' : 'venmo';
+		var form = order.can_record_payment
+			? (
+				'<div class="yp-form__row">' +
+					'<div class="yp-field"><label for="yp-pay-amount">Amount received ($)</label><input type="number" step="0.01" min="0.01" inputmode="decimal" id="yp-pay-amount" data-yp-pay-amount value="' + ( order.balance_due || order.total ).toFixed( 2 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-pay-method">Paid with</label><select id="yp-pay-method" data-yp-pay-method>' +
+						Object.keys( RECORD_PAYMENT_METHODS ).map( function ( key ) {
+							return '<option value="' + key + '"' + ( key === defaultMethod ? ' selected' : '' ) + '>' + RECORD_PAYMENT_METHODS[ key ] + '</option>';
+						} ).join( '' ) +
+					'</select></div>' +
+				'</div>' +
+				'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-pay-email" data-yp-pay-email checked /><label for="yp-pay-email">If it’s short, email the customer the remaining balance</label></div>' +
+				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-pay-submit>Record payment</button>' +
+				'<div data-yp-pay-error></div>'
+			)
+			: '';
+
+		return (
+			'<div class="yp-panel yp-panel--compact" data-yp-pay-panel>' +
+				'<div class="yp-panel__head"><h2>Payment received</h2></div>' +
+				summary +
+				listHtml +
+				form +
+			'</div>'
+		);
+	}
+
+	function bindRecordPaymentPanel( order, bodyEl, drawer ) {
+		var panel = bodyEl.querySelector( '[data-yp-pay-panel]' );
+		var submitButton = panel ? panel.querySelector( '[data-yp-pay-submit]' ) : null;
+		if ( ! submitButton ) {
+			return;
+		}
+
+		submitButton.addEventListener( 'click', function () {
+			var amount = Math.round( ( parseFloat( panel.querySelector( '[data-yp-pay-amount]' ).value ) || 0 ) * 100 ) / 100;
+			var method = panel.querySelector( '[data-yp-pay-method]' ).value;
+			var emailCustomer = panel.querySelector( '[data-yp-pay-email]' ).checked;
+			var errorEl = panel.querySelector( '[data-yp-pay-error]' );
+			var owed = order.balance_due || order.total;
+
+			if ( amount <= 0 ) {
+				errorEl.innerHTML = '<p class="yp-form__error">Enter the amount you received.</p>';
+				return;
+			}
+
+			var short = owed - amount >= 0.01;
+			var message = short
+				? 'That’s $' + ( owed - amount ).toFixed( 2 ) + ' short of the $' + owed.toFixed( 2 ) + ' owed. The order stays unpaid' +
+					( emailCustomer ? ', and the customer gets an email asking for the remaining $' + ( owed - amount ).toFixed( 2 ) + '.' : '. The customer is not emailed.' )
+				: 'This covers the $' + owed.toFixed( 2 ) + ' owed, so the order is marked paid and moves to Processing.';
+
+			YP.confirmModal( {
+				title: 'Record $' + amount.toFixed( 2 ) + ' ' + RECORD_PAYMENT_METHODS[ method ] + ' payment?',
+				message: message,
+				confirmLabel: 'Record payment',
+				onConfirm: function () {
+					submitButton.disabled = true;
+					submitButton.textContent = 'Saving…';
+					errorEl.innerHTML = '';
+
+					YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/record-payment', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( { amount: amount, method: method, email_customer: emailCustomer } )
+					} )
+						.then( function ( updated ) {
+							renderWcOrderDetail( updated, drawer, bodyEl );
+							loadDashboard();
+						} )
+						.catch( function ( error ) {
+							submitButton.disabled = false;
+							submitButton.textContent = 'Record payment';
+							errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
+						} );
+				}
+			} );
+		} );
+	}
+
+	/**
 	 * Direct request: refund an order without leaving this app. Mirrors
 	 * the classic order screen's own refund panel — an amount (defaults
 	 * to whatever's still refundable), an optional reason, and, only
@@ -2321,11 +2931,44 @@
 									? '<span class="yp-pill yp-pill--crit">Voided</span>'
 									: '<button type="button" class="wp-block-button__link yp-button--danger" data-yp-shippo-void="' + YP.escapeAttr( label.tracking_number ) + '" data-yp-shippo-void-carrier="' + YP.escapeAttr( label.carrier_label ) + '">Void</button>' ) +
 							'</span>' +
+							shippoLabelCustomsHtml( label.customs ) +
 						'</li>'
 					);
 				} ).join( '' ) +
 			'</ul>'
 		);
+	}
+
+	/**
+	 * Direct request: "a confirmation somewhere on our order screen saying
+	 * the invoice was sent electronically." Built from the carrier's own
+	 * messages Shippo returns with an international label (UPS: "The
+	 * commercial invoice has been submitted electronically...") — see
+	 * YeffoPrint_Order_Tracking::label_customs_summary(). Nothing for
+	 * domestic labels.
+	 */
+	function shippoLabelCustomsHtml( customs ) {
+		if ( ! customs ) {
+			return '';
+		}
+		var status = customs.sent_electronically
+			? '<span class="yp-pill yp-pill--good">✓ Customs invoice sent electronically</span>' +
+				'<span class="yp-shippo-label-row__customs-note">No need to attach it to the parcel.</span>'
+			: ( customs.commercial_invoice_url
+				? '<span class="yp-pill yp-pill--warn">Paperless invoice not confirmed</span>' +
+					'<span class="yp-shippo-label-row__customs-note">Print the invoice and attach it to the parcel.</span>'
+				: '' );
+		var invoiceButton = customs.commercial_invoice_url
+			? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-shippo-print="' + YP.escapeAttr( customs.commercial_invoice_url ) + '">' + ( customs.sent_electronically ? 'View invoice' : 'Print invoice' ) + '</button>'
+			: '';
+		var notes = ( customs.messages || [] ).length
+			? '<details class="yp-shippo-label-row__customs-messages"><summary>Carrier messages</summary><ul>' +
+				customs.messages.map( function ( text ) {
+					return '<li>' + YP.escapeHtml( text ) + '</li>';
+				} ).join( '' ) +
+				'</ul></details>'
+			: '';
+		return '<div class="yp-shippo-label-row__customs">' + status + invoiceButton + notes + '</div>';
 	}
 
 	/**
@@ -2797,7 +3440,8 @@
 					tracking_number:  response.label.tracking_number,
 					label_url:        response.label.label_url,
 					transaction_id:   response.label.transaction_id,
-					voided:           false
+					voided:           false,
+					customs:          response.label.customs || null
 				} ] );
 				var labelsListEl = panel.querySelector( '[data-yp-shippo-labels]' );
 				if ( labelsListEl ) {
@@ -2821,6 +3465,16 @@
 				purchaseButton.textContent = 'Purchase Selected Label';
 				errorEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
 			} );
+	}
+
+	/**
+	 * Direct request: unpaid orders were "stuck on awaiting payment" with
+	 * no obvious way out when the customer changes their mind. Offered
+	 * only while nothing has been paid — a paid order needs a refund,
+	 * not a cancel.
+	 */
+	function isUnpaidWcOrder( order ) {
+		return [ 'pending', 'failed', 'checkout-draft' ].indexOf( order.status ) !== -1 && ! order.date_paid;
 	}
 
 	function saveWcOrderStatus( order, drawer, bodyEl ) {

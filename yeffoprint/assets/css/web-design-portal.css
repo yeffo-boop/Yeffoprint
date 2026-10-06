@@ -170,12 +170,46 @@
 	margin-bottom: 1.25rem;
 }
 
-.yp-wd-sign-row input[type="checkbox"] {
+.yp-wd-sign-row input[type="checkbox"],
+.yp-wd-sign-row input[type="radio"] {
 	width: 18px;
 	height: 18px;
 	margin-top: 0.15rem;
 	accent-color: var(--wp--preset--color--magenta-deep);
 	flex-shrink: 0;
+}
+
+/* "Can we feature your site?" — asked once, on the agreement. */
+.yp-wd-feature {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--input);
+	padding: 1rem 1.25rem 0.25rem;
+	margin: 0 0 1.5rem;
+}
+
+.yp-wd-feature legend {
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--medium);
+	line-height: 1.4;
+	font-weight: 600;
+	padding: 0 0.35rem;
+}
+
+.yp-wd-feature p {
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
+	margin: 0.25rem 0 1rem;
+}
+
+.yp-wd-feature .yp-wd-sign-row {
+	margin-bottom: 0.75rem;
+}
+
+.yp-wd-signed-notice [data-yp-wd-feature-answer]:not(:empty) {
+	display: block;
+	margin-top: 0.35rem;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal);
 }
 
 .yp-wd-signed-notice {

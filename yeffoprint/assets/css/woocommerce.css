@@ -1299,3 +1299,77 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* My Account → View order: review nudge / "you reviewed this"
+   (class-order-reviews.php's render_account_prompt()). */
+.yp-account-review {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1rem;
+	padding: 1rem 1.25rem;
+	margin: 0 0 1.5rem;
+	border-radius: var(--wp--custom--radius--card);
+	background: #fff8e6;
+	border: 1px solid #f6df9e;
+	font-weight: 600;
+}
+
+.yp-account-review--done {
+	background: var(--wp--preset--color--warm-white);
+	border-color: var(--wp--preset--color--light-gray);
+	justify-content: flex-start;
+}
+
+.yp-account-review--done span {
+	color: #f5b300;
+	letter-spacing: 2px;
+}
+
+/* My Account > Account details: "Delete my account"
+   (yeffoprint-core class-account-deletion.php). */
+.yp-delete-account {
+	margin-top: 2.5rem;
+	padding: 1.375rem 1.5rem;
+	background: var(--wp--preset--color--white);
+	border: 1px solid #f3b3d6;
+	border-left: 5px solid var(--wp--preset--color--magenta-deep);
+	border-radius: 14px;
+}
+
+.yp-delete-account h2 {
+	margin: 0 0 0.5rem;
+	font-size: 1.125rem;
+}
+
+.yp-delete-account p {
+	margin: 0 0 0.75rem;
+	font-size: 1rem;
+	line-height: 1.55;
+}
+
+.yp-delete-account p.yp-delete-account__note {
+	font-size: 0.875rem;
+	color: #6b6b6e;
+}
+
+.yp-delete-account__note a {
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-delete-account__error {
+	color: var(--wp--preset--color--magenta-deep);
+	font-weight: 600;
+}
+
+.yp-delete-account__form {
+	margin-top: 1rem;
+}
+
+.woocommerce .yp-delete-account button.yp-delete-account__button,
+.woocommerce .yp-delete-account button.yp-delete-account__button:hover {
+	/* Beats the !important near-black on every .woocommerce button.button above. */
+	background: var(--wp--preset--color--magenta-deep) !important;
+	color: #fff !important;
+}

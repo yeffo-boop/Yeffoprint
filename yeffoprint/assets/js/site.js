@@ -436,7 +436,63 @@
 		sync();
 	}
 
+	/**
+	 * Review photos (functions.php yeffoprint_render_review_cards())
+	 * open full-size in a <dialog> instead of leaving the page. Without
+	 * <dialog> support the link just opens the image.
+	 */
+	function initReviewPhotos() {
+		if ( typeof HTMLDialogElement === 'undefined' ) {
+			return;
+		}
+		var dialog = null;
+
+		document.addEventListener( 'click', function ( event ) {
+			var link = event.target.closest && event.target.closest( '[data-yp-review-photo]' );
+			if ( ! link ) {
+				return;
+			}
+			event.preventDefault();
+
+			if ( ! dialog ) {
+				dialog = document.createElement( 'dialog' );
+				dialog.className = 'yp-review-lightbox';
+				dialog.innerHTML = '<img alt="" /><button type="button" class="yp-review-lightbox__close" aria-label="Close">&times;</button>';
+				dialog.addEventListener( 'click', function ( e ) {
+					if ( e.target === dialog || e.target.closest( '.yp-review-lightbox__close' ) ) {
+						dialog.close();
+					}
+				} );
+				document.body.appendChild( dialog );
+			}
+
+			var img = dialog.querySelector( 'img' );
+			img.src = link.getAttribute( 'href' );
+			img.alt = ( link.querySelector( 'img' ) || {} ).alt || '';
+			dialog.showModal();
+		} );
+	}
+
+	/**
+	 * The rating button under a product title smooth-scrolls to the
+	 * Customer Reviews section instead of jumping.
+	 */
+	function initRatingJump() {
+		document.addEventListener( 'click', function ( event ) {
+			var link = event.target.closest && event.target.closest( '[data-yp-rating-jump]' );
+			var target = link && document.getElementById( 'reviews' );
+			if ( ! target ) {
+				return;
+			}
+			event.preventDefault();
+			var reduce = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+			target.scrollIntoView( { behavior: reduce ? 'auto' : 'smooth', block: 'start' } );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
+		initRatingJump();
+		initReviewPhotos();
 		initHeaderScroll();
 		initDrawers();
 		initGalleryToolbar();

@@ -182,7 +182,7 @@
 
 			rowsEl.querySelectorAll( '[data-yp-open-order]' ).forEach( function ( button ) {
 				button.addEventListener( 'click', function () {
-					YP.openWcOrderDrawer( parseInt( button.getAttribute( 'data-yp-open-order' ), 10 ) );
+					YP.openOrder( parseInt( button.getAttribute( 'data-yp-open-order' ), 10 ) );
 				} );
 			} );
 
@@ -241,7 +241,7 @@
 						number( 'yp-ac-hours', settings.discount_hours, 'Code expires after (hours)', 1 ) +
 					'</div>' +
 					checkbox( 'yp-ac-telegram', settings.telegram_nudge, 'Also nudge customers on Telegram when their account is linked to the bot' ) +
-					checkbox( 'yp-ac-owner', settings.owner_alerts, 'Alert me on Telegram when a cart is left (with Send now / Don’t send buttons) and when one is recovered' ) +
+					checkbox( 'yp-ac-owner', settings.owner_alerts, 'Alert me when a cart is left and when one is recovered' ) +
 					'<div class="yp-form__actions"><button type="button" class="wp-block-button__link is-style-accent" data-yp-ac-save>Save settings</button></div>' +
 					'<div data-yp-ac-save-status></div>' +
 				'</div>';

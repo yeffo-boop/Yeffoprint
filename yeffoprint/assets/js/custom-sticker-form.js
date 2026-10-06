@@ -3,11 +3,16 @@
  * custom-order-form.js (the Fully Custom Design flow): load options,
  * handle file upload (reusing that flow's own /custom-orders/uploads
  * endpoint — YeffoPrint_Secure_Upload doesn't care what a file is for),
- * live-preview the price, then post and hand off to checkout. Unlike
+ * live-preview the price, then add to the cart. Unlike
  * that flow there's no separate flat fee to show — Custom Stickers'
  * whole charge is the stickers themselves — and the Size field can
  * switch to a width/height pair when the customer picks the one tier
  * marked "custom size".
+ *
+ * After a sticker is added the page stays put and opens the cart drawer
+ * (direct report: customers couldn't add more than one custom sticker).
+ * The artwork and instructions clear so the next design starts fresh;
+ * size, material, type, shape and quantity stay as picked.
  */
 ( function () {
 	'use strict';
@@ -352,6 +357,18 @@
 		formErrorEl.textContent = message;
 	}
 
+	var addedNoteEl = null;
+
+	function showAddedNote( checkoutUrl ) {
+		if ( ! addedNoteEl ) {
+			addedNoteEl = document.createElement( 'p' );
+			addedNoteEl.className = 'yp-configurator__cart-status';
+			addedNoteEl.setAttribute( 'role', 'status' );
+			submitButton.insertAdjacentElement( 'afterend', addedNoteEl );
+		}
+		addedNoteEl.innerHTML = 'Added to your cart. To add another sticker, upload its artwork above and click Add to Cart again, or <a href="' + escapeHtml( checkoutUrl ) + '">go to checkout</a>.';
+	}
+
 	function clearFormError() {
 		if ( formErrorEl ) {
 			formErrorEl.remove();
@@ -362,6 +379,10 @@
 	form.addEventListener( 'submit', function ( event ) {
 		event.preventDefault();
 		clearFormError();
+		if ( addedNoteEl ) {
+			addedNoteEl.remove();
+			addedNoteEl = null;
+		}
 
 		if ( uploadedFiles.some( function ( file ) { return ! file.id && ! file.error; } ) ) {
 			showFormError( 'Please wait for your files to finish uploading.' );
@@ -407,7 +428,25 @@
 					return;
 				}
 
-				window.location.href = result.data.checkout_url;
+				// No cart drawer on the page (shouldn't happen, it's in the
+				// header): fall back to the old straight-to-checkout.
+				if ( ! document.getElementById( 'yp-cart-drawer' ) ) {
+					window.location.href = result.data.checkout_url;
+					return;
+				}
+
+				submitButton.disabled = false;
+				uploadedFiles = [];
+				renderFileList();
+				document.getElementById( 'yp-cs-instructions' ).value = '';
+				showAddedNote( result.data.checkout_url );
+
+				document.dispatchEvent( new CustomEvent( 'yp:cart-updated', {
+					detail: {
+						count: result.data.cart_count,
+						drawerHtml: result.data.drawer_html
+					}
+				} ) );
 			} )
 			.catch( function () {
 				submitButton.disabled = false;

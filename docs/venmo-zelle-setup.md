@@ -32,6 +32,25 @@ one-time setup for the bridge between your inbox and the site.
 6. A matched order moves to **Processing** automatically, the same as
    any other paid order.
 
+### Short payments
+
+Amounts are compared against what's still **owed** on the order, not
+just its total, so a payment can be split:
+
+- A payment whose note names an order and is **less** than what that
+  order owes is recorded as a partial payment.
+- Without an order number, a payment up to 10% (max $20) short of
+  exactly one open order's balance is matched to it the same way.
+- Either way the order stays unpaid, the customer is emailed "we got
+  $X, $Y is still due" with the same Venmo/Zelle instructions, and you
+  get a "Short payment" email. When the rest arrives it matches the
+  remaining balance and the order moves to Processing.
+
+You can also enter a payment by hand: open the order in the admin app
+and use **Payment received → Record payment**. A full amount marks the
+order paid; a short one emails the customer the balance (untick the
+box to skip the email).
+
 ## Step 1 — Turn the gateways on and grab your webhook URLs
 
 1. In wp-admin: **WooCommerce → Settings → Payments**.

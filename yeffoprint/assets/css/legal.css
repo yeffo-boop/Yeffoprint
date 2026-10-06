@@ -1,0 +1,239 @@
+/* Store policy pages (blocks/legal-document/render.php): Privacy,
+   Terms, Refund & Returns, Shipping. Layout from
+   mockups/privacy-notice/: sticky "On this page" list beside the text
+   on desktop, a "short version" box first, tables become cards on
+   phones. */
+
+.yp-legal {
+	max-width: 1120px;
+	margin: 0 auto;
+	padding: 3rem 1.5rem 4.5rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-legal__eyebrow {
+	margin: 0 0 0.6rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--magenta-deep);
+}
+
+.yp-legal h1 {
+	margin: 0 0 0.6rem;
+	font-size: clamp(2rem, 4.5vw, 2.75rem);
+	line-height: 1.05;
+	letter-spacing: -0.02em;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-legal__date {
+	margin: 0 0 2.25rem;
+	font-size: 0.95rem;
+	color: #6b6b6e;
+}
+
+.yp-legal__grid {
+	display: grid;
+	grid-template-columns: 240px minmax(0, 1fr);
+	gap: 3.5rem;
+	align-items: start;
+}
+
+.yp-legal__toc {
+	position: sticky;
+	top: 1.5rem;
+	font-size: 0.875rem;
+}
+
+.yp-legal__toc p {
+	margin: 0 0 0.6rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-legal__toc ol {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	line-height: 1.5;
+}
+
+.yp-legal__toc li {
+	margin: 0 0 0.4rem;
+}
+
+.yp-legal__toc a {
+	color: var(--wp--preset--color--charcoal);
+	text-decoration: none;
+}
+
+.yp-legal__toc a:hover {
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-legal__body {
+	max-width: 720px;
+	font-size: 1rem;
+	line-height: 1.65;
+}
+
+.yp-legal__body h2 {
+	margin: 2.5rem 0 0.75rem;
+	padding-top: 1.75rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+	font-size: 1.5rem;
+	line-height: 1.25;
+	color: var(--wp--preset--color--near-black);
+	scroll-margin-top: 1.5rem;
+}
+
+.yp-legal__short + h2 {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.yp-legal__body ul {
+	padding-left: 1.25rem;
+}
+
+.yp-legal__body li {
+	margin: 0 0 0.5rem;
+}
+
+.yp-legal__body strong {
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-legal__body a {
+	color: var(--wp--preset--color--cyan-deep);
+}
+
+.yp-legal__short {
+	margin: 0 0 2.25rem;
+	padding: 1.375rem 1.625rem;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-left: 5px solid var(--wp--preset--color--cyan);
+	border-radius: 14px;
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.04);
+}
+
+.yp-legal__body .yp-legal__short h2 {
+	margin: 0 0 0.6rem;
+	padding: 0;
+	border: 0;
+	font-size: 1.125rem;
+}
+
+.yp-legal__short ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.yp-legal__short li {
+	position: relative;
+	padding-left: 1.875rem;
+	margin: 0 0 0.6rem;
+}
+
+.yp-legal__short li:last-child {
+	margin-bottom: 0;
+}
+
+.yp-legal__short li::before {
+	content: "✓";
+	position: absolute;
+	left: 0;
+	top: 0.15em;
+	display: grid;
+	place-items: center;
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 50%;
+	background: var(--wp--preset--color--cyan);
+	color: #fff;
+	font-size: 0.75rem;
+	font-weight: 700;
+}
+
+.yp-legal__table {
+	margin: 1rem 0;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 12px;
+	overflow: hidden;
+	background: var(--wp--preset--color--white);
+}
+
+.yp-legal__table table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.875rem;
+}
+
+.yp-legal__table th {
+	padding: 0.625rem 0.75rem;
+	text-align: left;
+	font-weight: 600;
+	background: var(--wp--preset--color--near-black);
+	color: #fff;
+}
+
+.yp-legal__table td {
+	padding: 0.625rem 0.75rem;
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+	vertical-align: top;
+}
+
+.yp-legal__table td:first-child {
+	width: 26%;
+	font-weight: 600;
+	color: var(--wp--preset--color--near-black);
+}
+
+@media (max-width: 800px) {
+	.yp-legal {
+		padding: 1.75rem 1rem 3rem;
+	}
+
+	.yp-legal__grid {
+		display: block;
+	}
+
+	.yp-legal__toc {
+		display: none;
+	}
+
+	.yp-legal__table thead {
+		display: none;
+	}
+
+	.yp-legal__table table,
+	.yp-legal__table tbody,
+	.yp-legal__table tr,
+	.yp-legal__table td {
+		display: block;
+		width: auto;
+	}
+
+	.yp-legal__table tr {
+		padding: 0.625rem 0.75rem;
+		border-top: 1px solid var(--wp--preset--color--light-gray);
+	}
+
+	.yp-legal__table tr:first-child {
+		border-top: 0;
+	}
+
+	.yp-legal__table td,
+	.yp-legal__table td:first-child {
+		width: auto;
+		padding: 0.125rem 0;
+		border: 0;
+	}
+}

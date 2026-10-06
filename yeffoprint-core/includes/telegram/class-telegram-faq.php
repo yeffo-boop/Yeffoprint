@@ -17,9 +17,31 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Telegram_Faq {
 
-	/** @return array{keywords:string[],answer:string}[] */
+	/**
+	 * `requires` (optional): the entry only counts when at least one of
+	 * these also appears, so a booster keyword like "iphone" alone
+	 * ("my proof won't load on my iphone") doesn't pull up this answer
+	 * instead of escalating to a person.
+	 *
+	 * @return array{keywords:string[],requires?:string[],answer:string}[]
+	 */
 	private static function entries(): array {
 		return [
+			[
+				// Direct request: a customer asked the bot how to add the
+				// calculator/tracker to their Home Screen and it couldn't
+				// answer. Listed before the order-tracking entry so
+				// "tracker" questions don't tie with its "track" keyword
+				// and lose (ties go to the earlier entry).
+				'keywords' => [ 'home screen', 'homescreen', 'home-screen', 'add to home', 'install', 'shortcut', 'an app', 'the app', 'app store', 'play store', 'download', 'calculator', 'tracker', 'yeffohealth', 'yeffo health', 'iphone', 'ipad', ' ios', 'android', 'safari', 'chrome', 'phone' ],
+				'requires' => [ 'home screen', 'homescreen', 'home-screen', 'add to home', 'install', 'shortcut', 'an app', 'the app', 'app store', 'play store', 'download', 'calculator', 'tracker', 'yeffohealth', 'yeffo health' ],
+				'answer'   => self::home_screen_answer(),
+			],
+			[
+				// Direct request: customers asked where to put a QR code on an order and the bot couldn't answer.
+				'keywords' => [ 'qr', 'q.r', 'scan', 'scannable', 'barcode', 'bar code' ],
+				'answer'   => self::qr_code_answer(),
+			],
 			[
 				'keywords' => [ 'size', 'sizes', 'material', 'materials', 'finish', 'finishes', 'ml', 'glossy', 'matte', 'holographic', 'metallic' ],
 				'answer'   => __( 'We launch with 3 mL and 10 mL sizes across five finishes: Glossy White, Matte White, Holographic, Clear, and Metallic. Availability is shown per design in the configurator.', 'yeffoprint-core' ),
@@ -49,6 +71,26 @@ class YeffoPrint_Telegram_Faq {
 				'answer'   => __( "Send me your order number and the email you used at checkout — for example:\nYP-1042 jane@example.com\n— and I'll pull up its status.", 'yeffoprint-core' ),
 			],
 		];
+	}
+
+	/** Matches the "QR code" box on the Custom Labels form (yeffoprint/assets/js/custom-order-form.js) and on templates with a QR code field. */
+	private static function qr_code_answer(): string {
+		return sprintf(
+			/* translators: %s: Custom Labels page URL */
+			__( "You can add a QR code to your labels. Just paste the web address you want it to open, and we turn it into the QR code for you.\n\n✏️ Custom Labels (%s)\nEach label has a \"QR code\" box under Quantity, next to Product details. Paste the full web address there, starting with https://. Each label can have its own QR code, or leave the box empty for none.\n\n🏷️ Templates\nOn a template's page, look for the \"QR code\" box with the other label details and paste the web address there. You'll see the code on the label preview.\n\nTips: copy the address from your browser's address bar so it's exact, and open it once on your phone to make sure it works before you order. Already have a QR code image, or need it to hold something other than a web address? Tell me here and I'll pass it to our team.", 'yeffoprint-core' ),
+			home_url( '/custom-design/' )
+		);
+	}
+
+	/** Picture version: /home-screen/ (class-home-screen-help.php). Steps match the install cards on the pages themselves (assets/tracker/tracker.js, yeffoprint/assets/js/peptide-calculator.js). */
+	private static function home_screen_answer(): string {
+		return sprintf(
+			/* translators: 1: Peptide Calculator URL, 2: Dose Tracker URL, 3: picture guide URL */
+			__( "You can put the YeffoHealth Peptide Calculator and Dose Tracker on your Home Screen so they open like an app. They're free, and there's nothing to download from an app store.\n\nPeptide Calculator: %1\$s\nDose Tracker: %2\$s\n\nStep-by-step with pictures: %3\$s\n\n📱 iPhone or iPad (Safari)\n1. Open the link above in Safari.\n2. Tap the menu button with three lines (☰) just left of the web address, then tap Share. On older iPhones, the Share button (a square with an arrow pointing up) is right in the bottom bar.\n3. Scroll down and tap \"Add to Home Screen\".\n4. If you see \"Open as Web App\", leave it on, then tap Add.\n\n🤖 Android (Chrome)\n1. Open the link above in Chrome.\n2. If the page shows an \"Install app\" button, tap it and you're done.\n3. Otherwise tap ⋮ at the top right, then \"Add to Home screen\" (or \"Install app\"), then Install.\n\nThe calculator and the tracker are two separate icons, so add each one you want. For the Dose Tracker, open it from the new icon and sign in once; it keeps you signed in. On iPhone, dose reminders only work when the tracker is opened from the Home Screen (iOS 16.4 or newer).", 'yeffoprint-core' ),
+			home_url( '/peptide-calculator/' ),
+			home_url( '/tracker/' ),
+			YeffoPrint_Home_Screen_Help::url()
+		);
 	}
 
 	/**
@@ -100,6 +142,10 @@ class YeffoPrint_Telegram_Faq {
 		$best_answer = null;
 
 		foreach ( self::entries() as $entry ) {
+			if ( isset( $entry['requires'] ) && ! self::contains_any( $haystack, $entry['requires'] ) ) {
+				continue;
+			}
+
 			$score = 0;
 			foreach ( $entry['keywords'] as $keyword ) {
 				if ( false !== strpos( $haystack, strtolower( $keyword ) ) ) {
@@ -116,7 +162,17 @@ class YeffoPrint_Telegram_Faq {
 		return $best_answer;
 	}
 
+	/** @param string[] $keywords */
+	private static function contains_any( string $haystack, array $keywords ): bool {
+		foreach ( $keywords as $keyword ) {
+			if ( false !== strpos( $haystack, strtolower( $keyword ) ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static function topics_text(): string {
-		return __( "Ask me about:\n• Sizes & materials\n• Bulk pricing & discounts\n• Multi-design batches\n• The \$25 custom design fee\n• Shipping\n• Guest checkout & accounts\n\nOr send your order number and checkout email to check an order's status.", 'yeffoprint-core' );
+		return __( "Ask me about:\n• Sizes & materials\n• Bulk pricing & discounts\n• Multi-design batches\n• The \$25 custom design fee\n• Shipping\n• Guest checkout & accounts\n• Adding a QR code to your labels\n• Adding the Peptide Calculator or Dose Tracker to your Home Screen\n\nOr send your order number and checkout email to check an order's status.", 'yeffoprint-core' );
 	}
 }

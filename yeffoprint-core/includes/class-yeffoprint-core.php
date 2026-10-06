@@ -64,6 +64,14 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-coupon-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-abandoned-cart-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-dashboard-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-next-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-payouts-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-disputes-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-sales-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-payments-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/messages/class-messages.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-messages-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-print-queue-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-settings-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-surcharge-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-rewards-controller.php';
@@ -78,6 +86,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-linked-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-package-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-cart-pricing.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-meta-pixel.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-card-surcharge.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-card-surcharge-blocks-integration.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-pay-address.php';
@@ -113,6 +122,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-guest-saved-design.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-reorder.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-webhook-secret.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-partial-payments.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-payment-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-nowpayments-client.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-nowpayments-webhook-controller.php';
@@ -135,6 +145,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-tracking.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-shippo-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-production-status.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-design-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-shipment-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delivery-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-status-stepper.php';
@@ -146,6 +157,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/security/class-retired-plugins.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-project-meta.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-credential-purge.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-web-design-showcase.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-web-design-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-portal-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-digest-controller.php';
@@ -160,6 +172,14 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-quote-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-design-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-app-shortcut.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/admin-app/class-admin-push.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-stay-signed-in.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-email-verification.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-deletion.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/legal/class-legal-pages.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/health/class-health-domains.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/health/class-home-screen-help.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-core-email-theme.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-settings.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-client.php';
@@ -193,7 +213,14 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-shares.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-reminders.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-app.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-feedback.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-tracker-feedback-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/calculator/class-calculator-app.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-tracker-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-order-reviews.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-review-request.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-review-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-review-controller.php';
 
 		new YeffoPrint_Post_Type_Registry();
 		new YeffoPrint_Template_Taxonomies();
@@ -213,6 +240,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Linked_Product();
 		new YeffoPrint_Web_Design_Package_Product();
 		new YeffoPrint_Cart_Pricing();
+		new YeffoPrint_Meta_Pixel();
 		new YeffoPrint_Card_Surcharge();
 		new YeffoPrint_Card_Surcharge_Blocks_Integration();
 		new YeffoPrint_Order_Pay_Address();
@@ -239,6 +267,15 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Shippo_Webhook_Sync();
 		new YeffoPrint_Shippo_Webhook_Controller();
 		new YeffoPrint_Admin_Dashboard_Controller();
+		new YeffoPrint_Admin_Next_Controller();
+		new YeffoPrint_Admin_Payouts_Controller();
+		new YeffoPrint_Admin_Disputes_Controller();
+		new YeffoPrint_Admin_Sales_Controller();
+		new YeffoPrint_Admin_Payments_Controller();
+		new YeffoPrint_Messages();
+		new YeffoPrint_Admin_Messages_Controller();
+		new YeffoPrint_Admin_Print_Queue_Controller();
+		new YeffoPrint_Admin_Push();
 		new YeffoPrint_Admin_Settings_Controller();
 		new YeffoPrint_Admin_Surcharge_Controller();
 		new YeffoPrint_Compound_List();
@@ -265,6 +302,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Stripe_Webhook_Controller();
 		new YeffoPrint_Order_Tracking();
 		new YeffoPrint_Order_Production_Status();
+		new YeffoPrint_Order_Design_Status();
 		new YeffoPrint_Order_Shipment_Status();
 		new YeffoPrint_Order_Delivery_Status();
 		new YeffoPrint_Order_Status_Stepper();
@@ -272,6 +310,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Completed_Email();
 		new YeffoPrint_Order_Processing_Email();
 		new YeffoPrint_Web_Design_Credential_Purge();
+		new YeffoPrint_Web_Design_Showcase();
 		new YeffoPrint_Admin_Web_Design_Controller();
 		new YeffoPrint_Web_Design_Portal_Controller();
 		new YeffoPrint_Web_Design_Digest_Controller();
@@ -285,6 +324,11 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Web_Design_Quote_Controller();
 		new YeffoPrint_Web_Design_Order_Controller();
 		new YeffoPrint_Admin_App_Shortcut();
+		new YeffoPrint_Stay_Signed_In();
+		new YeffoPrint_Email_Verification();
+		new YeffoPrint_Account_Deletion();
+		new YeffoPrint_Legal_Pages();
+		new YeffoPrint_Core_Email_Theme();
 		new YeffoPrint_Telegram_Webhook_Sync();
 		new YeffoPrint_Telegram_Webhook_Controller();
 		new YeffoPrint_Web_Chat_Controller();
@@ -295,6 +339,9 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Tracker_Shares();
 		new YeffoPrint_Tracker_Reminders();
 		new YeffoPrint_Tracker_App();
+		new YeffoPrint_Calculator_App();
+		new YeffoPrint_Health_Domains();
+		new YeffoPrint_Home_Screen_Help();
 		new YeffoPrint_Tracker_Controller();
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
@@ -308,6 +355,12 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Telegram_Express_Alerts();
 		new YeffoPrint_Abandoned_Carts();
 		new YeffoPrint_Admin_Abandoned_Cart_Controller();
+		new YeffoPrint_Order_Reviews();
+		new YeffoPrint_Review_Request();
+		new YeffoPrint_Review_Controller();
+		new YeffoPrint_Admin_Review_Controller();
+		new YeffoPrint_Tracker_Feedback();
+		new YeffoPrint_Admin_Tracker_Feedback_Controller();
 
 		// The gateway classes extend \WC_Payment_Gateway directly (a
 		// class declaration, not a lazy reference inside a method body)

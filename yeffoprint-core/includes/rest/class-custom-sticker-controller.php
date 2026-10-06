@@ -97,6 +97,12 @@ class YeffoPrint_Custom_Sticker_Controller {
 			wc_load_cart();
 		}
 
+		// Load the saved cart before adding, or the add is lost (see
+		// YeffoPrint_Cart_Controller::ensure_cart_loaded()).
+		if ( function_exists( 'WC' ) && WC()->cart ) {
+			WC()->cart->get_cart();
+		}
+
 		$size_id = absint( $request->get_param( 'size_id' ) );
 		if ( ! $size_id || ! $this->is_published( 'yp_sticker_size', $size_id ) ) {
 			return new \WP_Error( 'yeffoprint_invalid_size', __( 'Please choose a valid size.', 'yeffoprint-core' ), [ 'status' => 400 ] );
@@ -199,10 +205,14 @@ class YeffoPrint_Custom_Sticker_Controller {
 			return new \WP_Error( 'yeffoprint_add_to_cart_failed', __( "Couldn't add your stickers to your cart.", 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
+		// drawer_html lets the form open the cart drawer and stay put, so
+		// a customer can add another sticker design before checking out
+		// (direct report: customers couldn't add more than one).
 		return rest_ensure_response( [
 			'success'      => true,
 			'checkout_url' => wc_get_checkout_url(),
 			'cart_count'   => WC()->cart->get_cart_contents_count(),
+			'drawer_html'  => class_exists( 'YeffoPrint_Cart_Controller' ) ? YeffoPrint_Cart_Controller::drawer_html() : '',
 		] );
 	}
 

@@ -119,6 +119,7 @@ class YeffoPrint_Web_Design_Portal_Controller {
 			'is_signed'    => YeffoPrint_Web_Design_Project_Meta::is_agreement_signed( $order ),
 			'signed_name'  => $agreement['signed_name'],
 			'signed_at'    => $agreement['signed_at'],
+			'feature_ok'   => YeffoPrint_Web_Design_Showcase::get_permission( $order )['answer'],
 		] );
 	}
 
@@ -136,14 +137,22 @@ class YeffoPrint_Web_Design_Portal_Controller {
 			return new \WP_Error( 'yeffoprint_missing_name', __( 'Please type your full name to sign.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
+		// "Can we feature your site?" is a required yes/no on the agreement.
+		$feature = (string) ( $params['feature'] ?? '' );
+		if ( ! in_array( $feature, [ 'yes', 'no' ], true ) ) {
+			return new \WP_Error( 'yeffoprint_missing_feature_answer', __( 'Please answer whether we can feature your site.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		YeffoPrint_Web_Design_Showcase::set_permission( $order, $feature, 'agreement' );
+
 		YeffoPrint_Web_Design_Project_Meta::sign_agreement( $order, $name, $this->client_ip() );
 		$this->notify_admin(
 			sprintf( /* translators: %s: order number */ __( 'Agreement signed — Order #%s', 'yeffoprint-core' ), $order->get_order_number() ),
 			sprintf(
-				/* translators: 1: signer's name, 2: link to the order */
-				__( "%1\$s signed their web design agreement.\n\n%2\$s", 'yeffoprint-core' ),
+				/* translators: 1: signer's name, 2: link to the order, 3: Yes or No */
+				__( "%1\$s signed their web design agreement.\nFeature their site in the Showcase: %3\$s\n\n%2\$s", 'yeffoprint-core' ),
 				$name,
-				$order->get_edit_order_url()
+				$order->get_edit_order_url(),
+				'yes' === $feature ? __( 'Yes', 'yeffoprint-core' ) : __( 'No', 'yeffoprint-core' )
 			)
 		);
 

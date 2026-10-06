@@ -523,6 +523,75 @@ a.yp-proof-cta-button {
 	margin: 12px 0 0;
 }
 
+/* "How did we do?" review card at the top of the Delivered email
+   (class-order-reviews.php's render_email_block()): five tappable stars
+   that each open the review page with that rating picked, then a
+   button. Same card language as the proof CTA above. Stars are text
+   (&#9733;), not images, so they show even with images blocked. */
+table.yp-review-cta {
+	margin: 2px 0 22px;
+}
+
+table.yp-review-cta > tbody > tr > td {
+	background-color: #FFF8E6;
+	border: 1px solid #F6DF9E;
+	border-radius: 10px;
+	padding: 20px;
+	text-align: center;
+}
+
+.yp-review-cta-label {
+	display: block;
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 0 0 6px;
+}
+
+.yp-review-cta-title {
+	display: block;
+	font-size: 16px;
+	font-weight: 700;
+	color: <?php echo esc_attr( $text ); ?>;
+	font-family: <?php echo $font_family; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+	margin: 0 0 6px;
+}
+
+div.yp-review-cta-stars {
+	margin: 0 0 14px;
+	line-height: 1;
+}
+
+a.yp-review-cta-star {
+	display: inline-block;
+	font-size: 38px;
+	line-height: 44px;
+	color: #F5B300 !important;
+	text-decoration: none;
+	padding: 0 3px;
+}
+
+a.yp-review-cta-button {
+	display: inline-block;
+	background-color: <?php echo esc_attr( $band ); ?>;
+	color: <?php echo esc_attr( $band_text ); ?> !important;
+	font-weight: 700;
+	font-size: 14px;
+	text-decoration: none;
+	padding: 12px 26px;
+	border-radius: 8px;
+	letter-spacing: .01em;
+}
+
+.yp-review-cta-sub {
+	display: block;
+	font-size: 11.5px;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	margin: 12px 0 0;
+}
+
 /* Abandoned-cart reminders (customer-abandoned-cart.php) — the cart's
    own lines, an optional single-use code, then the same CTA box as the
    proof emails. */

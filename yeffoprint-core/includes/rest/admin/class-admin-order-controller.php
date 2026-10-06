@@ -64,6 +64,30 @@ class YeffoPrint_Admin_Order_Controller {
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/record-payment', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'record_payment' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/notes', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'add_note' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/notes/(?P<note_id>\d+)', [
+			'methods'             => \WP_REST_Server::DELETABLE,
+			'callback'            => [ $this, 'delete_note' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/details', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'save_details' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/orders', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'list_orders' ],
@@ -126,13 +150,16 @@ class YeffoPrint_Admin_Order_Controller {
 			$args['post__in'] = $order_ids;
 		}
 
-		$result = wc_get_orders( $args );
+		$result          = wc_get_orders( $args );
+		$unpaid_requests = $this->unpaid_custom_requests();
 
 		return rest_ensure_response( [
-			'orders'        => array_map( [ $this, 'summary_payload' ], $result->orders ),
-			'total'         => $result->total,
-			'max_num_pages' => $result->max_num_pages,
-			'page'          => $page,
+			'orders'          => array_map( [ $this, 'summary_payload' ], $result->orders ),
+			'total'           => $result->total,
+			'max_num_pages'   => $result->max_num_pages,
+			'page'            => $page,
+			// Only sent with the Drafts tab, which lists them above its orders.
+			'unpaid_requests' => 'checkout-draft' === $status ? $unpaid_requests : [],
 			// Counts for Order History's quick tabs (direct request: "the
 			// ability to see draft orders"). Drafts never show under "All
 			// statuses" — WooCommerce registers checkout-draft as
@@ -140,9 +167,66 @@ class YeffoPrint_Admin_Order_Controller {
 			// tab count is how they get noticed.
 			'counts'        => [
 				'pending'        => wc_orders_count( 'pending' ),
-				'checkout-draft' => wc_orders_count( 'checkout-draft' ),
+				'checkout-draft' => wc_orders_count( 'checkout-draft' ) + count( $unpaid_requests ),
 			],
 		] );
+	}
+
+	/**
+	 * Custom design requests a customer submitted but never checked out
+	 * (direct request: "a custom proof showing 'awaiting payment', but I
+	 * don't see a matching draft order"). Submitting the custom design
+	 * form only creates the unpublished yp_custom_order and puts its
+	 * items in the customer's cart — no WooCommerce order exists until
+	 * they press Place order, so there's nothing for the Drafts tab's
+	 * order query to find. Unpaid records already on a WooCommerce order
+	 * (a manual order's proof, or a checkout that got as far as Place
+	 * order) are left out: that order is what shows up instead.
+	 */
+	private function unpaid_custom_requests(): array {
+		$ids = get_posts( [
+			'post_type'      => 'yp_custom_order',
+			'post_status'    => 'draft',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		] );
+
+		if ( ! $ids ) {
+			return [];
+		}
+
+		global $wpdb;
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders built above; WooCommerce has no API for "which order items carry this meta value".
+		$linked = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT meta_value FROM {$wpdb->prefix}woocommerce_order_itemmeta WHERE meta_key = '_yp_custom_order_id' AND meta_value IN ( {$placeholders} )", $ids ) );
+		$linked = array_map( 'intval', $linked );
+
+		$rows = [];
+		foreach ( $ids as $id ) {
+			if ( in_array( (int) $id, $linked, true ) ) {
+				continue;
+			}
+
+			$batch      = json_decode( (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::BATCH, true ), true );
+			$label_rows = is_array( $batch ) ? count( $batch ) : 0;
+			$quantity   = is_array( $batch ) ? array_sum( array_map( static fn( $row ) => (int) ( $row['quantity'] ?? 0 ), $batch ) ) : (int) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::QUANTITY, true );
+			$order_type = YeffoPrint_Custom_Order_Meta::get_order_type( (int) $id );
+
+			$rows[] = [
+				'id'               => (int) $id,
+				'title'            => get_the_title( $id ),
+				'order_type_label' => YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ $order_type ],
+				'date'             => get_post_datetime( $id ) ? get_post_datetime( $id )->format( 'c' ) : null,
+				'customer_name'    => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true ),
+				'customer_email'   => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, true ),
+				'label_rows'       => $label_rows,
+				'quantity'         => $quantity,
+			];
+		}
+
+		return $rows;
 	}
 
 	/** A lighter row shape for the Order History list — detail_payload() (full items/shipping/Shippo panel data) only loads once a row is actually clicked open. */
@@ -274,6 +358,167 @@ class YeffoPrint_Admin_Order_Controller {
 		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
 	}
 
+	/**
+	 * Direct request: "alert a customer that they accidentally underpaid
+	 * if a zelle/venmo comes in that's slightly short." Staff enter what
+	 * actually arrived; a full payment marks the order paid, a short one
+	 * emails the customer the balance (class-partial-payments.php).
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function record_payment( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		if ( ! YeffoPrint_Partial_Payments::can_record( $order ) ) {
+			return new \WP_Error( 'yeffoprint_order_not_unpaid', __( 'This order is already paid or closed.', 'yeffoprint-core' ), [ 'status' => 409 ] );
+		}
+
+		$params = $request->get_json_params() ?: [];
+		$amount = round( (float) ( $params['amount'] ?? 0 ), 2 );
+		$method = sanitize_key( (string) ( $params['method'] ?? '' ) );
+
+		if ( $amount <= 0 ) {
+			return new \WP_Error( 'yeffoprint_payment_invalid_amount', __( 'Enter the amount you received.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		if ( ! array_key_exists( $method, YeffoPrint_Partial_Payments::METHODS ) ) {
+			return new \WP_Error( 'yeffoprint_payment_invalid_method', __( 'Pick how they paid.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		YeffoPrint_Partial_Payments::record( $order, $amount, $method, __( 'recorded by staff', 'yeffoprint-core' ), ! empty( $params['email_customer'] ) );
+
+		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
+	}
+
+	/**
+	 * Adds a WooCommerce order note — the same notes the classic order
+	 * screen's Order notes box shows. A customer note is emailed to the
+	 * customer by WooCommerce's own Customer note email.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function add_note( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$params = $request->get_json_params() ?: [];
+		$note   = trim( wp_kses_post( (string) ( $params['note'] ?? '' ) ) );
+		if ( '' === $note ) {
+			return new \WP_Error( 'yeffoprint_note_empty', __( 'Write a note first.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		// true = record the signed-in staff member as the author, same as the classic screen.
+		$order->add_order_note( $note, ! empty( $params['customer'] ) ? 1 : 0, true );
+
+		return rest_ensure_response( $this->order_notes_payload( $order ) );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function delete_note( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$note = wc_get_order_note( (int) $request['note_id'] );
+		if ( ! $note || (int) get_comment( (int) $request['note_id'] )->comment_post_ID !== $order->get_id() ) {
+			return new \WP_Error( 'yeffoprint_note_not_found', __( 'That note could not be found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		wc_delete_order_note( (int) $request['note_id'] );
+
+		return rest_ensure_response( $this->order_notes_payload( $order ) );
+	}
+
+	/**
+	 * Saves the customer's contact details and addresses on any order,
+	 * paid or not (unpaid orders can also have their items edited, in
+	 * class-admin-manual-order-controller.php). Only the fields sent are
+	 * changed. Leaves an order note listing what changed.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function save_details( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$params  = $request->get_json_params() ?: [];
+		$changed = [];
+
+		foreach ( [ 'billing', 'shipping' ] as $type ) {
+			if ( ! isset( $params[ $type ] ) || ! is_array( $params[ $type ] ) ) {
+				continue;
+			}
+			foreach ( self::address_fields( $type ) as $field ) {
+				if ( ! array_key_exists( $field, $params[ $type ] ) ) {
+					continue;
+				}
+				$value = 'email' === $field
+					? sanitize_email( (string) $params[ $type ][ $field ] )
+					: sanitize_text_field( (string) $params[ $type ][ $field ] );
+
+				if ( 'email' === $field && '' !== trim( (string) $params[ $type ][ $field ] ) && ! is_email( $value ) ) {
+					return new \WP_Error( 'yeffoprint_invalid_email', __( 'That email address doesn’t look right.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+				}
+
+				$getter = "get_{$type}_{$field}";
+				if ( (string) $order->{$getter}() === $value ) {
+					continue;
+				}
+				$order->{"set_{$type}_{$field}"}( $value );
+				$changed[ $type ] = true;
+			}
+		}
+
+		if ( $changed ) {
+			$order->add_order_note( sprintf(
+				/* translators: %s: "billing details", "shipping address", or both */
+				__( 'Customer %s edited from the dashboard.', 'yeffoprint-core' ),
+				implode( __( ' and ', 'yeffoprint-core' ), array_map( static function ( string $type ): string {
+					return 'billing' === $type ? __( 'contact details', 'yeffoprint-core' ) : __( 'shipping address', 'yeffoprint-core' );
+				}, array_keys( $changed ) ) )
+			), 0, true );
+			$order->save();
+		}
+
+		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
+	}
+
+	/** @return string[] Editable WC_Order address fields (billing also has email and phone). */
+	public static function address_fields( string $type ): array {
+		$fields = [ 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone' ];
+		return 'billing' === $type ? array_merge( $fields, [ 'email' ] ) : $fields;
+	}
+
+	private function address_payload( \WC_Order $order, string $type ): array {
+		$out = [];
+		foreach ( self::address_fields( $type ) as $field ) {
+			$getter        = "get_{$type}_{$field}";
+			$out[ $field ] = (string) $order->{$getter}();
+		}
+		return $out;
+	}
+
+	/** Every WooCommerce order note, newest first: system notes, private staff notes, and notes sent to the customer. */
+	private function order_notes_payload( \WC_Order $order ): array {
+		return array_values( array_map( static function ( $note ): array {
+			$added_by = (string) $note->added_by;
+			return [
+				'id'       => (int) $note->id,
+				'content'  => wp_kses_post( (string) $note->content ),
+				'date'     => $note->date_created instanceof \WC_DateTime ? $note->date_created->date( 'c' ) : null,
+				'customer' => (bool) $note->customer_note,
+				'by'       => 'system' === $added_by ? '' : $added_by,
+			];
+		}, wc_get_order_notes( [ 'order_id' => $order->get_id() ] ) ) );
+	}
+
 	/** @return \WC_Order|\WP_Error */
 	private function validate_order( int $order_id ) {
 		if ( ! function_exists( 'wc_get_order' ) ) {
@@ -296,11 +541,19 @@ class YeffoPrint_Admin_Order_Controller {
 			'status_label'         => wc_get_order_status_name( $order->get_status() ),
 			'statuses'             => $this->status_options(),
 			'date'                 => $order->get_date_created() ? $order->get_date_created()->date( 'c' ) : null,
+			// Drives the drawer's Cancel order button (unpaid orders only).
+			'date_paid'            => $order->get_date_paid() ? $order->get_date_paid()->date( 'c' ) : null,
 			'customer_name'        => trim( $order->get_formatted_billing_full_name() ),
 			'customer_email'       => $order->get_billing_email(),
 			'customer_phone'       => $order->get_billing_phone(),
 			'customer_note'        => $order->get_customer_note(),
+			// Raw address fields for the order page's Edit details form.
+			'billing'              => $this->address_payload( $order, 'billing' ),
+			'shipping'             => $this->address_payload( $order, 'shipping' ),
+			'order_notes'          => $this->order_notes_payload( $order ),
 			'express'              => YeffoPrint_Express_Order::is_express( $order ),
+			// Reminders still going out: shows the Acknowledge button.
+			'express_waiting'      => YeffoPrint_Telegram_Express_Alerts::is_waiting( $order ),
 			// Falls back to billing when there's no separate shipping
 			// address — same behavior WooCommerce's own order screen and
 			// order emails already use, not a new convention introduced
@@ -328,8 +581,18 @@ class YeffoPrint_Admin_Order_Controller {
 			// Direct request: edit an order "before it's been paid" — lets
 			// the drawer offer Edit order, and show the pay link it keeps.
 			'editable'             => YeffoPrint_Manual_Order_Creator::is_editable( $order ),
+			// Paid but not shipped yet: Add items still works, onto a
+			// linked add-on order (YeffoPrint_Manual_Order_Creator::add_items()).
+			'can_add_items'        => YeffoPrint_Manual_Order_Creator::can_add_items( $order ),
 			'payment_url'          => $order->needs_payment() ? $order->get_checkout_payment_url() : null,
 			'customer_picks_shipping' => YeffoPrint_Order_Pay_Address::customer_picks_shipping( $order ),
+			// Record payment panel (class-partial-payments.php): what has
+			// come in so far on an unpaid order, and what's still owed.
+			'can_record_payment'   => YeffoPrint_Partial_Payments::can_record( $order ),
+			'amount_received'      => YeffoPrint_Partial_Payments::received( $order ),
+			'balance_due'          => YeffoPrint_Partial_Payments::balance_due( $order ),
+			'payments_received'    => YeffoPrint_Partial_Payments::log( $order ),
+			'payment_method'       => $order->get_payment_method(),
 			'shipping_lines'       => array_values( array_map( static function ( \WC_Order_Item_Shipping $item ): array {
 				return [ 'title' => $item->get_method_title(), 'amount' => (float) $item->get_total() ];
 			}, $order->get_items( 'shipping' ) ) ),
@@ -364,7 +627,7 @@ class YeffoPrint_Admin_Order_Controller {
 			// Shippo label already purchased on this order, printable link included, so the panel
 			// can offer a reprint regardless of whether it was purchased in this drawer session or
 			// a previous one.
-			'shippo_labels'            => YeffoPrint_Order_Tracking::get_shippo_labels( $order ),
+			'shippo_labels'            => $this->shippo_labels_payload( $order ),
 			// Direct request: "can we add the rewards info to this screen... how many points this
 			// order will receive (or has received)?" Same processed-vs-pending distinction as the
 			// classic order screen's own "Rewards Points" meta box (class-rewards-order-box.php) —
@@ -406,6 +669,19 @@ class YeffoPrint_Admin_Order_Controller {
 				? [ 'package_id' => YeffoPrint_Web_Design_Project_Meta::get_package_id( $order ) ]
 				: null,
 		];
+	}
+
+	/**
+	 * Every Shippo label on the order. International labels bought before
+	 * the carrier's customs messages were saved get them looked up once
+	 * first, so "Customs invoice sent electronically" shows on those too.
+	 */
+	private function shippo_labels_payload( \WC_Order $order ): array {
+		if ( YeffoPrint_Shippo_Settings::is_configured() && YeffoPrint_Admin_Shippo_Controller::customs_payload( $order )['international'] ) {
+			YeffoPrint_Order_Tracking::backfill_shippo_label_customs( $order, new YeffoPrint_Shippo_Client( YeffoPrint_Shippo_Settings::get_api_key() ) );
+		}
+
+		return YeffoPrint_Order_Tracking::get_shippo_labels( $order );
 	}
 
 	private function refund_gateway_supported( \WC_Order $order ): bool {
@@ -461,7 +737,15 @@ class YeffoPrint_Admin_Order_Controller {
 			// use a generic linked product with no image, so this is
 			// simply null for those — the frontend already handles a
 			// missing image (falls back to a placeholder swatch).
-			'image_url' => $product ? ( wp_get_attachment_image_url( $product->get_image_id(), 'thumbnail' ) ?: null ) : null,
+			// 'medium' keeps the image's own shape; 'thumbnail' is a
+			// square crop that cut wide label previews off (direct report).
+			'image_url' => $product ? ( wp_get_attachment_image_url( $product->get_image_id(), 'medium' ) ?: null ) : null,
+			// The custom design request (yp_custom_order) behind this line,
+			// if any — the new admin's order page shows its proof there.
+			'custom_order_id' => (int) $item->get_meta( '_yp_custom_order_id' ),
+			// Shown on the label card itself so an order with several
+			// brands can be told apart without opening Details.
+			'brands'    => self::item_brands( $item ),
 			// display_value is already wp_kses_post()-safe HTML by the
 			// time get_formatted_meta_data() returns it (WC_Order_Item's
 			// own method) — the same batch tables/variant summaries/QR
@@ -482,6 +766,32 @@ class YeffoPrint_Admin_Order_Controller {
 				return [ 'label' => (string) $entry->display_key, 'value' => (string) $entry->display_value ];
 			}, self::formatted_meta_data( $item ) ) ),
 		];
+	}
+
+	/**
+	 * The brand name(s) behind a label line. A Create Order custom
+	 * design line keeps its own in _yp_brand_name; older lines and
+	 * storefront requests only have the yp_custom_order record's. A
+	 * Template batch keeps it per label in _yp_variants, under
+	 * whichever field is a "brand" one.
+	 */
+	private static function item_brands( \WC_Order_Item_Product $item ): array {
+		$brands          = [ (string) $item->get_meta( '_yp_brand_name' ) ];
+		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
+		if ( $custom_order_id && '' === $brands[0] ) {
+			$brands[] = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BRAND_NAME, true );
+		}
+
+		$variants = json_decode( (string) $item->get_meta( '_yp_variants' ), true );
+		foreach ( is_array( $variants ) ? $variants : [] as $variant ) {
+			foreach ( (array) ( $variant['values'] ?? [] ) as $key => $value ) {
+				if ( false !== stripos( (string) $key, 'brand' ) && is_scalar( $value ) ) {
+					$brands[] = (string) $value;
+				}
+			}
+		}
+
+		return array_values( array_unique( array_filter( array_map( 'trim', $brands ), 'strlen' ) ) );
 	}
 
 	/** @see item_payload()'s own call site above for why this wraps get_formatted_meta_data() instead of calling it directly. */

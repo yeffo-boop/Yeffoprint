@@ -85,7 +85,11 @@ The Vials tab is now **Supply**, with three views:
   powder vials, pen cartridges, premixed vials, or pills/sprays/patches
   counted one by one. Mixing a vial offers "Take it from your supply",
   which takes one off; pills count down with every dose taken after they
-  were counted.
+  were counted. **Bac water** is a `stock` with `form: 'water'`: bottle
+  size in `volume`, mL left in `ml`. Mixing a new vial offers "Use bac
+  water from your supply", which takes that vial's water off. It runs low
+  when there isn't enough for the upcoming mixes across every vial schedule
+  (each new vial mixed like the one in use; `waterPlan()` in tracker.js).
 - **Plan**: for each protocol, the vial in use, then each vial on hand
   (mix dates), then any still to buy before the cycle ends, with a
   "buy by" date a week ahead.
@@ -145,3 +149,85 @@ web app shows up in the Android app on the next open, with no app update.
   hidden on sign-in pages: Google blocks sign-in from an app's built-in
   browser, and Telegram's needs a pop-up. Email/password, Discord and
   Apple work.
+
+## Injection site rotation
+
+Injections (under the skin or into the muscle) suggest the next spot on
+each Today card: the spot in that peptide's rotation that has gone
+longest without a dose, counting every injection the customer logged,
+so two peptides rotate around each other. Tapping **Take** logs the dose
+at the suggested spot; **Change** opens a body map (front and back,
+drawn mirror-style so the customer's left is on the left) to pick
+another spot and take the dose there. Under-the-skin spots: belly (four
+quarters), thighs, backs of the arms, love handles and glutes.
+Into-the-muscle spots: shoulders, thighs and glutes.
+
+The spot is stored on the dose record (`site`), encrypted with the rest
+of it. Editing a peptide has **Rotate injection sites** (on by default)
+and a map to choose the spots the customer uses. History shows a map
+shaded by how recently each spot was used, the day list shows each
+dose's spot, and the CSV export has an Injection site column. Reminders
+don't include the spot.
+
+## How you felt (side effects & notes)
+
+A taken dose can carry tags (`tags` on the dose record: nausea, headache,
+good sleep, more energy… plus up to 20 of the customer's own, saved in
+`settings.me.tags`) and a note. Today shows "+ How do you feel?" under
+each taken dose, and the log and extra-dose sheets have the same picker.
+History has a "Side effects & notes" card counting each tag over 30 / 90
+days / all, the compound it mostly came with, and how many landed in a
+week the dose had just gone up. The CSV export has a "How you felt" column.
+
+## Cycles and titration
+
+A protocol can have `cycle` `{ on, off }` (weeks on, weeks off, repeating
+from the start date) and `steps` `[{ week, dose }]` (the dose from that
+many weeks after the start; the first step is the protocol's own dose).
+The editor's Cycle planner sets both, with a "change by X every N weeks
+up to Y" helper and a bar chart preview. Today, reminders
+(`Tracker_Schedule::is_due_on` / `dose_on`), the supply planner and
+shared protocol links all follow it: off weeks have no doses and show a
+"back on" line, and each dose uses that week's amount.
+
+## Vial expiry
+
+A mixed vial is good for 28 days from its mix date unless the customer
+sets another number on that vial (`goodFor`, days). Supply shows the
+days left, the planner starts a new vial when one expires even if it
+isn't empty, Today shows a banner a few days before, and "Remind me
+before a vial expires" (Supply › Plan, `settings.me.expiryReminders`)
+adds an `exp-` alert sent two days ahead.
+
+## Reorder labels
+
+Supply's low-stock banners and each plan card that needs more vials have
+**Order labels**, the same flow as Supply's Order labels (one template
+cart line, a batch row per vial) with the low compounds ticked and their
+strength filled in.
+
+## Progress log
+
+History › Progress records weight, measurements (waist, chest, hips,
+arm, thigh, neck), body fat and up to 3 photos per entry (`progress`
+records, units stored with each entry so lb/kg and in/cm can be switched
+on the Progress tab). The chart shows the chosen measure with the doses
+taken in lanes underneath and dashed lines where a titration step raised
+a dose.
+
+Photos are their own `photo` records: the app shrinks them to 1280 px
+JPEG (dropping location metadata), uploads them to
+`PUT /tracker/photos/{id}`, and the server checks they're real images
+(JPEG/PNG/WebP, 1.5 MB max, 300 per customer) before encrypting them like
+any other record. They are fetched one at a time
+(`GET /tracker/photos/{id}`), kept only in memory, never in the offline
+copy, and are erased with Delete my data.
+
+## Printable report
+
+History's **Create PDF report** (also Me › Tools) builds a PDF in the
+browser, nothing is uploaded: a summary, each medication's schedule,
+titration, cycle and doses taken vs scheduled, progress (first, latest,
+change, weight chart), side effects, injection spots and the full dose
+log, for 30 / 90 days, 6 months or everything. Sections can be switched
+off. It can be downloaded or shared from the phone's share sheet.

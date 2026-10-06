@@ -42,6 +42,7 @@
 		completed:       'good',
 		shipped:         'good',
 		processing:      'neutral',
+		'in-design':     'neutral',
 		'in-production': 'neutral',
 		'on-hold':       'warn',
 		pending:         'warn',
@@ -81,7 +82,8 @@
 					return '<button type="button" class="yp-settings-tabs__tab' + ( '' === tab.status ? ' is-active' : '' ) + '" data-yp-quick-tab="' + YP.escapeAttr( tab.status ) + '" role="tab" aria-selected="' + ( '' === tab.status ? 'true' : 'false' ) + '">' + YP.escapeHtml( tab.label ) + '<span data-yp-quick-count></span></button>';
 				} ).join( '' ) +
 			'</div>' +
-			'<p class="yp-field__hint" data-yp-draft-hint hidden>Drafts are checkouts where the customer pressed Place order but never finished paying (card declined, payment window closed, or they left). They are kept for ' + DRAFT_RETENTION_DAYS + ' days, then removed automatically.</p>' +
+			'<p class="yp-field__hint" data-yp-draft-hint hidden>Drafts are checkouts that were started but never paid for. A custom design request sits here from the moment the customer submits it until they check out. A checkout where the customer pressed Place order but never finished paying (card declined, payment window closed) is kept for ' + DRAFT_RETENTION_DAYS + ' days, then removed automatically.</p>' +
+			'<div data-yp-unpaid-requests hidden></div>' +
 			'<div class="yp-list-toolbar">' +
 				'<input type="text" class="yp-list-toolbar__search" data-yp-search placeholder="Search by customer, email, phone, or order #&hellip;" />' +
 				'<select data-yp-status-filter>' +
@@ -101,6 +103,7 @@
 		var statusEl     = viewEl.querySelector( '[data-yp-status-filter]' );
 		var paginationEl = viewEl.querySelector( '[data-yp-pagination]' );
 		var draftHintEl  = viewEl.querySelector( '[data-yp-draft-hint]' );
+		var unpaidEl     = viewEl.querySelector( '[data-yp-unpaid-requests]' );
 		var tabEls       = viewEl.querySelectorAll( '[data-yp-quick-tab]' );
 
 		function syncTabs() {
@@ -110,6 +113,48 @@
 				tabEl.setAttribute( 'aria-selected', isActive ? 'true' : 'false' );
 			} );
 			draftHintEl.hidden = 'checkout-draft' !== statusEl.value;
+		}
+
+		// Submitted custom design requests with no WooCommerce order yet
+		// (see list_orders()'s unpaid_custom_requests()). They aren't
+		// orders, so they get their own table rather than mixing into
+		// the paginated one; a row opens the request in Custom Orders.
+		function renderUnpaidRequests( requests ) {
+			if ( ! requests || ! requests.length ) {
+				unpaidEl.hidden = true;
+				unpaidEl.innerHTML = '';
+				return;
+			}
+
+			unpaidEl.hidden = false;
+			unpaidEl.innerHTML =
+				'<h3 class="yp-split__subhead">Custom design requests not checked out (' + requests.length + ')</h3>' +
+				'<p class="yp-field__hint">Open one to delete it if the customer changed their mind. To drop an unfinished checkout below, open it and press Cancel order.</p>' +
+				'<div class="yp-record-card" style="margin-bottom:var(--wp--preset--spacing--sm);"><table class="yp-record-table"><thead><tr>' +
+					'<th>Request</th><th>Customer</th><th>Submitted</th><th>Labels</th><th>Status</th>' +
+				'</tr></thead><tbody>' +
+				requests.map( function ( request ) {
+					return (
+						'<tr class="yp-row-clickable" data-yp-open-request="' + request.id + '">' +
+							'<td>' + YP.escapeHtml( request.title ) + '<div class="yp-field__hint" style="margin:0;">' + YP.escapeHtml( request.order_type_label ) + '</div></td>' +
+							'<td>' +
+								'<div>' + YP.escapeHtml( request.customer_name || 'Not known yet' ) + '</div>' +
+								'<div class="yp-field__hint" style="margin:0;">' + YP.escapeHtml( request.customer_email || '' ) + '</div>' +
+							'</td>' +
+							'<td>' + ( request.date ? YP.escapeHtml( new Date( request.date ).toLocaleDateString() ) : '—' ) + '</td>' +
+							'<td>' + request.quantity + ( request.label_rows > 1 ? ' <span class="yp-field__hint">(' + request.label_rows + ' designs)</span>' : '' ) + '</td>' +
+							'<td><span class="yp-pill yp-pill--warn">Awaiting payment</span></td>' +
+						'</tr>'
+					);
+				} ).join( '' ) +
+				'</tbody></table></div>' +
+				'<h3 class="yp-split__subhead">Unfinished checkouts</h3>';
+
+			unpaidEl.querySelectorAll( '[data-yp-open-request]' ).forEach( function ( row ) {
+				row.addEventListener( 'click', function () {
+					window.location.hash = '#/orders/' + row.getAttribute( 'data-yp-open-request' );
+				} );
+			} );
 		}
 
 		function renderCounts( counts ) {
@@ -139,6 +184,7 @@
 						return; // A newer request already landed — this one's now stale.
 					}
 					renderCounts( response.counts );
+					renderUnpaidRequests( response.unpaid_requests );
 					renderRows( response.orders || [] );
 					renderPagination( response.total || 0, response.max_num_pages || 0 );
 				} )
@@ -175,7 +221,7 @@
 
 			rowsEl.querySelectorAll( '[data-yp-open-order]' ).forEach( function ( row ) {
 				row.addEventListener( 'click', function () {
-					YP.openWcOrderDrawer( parseInt( row.getAttribute( 'data-yp-open-order' ), 10 ) );
+					YP.openOrder( parseInt( row.getAttribute( 'data-yp-open-order' ), 10 ) );
 				} );
 			} );
 		}

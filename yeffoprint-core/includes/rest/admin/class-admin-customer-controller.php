@@ -41,8 +41,21 @@ class YeffoPrint_Admin_Customer_Controller {
 		] );
 
 		register_rest_route( self::NAMESPACE, '/admin/customer/(?P<id>\d+)', [
-			'methods'             => \WP_REST_Server::READABLE,
-			'callback'            => [ $this, 'get_customer' ],
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_customer' ],
+				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+			],
+			[
+				'methods'             => \WP_REST_Server::EDITABLE,
+				'callback'            => [ $this, 'save_customer' ],
+				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+			],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/admin/customer/(?P<id>\d+)/password-reset', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'send_password_reset' ],
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
@@ -118,6 +131,10 @@ class YeffoPrint_Admin_Customer_Controller {
 			$this->summary_payload( $user ),
 			[
 				'registered'    => $user->user_registered,
+				'first_name'    => $user->first_name,
+				'last_name'     => $user->last_name,
+				'billing'       => $this->address_payload( $user->ID, 'billing' ),
+				'shipping'      => $this->address_payload( $user->ID, 'shipping' ),
 				'notes'         => YeffoPrint_Customer_Notes::get_notes( $user->user_email ),
 				'recent_orders' => array_map( static function ( \WC_Order $order ): array {
 					return [
@@ -131,6 +148,98 @@ class YeffoPrint_Admin_Customer_Controller {
 				}, $orders ),
 			]
 		) );
+	}
+
+	/**
+	 * Edits a customer account (direct request: run the business from the
+	 * dashboard without wp-admin): name, account email, and the saved
+	 * billing/shipping addresses checkout fills in. Only fields sent are
+	 * changed. Staff accounts can't be edited here.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function save_customer( \WP_REST_Request $request ) {
+		$user = get_userdata( (int) $request['id'] );
+		if ( ! $user ) {
+			return new \WP_Error( 'yeffoprint_customer_not_found', __( 'That customer could not be found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+		if ( user_can( $user, 'manage_options' ) ) {
+			return new \WP_Error( 'yeffoprint_customer_is_staff', __( 'Staff accounts can’t be edited here.', 'yeffoprint-core' ), [ 'status' => 403 ] );
+		}
+
+		$params   = $request->get_json_params() ?: [];
+		$customer = new \WC_Customer( $user->ID );
+
+		if ( array_key_exists( 'email', $params ) ) {
+			$email = sanitize_email( (string) $params['email'] );
+			if ( ! is_email( $email ) ) {
+				return new \WP_Error( 'yeffoprint_invalid_email', __( 'That email address doesn’t look right.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+			$owner = email_exists( $email );
+			if ( $owner && (int) $owner !== $user->ID ) {
+				return new \WP_Error( 'yeffoprint_email_taken', __( 'Another account already uses that email.', 'yeffoprint-core' ), [ 'status' => 409 ] );
+			}
+			$customer->set_email( $email );
+		}
+
+		foreach ( [ 'first_name', 'last_name' ] as $field ) {
+			if ( array_key_exists( $field, $params ) ) {
+				$customer->{"set_{$field}"}( sanitize_text_field( (string) $params[ $field ] ) );
+			}
+		}
+
+		foreach ( [ 'billing', 'shipping' ] as $type ) {
+			if ( ! isset( $params[ $type ] ) || ! is_array( $params[ $type ] ) ) {
+				continue;
+			}
+			foreach ( YeffoPrint_Admin_Order_Controller::address_fields( $type ) as $field ) {
+				if ( ! array_key_exists( $field, $params[ $type ] ) ) {
+					continue;
+				}
+				$value = 'email' === $field ? sanitize_email( (string) $params[ $type ][ $field ] ) : sanitize_text_field( (string) $params[ $type ][ $field ] );
+				$customer->{"set_{$type}_{$field}"}( $value );
+			}
+		}
+
+		if ( array_key_exists( 'first_name', $params ) || array_key_exists( 'last_name', $params ) ) {
+			$name = trim( $customer->get_first_name() . ' ' . $customer->get_last_name() );
+			if ( '' !== $name ) {
+				$customer->set_display_name( $name );
+			}
+		}
+
+		$customer->save();
+
+		return $this->get_customer( $request );
+	}
+
+	/**
+	 * Emails the customer WordPress's own "reset your password" link —
+	 * the same email the Lost password form sends.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function send_password_reset( \WP_REST_Request $request ) {
+		$user = get_userdata( (int) $request['id'] );
+		if ( ! $user ) {
+			return new \WP_Error( 'yeffoprint_customer_not_found', __( 'That customer could not be found.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		$result = retrieve_password( $user->user_login );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		return rest_ensure_response( [ 'sent' => true, 'email' => $user->user_email ] );
+	}
+
+	private function address_payload( int $user_id, string $type ): array {
+		$customer = new \WC_Customer( $user_id );
+		$out      = [];
+		foreach ( YeffoPrint_Admin_Order_Controller::address_fields( $type ) as $field ) {
+			$out[ $field ] = (string) $customer->{"get_{$type}_{$field}"}();
+		}
+		return $out;
 	}
 
 	private function summary_payload( \WP_User $user ): array {

@@ -62,9 +62,13 @@ class YeffoPrint_Order_Addon {
 	}
 
 	/**
+	 * $enforce_cap: the customer-facing limit of MAX_ADDONS. Staff adding
+	 * items from the admin app (YeffoPrint_Manual_Order_Creator::add_items())
+	 * aren't held to it; everything else still applies.
+	 *
 	 * @return array{eligible:bool, reason:string, root:\WC_Order}
 	 */
-	public static function eligibility( \WC_Order $order ): array {
+	public static function eligibility( \WC_Order $order, bool $enforce_cap = true ): array {
 		$root_id = self::root_id_for( $order );
 		$root    = $root_id === $order->get_id() ? $order : wc_get_order( $root_id );
 
@@ -88,7 +92,7 @@ class YeffoPrint_Order_Addon {
 			];
 		}
 
-		if ( count( self::addon_ids_for_root( $root->get_id() ) ) >= self::MAX_ADDONS ) {
+		if ( $enforce_cap && count( self::addon_ids_for_root( $root->get_id() ) ) >= self::MAX_ADDONS ) {
 			return [
 				'eligible' => false,
 				'reason'   => __( 'This order already has the maximum number of add-ons.', 'yeffoprint-core' ),
@@ -115,6 +119,13 @@ class YeffoPrint_Order_Addon {
 
 	public static function start_session( int $root_id ): void {
 		if ( function_exists( 'WC' ) && WC()->session ) {
+			// A guest landing here from an order email has an empty cart
+			// and so no session cookie yet. Without one WooCommerce never
+			// saves the session, the add-on link was silently lost, and
+			// checkout charged shipping again.
+			if ( ! WC()->session->has_session() ) {
+				WC()->session->set_customer_session_cookie( true );
+			}
 			WC()->session->set( self::SESSION_KEY, $root_id );
 		}
 	}

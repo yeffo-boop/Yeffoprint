@@ -1,9 +1,10 @@
 /**
  * 3D print product page (blocks/print-product/render.php). The page is
- * complete without this — every color is a real radio button — so this
- * only adds the live parts: each part's picked color name, the colored
- * badge on that part's photo dot, the running total, the "Your print"
- * summary, the optional lid text / lid image add-ons (the image goes
+ * complete without this — every filament is a real radio button inside a
+ * <details> — so this only adds the live parts: each part's picked
+ * filament row, the pickers' search / group chips / bigger photo on
+ * hover or press-and-hold, the badge on that part's photo dot, the
+ * running total, the "Your print" summary, the optional lid text / lid image add-ons (the image goes
  * up through the same /custom-orders/uploads endpoint the custom label
  * form uses), and Add to Cart through yeffoprint-core's /prints/cart
  * endpoint, which opens the cart drawer the same way the label
@@ -45,6 +46,204 @@
 	function money( amount ) {
 		return '$' + amount.toFixed( 2 );
 	}
+
+	/* ---------- Filament pickers ---------- */
+
+	var pickers = Array.prototype.slice.call( root.querySelectorAll( '[data-yp-fil-picker]' ) );
+
+	// The picked filament's row: same tile as its card, name, then brand
+	// and any extra charge.
+	function renderChosen( pickerEl ) {
+		var chosen = pickerEl.querySelector( '[data-yp-fil-chosen]' );
+		var input = pickerEl.querySelector( 'input[type="radio"]:checked' );
+		var toggle = chosen.querySelector( '.yp-fil-picker__toggle' );
+
+		Array.prototype.slice.call( chosen.children ).forEach( function ( child ) {
+			if ( child !== toggle ) {
+				chosen.removeChild( child );
+			}
+		} );
+
+		var tile;
+		var text = document.createElement( 'span' );
+		var name = document.createElement( 'b' );
+		text.className = 'yp-fil__text';
+
+		if ( input ) {
+			tile = input.parentNode.querySelector( '.yp-fil__tile' ).cloneNode( true );
+			var extra = parseFloat( input.getAttribute( 'data-extra' ) ) || 0;
+			var small = document.createElement( 'small' );
+			name.textContent = input.getAttribute( 'data-name' );
+			small.textContent = [ input.getAttribute( 'data-brand' ), extra > 0 ? '+' + money( extra ) : '' ].filter( Boolean ).join( ' · ' );
+			text.appendChild( name );
+			text.appendChild( small );
+		} else {
+			tile = document.createElement( 'span' );
+			tile.className = 'yp-fil__tile is-empty';
+			name.className = 'is-missing';
+			name.textContent = 'Pick a filament';
+			text.appendChild( name );
+		}
+
+		chosen.insertBefore( tile, toggle );
+		chosen.insertBefore( text, toggle );
+	}
+
+	function filterPicker( pickerEl ) {
+		var search = pickerEl.querySelector( '[data-yp-fil-search]' );
+		var chip = pickerEl.querySelector( '[data-yp-fil-chip].is-on' );
+		var words = search ? search.value.trim().toLowerCase().split( /\s+/ ).filter( Boolean ) : [];
+		var group = chip ? chip.getAttribute( 'data-yp-fil-chip' ) : '';
+		var shown = 0;
+
+		pickerEl.querySelectorAll( '[data-yp-fil-group]' ).forEach( function ( groupEl ) {
+			var inGroup = ! group || groupEl.getAttribute( 'data-yp-fil-group' ) === group;
+			var groupShown = 0;
+			groupEl.querySelectorAll( '[data-yp-fil]' ).forEach( function ( card ) {
+				var haystack = card.getAttribute( 'data-search' ) || '';
+				var match = inGroup && words.every( function ( word ) { return haystack.indexOf( word ) !== -1; } );
+				card.hidden = ! match;
+				if ( match ) {
+					groupShown++;
+				}
+			} );
+			groupEl.hidden = ! groupShown;
+			shown += groupShown;
+		} );
+
+		pickerEl.querySelector( '[data-yp-fil-empty]' ).hidden = shown > 0;
+	}
+
+	// One floating bigger photo, shared by every picker. It lives on
+	// <body> so the scrolling list can't clip it.
+	var zoomEl = document.createElement( 'div' );
+	zoomEl.className = 'yp-fil-zoom';
+	zoomEl.hidden = true;
+	document.body.appendChild( zoomEl );
+	var zoomTimer = null;
+	var suppressClick = false;
+
+	function showZoom( card ) {
+		var input = card.querySelector( 'input' );
+		var image = input.getAttribute( 'data-image' );
+		if ( ! image ) {
+			return;
+		}
+		var line = [ input.getAttribute( 'data-brand' ), input.getAttribute( 'data-line' ) ].filter( Boolean ).join( ' · ' );
+		zoomEl.innerHTML = '';
+		var img = document.createElement( 'img' );
+		img.src = image;
+		img.alt = '';
+		var name = document.createElement( 'b' );
+		name.textContent = input.getAttribute( 'data-name' );
+		var small = document.createElement( 'small' );
+		small.textContent = line;
+		zoomEl.appendChild( img );
+		zoomEl.appendChild( name );
+		zoomEl.appendChild( small );
+		zoomEl.hidden = false;
+
+		// Beside the picker on wide screens, above the card otherwise.
+		var rect = card.getBoundingClientRect();
+		var panel = card.closest( '[data-yp-fil-picker]' ).getBoundingClientRect();
+		var width = zoomEl.offsetWidth;
+		var height = zoomEl.offsetHeight;
+		var left = panel.left - width - 12;
+		var top = Math.max( 8, Math.min( window.innerHeight - height - 8, rect.top + rect.height / 2 - height / 2 ) );
+		if ( left < 8 ) {
+			left = Math.max( 8, Math.min( window.innerWidth - width - 8, rect.left + rect.width / 2 - width / 2 ) );
+			top = rect.top - height - 8 < 8 ? rect.bottom + 8 : rect.top - height - 8;
+		}
+		zoomEl.style.left = left + 'px';
+		zoomEl.style.top = top + 'px';
+	}
+
+	function hideZoom() {
+		clearTimeout( zoomTimer );
+		zoomEl.hidden = true;
+	}
+
+	pickers.forEach( function ( pickerEl ) {
+		var tools = pickerEl.querySelector( '[data-yp-fil-tools]' );
+		var search = pickerEl.querySelector( '[data-yp-fil-search]' );
+
+		if ( tools ) {
+			tools.hidden = false;
+		}
+		if ( search ) {
+			search.addEventListener( 'input', function () { filterPicker( pickerEl ); } );
+			// Enter in the search box shouldn't submit the whole form.
+			search.addEventListener( 'keydown', function ( event ) {
+				if ( 'Enter' === event.key ) {
+					event.preventDefault();
+				}
+			} );
+		}
+
+		pickerEl.querySelectorAll( '[data-yp-fil-chip]' ).forEach( function ( chip ) {
+			chip.addEventListener( 'click', function () {
+				pickerEl.querySelectorAll( '[data-yp-fil-chip]' ).forEach( function ( other ) {
+					other.classList.toggle( 'is-on', other === chip );
+					other.setAttribute( 'aria-pressed', other === chip ? 'true' : 'false' );
+				} );
+				filterPicker( pickerEl );
+			} );
+		} );
+
+		pickerEl.querySelectorAll( '[data-yp-fil]' ).forEach( function ( card ) {
+			// A tap or click picks and folds the picker back to one row;
+			// arrow keys move through filaments without closing it.
+			card.addEventListener( 'click', function ( event ) {
+				if ( suppressClick ) {
+					event.preventDefault();
+					suppressClick = false;
+					return;
+				}
+				if ( event.target.tagName === 'INPUT' && ! event.detail ) {
+					return;
+				}
+				var input = card.querySelector( 'input' );
+				if ( input.disabled ) {
+					return;
+				}
+				setTimeout( function () {
+					pickerEl.open = false;
+					hideZoom();
+					pickerEl.querySelector( 'summary' ).focus( { preventScroll: true } );
+				}, 120 );
+			} );
+
+			card.addEventListener( 'mouseenter', function () {
+				if ( window.matchMedia( '(hover: hover)' ).matches ) {
+					showZoom( card );
+				}
+			} );
+			card.addEventListener( 'mouseleave', hideZoom );
+
+			card.addEventListener( 'touchstart', function () {
+				clearTimeout( zoomTimer );
+				zoomTimer = setTimeout( function () {
+					suppressClick = true;
+					showZoom( card );
+				}, 450 );
+			}, { passive: true } );
+			card.addEventListener( 'touchmove', hideZoom, { passive: true } );
+			card.addEventListener( 'touchend', function () {
+				clearTimeout( zoomTimer );
+				if ( ! zoomEl.hidden ) {
+					setTimeout( hideZoom, 900 );
+				}
+			} );
+			card.addEventListener( 'contextmenu', function ( event ) {
+				if ( ! zoomEl.hidden ) {
+					event.preventDefault(); // Long-press shows the photo, not the browser menu.
+				}
+			} );
+		} );
+
+		pickerEl.addEventListener( 'toggle', hideZoom );
+		pickerEl.querySelector( '[data-yp-fil-list]' ).addEventListener( 'scroll', hideZoom, { passive: true } );
+	} );
 
 	function picked( slotEl ) {
 		return slotEl.querySelector( 'input[type="radio"]:checked' );
@@ -103,6 +302,11 @@
 		return textInput && addonOn( textAddon ) ? textInput.value.trim() : '';
 	}
 
+	function filamentLabel( input ) {
+		var brand = input.getAttribute( 'data-brand' );
+		return input.getAttribute( 'data-name' ) + ( brand ? ' (' + brand + ')' : '' );
+	}
+
 	function slotName( slotEl ) {
 		var strong = slotEl.querySelector( '.yp-print-slot__label strong' );
 		return strong ? strong.textContent : '';
@@ -117,38 +321,32 @@
 		var unit = sizePrice() + addonPrice( textAddon ) + addonPrice( imageAddon );
 		var parts = sizesEl ? [ 'Size ' + ( pickedSize() || '(not picked)' ) ] : [];
 
+		pickers.forEach( renderChosen );
+
 		slots.forEach( function ( slotEl ) {
 			var index = slotEl.getAttribute( 'data-yp-slot' );
 			var input = picked( slotEl );
-			var pickedEl = slotEl.querySelector( '[data-yp-picked]' );
 			var dotColor = root.querySelector( '[data-yp-dot="' + index + '"] .yp-print__dot-color' );
 			var extra = input ? parseFloat( input.getAttribute( 'data-extra' ) ) || 0 : 0;
-			var label = input ? input.getAttribute( 'data-name' ) + ( extra > 0 ? ' +' + money( extra ) : '' ) : 'Pick a color';
 
 			unit += extra;
-			pickedEl.textContent = label;
-			pickedEl.classList.toggle( 'is-missing', ! input );
-			parts.push( slotName( slotEl ) + ' ' + ( input ? input.getAttribute( 'data-name' ) : '(not picked)' ) );
+			parts.push( slotName( slotEl ) + ' ' + ( input ? filamentLabel( input ) : '(not picked)' ) );
 
 			if ( dotColor ) {
+				var image = input ? input.getAttribute( 'data-image' ) : '';
+				var tileImg = input && image ? input.parentNode.querySelector( '.yp-fil__tile img' ) : null;
 				dotColor.style.backgroundColor = input ? input.getAttribute( 'data-hex' ) : 'transparent';
-				dotColor.classList.toggle( 'is-silk', !! input && 'silk' === input.getAttribute( 'data-finish' ) );
-			}
-		} );
-
-		[ textAddon, imageAddon ].forEach( function ( addonEl ) {
-			var pickedEl = addonEl ? addonEl.querySelector( '[data-yp-addon-colors] [data-yp-picked]' ) : null;
-			var input = addonColor( addonEl );
-			if ( pickedEl ) {
-				pickedEl.textContent = input ? input.getAttribute( 'data-name' ) : 'Pick a color';
-				pickedEl.classList.toggle( 'is-missing', ! input );
+				dotColor.style.backgroundImage = image ? 'url("' + image.replace( /"/g, '%22' ) + '")' : '';
+				dotColor.style.backgroundSize = tileImg ? ( parseFloat( tileImg.style.transform.replace( /[^0-9.]/g, '' ) ) || 1 ) * 100 + '%' : '';
+				dotColor.style.backgroundPosition = tileImg ? tileImg.style.objectPosition : '';
+				dotColor.classList.toggle( 'is-silk', !! input && ! image && 'silk' === input.getAttribute( 'data-finish' ) );
 			}
 		} );
 		if ( lidText() ) {
-			parts.push( 'Text “' + lidText() + '” in ' + ( addonColor( textAddon ) ? addonColor( textAddon ).getAttribute( 'data-name' ) : '(color not picked)' ) );
+			parts.push( 'Text “' + lidText() + '” in ' + ( addonColor( textAddon ) ? filamentLabel( addonColor( textAddon ) ) : '(filament not picked)' ) );
 		}
 		if ( addonOn( imageAddon ) ) {
-			parts.push( ( imageId ? 'Your image' : 'Image (not uploaded yet)' ) + ' in ' + ( addonColor( imageAddon ) ? addonColor( imageAddon ).getAttribute( 'data-name' ) : '(color not picked)' ) );
+			parts.push( ( imageId ? 'Your image' : 'Image (not uploaded yet)' ) + ' in ' + ( addonColor( imageAddon ) ? filamentLabel( addonColor( imageAddon ) ) : '(filament not picked)' ) );
 		}
 		if ( textCount && textInput ) {
 			textCount.textContent = textInput.value.length;
@@ -163,6 +361,14 @@
 			summaryEl.appendChild( strong );
 			summaryEl.appendChild( document.createTextNode( parts.join( ' · ' ) ) );
 		}
+	}
+
+	function openPicker( containerEl ) {
+		var pickerEl = containerEl.querySelector( '[data-yp-fil-picker]' );
+		if ( pickerEl ) {
+			pickerEl.open = true;
+		}
+		containerEl.scrollIntoView( { block: 'center', behavior: 'smooth' } );
 	}
 
 	function setStatus( message, isError ) {
@@ -293,12 +499,13 @@
 			if ( input ) {
 				colors[ slotEl.getAttribute( 'data-yp-slot' ) ] = parseInt( input.value, 10 );
 			} else if ( ! missing ) {
-				missing = slotName( slotEl );
+				missing = { name: slotName( slotEl ), el: slotEl };
 			}
 		} );
 
 		if ( missing ) {
-			setStatus( 'Pick a color for ' + missing + '.', true );
+			setStatus( 'Pick a filament for ' + missing.name + '.', true );
+			openPicker( missing.el );
 			return;
 		}
 
@@ -309,14 +516,14 @@
 		}
 
 		if ( lidText() && ! addonColor( textAddon ) ) {
-			setStatus( 'Pick a color for your text.', true );
-			textAddon.querySelector( '[data-yp-addon-colors]' ).scrollIntoView( { block: 'center', behavior: 'smooth' } );
+			setStatus( 'Pick a filament for your text.', true );
+			openPicker( textAddon.querySelector( '[data-yp-addon-colors]' ) );
 			return;
 		}
 
 		if ( addonOn( imageAddon ) && ! addonColor( imageAddon ) ) {
-			setStatus( 'Pick a color for your image.', true );
-			imageAddon.querySelector( '[data-yp-addon-colors]' ).scrollIntoView( { block: 'center', behavior: 'smooth' } );
+			setStatus( 'Pick a filament for your image.', true );
+			openPicker( imageAddon.querySelector( '[data-yp-addon-colors]' ) );
 			return;
 		}
 

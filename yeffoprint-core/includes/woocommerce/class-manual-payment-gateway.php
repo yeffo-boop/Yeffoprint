@@ -145,16 +145,25 @@ abstract class YeffoPrint_Manual_Payment_Gateway extends \WC_Payment_Gateway {
 		];
 	}
 
-	private function instructions_text( \WC_Order $order ): string {
+	/**
+	 * Asks for what's still owed, which is the full total unless part of
+	 * it already came in (YeffoPrint_Partial_Payments).
+	 */
+	private function instructions_text( \WC_Order $order, ?float $amount = null ): string {
 		$handle = $this->get_option( 'handle' );
 
 		return sprintf(
 			/* translators: 1: amount owed, 2: Venmo/Zelle handle, 3: order number */
 			__( 'Please send %1$s to %2$s. Include your order number, %3$s, in the payment note so it\'s matched automatically — otherwise it may take us longer to confirm.', 'yeffoprint-core' ),
-			wc_price( $order->get_total() ),
+			wc_price( $amount ?? YeffoPrint_Partial_Payments::balance_due( $order ) ),
 			$handle ? '<strong>' . esc_html( $handle ) . '</strong>' : __( 'the account shown at checkout', 'yeffoprint-core' ),
 			'#' . $order->get_order_number()
 		);
+	}
+
+	/** Payment instructions for a specific amount, with the Venmo button/QR — the short payment email (class-partial-payments.php). */
+	public function instructions_html( \WC_Order $order, float $amount, string $button_class ): string {
+		return '<p>' . $this->instructions_text( $order, $amount ) . '</p>' . $this->payment_action_html( $button_class );
 	}
 
 	public function thankyou_page( $order_id ): void {

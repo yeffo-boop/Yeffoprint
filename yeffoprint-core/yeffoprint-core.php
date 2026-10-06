@@ -3,7 +3,7 @@
  * Plugin Name: YeffoPrint Core
  * Plugin URI: https://yeffoprint.com
  * Description: Business logic for YeffoPrint — templates, customization schemas, batches/variants, pricing, materials, sizes, custom orders, and proofs. Presentation lives in the yeffoprint theme; this plugin must work under any theme.
- * Version: 0.9.8
+ * Version: 0.9.19
  * Requires at least: 6.4
  * Requires PHP: 8.0
  * Author: YeffoPrint
@@ -16,7 +16,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'YEFFOPRINT_CORE_VERSION', '0.9.8' );
+define( 'YEFFOPRINT_CORE_VERSION', '0.9.19' );
 define( 'YEFFOPRINT_CORE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'YEFFOPRINT_CORE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -93,4 +93,8 @@ register_deactivation_hook( __FILE__, function () {
 	// Same reasoning again — the abandoned cart reminder sweep.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
 	YeffoPrint_Abandoned_Carts::unschedule();
+
+	// Same reasoning again — the review request email sweep.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-review-request.php';
+	YeffoPrint_Review_Request::unschedule();
 } );

@@ -6,9 +6,9 @@
  * orders, not just custom orders."
  *
  * Phase A shipped Custom Design orders. Phase B added Custom Stickers —
- * no fee item, no batching (one sticker configuration per order), and
- * its own artwork upload, matching the customer-facing Custom Stickers
- * form's own shape. Phase C (this revision) adds Template Label orders —
+ * no fee item, and its own artwork upload per sticker; "+ Add another
+ * sticker" puts several on one order (direct report: "I can only add
+ * one custom sticker to an order"). Phase C (this revision) adds Template Label orders —
  * a real, existing yp_template, picked the same way the Customer field
  * picks an existing customer (search-as-you-type, WP core's own
  * `/wp/v2/yp_template?search=` route — same route views/templates.js
@@ -70,27 +70,80 @@
 		return yeffoprintAdminApp.restUrl + path;
 	}
 
+	// "Fill all" link under each field in the first label row — direct
+	// request: "if I create 10 items for an order, and they're all
+	// holographic, I should be able to put that in the top one then auto
+	// fill the rest." records.css only shows it on the first row, and only
+	// once there's more than one row; wireFillAll() does the copying.
+	var FILL_ALL_HTML = '<button type="button" class="yp-fill-all" data-yp-fill-all>&darr; Fill all</button>';
+
 	function batchRowHtml( row, options ) {
-		row = row || { size_id: '', material_id: '', quantity: 100, compound_strength: '' };
+		row = row || { size_id: '', material_id: '', quantity: 100, compound_strength: '', brand_name: '' };
 		return (
 			'<tr>' +
-				'<td><select data-row-size>' +
+				'<td data-label="Size"><select data-row-size aria-label="Size">' +
 					'<option value="">Choose a size…</option>' +
 					options.sizes.map( function ( size ) {
 						return '<option value="' + size.id + '"' + ( String( row.size_id ) === String( size.id ) ? ' selected' : '' ) + '>' + YP.escapeHtml( size.name ) + '</option>';
 					} ).join( '' ) +
-				'</select></td>' +
-				'<td><select data-row-material>' +
+				'</select>' + FILL_ALL_HTML + '</td>' +
+				'<td data-label="Material"><select data-row-material aria-label="Material">' +
 					'<option value="">Choose a material…</option>' +
 					options.materials.map( function ( material ) {
 						return '<option value="' + material.id + '"' + ( String( row.material_id ) === String( material.id ) ? ' selected' : '' ) + ( material.in_stock ? '' : ' disabled' ) + '>' + YP.escapeHtml( material.name ) + ( material.in_stock ? '' : ' (out of stock)' ) + '</option>';
 					} ).join( '' ) +
-				'</select></td>' +
-				'<td><input type="number" min="1" step="1" data-row-quantity value="' + YP.escapeAttr( row.quantity ) + '" /></td>' +
-				'<td><input type="text" data-row-compound placeholder="e.g. 10mg/mL" value="' + YP.escapeAttr( row.compound_strength ) + '" /></td>' +
-				'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
+				'</select>' + FILL_ALL_HTML + '</td>' +
+				'<td data-label="Quantity" class="yp-tier-table__qty yp-stack-half"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( row.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
+				'<td data-label="Compound/Strength" class="yp-stack-half"><input type="text" data-row-compound aria-label="Compound/Strength" placeholder="e.g. 10mg/mL" value="' + YP.escapeAttr( row.compound_strength ) + '" />' + FILL_ALL_HTML + '</td>' +
+				// Blank uses the order's Brand name above; only a label for a different brand needs one typed.
+				'<td data-label="Brand"><input type="text" data-row-brand aria-label="Brand" placeholder="Same as Brand name" value="' + YP.escapeAttr( row.brand_name || '' ) + '" />' + FILL_ALL_HTML + '</td>' +
+				'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
 			'</tr>'
 		);
+	}
+
+	// Copies the first row's value in the clicked column into every other
+	// row. One delegated listener per <tbody> (render() builds a fresh one
+	// each time), so rows added later are covered too.
+	function wireFillAll( tbody, onChange ) {
+		if ( ! tbody || tbody._fillAllWired ) {
+			return;
+		}
+		tbody._fillAllWired = true;
+		tbody.addEventListener( 'click', function ( event ) {
+			var button = event.target.closest( '[data-yp-fill-all]' );
+			if ( ! button || ! tbody.contains( button ) ) {
+				return;
+			}
+			var cell   = button.closest( 'td' );
+			var column = Array.prototype.indexOf.call( cell.parentNode.children, cell );
+			var source = cell.querySelector( 'input, select, textarea' );
+			if ( ! source ) {
+				return;
+			}
+			Array.prototype.forEach.call( tbody.querySelectorAll( 'tr' ), function ( row ) {
+				var target = row.children[ column ] && row.children[ column ].querySelector( 'input, select, textarea' );
+				if ( target && target !== source ) {
+					target.value = source.value;
+				}
+			} );
+			var label = button.innerHTML;
+			button.classList.add( 'is-done' );
+			button.textContent = '\u2713 Filled';
+			setTimeout( function () {
+				button.classList.remove( 'is-done' );
+				button.innerHTML = label;
+			}, 1400 );
+			onChange();
+		} );
+	}
+
+	// A new row starts as a copy of the last one's picks (size, material,
+	// quantity), so a run of identical labels only needs the text typed.
+	function lastBatchRow( tbody ) {
+		var rows = readBatchRows( tbody );
+		var last = rows[ rows.length - 1 ];
+		return last ? { size_id: last.size_id || '', material_id: last.material_id || '', quantity: last.quantity || 100, compound_strength: '', brand_name: last.brand_name || '' } : null;
 	}
 
 	function wireRemoveButtons( tbody, onChange ) {
@@ -116,7 +169,8 @@
 				size_id: parseInt( row.querySelector( '[data-row-size]' ).value, 10 ) || 0,
 				material_id: parseInt( row.querySelector( '[data-row-material]' ).value, 10 ) || 0,
 				quantity: parseInt( row.querySelector( '[data-row-quantity]' ).value, 10 ) || 0,
-				compound_strength: row.querySelector( '[data-row-compound]' ).value
+				compound_strength: row.querySelector( '[data-row-compound]' ).value,
+				brand_name: row.querySelector( '[data-row-brand]' ).value
 			};
 		} );
 	}
@@ -147,7 +201,12 @@
 			stickerOptions: null, // custom-stickers/options — Custom Stickers' own sizes/materials/types/shapes.
 			webDesignPackages: null, // /wp/v2/yp_web_design_pkg — every published package, priced or not (see webDesignFieldsHtml()).
 			addToOrder: null, // GET /admin/order/{id} — only in "add to an existing order" mode (addToOrderId).
-			stickerUploads: [], // [{ name, id, error }] — same shape as the customer-facing form's own uploadedFiles.
+			stickers: null, // Custom Sticker cards — see newSticker(); filled in once the options load.
+			// Direct report: switching item types "makes me start all the way
+			// over" — render() rebuilds every panel. saveDraft() copies what's
+			// typed here first and render() puts it back, so turning a type
+			// on/off (even off and on again) keeps every other panel as is.
+			draft: { fields: {}, batch: null, templateVariants: null },
 			selectedCustomer: null, // { id, display_name, email }
 			newCustomerMode: false,
 			selectedTemplate: null, // { id, title } — picked from search, before its configurator data has loaded.
@@ -181,10 +240,11 @@
 			.then( function ( results ) {
 				state.options = results[ 0 ];
 				state.stickerOptions = results[ 1 ];
+				state.stickers = [ newSticker() ];
 				state.webDesignPackages = results[ 2 ];
 				state.addToOrder = results[ 3 ];
-				if ( state.addToOrder && ! state.addToOrder.editable ) {
-					viewEl.innerHTML = '<p class="yp-form__error">Order #' + YP.escapeHtml( String( state.addToOrder.number ) ) + ' has already been paid, so items can’t be added to it.</p>';
+				if ( state.addToOrder && ! state.addToOrder.editable && ! state.addToOrder.can_add_items ) {
+					viewEl.innerHTML = '<p class="yp-form__error">Order #' + YP.escapeHtml( String( state.addToOrder.number ) ) + ' has already shipped or closed, so items can’t be added to it.</p>';
 					return;
 				}
 				render();
@@ -206,8 +266,13 @@
 			var adding          = state.addToOrder;
 
 			viewEl.innerHTML =
+				'<div class="yp-mo">' +
 				( adding
-					? '<p class="yp-app__intro">Adding items to <strong>Order #' + YP.escapeHtml( String( adding.number ) ) + '</strong>' + ( adding.customer_name ? ' for ' + YP.escapeHtml( adding.customer_name ) : '' ) + ' (currently $' + adding.total.toFixed( 2 ) + '). Its payment link stays the same and charges the new total. <a href="#/manual-order">Start a new order instead</a></p>'
+					? '<p class="yp-app__intro">Adding items to <strong>Order #' + YP.escapeHtml( String( adding.number ) ) + '</strong>' + ( adding.customer_name ? ' for ' + YP.escapeHtml( adding.customer_name ) : '' ) +
+						( adding.editable
+							? ' (currently $' + adding.total.toFixed( 2 ) + '). Its payment link stays the same and charges the new total.'
+							: '. It’s already paid, so these items go on a linked add-on order with its own payment link and no shipping charge. Both orders ship together in one box.' ) +
+						' <a href="#/manual-order">Start a new order instead</a></p>'
 					: '<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' ) +
 
 				'<div class="yp-panel">' +
@@ -233,7 +298,7 @@
 						'<input type="checkbox" id="yp-mo-requires-proof" checked />' +
 						'<label for="yp-mo-requires-proof">Requires proof approval before printing</label>' +
 					'</div>' +
-					'<p class="yp-panel__hint">When checked, the customer gets a proof-approval link once staff upload a proof from the Custom Orders screen — same flow as an order placed on the storefront. Each item type above gets its own proof to approve.</p>' +
+					'<p class="yp-panel__hint">When checked, the customer gets a proof-approval link once staff upload a proof from the Custom Orders screen — same flow as an order placed on the storefront. Each item type above (and each sticker) gets its own proof to approve.</p>' +
 					( state.activeTypes.custom_design ?
 						'<div class="yp-field yp-field--checkbox">' +
 							'<input type="checkbox" id="yp-mo-waive-fee" />' +
@@ -243,13 +308,15 @@
 						: '' ) +
 					'<div class="yp-field yp-field--checkbox">' +
 						'<input type="checkbox" id="yp-mo-send-invoice"' + ( adding ? '' : ' checked' ) + ' />' +
-						'<label for="yp-mo-send-invoice">' + ( adding ? 'Email the customer the updated order and payment link' : 'Email the customer their order details and a payment link' ) + '</label>' +
+						'<label for="yp-mo-send-invoice">' + ( adding ? ( adding.editable ? 'Email the customer the updated order and payment link' : 'Email the customer the add-on order and its payment link' ) : 'Email the customer their order details and a payment link' ) + '</label>' +
 					'</div>' +
 					'<p class="yp-panel__hint">Sent right away via WooCommerce’s own Order details email, with the order’s real payment link — skip this if you’re taking payment another way (over the phone, in person) instead.</p>' +
 				'</div>' +
 
 				'<div data-yp-submit-status></div>' +
-				'<button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>' + submitLabel() + '</button>';
+				// Wrapped so phones can keep it pinned to the bottom of the screen (records.css .yp-mo__submit).
+				'<div class="yp-mo__submit"><button type="button" class="wp-block-button__link is-style-accent" data-yp-submit>' + submitLabel() + '</button></div>' +
+				'</div>';
 
 			if ( ! adding ) {
 				renderCustomerPicker();
@@ -277,6 +344,7 @@
 						return;
 					}
 					state.activeTypes[ type ] = ! state.activeTypes[ type ];
+					saveDraft();
 					render();
 				} );
 			} );
@@ -284,9 +352,10 @@
 			if ( state.activeTypes.custom_design ) {
 				var batchBody = viewEl.querySelector( '[data-yp-batch]' );
 				wireRemoveButtons( batchBody, refreshPricePreview );
+				wireFillAll( batchBody, refreshPricePreview );
 
 				viewEl.querySelector( '[data-yp-add-row]' ).addEventListener( 'click', function () {
-					batchBody.insertAdjacentHTML( 'beforeend', batchRowHtml( null, state.options ) );
+					batchBody.insertAdjacentHTML( 'beforeend', batchRowHtml( lastBatchRow( batchBody ), state.options ) );
 					wireRemoveButtons( batchBody, refreshPricePreview );
 					bindBatchChangeListeners();
 					refreshPricePreview();
@@ -303,11 +372,7 @@
 			}
 
 			if ( state.activeTypes.sticker ) {
-				bindStickerChangeListeners();
-				wireStickerUploads();
-				renderStickerFileList();
-				toggleStickerCustomDimensions();
-				refreshStickerPricePreview();
+				bindStickerPanel();
 			}
 
 			if ( state.activeTypes.template ) {
@@ -318,7 +383,60 @@
 				}
 			}
 
+			restoreDraftFields();
+
 			viewEl.querySelector( '[data-yp-submit]' ).addEventListener( 'click', submit );
+		}
+
+		// Every plain field with an id (brand name, notes, checkboxes, the
+		// web design package, the template's size/material, new-customer
+		// name/email...) plus the two row tables. Merged into the draft
+		// rather than replacing it, so a panel that's switched off keeps
+		// its values for when it's switched back on. Stickers and the
+		// shipping panel already live in state; search boxes are skipped.
+		function saveDraft() {
+			viewEl.querySelectorAll( 'input[id], select[id], textarea[id]' ).forEach( function ( field ) {
+				if ( 'file' === field.type || /^yp-mo-sticker-|-search$|^yp-mo-(billing-differs|customer-provides-address|shipping-method|payment-link)$/.test( field.id ) || field.hasAttribute( 'data-yp-address-field' ) ) {
+					return;
+				}
+				state.draft.fields[ field.id ] = 'checkbox' === field.type ? { checked: field.checked } : { value: field.value };
+			} );
+
+			var batchBody = viewEl.querySelector( '[data-yp-batch]' );
+			if ( batchBody ) {
+				state.draft.batch = Array.prototype.map.call( batchBody.querySelectorAll( 'tr' ), function ( row ) {
+					return {
+						size_id: row.querySelector( '[data-row-size]' ).value,
+						material_id: row.querySelector( '[data-row-material]' ).value,
+						quantity: row.querySelector( '[data-row-quantity]' ).value,
+						compound_strength: row.querySelector( '[data-row-compound]' ).value,
+						brand_name: row.querySelector( '[data-row-brand]' ).value
+					};
+				} );
+			}
+
+			var variantsBody = viewEl.querySelector( '[data-yp-template-variants]' );
+			if ( variantsBody && state.templateData ) {
+				state.draft.templateVariants = readTemplateVariants( variantsBody, state.templateData.field_schema ).map( function ( variant ) {
+					variant.quantity = variant.quantity || '';
+					return variant;
+				} );
+			}
+		}
+
+		function restoreDraftFields() {
+			Object.keys( state.draft.fields ).forEach( function ( id ) {
+				var field = document.getElementById( id );
+				if ( ! field || ! viewEl.contains( field ) ) {
+					return;
+				}
+				var saved = state.draft.fields[ id ];
+				if ( 'checked' in saved ) {
+					field.checked = saved.checked;
+				} else if ( 'SELECT' !== field.tagName || field.querySelector( 'option[value="' + CSS.escape( saved.value ) + '"]' ) ) {
+					field.value = saved.value;
+				}
+			} );
 		}
 
 		/* ---------- Custom Design (Phase A) ---------- */
@@ -328,10 +446,10 @@
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Custom Design details</h2></div>' +
 					'<div class="yp-field"><label for="yp-mo-brand">Brand name</label><input type="text" id="yp-mo-brand" /></div>' +
-					'<table class="yp-tier-table"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th></th></tr></thead>' +
-						'<tbody data-yp-batch>' + batchRowHtml( null, state.options ) + '</tbody>' +
+					'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Size</th><th>Material</th><th>Quantity</th><th>Compound/Strength</th><th>Brand</th><th></th></tr></thead>' +
+						'<tbody data-yp-batch>' + ( state.draft.batch || [ null ] ).map( function ( row ) { return batchRowHtml( row, state.options ); } ).join( '' ) + '</tbody>' +
 					'</table>' +
-					'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-row>+ Add another label</button>' +
+					'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-row>+ Add another label</button>' +
 					'<div class="yp-form__row">' +
 						'<div class="yp-field"><label for="yp-mo-style-notes">Style notes</label><textarea id="yp-mo-style-notes" rows="2"></textarea></div>' +
 						'<div class="yp-field"><label for="yp-mo-instructions">Instructions</label><textarea id="yp-mo-instructions" rows="2"></textarea></div>' +
@@ -398,6 +516,24 @@
 
 		/* ---------- Custom Stickers (Phase B) ---------- */
 
+		// Direct report: "I can only add one custom sticker to an order."
+		// Each sticker is its own card (own size/type/shape/quantity,
+		// instructions and artwork) kept in state.stickers, so a re-render
+		// (e.g. toggling another item type) keeps every card as typed.
+		function newSticker( copyFrom ) {
+			return {
+				size_id: copyFrom ? copyFrom.size_id : '',
+				material_id: copyFrom ? copyFrom.material_id : '',
+				sticker_type: copyFrom ? copyFrom.sticker_type : '',
+				shape: copyFrom ? copyFrom.shape : '',
+				quantity: copyFrom ? copyFrom.quantity : 100,
+				custom_width_in: copyFrom ? copyFrom.custom_width_in : '',
+				custom_height_in: copyFrom ? copyFrom.custom_height_in : '',
+				instructions: '',
+				uploads: [] // [{ name, id, error }] — same shape as the customer-facing form's own uploadedFiles.
+			};
+		}
+
 		function stickerSizeById( id ) {
 			return state.stickerOptions.sizes.filter( function ( size ) {
 				return String( size.id ) === String( id );
@@ -405,79 +541,124 @@
 		}
 
 		function stickerFieldsHtml() {
-			var o = state.stickerOptions;
 			return (
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Custom Sticker details</h2></div>' +
-					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-mo-sticker-size">Size</label><select id="yp-mo-sticker-size">' +
-							'<option value="">Choose a size…</option>' +
-							o.sizes.map( function ( size ) {
-								return '<option value="' + size.id + '">' + YP.escapeHtml( size.name ) + '</option>';
-							} ).join( '' ) +
-						'</select></div>' +
-						'<div class="yp-field"><label for="yp-mo-sticker-material">Material</label><select id="yp-mo-sticker-material">' +
-							'<option value="">Choose a material…</option>' +
-							o.materials.map( function ( material ) {
-								return '<option value="' + material.id + '"' + ( material.in_stock ? '' : ' disabled' ) + '>' + YP.escapeHtml( material.name ) + ( material.in_stock ? '' : ' (out of stock)' ) + '</option>';
-							} ).join( '' ) +
-						'</select></div>' +
-					'</div>' +
-					'<div class="yp-form__row" data-yp-sticker-custom-dims style="display:none;">' +
-						'<div class="yp-field"><label for="yp-mo-sticker-width">Width (in)</label><input type="number" min="0.1" step="0.01" id="yp-mo-sticker-width" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-sticker-height">Height (in)</label><input type="number" min="0.1" step="0.01" id="yp-mo-sticker-height" /></div>' +
-					'</div>' +
-					'<div class="yp-form__row--three">' +
-						'<div class="yp-field"><label for="yp-mo-sticker-type">Type</label><select id="yp-mo-sticker-type">' +
-							'<option value="">Choose a type…</option>' +
-							Object.keys( o.sticker_types ).map( function ( key ) {
-								return '<option value="' + key + '">' + YP.escapeHtml( o.sticker_types[ key ] ) + '</option>';
-							} ).join( '' ) +
-						'</select></div>' +
-						'<div class="yp-field"><label for="yp-mo-sticker-shape">Shape</label><select id="yp-mo-sticker-shape">' +
-							'<option value="">Choose a shape…</option>' +
-							Object.keys( o.shapes ).map( function ( key ) {
-								return '<option value="' + key + '">' + YP.escapeHtml( o.shapes[ key ] ) + '</option>';
-							} ).join( '' ) +
-						'</select></div>' +
-						'<div class="yp-field"><label for="yp-mo-sticker-quantity">Quantity</label><input type="number" min="1" step="1" id="yp-mo-sticker-quantity" value="100" /></div>' +
-					'</div>' +
-					'<div class="yp-field"><label for="yp-mo-sticker-instructions">Instructions</label><textarea id="yp-mo-sticker-instructions" rows="2"></textarea></div>' +
-					'<div class="yp-field">' +
-						'<label for="yp-mo-sticker-files">Artwork (optional — can be sent separately and attached later)</label>' +
-						'<input type="file" id="yp-mo-sticker-files" multiple />' +
-						'<ul data-yp-sticker-file-list></ul>' +
-					'</div>' +
+					'<div data-yp-sticker-list></div>' +
+					'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-sticker>+ Add another sticker</button>' +
 					'<div data-yp-price-preview="sticker"><p class="yp-field__hint">Choose a size, material, type, and shape to see pricing.</p></div>' +
 				'</div>'
 			);
 		}
 
-		function toggleStickerCustomDimensions() {
-			var sizeSelect = viewEl.querySelector( '#yp-mo-sticker-size' );
-			var dimsRow    = viewEl.querySelector( '[data-yp-sticker-custom-dims]' );
-			if ( ! sizeSelect || ! dimsRow ) {
-				return;
-			}
-			var size = stickerSizeById( sizeSelect.value );
-			dimsRow.style.display = ( size && size.is_custom ) ? '' : 'none';
+		function stickerOptionsHtml( placeholder, entries, selected ) {
+			return '<option value="">' + placeholder + '</option>' + entries.map( function ( entry ) {
+				return '<option value="' + YP.escapeAttr( entry.value ) + '"' + ( String( entry.value ) === String( selected ) ? ' selected' : '' ) + ( entry.disabled ? ' disabled' : '' ) + '>' + YP.escapeHtml( entry.label ) + '</option>';
+			} ).join( '' );
 		}
 
-		function bindStickerChangeListeners() {
-			var ids = [ 'yp-mo-sticker-size', 'yp-mo-sticker-material', 'yp-mo-sticker-type', 'yp-mo-sticker-shape', 'yp-mo-sticker-quantity', 'yp-mo-sticker-width', 'yp-mo-sticker-height' ];
-			ids.forEach( function ( id ) {
-				var field = viewEl.querySelector( '#' + id );
-				if ( ! field || field._wired ) {
-					return;
-				}
-				field._wired = true;
-				field.addEventListener( 'change', function () {
-					if ( 'yp-mo-sticker-size' === id ) {
-						toggleStickerCustomDimensions();
-					}
-					refreshStickerPricePreview();
+		function stickerCardHtml( sticker, index ) {
+			var o    = state.stickerOptions;
+			var id   = function ( name ) { return 'yp-mo-sticker-' + name + '-' + index; };
+			var size = stickerSizeById( sticker.size_id );
+			var many = state.stickers.length > 1;
+			return (
+				'<div class="yp-mo-sticker" data-yp-sticker="' + index + '">' +
+					( many
+						? '<div class="yp-mo-sticker__head"><h3>Sticker ' + ( index + 1 ) + '</h3>' +
+							'<button type="button" class="yp-row-action" data-yp-remove-sticker aria-label="Remove sticker ' + ( index + 1 ) + '">Remove</button>' +
+							'<span class="yp-mo-sticker__price" data-yp-sticker-price></span></div>'
+						: '' ) +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="' + id( 'size' ) + '">Size</label><select id="' + id( 'size' ) + '" data-sk="size_id">' +
+							stickerOptionsHtml( 'Choose a size…', o.sizes.map( function ( s ) { return { value: s.id, label: s.name }; } ), sticker.size_id ) +
+						'</select></div>' +
+						'<div class="yp-field"><label for="' + id( 'material' ) + '">Material</label><select id="' + id( 'material' ) + '" data-sk="material_id">' +
+							stickerOptionsHtml( 'Choose a material…', o.materials.map( function ( m ) {
+								return { value: m.id, label: m.name + ( m.in_stock ? '' : ' (out of stock)' ), disabled: ! m.in_stock };
+							} ), sticker.material_id ) +
+						'</select></div>' +
+					'</div>' +
+					'<div class="yp-form__row" data-yp-sticker-custom-dims' + ( size && size.is_custom ? '' : ' style="display:none;"' ) + '>' +
+						'<div class="yp-field"><label for="' + id( 'width' ) + '">Width (in)</label><input type="number" min="0.1" step="0.01" id="' + id( 'width' ) + '" data-sk="custom_width_in" value="' + YP.escapeAttr( sticker.custom_width_in ) + '" /></div>' +
+						'<div class="yp-field"><label for="' + id( 'height' ) + '">Height (in)</label><input type="number" min="0.1" step="0.01" id="' + id( 'height' ) + '" data-sk="custom_height_in" value="' + YP.escapeAttr( sticker.custom_height_in ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-form__row--three">' +
+						'<div class="yp-field"><label for="' + id( 'type' ) + '">Type</label><select id="' + id( 'type' ) + '" data-sk="sticker_type">' +
+							stickerOptionsHtml( 'Choose a type…', Object.keys( o.sticker_types ).map( function ( key ) { return { value: key, label: o.sticker_types[ key ] }; } ), sticker.sticker_type ) +
+						'</select></div>' +
+						'<div class="yp-field"><label for="' + id( 'shape' ) + '">Shape</label><select id="' + id( 'shape' ) + '" data-sk="shape">' +
+							stickerOptionsHtml( 'Choose a shape…', Object.keys( o.shapes ).map( function ( key ) { return { value: key, label: o.shapes[ key ] }; } ), sticker.shape ) +
+						'</select></div>' +
+						'<div class="yp-field"><label for="' + id( 'quantity' ) + '">Quantity</label><input type="number" min="1" step="1" inputmode="numeric" id="' + id( 'quantity' ) + '" data-sk="quantity" value="' + YP.escapeAttr( sticker.quantity ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-field"><label for="' + id( 'instructions' ) + '">Instructions</label><textarea id="' + id( 'instructions' ) + '" data-sk="instructions" rows="2">' + YP.escapeHtml( sticker.instructions ) + '</textarea></div>' +
+					'<div class="yp-field">' +
+						'<label for="' + id( 'files' ) + '">Artwork (optional — can be sent separately and attached later)</label>' +
+						'<input type="file" id="' + id( 'files' ) + '" multiple data-yp-sticker-files />' +
+						'<ul data-yp-sticker-file-list></ul>' +
+					'</div>' +
+				'</div>'
+			);
+		}
+
+		function renderStickerCards() {
+			var listEl = viewEl.querySelector( '[data-yp-sticker-list]' );
+			if ( ! listEl ) {
+				return;
+			}
+			listEl.innerHTML = state.stickers.map( stickerCardHtml ).join( '' );
+
+			Array.prototype.forEach.call( listEl.querySelectorAll( '[data-yp-sticker]' ), function ( card ) {
+				var index   = parseInt( card.getAttribute( 'data-yp-sticker' ), 10 );
+				var sticker = state.stickers[ index ];
+
+				card.querySelectorAll( '[data-sk]' ).forEach( function ( field ) {
+					var key = field.getAttribute( 'data-sk' );
+					field.addEventListener( 'input', function () {
+						sticker[ key ] = field.value;
+					} );
+					field.addEventListener( 'change', function () {
+						sticker[ key ] = field.value;
+						if ( 'size_id' === key ) {
+							var size = stickerSizeById( field.value );
+							card.querySelector( '[data-yp-sticker-custom-dims]' ).style.display = ( size && size.is_custom ) ? '' : 'none';
+						}
+						if ( 'instructions' !== key ) {
+							refreshStickerPricePreview();
+						}
+					} );
 				} );
+
+				var removeButton = card.querySelector( '[data-yp-remove-sticker]' );
+				if ( removeButton ) {
+					removeButton.addEventListener( 'click', function () {
+						state.stickers.splice( index, 1 );
+						renderStickerCards();
+						refreshStickerPricePreview();
+					} );
+				}
+
+				wireStickerUploads( card, sticker );
+				renderStickerFileList( card, sticker );
 			} );
+		}
+
+		function bindStickerPanel() {
+			var addButton = viewEl.querySelector( '[data-yp-add-sticker]' );
+			addButton.addEventListener( 'click', function () {
+				// Starts as a copy of the last sticker's picks, same as
+				// "Add another label" — only the artwork usually differs.
+				state.stickers.push( newSticker( state.stickers[ state.stickers.length - 1 ] ) );
+				renderStickerCards();
+				refreshStickerPricePreview();
+				var cards = viewEl.querySelectorAll( '[data-yp-sticker]' );
+				if ( cards.length && cards[ cards.length - 1 ].scrollIntoView ) {
+					cards[ cards.length - 1 ].scrollIntoView( { behavior: 'smooth', block: 'start' } );
+				}
+			} );
+			renderStickerCards();
+			refreshStickerPricePreview();
 		}
 
 		var stickerPreviewTimer = null;
@@ -486,17 +667,22 @@
 			stickerPreviewTimer = setTimeout( doRefreshStickerPricePreview, 300 );
 		}
 
-		function readStickerFields() {
-			var size = viewEl.querySelector( '#yp-mo-sticker-size' );
+		function stickerPayload( sticker ) {
 			return {
-				size_id: size ? parseInt( size.value, 10 ) || 0 : 0,
-				material_id: parseInt( ( viewEl.querySelector( '#yp-mo-sticker-material' ) || {} ).value, 10 ) || 0,
-				sticker_type: ( viewEl.querySelector( '#yp-mo-sticker-type' ) || {} ).value || '',
-				shape: ( viewEl.querySelector( '#yp-mo-sticker-shape' ) || {} ).value || '',
-				quantity: parseInt( ( viewEl.querySelector( '#yp-mo-sticker-quantity' ) || {} ).value, 10 ) || 0,
-				custom_width_in: parseFloat( ( viewEl.querySelector( '#yp-mo-sticker-width' ) || {} ).value ) || 0,
-				custom_height_in: parseFloat( ( viewEl.querySelector( '#yp-mo-sticker-height' ) || {} ).value ) || 0
+				size_id: parseInt( sticker.size_id, 10 ) || 0,
+				material_id: parseInt( sticker.material_id, 10 ) || 0,
+				sticker_type: sticker.sticker_type || '',
+				shape: sticker.shape || '',
+				quantity: parseInt( sticker.quantity, 10 ) || 0,
+				custom_width_in: parseFloat( sticker.custom_width_in ) || 0,
+				custom_height_in: parseFloat( sticker.custom_height_in ) || 0
 			};
+		}
+
+		function stickerIsComplete( fields ) {
+			var size   = stickerSizeById( fields.size_id );
+			var dimsOk = ! size || ! size.is_custom || ( fields.custom_width_in > 0 && fields.custom_height_in > 0 );
+			return fields.size_id && fields.material_id && fields.sticker_type && fields.shape && fields.quantity >= 1 && dimsOk;
 		}
 
 		function doRefreshStickerPricePreview() {
@@ -505,34 +691,54 @@
 				return; // Navigated away.
 			}
 
-			var fields = readStickerFields();
-			var size   = stickerSizeById( fields.size_id );
-			var dimsOk = ! size || ! size.is_custom || ( fields.custom_width_in > 0 && fields.custom_height_in > 0 );
+			var priceEls = viewEl.querySelectorAll( '[data-yp-sticker-price]' );
+			priceEls.forEach( function ( el ) { el.textContent = ''; } );
 
-			if ( ! fields.size_id || ! fields.material_id || ! fields.sticker_type || ! fields.shape || fields.quantity < 1 || ! dimsOk ) {
+			var stickers = state.stickers.map( stickerPayload );
+			var ready    = stickers.filter( stickerIsComplete );
+			if ( ! ready.length ) {
 				previewEl.innerHTML = '<p class="yp-field__hint">Choose a size, material, type, and shape to see pricing.</p>';
 				return;
 			}
 
+			// Only finished stickers are priced (and count toward the
+			// bulk tier), so a half-filled new card doesn't error out.
 			YP.request( coreEndpoint( 'admin/manual-orders/sticker-pricing-preview' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify( fields )
+				body: JSON.stringify( { stickers: ready } )
 			} )
 				.then( function ( pricing ) {
-					previewEl.innerHTML = '<p><strong>Total: $' + pricing.total.toFixed( 2 ) + '</strong></p>';
+					var errors = [];
+					var next   = 0;
+					stickers.forEach( function ( fields, index ) {
+						if ( ! stickerIsComplete( fields ) ) {
+							return;
+						}
+						var item = pricing.items[ next++ ] || {};
+						if ( item.error ) {
+							errors.push( ( stickers.length > 1 ? 'Sticker ' + ( index + 1 ) + ': ' : '' ) + item.error );
+						} else if ( priceEls[ index ] ) {
+							priceEls[ index ].textContent = '$' + item.total.toFixed( 2 );
+						}
+					} );
+					var waiting = stickers.length - ready.length;
+					previewEl.innerHTML =
+						errors.map( function ( message ) { return '<p class="yp-form__error">' + YP.escapeHtml( message ) + '</p>'; } ).join( '' ) +
+						'<p><strong>' + ( stickers.length > 1 ? 'Stickers total: $' : 'Total: $' ) + pricing.total.toFixed( 2 ) + '</strong></p>' +
+						( waiting ? '<p class="yp-field__hint">' + waiting + ' sticker' + ( waiting > 1 ? 's' : '' ) + ' not priced yet. Choose a size, material, type, and shape.</p>' : '' );
 				} )
 				.catch( function ( error ) {
 					previewEl.innerHTML = '<p class="yp-form__error">' + YP.escapeHtml( error.message ) + '</p>';
 				} );
 		}
 
-		function renderStickerFileList() {
-			var listEl = viewEl.querySelector( '[data-yp-sticker-file-list]' );
+		function renderStickerFileList( card, sticker ) {
+			var listEl = card.querySelector( '[data-yp-sticker-file-list]' );
 			if ( ! listEl ) {
 				return;
 			}
-			listEl.innerHTML = state.stickerUploads.map( function ( file, index ) {
+			listEl.innerHTML = sticker.uploads.map( function ( file, index ) {
 				var status = file.error
 					? '<span class="yp-form__error">' + YP.escapeHtml( file.error ) + '</span>'
 					: ( file.id ? '<span>Uploaded</span>' : '<span>Uploading&hellip;</span>' );
@@ -542,18 +748,29 @@
 
 			listEl.querySelectorAll( '[data-yp-remove-sticker-file]' ).forEach( function ( button ) {
 				button.addEventListener( 'click', function () {
-					state.stickerUploads.splice( parseInt( button.getAttribute( 'data-yp-remove-sticker-file' ), 10 ), 1 );
-					renderStickerFileList();
+					sticker.uploads.splice( parseInt( button.getAttribute( 'data-yp-remove-sticker-file' ), 10 ), 1 );
+					renderStickerFileList( card, sticker );
 				} );
 			} );
 		}
 
-		function wireStickerUploads() {
-			var filesInput = viewEl.querySelector( '#yp-mo-sticker-files' );
-			if ( ! filesInput || filesInput._wired ) {
+		// An upload finishing after its card was re-rendered (or moved by
+		// removing an earlier sticker) still lands on the right sticker:
+		// results go into the sticker object, then whichever card shows
+		// that sticker now is redrawn.
+		function redrawStickerFiles( sticker ) {
+			var index = state.stickers.indexOf( sticker );
+			var card  = index === -1 ? null : viewEl.querySelector( '[data-yp-sticker="' + index + '"]' );
+			if ( card ) {
+				renderStickerFileList( card, sticker );
+			}
+		}
+
+		function wireStickerUploads( card, sticker ) {
+			var filesInput = card.querySelector( '[data-yp-sticker-files]' );
+			if ( ! filesInput ) {
 				return;
 			}
-			filesInput._wired = true;
 
 			filesInput.addEventListener( 'change', function () {
 				var selected = Array.prototype.slice.call( filesInput.files );
@@ -570,8 +787,8 @@
 				var placeholders = selected.map( function ( file ) {
 					return { name: file.name, id: null, error: null };
 				} );
-				state.stickerUploads = state.stickerUploads.concat( placeholders );
-				renderStickerFileList();
+				sticker.uploads = sticker.uploads.concat( placeholders );
+				redrawStickerFiles( sticker );
 
 				YP.request( coreEndpoint( 'custom-orders/uploads' ), {
 					method: 'POST',
@@ -579,26 +796,26 @@
 				} )
 					.then( function ( data ) {
 						( data.files || [] ).forEach( function ( result, i ) {
-							var entry = state.stickerUploads.indexOf( placeholders[ i ] );
+							var entry = sticker.uploads.indexOf( placeholders[ i ] );
 							if ( entry === -1 ) {
 								return;
 							}
 							if ( result.success ) {
-								state.stickerUploads[ entry ].id = result.id;
+								sticker.uploads[ entry ].id = result.id;
 							} else {
-								state.stickerUploads[ entry ].error = result.message;
+								sticker.uploads[ entry ].error = result.message;
 							}
 						} );
-						renderStickerFileList();
+						redrawStickerFiles( sticker );
 					} )
 					.catch( function () {
 						placeholders.forEach( function ( placeholder ) {
-							var entry = state.stickerUploads.indexOf( placeholder );
+							var entry = sticker.uploads.indexOf( placeholder );
 							if ( entry !== -1 ) {
-								state.stickerUploads[ entry ].error = 'Upload failed.';
+								sticker.uploads[ entry ].error = 'Upload failed.';
 							}
 						} );
-						renderStickerFileList();
+						redrawStickerFiles( sticker );
 					} );
 			} );
 		}
@@ -641,11 +858,11 @@
 			variant = variant || { quantity: 100, values: {} };
 			return (
 				'<tr>' +
-					'<td><input type="number" min="1" step="1" data-row-quantity value="' + YP.escapeAttr( variant.quantity ) + '" /></td>' +
+					'<td data-label="Quantity" class="yp-tier-table__qty yp-stack-half"><input type="number" min="1" step="1" inputmode="numeric" data-row-quantity aria-label="Quantity" value="' + YP.escapeAttr( variant.quantity ) + '" />' + FILL_ALL_HTML + '</td>' +
 					fieldSchema.map( function ( field ) {
-						return '<td>' + templateFieldInputHtml( field, variant.values[ field.id ] ) + '</td>';
+						return '<td data-label="' + YP.escapeAttr( field.label ) + '"' + ( 'textarea' === field.type ? '' : ' class="yp-stack-half"' ) + '>' + templateFieldInputHtml( field, variant.values[ field.id ] ) + FILL_ALL_HTML + '</td>';
 					} ).join( '' ) +
-					'<td><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
+					'<td class="yp-stack-remove"><button type="button" class="yp-row-action" data-yp-remove-row aria-label="Remove label">&times;</button></td>' +
 				'</tr>'
 			);
 		}
@@ -667,7 +884,7 @@
 		function bindTemplateVariantListeners() {
 			var tbody = viewEl.querySelector( '[data-yp-template-variants]' );
 			if ( tbody ) {
-				tbody.querySelectorAll( 'input, textarea' ).forEach( function ( field ) {
+				tbody.querySelectorAll( 'input, select, textarea' ).forEach( function ( field ) {
 					if ( field._wired ) {
 						return;
 					}
@@ -781,26 +998,34 @@
 						} ).join( '' ) +
 					'</select></div>' +
 				'</div>' +
-				'<table class="yp-tier-table"><thead><tr><th>Quantity</th>' +
+				'<table class="yp-tier-table yp-tier-table--items yp-stack-rows"><thead><tr><th>Quantity</th>' +
 					data.field_schema.map( function ( field ) { return '<th>' + YP.escapeHtml( field.label ) + '</th>'; } ).join( '' ) +
 					'<th></th></tr></thead>' +
-					'<tbody data-yp-template-variants>' + templateVariantRowHtml( null, data.field_schema ) + '</tbody>' +
+					'<tbody data-yp-template-variants>' + ( state.draft.templateVariants || [ null ] ).map( function ( variant ) { return templateVariantRowHtml( variant, data.field_schema ); } ).join( '' ) + '</tbody>' +
 				'</table>' +
-				'<button type="button" class="wp-block-button__link is-style-outline" data-yp-add-template-row>+ Add another label</button>' +
+				'<button type="button" class="wp-block-button__link is-style-outline yp-add-row-button" data-yp-add-template-row>+ Add another label</button>' +
 				'<div class="yp-field"><label for="yp-mo-template-instructions">Instructions</label><textarea id="yp-mo-template-instructions" rows="2"></textarea></div>';
 
 			el.querySelector( '[data-yp-change-template]' ).addEventListener( 'click', function () {
 				state.selectedTemplate = null;
 				state.templateData = null;
+				state.draft.templateVariants = null;
+				delete state.draft.fields[ 'yp-mo-template-size' ];
+				delete state.draft.fields[ 'yp-mo-template-material' ];
 				renderTemplatePanel();
 				refreshTemplatePricePreview();
 			} );
 
 			var tbody = el.querySelector( '[data-yp-template-variants]' );
 			wireRemoveButtons( tbody, refreshTemplatePricePreview );
+			wireFillAll( tbody, refreshTemplatePricePreview );
 
 			el.querySelector( '[data-yp-add-template-row]' ).addEventListener( 'click', function () {
-				tbody.insertAdjacentHTML( 'beforeend', templateVariantRowHtml( null, data.field_schema ) );
+				// Same as Custom Design's rows: carry the last row's quantity
+				// over; the label text itself starts blank.
+				var rows = readTemplateVariants( tbody, data.field_schema );
+				var last = rows[ rows.length - 1 ];
+				tbody.insertAdjacentHTML( 'beforeend', templateVariantRowHtml( { quantity: last && last.quantity ? last.quantity : 100, values: {} }, data.field_schema ) );
 				wireRemoveButtons( tbody, refreshTemplatePricePreview );
 				bindTemplateVariantListeners();
 				refreshTemplatePricePreview();
@@ -1007,19 +1232,19 @@
 			return (
 				'<div class="yp-address-fields">' +
 					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-first-name">First name</label><input type="text" id="yp-mo-' + prefix + '-first-name" data-yp-address-field="first_name" value="' + YP.escapeAttr( address.first_name ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-last-name">Last name</label><input type="text" id="yp-mo-' + prefix + '-last-name" data-yp-address-field="last_name" value="' + YP.escapeAttr( address.last_name ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-first-name">First name</label><input type="text" id="yp-mo-' + prefix + '-first-name" data-yp-address-field="first_name" autocomplete="given-name" value="' + YP.escapeAttr( address.first_name ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-last-name">Last name</label><input type="text" id="yp-mo-' + prefix + '-last-name" data-yp-address-field="last_name" autocomplete="family-name" value="' + YP.escapeAttr( address.last_name ) + '" /></div>' +
 					'</div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-1">Address line 1</label><input type="text" id="yp-mo-' + prefix + '-address-1" data-yp-address-field="address_1" value="' + YP.escapeAttr( address.address_1 ) + '" /></div>' +
-					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-2">Address line 2</label><input type="text" id="yp-mo-' + prefix + '-address-2" data-yp-address-field="address_2" value="' + YP.escapeAttr( address.address_2 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-1">Address line 1</label><input type="text" id="yp-mo-' + prefix + '-address-1" data-yp-address-field="address_1" autocomplete="address-line1" value="' + YP.escapeAttr( address.address_1 ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-mo-' + prefix + '-address-2">Address line 2</label><input type="text" id="yp-mo-' + prefix + '-address-2" data-yp-address-field="address_2" autocomplete="address-line2" value="' + YP.escapeAttr( address.address_2 ) + '" /></div>' +
 					'<div class="yp-form__row--three">' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-city">City</label><input type="text" id="yp-mo-' + prefix + '-city" data-yp-address-field="city" value="' + YP.escapeAttr( address.city ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-state">State</label><input type="text" id="yp-mo-' + prefix + '-state" data-yp-address-field="state" value="' + YP.escapeAttr( address.state ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-postcode">ZIP / postal code</label><input type="text" id="yp-mo-' + prefix + '-postcode" data-yp-address-field="postcode" value="' + YP.escapeAttr( address.postcode ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-city">City</label><input type="text" id="yp-mo-' + prefix + '-city" data-yp-address-field="city" autocomplete="address-level2" value="' + YP.escapeAttr( address.city ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-state">State</label><input type="text" id="yp-mo-' + prefix + '-state" data-yp-address-field="state" autocomplete="address-level1" value="' + YP.escapeAttr( address.state ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-postcode">ZIP / postal code</label><input type="text" id="yp-mo-' + prefix + '-postcode" data-yp-address-field="postcode" autocomplete="postal-code" value="' + YP.escapeAttr( address.postcode ) + '" /></div>' +
 					'</div>' +
 					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-country">Country</label><input type="text" id="yp-mo-' + prefix + '-country" data-yp-address-field="country" maxlength="2" placeholder="US" value="' + YP.escapeAttr( address.country ) + '" /></div>' +
-						'<div class="yp-field"><label for="yp-mo-' + prefix + '-phone">Phone</label><input type="text" id="yp-mo-' + prefix + '-phone" data-yp-address-field="phone" value="' + YP.escapeAttr( address.phone ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-country">Country</label><input type="text" id="yp-mo-' + prefix + '-country" data-yp-address-field="country" autocomplete="country" autocapitalize="characters" maxlength="2" placeholder="US" value="' + YP.escapeAttr( address.country ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-mo-' + prefix + '-phone">Phone</label><input type="tel" id="yp-mo-' + prefix + '-phone" data-yp-address-field="phone" autocomplete="tel" value="' + YP.escapeAttr( address.phone ) + '" /></div>' +
 					'</div>' +
 				'</div>'
 			);
@@ -1044,7 +1269,7 @@
 
 					'<div data-yp-ship-address-fields' + ( s.customerProvidesAddress ? ' style="display:none;"' : '' ) + '>' +
 						addressFieldsHtml( 'ship', s.address ) +
-						'<button type="button" class="yp-row-action" data-yp-verify-address>Verify address</button>' +
+						'<button type="button" class="wp-block-button__link is-style-outline yp-mo__verify" data-yp-verify-address>Verify address</button>' +
 						'<div data-yp-verify-result></div>' +
 					'</div>' +
 
@@ -1325,10 +1550,12 @@
 			}
 
 			if ( state.activeTypes.sticker ) {
-				var stickerFields = readStickerFields();
-				stickerFields.instructions = viewEl.querySelector( '#yp-mo-sticker-instructions' ).value;
-				stickerFields.uploads = state.stickerUploads.filter( function ( file ) { return file.id; } ).map( function ( file ) { return file.id; } );
-				body.sticker = stickerFields;
+				body.stickers = state.stickers.map( function ( sticker ) {
+					var fields = stickerPayload( sticker );
+					fields.instructions = sticker.instructions;
+					fields.uploads = sticker.uploads.filter( function ( file ) { return file.id; } ).map( function ( file ) { return file.id; } );
+					return fields;
+				} );
 			}
 
 			if ( state.activeTypes.template ) {
@@ -1405,8 +1632,17 @@
 					// One "Add a proof" link per shell — an order can now
 					// carry more than one (see the class docblock in
 					// class-manual-order-creator.php).
+					var typeCounts = {};
+					( result.custom_orders || [] ).forEach( function ( customOrder ) {
+						typeCounts[ customOrder.order_type ] = ( typeCounts[ customOrder.order_type ] || 0 ) + 1;
+					} );
+					var typeSeen = {};
 					( result.custom_orders || [] ).forEach( function ( customOrder ) {
 						var label = ORDER_TYPE_LABELS[ customOrder.order_type ] || customOrder.order_type;
+						typeSeen[ customOrder.order_type ] = ( typeSeen[ customOrder.order_type ] || 0 ) + 1;
+						if ( typeCounts[ customOrder.order_type ] > 1 ) {
+							label += ' ' + typeSeen[ customOrder.order_type ];
+						}
 						links += ' &middot; <a href="#/orders/' + customOrder.id + '">Add a proof (' + YP.escapeHtml( label ) + ')</a>';
 					} );
 

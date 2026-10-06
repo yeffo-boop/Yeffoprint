@@ -65,6 +65,9 @@
 	var labelsTotalEl = root.querySelector( '[data-yp-co-labels-total]' );
 	var totalEl = root.querySelector( '[data-yp-co-total]' );
 	var aiPanelEl = root.querySelector( '[data-yp-ai-panel]' );
+	var summaryListEl = root.querySelector( '[data-yp-co-summary]' );
+	var barEl = root.querySelector( '[data-yp-co-bar]' );
+	var barTotalEl = root.querySelector( '[data-yp-co-bar-total]' );
 
 	// Present only for an admin viewer — blocks/label-designer-choice
 	// renders nothing at all for everyone else, so these are simply null
@@ -109,6 +112,9 @@
 
 	/* ---------- Batch rows ---------- */
 
+	// YeffoPrint_Field_Schema::QR_MAX_CHARS (the server trims to it too).
+	var QR_MAX_CHARS = 500;
+
 	function createRow( overrides ) {
 		return Object.assign( {
 			id: nextRowId++,
@@ -116,6 +122,7 @@
 			material_id: firstAvailableMaterialId(),
 			quantity: quantityPresets[ 0 ] || 10,
 			compound_strength: '',
+			qr_url: '',
 			custom_width_in: '',
 			custom_height_in: ''
 		}, overrides || {} );
@@ -137,6 +144,7 @@
 				material_id: row.material_id,
 				quantity: row.quantity,
 				compound_strength: row.compound_strength,
+				qr_url: String( row.qr_url || '' ).trim(),
 				custom_width_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_width_in ) || 0 : 0,
 				custom_height_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_height_in ) || 0 : 0
 			};
@@ -221,9 +229,15 @@
 					'<span class="yp-field__label">Quantity</span>' +
 					'<div class="yp-quantity-control" data-row-quantity></div>' +
 				'</div>' +
+				'<div class="yp-custom-order__pair">' +
 				'<div class="yp-field">' +
 					'<label for="yp-co-row-' + row.id + '-compound">Product details <span class="description">(e.g. compound &amp; strength) (optional)</span></label>' +
 					'<input type="text" id="yp-co-row-' + row.id + '-compound" data-row-field="compound_strength" maxlength="120" class="widefat" />' +
+				'</div>' +
+				'<div class="yp-field">' +
+					'<label for="yp-co-row-' + row.id + '-qr">QR code <span class="description">(a web address to link to) (optional)</span></label>' +
+					'<input type="url" id="yp-co-row-' + row.id + '-qr" data-row-field="qr_url" placeholder="https://" maxlength="' + QR_MAX_CHARS + '" class="widefat" />' +
+				'</div>' +
 				'</div>' +
 			'</div>'
 		);
@@ -273,10 +287,12 @@
 			customHeightInput.value = row.custom_height_in;
 			customWidthInput.addEventListener( 'input', function () {
 				row.custom_width_in = customWidthInput.value;
+				renderSummary();
 				customSizeEl.classList.remove( 'is-invalid' );
 			} );
 			customHeightInput.addEventListener( 'input', function () {
 				row.custom_height_in = customHeightInput.value;
+				renderSummary();
 				customSizeEl.classList.remove( 'is-invalid' );
 			} );
 
@@ -298,10 +314,17 @@
 			compoundInput.value = row.compound_strength;
 			compoundInput.addEventListener( 'input', function () {
 				row.compound_strength = compoundInput.value;
+				renderSummary();
 			} );
 			if ( window.YPLabelProofing ) {
 				window.YPLabelProofing.attachSpellCheck( compoundInput, { anchor: compoundInput.closest( '.yp-field' ) } );
 			}
+
+			var qrInput = rowEl.querySelector( '[data-row-field="qr_url"]' );
+			qrInput.value = row.qr_url || '';
+			qrInput.addEventListener( 'input', function () {
+				row.qr_url = qrInput.value;
+			} );
 
 			renderRowQuantity( row, rowEl.querySelector( '[data-row-quantity]' ) );
 		} );
@@ -330,6 +353,7 @@
 			material_id: source.material_id,
 			quantity: source.quantity,
 			compound_strength: source.compound_strength,
+			qr_url: source.qr_url,
 			custom_width_in: source.custom_width_in,
 			custom_height_in: source.custom_height_in
 		} ) );
@@ -582,15 +606,63 @@
 	 * to share one bulk-discount tier with each other, not just with
 	 * whatever's already in the cart.
 	 */
+	var pricingEl = totalEl ? totalEl.closest( '.yp-custom-order__pricing' ) : null;
+	var pricingTimer = null;
+
+	/**
+	 * Re-prices the batch after any change. Debounced so typing a
+	 * quantity sends one request, and the totals dim while it's out so a
+	 * slow response never looks like the old price is the new one. A
+	 * failed request is retried once, then shows dashes rather than a
+	 * stale total.
+	 */
+	/** One line per label in the "Your order" box (two-column layout's right side). */
+	function renderSummary() {
+		if ( ! summaryListEl ) {
+			return;
+		}
+		summaryListEl.innerHTML = batchRows.map( function ( row, index ) {
+			var size = sizesData.filter( function ( s ) { return s.id === row.size_id; } )[ 0 ];
+			var material = materialsData.filter( function ( m ) { return m.id === row.material_id; } )[ 0 ];
+			var sizeText = size ? size.name : '';
+			if ( rowNeedsCustomSize( row ) && rowCustomSizeValid( row ) ) {
+				sizeText += ': ' + parseFloat( row.custom_width_in ) + '" × ' + parseFloat( row.custom_height_in ) + '"';
+			}
+			var details = String( row.compound_strength || '' ).trim();
+			return '<li>' +
+				'<span>Label ' + ( index + 1 ) + ( details ? ' · ' + escapeHtml( details ) : '' ) +
+					'<small>' + escapeHtml( [ sizeText, material ? material.name : '' ].filter( Boolean ).join( ' · ' ) ) + '</small></span>' +
+				'<span class="yp-custom-order__summary-qty">× ' + escapeHtml( row.quantity ) + '</span>' +
+			'</li>';
+		} ).join( '' );
+	}
+
+	/** Mirrors the total into the phone's bottom bar. */
+	function syncBarTotal() {
+		if ( barTotalEl ) {
+			barTotalEl.textContent = totalEl.textContent;
+		}
+	}
+
 	function updatePricePreview() {
 		updateAiPanel();
+		renderSummary();
 		var batch = currentBatchPayload();
 		if ( ! batch.length || batch.some( function ( row ) { return ! row.size_id || ! row.material_id || ! row.quantity; } ) ) {
 			return;
 		}
 
 		var requestId = ++pricingRequestId;
+		if ( pricingEl ) {
+			pricingEl.classList.add( 'is-updating' );
+		}
+		window.clearTimeout( pricingTimer );
+		pricingTimer = window.setTimeout( function () {
+			fetchPricing( batch, requestId, 1 );
+		}, 250 );
+	}
 
+	function fetchPricing( batch, requestId, retriesLeft ) {
 		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders/pricing-preview', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -614,8 +686,30 @@
 
 				labelsTotalEl.textContent = formatCurrency( data.labels_subtotal );
 				totalEl.textContent = formatCurrency( data.total );
+				syncBarTotal();
+				if ( pricingEl ) {
+					pricingEl.classList.remove( 'is-updating' );
+				}
 			} )
-			.catch( function () {} );
+			.catch( function () {
+				if ( requestId !== pricingRequestId ) {
+					return;
+				}
+				if ( retriesLeft > 0 ) {
+					window.setTimeout( function () {
+						if ( requestId === pricingRequestId ) {
+							fetchPricing( batch, requestId, retriesLeft - 1 );
+						}
+					}, 1500 );
+					return;
+				}
+				labelsTotalEl.innerHTML = '&mdash;';
+				totalEl.innerHTML = '&mdash;';
+				syncBarTotal();
+				if ( pricingEl ) {
+					pricingEl.classList.remove( 'is-updating' );
+				}
+			} );
 	}
 
 	/**
@@ -1201,7 +1295,7 @@
 				// every row it actually had comes back, not just one.
 				var rows = data.batch && data.batch.length ? data.batch : [ {} ];
 				batchRows = rows.map( function ( row ) {
-					var overrides = { compound_strength: row.compound_strength || '' };
+					var overrides = { compound_strength: row.compound_strength || '', qr_url: row.qr_url || '' };
 					if ( row.size_id ) {
 						overrides.size_id = row.size_id;
 					}
@@ -1397,7 +1491,8 @@
 			getRecap: function () {
 				var brand = document.getElementById( 'yp-co-brand' ).value.trim();
 				var details = batchRows.map( function ( row ) {
-					return String( row.compound_strength || '' ).trim();
+					var qr = String( row.qr_url || '' ).trim();
+					return [ String( row.compound_strength || '' ).trim(), qr ? 'QR: ' + qr : '' ].filter( Boolean ).join( ' · ' );
 				} ).filter( Boolean );
 				return [ brand ].concat( details );
 			},
@@ -1405,6 +1500,35 @@
 			buttons: [ submitButton ],
 			actionLabel: 'continuing to payment'
 		} );
+	}
+
+	// Phone-only bottom bar (CSS shows it under 900px): keeps the total and
+	// Continue to Payment in reach while the "Your order" box is off screen.
+	// Its button clicks the real submit button, so the same checks run.
+	if ( barEl ) {
+		root.querySelector( '[data-yp-co-bar-go]' ).addEventListener( 'click', function () {
+			submitButton.click();
+		} );
+		// Same body class as the product page's sticky bar (configurator.css),
+		// which lifts the chat bubble above the bar and pads the footer.
+		var phoneQuery = window.matchMedia( '(max-width: 899px)' );
+		var summaryInView = false;
+		var syncBar = function () {
+			barEl.classList.toggle( 'is-tucked', summaryInView );
+			document.body.classList.toggle( 'yp-has-sticky-bar', phoneQuery.matches && ! form.hidden && ! summaryInView );
+		};
+		var summaryEl = root.querySelector( '.yp-custom-order__summary' );
+		if ( summaryEl && 'IntersectionObserver' in window ) {
+			new IntersectionObserver( function ( entries ) {
+				summaryInView = entries[ 0 ].isIntersecting;
+				syncBar();
+			} ).observe( summaryEl );
+		}
+		if ( phoneQuery.addEventListener ) {
+			phoneQuery.addEventListener( 'change', syncBar );
+		}
+		// The form starts hidden and hides again for the Designer.
+		new MutationObserver( syncBar ).observe( form, { attributes: true, attributeFilter: [ 'hidden' ] } );
 	}
 
 	form.addEventListener( 'submit', function ( event ) {

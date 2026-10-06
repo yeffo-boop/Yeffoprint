@@ -1,14 +1,16 @@
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 
-<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"1200px"}} -->
 <main class="wp-block-group">
 
 	<!-- wp:html -->
 	<div id="yp-custom-order" class="yp-custom-order yp-section">
 
-		<p class="yp-eyebrow">Fully Custom</p>
-		<h1>Create a Custom Label</h1>
-		<p>Tell us about your brand and we'll build a one-off label from scratch. A designer reviews every request and sends a proof before anything prints.</p>
+		<div class="yp-custom-order__intro">
+			<p class="yp-eyebrow">Fully Custom</p>
+			<h1>Create a Custom Label</h1>
+			<p>Tell us about your brand and we'll build a one-off label from scratch. A designer reviews every request and sends a proof before anything prints.</p>
+		</div>
 
 		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
 
@@ -60,7 +62,10 @@
 		</div>
 
 		<form id="yp-custom-order-form" hidden>
+		<div class="yp-custom-order__layout">
+		<div class="yp-custom-order__main">
 
+			<p class="yp-custom-order__step"><span aria-hidden="true">1</span> Your labels</p>
 			<div class="yp-custom-order__batch" data-yp-co-batch></div>
 			<p class="yp-batch-actions">
 				<button type="button" class="button-link" data-yp-co-add-row>+ Add another label</button>
@@ -71,19 +76,22 @@
 				<input type="file" accept=".csv,text/csv" data-yp-co-csv-input hidden />
 			</p>
 
+			<p class="yp-custom-order__step"><span aria-hidden="true">2</span> About your brand</p>
 			<div class="yp-field">
 				<label for="yp-co-brand">Brand name</label>
 				<input type="text" id="yp-co-brand" name="brand_name" maxlength="80" required class="widefat" />
 			</div>
 
+			<div class="yp-custom-order__pair">
 			<div class="yp-field">
 				<label for="yp-co-style">Style / colors <span class="description">(optional)</span></label>
-				<textarea id="yp-co-style" name="style_notes" rows="3" maxlength="500" class="widefat"></textarea>
+				<textarea id="yp-co-style" name="style_notes" rows="2" maxlength="500" class="widefat"></textarea>
 			</div>
 
 			<div class="yp-field">
 				<label for="yp-co-instructions">Instructions <span class="description">(optional)</span></label>
-				<textarea id="yp-co-instructions" name="instructions" rows="4" maxlength="1000" class="widefat"></textarea>
+				<textarea id="yp-co-instructions" name="instructions" rows="2" maxlength="1000" class="widefat"></textarea>
+			</div>
 			</div>
 
 			<section class="yp-ai" data-yp-ai-panel hidden>
@@ -141,6 +149,12 @@
 				<ul class="yp-custom-order__file-list" data-yp-co-file-list></ul>
 			</div>
 
+		</div><!-- /.yp-custom-order__main -->
+
+		<aside class="yp-custom-order__summary" aria-label="Your order">
+			<p class="yp-custom-order__step"><span aria-hidden="true">&#10003;</span> Your order</p>
+			<ul class="yp-custom-order__summary-list" data-yp-co-summary></ul>
+
 			<div class="yp-custom-order__pricing">
 				<div class="yp-custom-order__fee">
 					<span>Custom design fee</span>
@@ -160,6 +174,13 @@
 			<p>
 				<button type="submit" class="wp-block-button__link is-style-accent" data-yp-co-submit>Continue to Payment</button>
 			</p>
+		</aside>
+		</div><!-- /.yp-custom-order__layout -->
+
+			<div class="yp-custom-order__bar" data-yp-co-bar aria-hidden="true">
+				<span class="yp-custom-order__bar-total">Total due today<strong data-yp-co-bar-total>&mdash;</strong></span>
+				<button type="button" class="wp-block-button__link is-style-accent" data-yp-co-bar-go tabindex="-1">Continue to Payment</button>
+			</div>
 
 		</form>
 

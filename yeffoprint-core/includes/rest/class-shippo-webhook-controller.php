@@ -80,7 +80,7 @@ class YeffoPrint_Shippo_Webhook_Controller {
 
 		$parsed = YeffoPrint_Shippo_Client::parse_tracking_payload( $data );
 
-		( new YeffoPrint_Order_Delivery_Status() )->record_live_status( $order, $tracking_number, $parsed['events'] );
+		( new YeffoPrint_Order_Delivery_Status() )->record_live_status( $order, $tracking_number, $parsed['events'], $parsed['eta'] );
 
 		return rest_ensure_response( [ 'status' => 'ok', 'order_id' => $order->get_id() ] );
 	}

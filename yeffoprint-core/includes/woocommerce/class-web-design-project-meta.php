@@ -272,13 +272,18 @@ class YeffoPrint_Web_Design_Project_Meta {
 	}
 
 	/**
-	 * @param array $fields { kickoff_date, staging_due, golive_due, milestones: [{label,due_date,done}], addons: [{label,price}], scope_text }
+	 * @param array $fields { kickoff_date, staging_due, golive_due, milestones?: [{label,due_date,done}], addons: [{label,price}], scope_text }
+	 *                      Milestones are left untouched when the key is missing.
 	 */
 	public static function save_agreement( \WC_Order $order, array $fields ): void {
 		$order->update_meta_data( self::KICKOFF_DATE, sanitize_text_field( (string) ( $fields['kickoff_date'] ?? '' ) ) );
 		$order->update_meta_data( self::STAGING_DUE_DATE, sanitize_text_field( (string) ( $fields['staging_due'] ?? '' ) ) );
 		$order->update_meta_data( self::GOLIVE_DUE_DATE, sanitize_text_field( (string) ( $fields['golive_due'] ?? '' ) ) );
-		$order->update_meta_data( self::MILESTONES, self::encode_list( $fields['milestones'] ?? [], self::MILESTONE_FIELDS ) );
+		// Milestones have their own save path (save_milestones() below), so
+		// an agreement save that leaves them out must not wipe them.
+		if ( array_key_exists( 'milestones', $fields ) ) {
+			$order->update_meta_data( self::MILESTONES, self::encode_list( is_array( $fields['milestones'] ) ? $fields['milestones'] : [], self::MILESTONE_FIELDS ) );
+		}
 		$order->update_meta_data( self::ADDONS, self::encode_list( $fields['addons'] ?? [], self::ADDON_FIELDS ) );
 		$order->update_meta_data( self::SCOPE_TEXT, sanitize_textarea_field( (string) ( $fields['scope_text'] ?? '' ) ) );
 		$order->save();

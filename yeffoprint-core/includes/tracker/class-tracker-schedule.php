@@ -8,6 +8,8 @@
  *   type: daily | weekdays (days: 0=Sun..6=Sat) | interval (every N days) | cycle (on N days, off M days)
  *   times: ["08:00", "21:00"]
  *   start: "2026-09-27", weeks: optional length, paused: bool
+ *   cycle: { on: weeks, off: weeks } — repeating weeks on, then weeks off (both set to use it)
+ *   steps: [{ week, dose }] — titration: from `week` weeks after start, the dose is `dose`
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -35,6 +37,14 @@ class YeffoPrint_Tracker_Schedule {
 			return false;
 		}
 
+		// Cycle planner: N weeks on, M weeks off, repeating from the start date.
+		$cycle = is_array( $protocol['cycle'] ?? null ) ? $protocol['cycle'] : [];
+		$on_w  = (int) ( $cycle['on'] ?? 0 );
+		$off_w = (int) ( $cycle['off'] ?? 0 );
+		if ( $on_w > 0 && $off_w > 0 && ( $offset % ( ( $on_w + $off_w ) * 7 ) ) >= $on_w * 7 ) {
+			return false;
+		}
+
 		$schedule = is_array( $protocol['schedule'] ?? null ) ? $protocol['schedule'] : [];
 		switch ( $schedule['type'] ?? 'daily' ) {
 			case 'weekdays':
@@ -50,6 +60,26 @@ class YeffoPrint_Tracker_Schedule {
 			default:
 				return true;
 		}
+	}
+
+	/** The dose on a date, after any titration steps — tracker.js's doseOn(). */
+	public static function dose_on( array $protocol, string $date ): float {
+		$dose  = (float) ( $protocol['dose'] ?? 0 );
+		$start = self::parse_date( (string) ( $protocol['start'] ?? '' ) );
+		$day   = self::parse_date( $date );
+		if ( ! $start || ! $day || ! is_array( $protocol['steps'] ?? null ) ) {
+			return $dose;
+		}
+		$week = (int) floor( ( $day->getTimestamp() - $start->getTimestamp() ) / DAY_IN_SECONDS / 7 );
+		$best = -1;
+		foreach ( $protocol['steps'] as $step ) {
+			$at = is_array( $step ) ? (int) ( $step['week'] ?? -1 ) : -1;
+			if ( $at > 0 && $at <= $week && $at > $best && (float) ( $step['dose'] ?? 0 ) > 0 ) {
+				$best = $at;
+				$dose = (float) $step['dose'];
+			}
+		}
+		return $dose;
 	}
 
 	/**

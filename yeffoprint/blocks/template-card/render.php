@@ -54,6 +54,16 @@ $primary_image_url = $card['vial_mockup_url'] ?: $card['artwork_url'];
 	</div>
 	<div class="yp-card__body yp-template-card__body">
 		<span class="yp-template-card__title"><?php echo esc_html( $card['title'] ); ?></span>
+		<?php
+		$rating = function_exists( 'yeffoprint_review_summary_for' ) ? yeffoprint_review_summary_for( 'template:' . (int) $post_id ) : [ 'count' => 0 ];
+		if ( $rating['count'] ) :
+			?>
+			<span class="yp-card-rating" aria-label="<?php echo esc_attr( sprintf( /* translators: 1: average rating, 2: review count */ __( 'Rated %1$s out of 5 from %2$s reviews', 'yeffoprint' ), number_format_i18n( $rating['average'], 1 ), number_format_i18n( $rating['count'] ) ) ); ?>">
+				<?php echo yeffoprint_render_stars( $rating['average'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG markup. ?>
+				<strong aria-hidden="true"><?php echo esc_html( number_format_i18n( $rating['average'], 1 ) ); ?></strong>
+				<span aria-hidden="true">(<?php echo esc_html( number_format_i18n( $rating['count'] ) ); ?>)</span>
+			</span>
+		<?php endif; ?>
 		<?php if ( $card['material_label'] || $card['size_label'] ) : ?>
 			<div class="yp-template-card__specs">
 				<?php if ( $card['size_label'] ) : ?>

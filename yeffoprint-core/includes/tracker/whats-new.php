@@ -15,6 +15,84 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-04b',
+		'date'  => '2026-10-04',
+		'title' => 'Meet YeffoHealth',
+		'text'  => 'The Dose Tracker has a new name: YeffoHealth. Everything you\'ve logged is right where you left it. It has a new icon too. If it\'s on your Home Screen, the new name and icon show up the next time your phone refreshes the app, or remove it and add it again to see them now.',
+	],
+	[
+		'id'    => '2026-10-04a',
+		'date'  => '2026-10-04',
+		'title' => 'Stay signed in',
+		'text'  => 'If you added the tracker to your Home Screen, it now keeps you signed in instead of asking you to log in every time you open it. Sign in once more and you\'re set. Signing out still works the same and clears your data from the phone.',
+	],
+	[
+		'id'    => '2026-10-03b',
+		'date'  => '2026-10-03',
+		'title' => 'New Progress tab and Add menu',
+		'text'  => 'Progress now has its own tab for your weight, measurements and photos. Today shows your week at a glance, and the calendar button next to the date opens your full history and PDF report. The + button now lets you log a dose, add a medication, mix a vial, or log your weight or a photo from anywhere.',
+	],
+	[
+		'id'    => '2026-10-03a',
+		'date'  => '2026-10-03',
+		'title' => 'Dosage for pills',
+		'text'  => 'Adding a tablet or capsule now asks for its dosage too, like 500 mg, next to how many you take. Today, History, reminders and your PDF report show both, for example "2 tablets (500 mg each)".',
+	],
+	[
+		'id'    => '2026-10-02h',
+		'date'  => '2026-10-02',
+		'title' => 'Progress log',
+		'text'  => 'Track your weight, measurements and progress photos on History > Progress. Each chart shows the doses you took underneath, so you can see what changed when. Photos are encrypted like everything else and only you can see them.',
+	],
+	[
+		'id'    => '2026-10-02g',
+		'date'  => '2026-10-02',
+		'title' => 'Printable report',
+		'text'  => 'Seeing a doctor or coach? On the History tab, tap "Create PDF report" to make a clean PDF of your medications, doses taken, side effects, injection spots and progress for any time period. It\'s made on your phone and only shared if you share it.',
+	],
+	[
+		'id'    => '2026-10-02f',
+		'date'  => '2026-10-02',
+		'title' => 'Reorder labels from Supply',
+		'text'  => 'When a vial is running low, Supply now has an "Order labels" button so you can get labels for the new vials at the same time. The compound and strength are filled in for you.',
+	],
+	[
+		'id'    => '2026-10-02e',
+		'date'  => '2026-10-02',
+		'title' => 'Vial expiry countdown',
+		'text'  => 'Mixed vials now count down from the day you mixed them (28 days unless you change it for that vial). Supply shows the days left, Today warns you a few days before, and you can get a reminder before one expires.',
+	],
+	[
+		'id'    => '2026-10-02d',
+		'date'  => '2026-10-02',
+		'title' => 'Cycles and titration',
+		'text'  => 'Edit a medication to plan weeks on and weeks off, or to raise the dose over time (for example, up 0.25 mg every 4 weeks). Your schedule, reminders and supply plan follow the plan automatically.',
+	],
+	[
+		'id'    => '2026-10-02c',
+		'date'  => '2026-10-02',
+		'title' => 'How you felt',
+		'text'  => 'Tap a taken dose to note how you felt: nausea, headache, good sleep, more energy or your own tags. History shows which ones come up most and whether they followed a dose increase.',
+	],
+	[
+		'id'    => '2026-10-02b',
+		'date'  => '2026-10-02',
+		'title' => 'Injection site rotation',
+		'text'  => 'Each injection now shows the next spot to use, picked from the one that has rested longest. Tap "Change" to choose a different spot on the body map, and see where you\'ve injected lately on the History tab. Choose the spots you use when you edit a peptide.',
+	],
+	[
+		'id'    => '2026-10-02a',
+		'date'  => '2026-10-02',
+		'title' => 'Help & feedback',
+		'text'  => 'Got a question, found a problem or have an idea? Open the Me tab and tap Help & feedback to send us a note, with a screenshot if you like. We reply by email, and your tracker data is only included if you turn it on.',
+	],
+	[
+		'id'    => '2026-09-29x',
+		'date'  => '2026-09-29',
+		'title' => 'Bac water in your supply',
+		'text'  => 'Add your bac water on Supply > On hand. It counts down by the water you use each time you mix a vial, and you\'ll get a heads-up before you run short for your next mix.',
+	],
+	[
 		'id'    => '2026-09-29w',
 		'date'  => '2026-09-29',
 		'title' => 'Private reminders',

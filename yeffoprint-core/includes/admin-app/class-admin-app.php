@@ -31,13 +31,65 @@ class YeffoPrint_Admin_App {
 		self::$hook_suffix = $hook_suffix;
 	}
 
+	/**
+	 * The redesigned app ("B Light": top tabs, phone tab bar, Today,
+	 * Production board, hubs from next/next.js, styled by next/next.css)
+	 * is the only admin now; the classic sidebar shell was retired
+	 * (direct request: "retire the old admin dashboard and move the new
+	 * one in place"). Both the `yeffoprint` page and the unlinked
+	 * `yeffoprint-next` page it first shipped at render it.
+	 */
+	private static string $next_hook_suffix = '';
+
+	public static function set_next_hook_suffix( string $hook_suffix ): void {
+		self::$next_hook_suffix = $hook_suffix;
+	}
+
 	public function __construct() {
 		add_filter( 'admin_body_class', [ $this, 'add_body_class' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_action( 'admin_head', [ $this, 'print_install_tags' ] );
+		add_action( 'wp_ajax_yeffoprint_admin_nonce', [ $this, 'ajax_fresh_nonce' ] );
+	}
+
+	/**
+	 * A fresh wp_rest nonce for an app page left open longer than its
+	 * baked-in nonce lives (the print station runs all day, and logins now
+	 * last 90 days). Not the REST /session/nonce route: WordPress treats a
+	 * REST request without a valid nonce as signed out, so that route only
+	 * hands back a guest nonce. admin-ajax reads the login cookie itself,
+	 * and the JSON has no CORS headers, so no other site can read it.
+	 */
+	public function ajax_fresh_nonce(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( null, 403 );
+		}
+		if ( class_exists( 'YeffoPrint_Stay_Signed_In' ) ) {
+			YeffoPrint_Stay_Signed_In::extend_current_login();
+		}
+		nocache_headers();
+		wp_send_json_success( [ 'nonce' => wp_create_nonce( 'wp_rest' ) ] );
 	}
 
 	public function add_body_class( string $classes ): string {
-		return $this->is_own_screen() ? $classes . ' yeffoprint-app' : $classes;
+		if ( ! $this->is_own_screen() ) {
+			return $classes;
+		}
+		return $classes . ' yeffoprint-app' . ( $this->is_next_screen() ? ' yp-next' : '' );
+	}
+
+	/** Home Screen install for the new app (class-admin-app-shortcut.php serves the manifest and service worker). */
+	public function print_install_tags(): void {
+		if ( ! $this->is_next_screen() ) {
+			return;
+		}
+		echo '<link rel="manifest" href="' . esc_url( YeffoPrint_Admin_App_Shortcut::manifest_url() ) . '">' . "\n";
+		echo '<link rel="apple-touch-icon" href="' . esc_url( YEFFOPRINT_CORE_URL . 'assets/admin-app/next/icons/apple-touch-icon.png?v=2' ) . '">' . "\n";
+		echo '<meta name="apple-mobile-web-app-capable" content="yes">' . "\n";
+		echo '<meta name="mobile-web-app-capable" content="yes">' . "\n";
+		echo '<meta name="apple-mobile-web-app-title" content="YeffoDesign">' . "\n";
+		echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . "\n";
+		echo '<meta name="theme-color" content="#FFFFFF">' . "\n";
 	}
 
 	public static function render(): void {
@@ -144,8 +196,15 @@ class YeffoPrint_Admin_App {
 			'restUrl'         => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'wpApiUrl'        => esc_url_raw( rest_url( 'wp/v2/' ) ),
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
+			'nonceUrl'        => esc_url_raw( admin_url( 'admin-ajax.php?action=yeffoprint_admin_nonce' ) ),
 			'exitUrl'         => esc_url_raw( admin_url() ),
 			'currentUserName' => wp_get_current_user()->display_name,
+			// 'next' on the redesigned app's page — app.js builds that
+			// page's shell instead of the classic sidebar.
+			'shell'           => $this->is_next_screen() ? 'next' : 'classic',
+			'nextUrl'         => esc_url_raw( admin_url( 'admin.php?page=' . YeffoPrint_Admin_Push::APP_SLUG ) ),
+			'swUrl'           => esc_url_raw( YeffoPrint_Admin_App_Shortcut::service_worker_url() ),
+			'swScope'         => YeffoPrint_Admin_App_Shortcut::admin_scope(),
 			// Static constants the Templates/Field Presets screens need
 			// (Phase 5) before any record/id exists yet — an "Add" drawer
 			// must render its full field-schema editor and Badge/etc
@@ -231,7 +290,7 @@ class YeffoPrint_Admin_App {
 		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
 		// always finish loading (and registering) before app.js's own
 		// DOMContentLoaded-triggered first route() call needs them.
-		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'label-fields', 'label-colors', 'compound-list', 'filament-colors', 'prints', 'web-design-packages', 'web-design-addons', 'maintenance', 'pricing', 'orders', 'order-history', 'abandoned-carts', 'web-design-orders', 'customers', 'coupons', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order' ] as $view ) {
+		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'label-fields', 'label-colors', 'compound-list', 'filament-colors', 'prints', 'web-design-packages', 'web-design-addons', 'maintenance', 'pricing', 'orders', 'order-history', 'abandoned-carts', 'web-design-orders', 'customers', 'reviews', 'tracker-feedback', 'coupons', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order', 'sales', 'messages', 'disputes', 'payments' ] as $view ) {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',
@@ -242,10 +301,30 @@ class YeffoPrint_Admin_App {
 				[ 'strategy' => 'defer' ]
 			);
 		}
+
+		if ( $this->is_next_screen() ) {
+			wp_enqueue_style(
+				'yeffoprint-admin-app-next',
+				YEFFOPRINT_CORE_URL . 'assets/admin-app/next/next.css',
+				[ 'yeffoprint-admin-app-field-schema', 'yeffoprint-admin-app-order-stepper' ],
+				yeffoprint_core_asset_version( 'assets/admin-app/next/next.css' )
+			);
+			wp_enqueue_script(
+				'yeffoprint-admin-app-next',
+				YEFFOPRINT_CORE_URL . 'assets/admin-app/next/next.js',
+				[ 'yeffoprint-admin-app' ],
+				yeffoprint_core_asset_version( 'assets/admin-app/next/next.js' ),
+				[ 'strategy' => 'defer' ]
+			);
+		}
 	}
 
 	private function is_own_screen(): bool {
 		$screen = get_current_screen();
-		return self::$hook_suffix && $screen && self::$hook_suffix === $screen->id;
+		return $screen && in_array( $screen->id, array_filter( [ self::$hook_suffix, self::$next_hook_suffix ] ), true );
+	}
+
+	private function is_next_screen(): bool {
+		return $this->is_own_screen();
 	}
 }

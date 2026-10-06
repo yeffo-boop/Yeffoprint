@@ -15,6 +15,10 @@
  *   GET    /tracker/label-templates       designs offered by "Order labels" (public storefront data)
  *   POST   /tracker/shares                a share link for one protocol (class-tracker-shares.php)
  *   DELETE /tracker/shares/{code}         stop sharing one of the customer's own links
+ *   POST   /tracker/feedback              Me > Help & feedback note to the owner (class-tracker-feedback.php)
+ *   PUT    /tracker/photos/{id}           save one progress photo (a JPEG data URL), encrypted like every record
+ *   GET    /tracker/photos/{id}           the photo itself (the app fetches it with its nonce and shows a blob: URL)
+ *   DELETE /tracker/photos/{id}
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -24,7 +28,10 @@ class YeffoPrint_Tracker_Controller {
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
 	/** Kinds the app writes directly; `push` only goes through /tracker/push. */
-	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings' ];
+	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress' ];
+
+	/** What a progress photo may be once decoded. */
+	private const PHOTO_TYPES = [ 'image/jpeg', 'image/png', 'image/webp' ];
 
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
@@ -87,6 +94,30 @@ class YeffoPrint_Tracker_Controller {
 			'methods'             => \WP_REST_Server::DELETABLE,
 			'callback'            => [ $this, 'delete_share' ],
 			'permission_callback' => $perm,
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/feedback', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'send_feedback' ],
+			'permission_callback' => $perm,
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/photos/(?P<id>[A-Za-z0-9_-]{1,64})', [
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'get_photo' ],
+				'permission_callback' => $perm,
+			],
+			[
+				'methods'             => 'PUT',
+				'callback'            => [ $this, 'put_photo' ],
+				'permission_callback' => $perm,
+			],
+			[
+				'methods'             => \WP_REST_Server::DELETABLE,
+				'callback'            => [ $this, 'delete_photo' ],
+				'permission_callback' => $perm,
+			],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/tracker/label-templates', [
@@ -257,6 +288,81 @@ class YeffoPrint_Tracker_Controller {
 		if ( ! YeffoPrint_Tracker_Shares::delete( get_current_user_id(), (string) $request['code'] ) ) {
 			return new \WP_Error( 'yeffoprint_tracker_share_missing', __( 'That link was already stopped.', 'yeffoprint-core' ), [ 'status' => 404 ] );
 		}
+		return self::no_store( [ 'ok' => true ] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function send_feedback( \WP_REST_Request $request ) {
+		$params = $request->get_json_params();
+		$id     = YeffoPrint_Tracker_Feedback::submit( get_current_user_id(), is_array( $params ) ? $params : [] );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		return self::no_store( [ 'ok' => true ] );
+	}
+
+	/**
+	 * A progress photo: the app shrinks it to a JPEG of at most 1600px
+	 * (which also drops the camera's location data) and sends it as a data
+	 * URL. It's stored as its own encrypted record, kept out of
+	 * /tracker/state so the app never downloads every photo at once.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function put_photo( \WP_REST_Request $request ) {
+		$id      = (string) $request['id'];
+		$user_id = get_current_user_id();
+		$params  = $request->get_json_params();
+		$url     = is_string( $params['data'] ?? null ) ? $params['data'] : '';
+
+		$bytes = '';
+		if ( preg_match( '#^data:image/(?:jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$#', $url, $m ) ) {
+			$bytes = (string) base64_decode( $m[1], true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		}
+		$info = '' !== $bytes ? @getimagesizefromstring( $bytes ) : false; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( ! YeffoPrint_Tracker_Store::valid_id( $id ) || ! $info || ! in_array( $info['mime'] ?? '', self::PHOTO_TYPES, true ) ) {
+			return new \WP_Error( 'yeffoprint_tracker_bad_photo', __( 'That photo couldn’t be saved. Try another one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		if ( strlen( $bytes ) > YeffoPrint_Tracker_Store::MAX_PHOTO_BYTES ) {
+			return new \WP_Error( 'yeffoprint_tracker_photo_big', __( 'That photo is too large.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		if ( ! YeffoPrint_Tracker_Store::exists( $user_id, 'photo', $id ) && YeffoPrint_Tracker_Store::count( $user_id, 'photo' ) >= YeffoPrint_Tracker_Store::MAX_PHOTOS ) {
+			return new \WP_Error( 'yeffoprint_tracker_photos_full', __( 'You have the most progress photos the tracker can keep. Delete some older ones first.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$result = YeffoPrint_Tracker_Store::put( $user_id, 'photo', $id, [
+			'mime' => $info['mime'],
+			'b64'  => base64_encode( $bytes ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		] );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		YeffoPrint_Tracker_Usage::record( $user_id );
+		return self::no_store( [ 'ok' => true ] );
+	}
+
+	/** Sends the image bytes straight out (the same nonce check as every tracker call, so it can't be hotlinked). */
+	public function get_photo( \WP_REST_Request $request ) {
+		$id    = (string) $request['id'];
+		$photo = YeffoPrint_Tracker_Store::valid_id( $id ) ? YeffoPrint_Tracker_Store::get( get_current_user_id(), 'photo', $id ) : null;
+		$bytes = $photo ? base64_decode( (string) ( $photo['b64'] ?? '' ), true ) : false; // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		$mime  = $photo ? (string) ( $photo['mime'] ?? '' ) : '';
+		if ( ! $bytes || ! in_array( $mime, self::PHOTO_TYPES, true ) ) {
+			return new \WP_Error( 'yeffoprint_tracker_no_photo', __( 'That photo isn’t there any more.', 'yeffoprint-core' ), [ 'status' => 404 ] );
+		}
+
+		nocache_headers();
+		header( 'Cache-Control: no-store, private' );
+		header( 'Content-Type: ' . $mime );
+		header( 'Content-Length: ' . strlen( $bytes ) );
+		header( 'X-Content-Type-Options: nosniff' );
+		header( 'Content-Disposition: inline' );
+		echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- validated image bytes.
+		exit;
+	}
+
+	public function delete_photo( \WP_REST_Request $request ): \WP_REST_Response {
+		YeffoPrint_Tracker_Store::delete( get_current_user_id(), 'photo', (string) $request['id'] );
 		return self::no_store( [ 'ok' => true ] );
 	}
 

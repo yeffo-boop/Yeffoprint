@@ -149,6 +149,7 @@ class YeffoPrint_Tracker_App {
 	 * headers, so no other site can read it.
 	 */
 	private function serve_session(): void {
+		YeffoPrint_Stay_Signed_In::extend_current_login();
 		nocache_headers();
 		header( 'Cache-Control: no-store, private' );
 		header( 'Content-Type: application/json; charset=utf-8' );
@@ -168,9 +169,9 @@ class YeffoPrint_Tracker_App {
 		$icons = YEFFOPRINT_CORE_URL . 'assets/tracker/icons/';
 		echo wp_json_encode( [ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
 			'id'               => self::path(),
-			'name'             => 'YeffoDesign Dose Tracker',
-			'short_name'       => 'Dose Tracker',
-			'description'      => 'Track your peptides and medications: doses, vials and schedule.',
+			'name'             => 'YeffoHealth Dose Tracker',
+			'short_name'       => 'YeffoHealth',
+			'description'      => 'Track your peptides, medications and health: doses, vials, schedule and progress.',
 			'start_url'        => self::path(),
 			'scope'            => self::path(),
 			'display'          => 'standalone',
@@ -178,14 +179,15 @@ class YeffoPrint_Tracker_App {
 			'background_color' => '#FAF9F6',
 			'theme_color'      => '#FAF9F6',
 			'icons'            => [
-				[ 'src' => $icons . 'icon-192.png', 'sizes' => '192x192', 'type' => 'image/png' ],
-				[ 'src' => $icons . 'icon-512.png', 'sizes' => '512x512', 'type' => 'image/png' ],
-				[ 'src' => $icons . 'icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ],
+				[ 'src' => $icons . 'icon-192.png?v=2', 'sizes' => '192x192', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-512.png?v=2', 'sizes' => '512x512', 'type' => 'image/png' ],
+				[ 'src' => $icons . 'icon-maskable-512.png?v=2', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable' ],
 			],
 		], JSON_UNESCAPED_SLASHES );
 	}
 
 	private function serve_app(): void {
+		YeffoPrint_Stay_Signed_In::extend_current_login();
 		nocache_headers();
 		header( 'Cache-Control: no-store, private' );
 		header( 'X-Robots-Tag: noindex' );
@@ -205,6 +207,8 @@ class YeffoPrint_Tracker_App {
 			'signedIn'      => is_user_logged_in(),
 			'ready'         => YeffoPrint_Tracker_Crypto::is_ready(),
 			'firstName'     => $user->ID ? ( $user->first_name ?: $user->display_name ) : '',
+			'email'         => $user->ID ? $user->user_email : '',
+			'version'       => YEFFOPRINT_CORE_VERSION,
 			'userKey'       => $user->ID ? substr( hash_hmac( 'sha256', (string) $user->ID, wp_salt( 'auth' ) ), 0, 16 ) : '',
 			'restUrl'       => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'nonce'         => $user->ID ? wp_create_nonce( 'wp_rest' ) : '',

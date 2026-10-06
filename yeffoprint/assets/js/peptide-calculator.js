@@ -21,6 +21,12 @@
  * Also draws the syringe (inline SVG, rebuilt only when the syringe size
  * changes) and keeps the vial-label preview in the tie-in section in
  * sync with the same numbers.
+ *
+ * On phones, a bar pinned to the bottom of the screen shows the units to
+ * draw while the results are scrolled out of view. When the page carries
+ * the calculator's own manifest (yeffoprint-core class-calculator-app.php)
+ * it also registers its offline service worker and offers "Add to your
+ * home screen", and drops the site header/footer once opened from there.
  */
 ( function () {
 	'use strict';
@@ -640,6 +646,12 @@
 		out( 'warn-text' ).textContent = text || '';
 	}
 
+	function setDock( units, warn ) {
+		out( 'dock-units' ).textContent = units;
+		out( 'dock' ).classList.toggle( 'is-warn', warn );
+		out( 'dock-go' ).textContent = warn ? 'Read the note ↓' : 'See result ↓';
+	}
+
 	function update() {
 		syncChips();
 
@@ -651,6 +663,7 @@
 
 		if ( ! r ) {
 			out( 'units' ).textContent = '–';
+			setDock( '–', false );
 			setHint( [ 'Fill in the amounts to see where to draw.' ] );
 			for ( i = 0; i < 3; i++ ) {
 				setValue( stats[ i ].querySelector( 'dd' ), '–' );
@@ -703,6 +716,7 @@
 			showWarning( '' );
 		}
 
+		setDock( fmt( units, 1 ), ! out( 'warn' ).hidden );
 		showBlend( r );
 		drawSyringe( units, cap, overCap );
 
@@ -808,6 +822,142 @@
 			out( 'label-name' ).textContent = nameInput.value.trim() || 'Your Product';
 		} );
 	}
+
+	/* ---------- Phones: result bar ---------- */
+
+	// Shown while the inputs are on screen but the "Draw to" panel isn't
+	// (it sits below the form on phones), so a change is answered without
+	// scrolling. Tapping it jumps to the full result.
+	var dock = out( 'dock' );
+	var drawPanel = root.querySelector( '.yp-pcalc__draw' );
+	if ( 'IntersectionObserver' in window ) {
+		var seen = { form: false, draw: true };
+		var io = new IntersectionObserver( function ( entries ) {
+			entries.forEach( function ( e ) {
+				seen[ e.target === form ? 'form' : 'draw' ] = e.isIntersecting;
+			} );
+			dock.hidden = ! ( seen.form && ! seen.draw );
+		} );
+		io.observe( form );
+		io.observe( drawPanel );
+	}
+	out( 'dock-btn' ).addEventListener( 'click', function () {
+		var reduce = window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+		root.querySelector( '.yp-pcalc__card--brand' ).scrollIntoView( { behavior: reduce ? 'auto' : 'smooth', block: 'start' } );
+	} );
+
+	/* ---------- Home Screen install ---------- */
+
+	var manifest = document.querySelector( 'link[rel="manifest"][data-yp-pcalc-sw]' );
+	var standalone = window.matchMedia( '(display-mode: standalone)' ).matches || window.navigator.standalone === true;
+	if ( standalone ) {
+		document.documentElement.classList.add( 'yp-pcalc-app' );
+	}
+
+	if ( manifest && 'serviceWorker' in navigator ) {
+		var swUrl = manifest.getAttribute( 'data-yp-pcalc-sw' );
+		navigator.serviceWorker.register( swUrl, { scope: swUrl.replace( /^https?:\/\/[^/]+/, '' ).replace( /sw\.js$/, '' ) } ).catch( function () {} );
+	}
+
+	var install = out( 'install' );
+	var installBtn = out( 'install-btn' );
+	var installPrompt = null;
+	var DISMISS_KEY = 'yp-pcalc-install-dismissed';
+
+	function dismissedRecently() {
+		try {
+			var at = parseInt( window.localStorage.getItem( DISMISS_KEY ), 10 );
+			return at > 0 && Date.now() - at < 30 * 86400000;
+		} catch ( e ) {
+			return false;
+		}
+	}
+
+	function isIOS() {
+		return /iphone|ipad|ipod/i.test( navigator.userAgent ) || ( navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 );
+	}
+
+	function setHow( parts ) {
+		var how = out( 'install-how' );
+		how.textContent = '';
+		parts.forEach( function ( part ) {
+			how.appendChild( typeof part === 'string' ? document.createTextNode( part ) : part );
+		} );
+	}
+
+	// The iOS Share glyph (square with an up arrow), so it's easy to spot in Safari's toolbar.
+	function shareGlyph() {
+		var svg = document.createElementNS( SVG_NS, 'svg' );
+		svg.setAttribute( 'viewBox', '0 0 24 24' );
+		svg.setAttribute( 'width', '16' );
+		svg.setAttribute( 'height', '16' );
+		svg.setAttribute( 'aria-label', 'Share' );
+		svg.setAttribute( 'class', 'yp-pcalc__install-glyph' );
+		var path = document.createElementNS( SVG_NS, 'path' );
+		path.setAttribute( 'fill', 'none' );
+		path.setAttribute( 'stroke', 'currentColor' );
+		path.setAttribute( 'stroke-width', '2' );
+		path.setAttribute( 'stroke-linecap', 'round' );
+		path.setAttribute( 'stroke-linejoin', 'round' );
+		path.setAttribute( 'd', 'M12 3v12M8 7l4-4 4 4M7 11H5v10h14V11h-2' );
+		svg.appendChild( path );
+		return svg;
+	}
+
+	function showInstall() {
+		if ( ! manifest || standalone || dismissedRecently() || ! window.matchMedia( '(pointer: coarse)' ).matches ) {
+			return;
+		}
+		var touchIcon = document.querySelector( 'link[rel="apple-touch-icon"]' );
+		if ( touchIcon ) {
+			out( 'install-icon' ).src = touchIcon.href;
+		}
+		if ( installPrompt ) {
+			setHow( [ 'It opens like an app, even with no signal.' ] );
+			installBtn.hidden = false;
+		} else if ( isIOS() ) {
+			setHow( [ 'Tap ', shareGlyph(), ' Share, then \u201cAdd to Home Screen\u201d.' ] );
+			installBtn.hidden = true;
+		} else {
+			setHow( [ 'Tap \u22ee in your browser, then \u201cAdd to Home screen\u201d.' ] );
+			installBtn.hidden = true;
+		}
+		install.hidden = false;
+	}
+
+	window.addEventListener( 'beforeinstallprompt', function ( e ) {
+		e.preventDefault();
+		installPrompt = e;
+		showInstall();
+	} );
+
+	window.addEventListener( 'appinstalled', function () {
+		install.hidden = true;
+	} );
+
+	installBtn.addEventListener( 'click', function () {
+		if ( ! installPrompt ) {
+			return;
+		}
+		installPrompt.prompt();
+		installPrompt.userChoice.then( function ( choice ) {
+			installPrompt = null;
+			if ( choice && choice.outcome === 'accepted' ) {
+				install.hidden = true;
+			} else {
+				showInstall();
+			}
+		} );
+	} );
+
+	out( 'install-close' ).addEventListener( 'click', function () {
+		install.hidden = true;
+		try {
+			window.localStorage.setItem( DISMISS_KEY, String( Date.now() ) );
+		} catch ( e ) {}
+	} );
+
+	showInstall();
 
 	var start = ( window.location.hash || '' ).slice( 1 );
 	// #blend-mix (linked from the Dose Tracker) opens Blends on Mixing my own.
