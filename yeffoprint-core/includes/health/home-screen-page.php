@@ -60,6 +60,12 @@ h1{font-size:34px;line-height:1.1;margin:16px 0 10px;letter-spacing:-.02em}
 .url{background:#e9e9eb;border-radius:9px;padding:6px 10px;text-align:center;font-size:11px;margin-bottom:8px}
 .tools{display:flex;justify-content:space-between;align-items:center;color:var(--blue);padding:0 4px}
 .tools span{display:inline-grid;place-items:center;width:28px;height:24px;font-size:15px;line-height:1}
+.ibar{display:flex;align-items:center;gap:8px;background:#e9e9eb;border-radius:18px;padding:4px 8px;color:#333;font-size:13px}
+.ibar span{display:inline-grid;place-items:center;width:24px;height:24px}
+.ibar .iurl{flex:1;width:auto;font-size:11px}
+.imenu{position:absolute;left:10px;bottom:50px;width:150px;background:#fff;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.2);overflow:hidden}
+.imenu div{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #eee;font-size:11.5px}
+.imenu div:last-child{border-bottom:0}
 .hl{position:relative;border-radius:50%;box-shadow:0 0 0 3px var(--pink);background:rgba(230,0,126,.08)}
 .hl-row{box-shadow:inset 0 0 0 3px var(--pink);background:rgba(230,0,126,.06)!important}
 .sheet{position:absolute;left:0;right:0;bottom:0;background:#f2f2f7;border-radius:14px 14px 0 0;padding:10px 8px;box-shadow:0 -6px 20px rgba(0,0,0,.15)}
@@ -139,15 +145,19 @@ h1{font-size:34px;line-height:1.1;margin:16px 0 10px;letter-spacing:-.02em}
 
 		<div class="step">
 			<div>
-				<h2><span class="num">2</span>Tap the Share button</h2>
-				<p>It's the square with an arrow pointing up <span class="ico"><?php echo $share_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG. ?></span>, in the bar at the bottom of Safari (at the top on iPad).</p>
-				<p>Don't see it? On newer iPhones, tap <b>•••</b> at the bottom right first, then <b>Share</b>.</p>
+				<h2><span class="num">2</span>Tap ☰, then Share</h2>
+				<p>Tap the menu button with three lines <b>☰</b>, just to the left of the web address. Then tap <b>Share</b>.</p>
+				<p>On older iPhones, the Share button <span class="ico"><?php echo $share_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG. ?></span> (a square with an arrow pointing up) is right in the bar at the bottom of Safari, so tap that instead.</p>
 			</div>
 			<div class="phone" aria-hidden="true">
 				<div class="page"><b>Peptide Calculator</b><i></i><i></i><i></i></div>
+				<div class="imenu">
+					<div>Reload</div>
+					<div class="hl-row"><b>Share</b><span class="ico"><?php echo $share_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span></div>
+					<div>Add to Favorites</div>
+				</div>
 				<div class="sbar">
-					<div class="url">yeffodesign.com</div>
-					<div class="tools"><span>‹</span><span>›</span><span class="hl"><?php echo $share_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span><span>📖</span><span>⧉</span></div>
+					<div class="ibar"><span class="hl">☰</span><span class="iurl">yeffodesign.com</span><span>↻</span></div>
 				</div>
 			</div>
 		</div>
