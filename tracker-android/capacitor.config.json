@@ -1,0 +1,36 @@
+{
+  "appId": "com.yeffohealth.app",
+  "appName": "YeffoHealth",
+  "webDir": "www",
+  "server": {
+    "url": "https://yeffodesign.com/tracker/",
+    "errorPath": "offline.html",
+    "allowNavigation": [
+      "discord.com",
+      "appleid.apple.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "appendUserAgent": "YeffoHealth/1.0"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#FAF9F6",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_reminder",
+      "iconColor": "#EC008C"
+    },
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover",
+      "style": "LIGHT"
+    }
+  }
+}
