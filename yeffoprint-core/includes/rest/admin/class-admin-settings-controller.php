@@ -121,6 +121,7 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::TELEGRAM_ENABLED_OPTION, (bool) ( $params['telegram_enabled'] ?? false ) );
 		update_option( $M::TELEGRAM_BOT_USERNAME_OPTION, ltrim( sanitize_text_field( (string) ( $params['telegram_bot_username'] ?? '' ) ), '@' ) );
 		update_option( $M::TELEGRAM_ADMIN_CHAT_ID_OPTION, sanitize_text_field( (string) ( $params['telegram_admin_chat_id'] ?? '' ) ) );
+		update_option( $M::TELEGRAM_OWNER_ALERTS_OPTION, (bool) ( $params['telegram_owner_alerts'] ?? false ) );
 		update_option( $M::TELEGRAM_LOGIN_ENABLED_OPTION, (bool) ( $params['telegram_login_enabled'] ?? false ) );
 
 		update_option( $M::GOOGLE_LOGIN_ENABLED_OPTION, (bool) ( $params['google_login_enabled'] ?? false ) );
@@ -201,6 +202,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			'telegram_webhook_url'       => esc_url_raw( YeffoPrint_Telegram_Webhook_Secret::webhook_url() ),
 			'telegram_status'            => YeffoPrint_Telegram_Webhook_Sync::last_message(),
 			'telegram_admin_chat_id'     => (string) get_option( $M::TELEGRAM_ADMIN_CHAT_ID_OPTION, '' ),
+			'telegram_owner_alerts'      => (bool) get_option( $M::TELEGRAM_OWNER_ALERTS_OPTION, false ),
 			'telegram_login_enabled'     => (bool) get_option( $M::TELEGRAM_LOGIN_ENABLED_OPTION, false ),
 			'google_login_enabled'       => (bool) get_option( $M::GOOGLE_LOGIN_ENABLED_OPTION, false ),
 			'google_client_id'           => (string) get_option( $M::GOOGLE_CLIENT_ID_OPTION, '' ),

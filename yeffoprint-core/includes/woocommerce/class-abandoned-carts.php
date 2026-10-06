@@ -1004,8 +1004,9 @@ class YeffoPrint_Abandoned_Carts {
 		return new YeffoPrint_Telegram_Client( $token );
 	}
 
+	/** 0 unless owner alerts are also going to Telegram (see YeffoPrint_Telegram_Admin_Alerts::telegram_chat_id()). */
 	private static function owner_chat_id(): int {
-		return (int) get_option( YeffoPrint_Admin_Menu::TELEGRAM_ADMIN_CHAT_ID_OPTION, 0 );
+		return YeffoPrint_Telegram_Admin_Alerts::telegram_chat_id();
 	}
 
 	private static function cart_lines_text( array $row ): string {
@@ -1022,13 +1023,23 @@ class YeffoPrint_Abandoned_Carts {
 	private static function alert_owner( array $row ): void {
 		self::update_row( (int) $row['id'], [ 'owner_alerted_at' => self::now() ] );
 
+		$name = trim( $row['first_name'] . ' ' . $row['last_name'] );
+
+		// Phone push from the admin app; Send now / Stop are on its Abandoned Carts screen.
+		do_action( 'yeffoprint_owner_alert', implode( "\n", [
+			__( '🛒 Cart left behind', 'yeffoprint-core' ),
+			trim( ( $name ? $name . ' · ' : '' ) . $row['email'] ),
+			/* translators: %s: cart total */
+			sprintf( __( 'Total: %s', 'yeffoprint-core' ), self::money( (float) $row['total'] ) ),
+			__( 'The first reminder email goes out in about 5 minutes unless you stop it.', 'yeffoprint-core' ),
+		] ), [ 'section' => 'abandoned-carts' ] );
+
 		$client  = self::telegram_client();
 		$chat_id = self::owner_chat_id();
 		if ( ! $client || ! $chat_id ) {
 			return;
 		}
 
-		$name  = trim( $row['first_name'] . ' ' . $row['last_name'] );
 		$text  = implode( "\n", array_filter( [
 			__( '🛒 Cart left behind', 'yeffoprint-core' ),
 			trim( ( $name ? $name . ' · ' : '' ) . $row['email'] ),
@@ -1062,14 +1073,25 @@ class YeffoPrint_Abandoned_Carts {
 	}
 
 	private static function notify_owner_recovered( array $row, \WC_Order $order ): void {
-		$client  = self::telegram_client();
-		$chat_id = self::owner_chat_id();
-		if ( ! $client || ! $chat_id || ! self::settings()['owner_alerts'] ) {
+		if ( ! self::settings()['owner_alerts'] ) {
 			return;
 		}
 
 		$name = trim( $order->get_formatted_billing_full_name() ) ?: ( trim( $row['first_name'] . ' ' . $row['last_name'] ) ?: $row['email'] );
 		$via  = (int) $row['stage'] >= 2 ? __( 'the second reminder', 'yeffoprint-core' ) : __( 'the first reminder', 'yeffoprint-core' );
+
+		do_action( 'yeffoprint_owner_alert', implode( "\n", [
+			/* translators: 1: customer name, 2: order total */
+			sprintf( __( '✅ Recovered cart: %1$s paid %2$s', 'yeffoprint-core' ), $name, self::money( (float) $order->get_total() ) ),
+			/* translators: 1: order number, 2: which reminder */
+			sprintf( __( 'Order %1$s · came back after %2$s', 'yeffoprint-core' ), $order->get_order_number(), $via ),
+		] ), [ 'section' => 'abandoned-carts' ] );
+
+		$client  = self::telegram_client();
+		$chat_id = self::owner_chat_id();
+		if ( ! $client || ! $chat_id ) {
+			return;
+		}
 
 		$client->send_message( $chat_id, sprintf(
 			/* translators: 1: customer name, 2: order total, 3: order number, 4: which reminder */

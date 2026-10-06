@@ -233,6 +233,7 @@
 	var QUEUE_KINDS = {
 		problem: { rank: 0, color: '#dc2626' },
 		dispute: { rank: 0, color: '#dc2626' },
+		express: { rank: 0, color: '#141414' },
 		proof: { rank: 1, color: 'var(--ypn-mag)' },
 		ready: { rank: 2, color: '#7c3aed' },
 		approval: { rank: 3, color: 'var(--ypn-yel)' },
@@ -281,6 +282,11 @@
 		return ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + o.number;
 	}
 
+	/* Stops an express order's 30-minute reminders (phone push and Telegram), like "Got it" / /ack on Telegram. */
+	function acknowledgeExpress( orderId ) {
+		return YP.request( api( 'admin/order/' + parseInt( orderId, 10 ) + '/express-ack' ), { method: 'POST' } );
+	}
+
 	function queueItems() {
 		var items = todayProblems.map( function ( pkg ) {
 			return {
@@ -317,6 +323,10 @@
 		( todayBoard || [] ).forEach( function ( o ) {
 			var age = o.date ? Date.now() - new Date( o.date ).getTime() : 0;
 			var base = { id: o.id, express: o.express, date: o.date, meta: ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
+			// Express reminders keep going out every 30 minutes until acknowledged.
+			if ( o.express_waiting ) {
+				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
+			}
 			if ( 'proof' === o.column ) {
 				items.push( Object.assign( base, { kind: 'proof', title: 'Make the proof for ' + orderLabel( o ), action: 'Open' } ) );
 			} else if ( 'ready' === o.column ) {
@@ -329,8 +339,8 @@
 		} );
 
 		items.sort( function ( a, b ) {
-			var aHot = 'problem' === a.kind || 'dispute' === a.kind;
-			var bHot = 'problem' === b.kind || 'dispute' === b.kind;
+			var aHot = 'problem' === a.kind || 'dispute' === a.kind || 'express' === a.kind;
+			var bHot = 'problem' === b.kind || 'dispute' === b.kind || 'express' === b.kind;
 			if ( aHot !== bHot ) {
 				return aHot ? -1 : 1;
 			}
@@ -368,9 +378,11 @@
 					'<div class="ypn-q' + ( item.express || 'problem' === item.kind || 'dispute' === item.kind ? ' is-hot' : '' ) + '">' +
 						'<i style="background:' + QUEUE_KINDS[ item.kind ].color + '"></i>' +
 						'<a class="ypn-q__text" href="' + escAttr( href ) + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
-						( item.print
-							? '<button type="button" class="ypn-btn" data-ypn-q-print="' + item.id + '">' + esc( item.action ) + '</button>'
-							: '<a class="ypn-btn" href="' + escAttr( href ) + '">' + esc( item.action ) + '</a>' ) +
+						( item.ack
+							? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-q-ack="' + item.id + '">' + esc( item.action ) + '</button>'
+							: ( item.print
+								? '<button type="button" class="ypn-btn" data-ypn-q-print="' + item.id + '">' + esc( item.action ) + '</button>'
+								: '<a class="ypn-btn" href="' + escAttr( href ) + '">' + esc( item.action ) + '</a>' ) ) +
 					'</div>'
 				);
 			} ).join( '' ) + ( items.length > shown.length ? '<a class="ypn-more" href="#/production">' + ( items.length - shown.length ) + ' more on the board &rarr;</a>' : '' )
@@ -392,6 +404,17 @@
 		if ( ! todayEl.getAttribute( 'data-ypn-bound' ) ) {
 			todayEl.setAttribute( 'data-ypn-bound', '1' );
 			todayEl.addEventListener( 'click', function ( event ) {
+				var ack = event.target.closest( '[data-ypn-q-ack]' );
+				if ( ack ) {
+					ack.disabled = true;
+					ack.textContent = 'Acknowledging…';
+					acknowledgeExpress( ack.getAttribute( 'data-ypn-q-ack' ) ).then( loadToday ).catch( function ( error ) {
+						ack.disabled = false;
+						ack.textContent = 'Acknowledge';
+						window.alert( 'Couldn’t acknowledge: ' + error.message );
+					} );
+					return;
+				}
 				var print = event.target.closest( '[data-ypn-q-print]' );
 				if ( print ) {
 					print.disabled = true;
@@ -994,6 +1017,12 @@
 
 			viewEl.innerHTML =
 				'<div class="ypn-op">' +
+					( order.express_waiting
+						? '<div class="ypn-banner ypn-ack">' +
+							'<div><b>Express order waiting on you</b><span>Reminders go out every 30 minutes until you acknowledge it or move it to In Production.</span></div>' +
+							'<button type="button" class="ypn-btn" data-ypn-express-ack>Acknowledge</button>' +
+						'</div>'
+						: '' ) +
 					'<div class="ypn-op__sub">' +
 						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
 						'<span class="ypn-pill ypn-pill--' + ( unpaid ? 'yel' : ( 'shipped' === order.status || 'completed' === order.status ? 'grn' : 'ink' ) ) + '">' + esc( order.status_label ) + '</span>' +
@@ -1073,6 +1102,19 @@
 				YP.loadWebDesignPanel( order, wd );
 			}
 			viewEl.querySelector( '[data-ypn-edit-details]' ).addEventListener( 'click', function () { editDetails( order ); } );
+
+			var ack = viewEl.querySelector( '[data-ypn-express-ack]' );
+			if ( ack ) {
+				ack.addEventListener( 'click', function () {
+					ack.disabled = true;
+					ack.textContent = 'Acknowledging…';
+					acknowledgeExpress( order.id ).then( load ).catch( function ( error ) {
+						ack.disabled = false;
+						ack.textContent = 'Acknowledge';
+						window.alert( 'Couldn’t acknowledge: ' + error.message );
+					} );
+				} );
+			}
 
 			viewEl.querySelectorAll( '[data-ypn-act]' ).forEach( function ( button ) {
 				button.addEventListener( 'click', function () {

@@ -248,6 +248,17 @@ class YeffoPrint_Admin_Menu {
 	const TELEGRAM_ADMIN_CHAT_ID_OPTION = 'yeffoprint_telegram_admin_chat_id';
 
 	/**
+	 * Direct request: "Now that I have push notifications from my web app,
+	 * can we disable all of the admin notifications going to telegram? So
+	 * I don't get duplicates." Off by default: owner alerts (new orders,
+	 * express reminders, abandoned carts, messages, reviews, tracker
+	 * feedback) go to the admin app's phone push only. Turning it on
+	 * copies them to the chat above as well. The chat ID stays in use
+	 * either way for /ack, /pending and the other owner commands.
+	 */
+	const TELEGRAM_OWNER_ALERTS_OPTION = 'yeffoprint_telegram_owner_alerts';
+
+	/**
 	 * Also read by includes/telegram/class-telegram-login.php. Direct
 	 * request: "allow users to login to the site using their telegram
 	 * account" — Telegram's own official Login Widget, not a hand-rolled

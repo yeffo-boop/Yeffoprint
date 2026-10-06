@@ -552,6 +552,8 @@ class YeffoPrint_Admin_Order_Controller {
 			'shipping'             => $this->address_payload( $order, 'shipping' ),
 			'order_notes'          => $this->order_notes_payload( $order ),
 			'express'              => YeffoPrint_Express_Order::is_express( $order ),
+			// Reminders still going out: shows the Acknowledge button.
+			'express_waiting'      => YeffoPrint_Telegram_Express_Alerts::is_waiting( $order ),
 			// Falls back to billing when there's no separate shipping
 			// address — same behavior WooCommerce's own order screen and
 			// order emails already use, not a new convention introduced

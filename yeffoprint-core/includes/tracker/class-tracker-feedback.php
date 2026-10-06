@@ -348,17 +348,17 @@ class YeffoPrint_Tracker_Feedback {
 		return admin_url( 'admin.php?page=yeffoprint#/tracker-feedback' );
 	}
 
-	/** Telegram to the owner's chat, with the first screenshot uploaded alongside when there is one. */
+	/** Phone push, plus Telegram to the owner's chat when that's turned on, with the first screenshot uploaded alongside when there is one. */
 	private static function alert_owner( int $id ): void {
 		do_action( 'yeffoprint_owner_alert', __( 'New Dose Tracker feedback', 'yeffoprint-core' ), [ 'section' => 'tracker-feedback' ] );
 
-		if ( ! class_exists( 'YeffoPrint_Telegram_Settings' ) ) {
+		if ( ! class_exists( 'YeffoPrint_Telegram_Admin_Alerts' ) ) {
 			return;
 		}
-		$chat_id = (int) get_option( YeffoPrint_Admin_Menu::TELEGRAM_ADMIN_CHAT_ID_OPTION, 0 );
+		$chat_id = YeffoPrint_Telegram_Admin_Alerts::telegram_chat_id();
 		$token   = YeffoPrint_Telegram_Settings::get_bot_token();
 		$row     = self::get_row( $id );
-		if ( ! $chat_id || '' === $token || ! YeffoPrint_Telegram_Settings::is_enabled() || ! $row ) {
+		if ( ! $chat_id || ! $row ) {
 			return;
 		}
 

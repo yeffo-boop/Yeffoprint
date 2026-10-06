@@ -42,7 +42,7 @@
 		var page = 1;
 
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Contact form messages and web design quote requests from the website. Reply by email; the address is filled in. They still arrive by email and Telegram too.</p>' +
+			'<p class="yp-app__intro">Contact form messages and web design quote requests from the website. Reply by email; the address is filled in. They still arrive by email and as a phone alert too.</p>' +
 			'<div class="yp-settings-tabs" role="tablist">' +
 				TABS.map( function ( tab ) {
 					return '<button type="button" class="yp-settings-tabs__tab' + ( tab.filter === filter ? ' is-active' : '' ) + '" data-yp-msg-tab="' + tab.filter + '" role="tab" aria-selected="' + ( tab.filter === filter ? 'true' : 'false' ) + '">' + tab.label + '<span data-yp-msg-count="' + tab.filter + '"></span></button>';

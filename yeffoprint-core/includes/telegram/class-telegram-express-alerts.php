@@ -1,13 +1,22 @@
 <?php
 /**
- * Escalating Telegram alerts for paid Express orders (class-express-
- * order.php) — direct request: ping the owner's chat (the same
- * TELEGRAM_ADMIN_CHAT_ID_OPTION class-telegram-admin-alerts.php uses)
- * right away and then every 30 minutes until the owner acknowledges it
- * on Telegram, or the order moves on to In Production / Shipped (or
- * anywhere else past Processing).
+ * Escalating alerts for paid Express orders (class-express-order.php):
+ * a phone push from the admin app (class-admin-push.php), and the
+ * owner's Telegram chat too when owner alerts are copied there
+ * (YeffoPrint_Telegram_Admin_Alerts::telegram_chat_id()), right away
+ * and then every 30 minutes until the owner acknowledges it, or the
+ * order moves on to In Production / Shipped (or anywhere else past
+ * Processing).
  *
- * Acknowledging: every alert carries a "✅ Got it" button
+ * Acknowledging in the admin app (direct request: "I need a way to
+ * acknowledge express orders in the web app like I did in telegram"):
+ * the order page and the Today queue show an Acknowledge button
+ * (POST /admin/order/{id}/express-ack), and on phones that show
+ * notification buttons (Android, desktop; not iPhone) the push itself
+ * has a "Got it" button that calls /express-ack/{id} with a signed
+ * token, so it works without opening the app.
+ *
+ * Acknowledging on Telegram: every alert carries a "✅ Got it" button
  * (class-telegram-callback-handler.php routes `express_ack:<id>` taps
  * here), and typing `/ack` (or just "ack") in the owner's chat
  * acknowledges every open express alert at once — `/ack 1234` just
@@ -44,6 +53,40 @@ class YeffoPrint_Telegram_Express_Alerts {
 		add_action( 'init', [ $this, 'ensure_scheduled' ] );
 
 		add_action( 'woocommerce_order_status_changed', [ $this, 'on_status_changed' ], 10, 4 );
+		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
+	}
+
+	public function register_routes(): void {
+		register_rest_route( 'yeffoprint-core/v1', '/admin/order/(?P<id>\d+)/express-ack', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'rest_acknowledge' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
+		// The push notification's "Got it" button. The service worker has
+		// no REST nonce, so the push carries a token signed for this one
+		// order instead. All it can do is stop that order's reminders.
+		register_rest_route( 'yeffoprint-core/v1', '/express-ack/(?P<id>\d+)', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'rest_acknowledge' ],
+			'permission_callback' => static function ( \WP_REST_Request $request ): bool {
+				return hash_equals( self::ack_token( (int) $request['id'] ), (string) $request->get_param( 'token' ) );
+			},
+		] );
+	}
+
+	public function rest_acknowledge( \WP_REST_Request $request ): \WP_REST_Response {
+		$ok = self::acknowledge( (int) $request['id'], __( 'Express order acknowledged in the dashboard — alerts stopped.', 'yeffoprint-core' ) );
+		return new \WP_REST_Response( [ 'acknowledged' => $ok, 'waiting' => false ] );
+	}
+
+	private static function ack_token( int $order_id ): string {
+		return wp_hash( 'express_ack|' . $order_id );
+	}
+
+	/** True while reminders are still going out for this order (Acknowledge buttons in the admin app). */
+	public static function is_waiting( \WC_Order $order ): bool {
+		return 'yes' === $order->get_meta( self::ESCALATING_META ) && 'processing' === $order->get_status();
 	}
 
 	public static function add_schedule( array $schedules ): array {
@@ -136,23 +179,52 @@ class YeffoPrint_Telegram_Express_Alerts {
 	private static function send_alert( \WC_Order $order ): void {
 		$count = (int) $order->get_meta( self::ALERT_COUNT_META ) + 1;
 
-		// Recorded before sending, so a Telegram outage retries on the
-		// next 30-minute mark rather than every 5-minute sweep.
+		// Recorded before sending, so an outage retries on the next
+		// 30-minute mark rather than every 5-minute sweep.
 		$order->update_meta_data( self::ALERT_COUNT_META, $count );
 		$order->update_meta_data( self::NEXT_ALERT_META, time() + self::INTERVAL );
 		$order->save_meta_data();
 
-		$chat_id = (int) get_option( YeffoPrint_Admin_Menu::TELEGRAM_ADMIN_CHAT_ID_OPTION, 0 );
-		$token   = YeffoPrint_Telegram_Settings::get_bot_token();
-		if ( ! $chat_id || '' === $token || ! YeffoPrint_Telegram_Settings::is_enabled() ) {
+		self::send_push( $order, $count );
+
+		$chat_id = YeffoPrint_Telegram_Admin_Alerts::telegram_chat_id();
+		if ( ! $chat_id ) {
 			return;
 		}
 
-		( new YeffoPrint_Telegram_Client( $token ) )->send_message(
+		( new YeffoPrint_Telegram_Client( YeffoPrint_Telegram_Settings::get_bot_token() ) )->send_message(
 			$chat_id,
 			self::alert_text( $order, $count ),
 			[ [ [ 'text' => __( '✅ Got it', 'yeffoprint-core' ), 'callback_data' => 'express_ack:' . $order->get_id() ] ] ]
 		);
+	}
+
+	/**
+	 * Same tag as the order's "New order paid" push, so the phone keeps
+	 * one notification per order; renotify makes each reminder buzz again
+	 * instead of silently replacing the last one.
+	 */
+	private static function send_push( \WC_Order $order, int $count ): void {
+		if ( ! class_exists( 'YeffoPrint_Admin_Push' ) ) {
+			return;
+		}
+
+		$lines = explode( "\n", self::alert_text( $order, $count ) );
+		$items = [];
+		foreach ( $order->get_items() as $item ) {
+			$items[] = sprintf( '%1$s × %2$d', $item->get_name(), $item->get_quantity() );
+		}
+
+		YeffoPrint_Admin_Push::send_to_admins( [
+			'title'              => mb_strimwidth( $lines[0], 0, 120, '…' ),
+			'body'               => mb_strimwidth( implode( ' · ', array_filter( [ $lines[1] ?? '', implode( ', ', $items ) ] ) ), 0, 200, '…' ) . "\n" . __( 'Acknowledge to stop the reminders.', 'yeffoprint-core' ),
+			'url'                => admin_url( 'admin.php?page=' . YeffoPrint_Admin_Push::APP_SLUG ) . '#/order/' . $order->get_id(),
+			'tag'                => 'order-' . $order->get_id(),
+			'renotify'           => true,
+			'requireInteraction' => true,
+			'actions'            => [ [ 'action' => 'ack', 'title' => __( '✅ Got it', 'yeffoprint-core' ) ] ],
+			'ack_url'            => add_query_arg( 'token', self::ack_token( $order->get_id() ), rest_url( 'yeffoprint-core/v1/express-ack/' . $order->get_id() ) ),
+		] );
 	}
 
 	private static function alert_text( \WC_Order $order, int $count ): string {
@@ -182,14 +254,14 @@ class YeffoPrint_Telegram_Express_Alerts {
 	}
 
 	/** @return bool False when the order isn't an express order with alerts still running. */
-	public static function acknowledge( int $order_id ): bool {
+	public static function acknowledge( int $order_id, string $note = '' ): bool {
 		$order = wc_get_order( $order_id );
 		if ( ! $order instanceof \WC_Order || 'yes' !== $order->get_meta( self::ESCALATING_META ) ) {
 			return false;
 		}
 
 		$order->update_meta_data( self::ACKED_AT_META, time() );
-		self::stop( $order, __( 'Express order acknowledged on Telegram — alerts stopped.', 'yeffoprint-core' ) );
+		self::stop( $order, '' !== $note ? $note : __( 'Express order acknowledged on Telegram — alerts stopped.', 'yeffoprint-core' ) );
 		return true;
 	}
 
