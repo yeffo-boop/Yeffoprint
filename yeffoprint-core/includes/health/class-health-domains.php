@@ -33,7 +33,7 @@ class YeffoPrint_Health_Domains {
 	public const HOSTS_OPTION = 'yeffoprint_health_hosts';
 
 	/** Paths that keep their own address on the main site instead of landing on /health/. */
-	private const PASSTHROUGH = [ 'tracker', 'peptide-calculator' ];
+	private const PASSTHROUGH = [ 'tracker', 'peptide-calculator', 'home-screen' ];
 
 	private const SETUP_VERSION = 1;
 	private const SETUP_OPTION  = 'yeffoprint_health_page_version';

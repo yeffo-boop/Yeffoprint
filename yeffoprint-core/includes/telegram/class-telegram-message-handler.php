@@ -394,7 +394,7 @@ class YeffoPrint_Telegram_Message_Handler {
 			"📮 Update a shipping address — /address plus your order number and email (only before a shipping label is generated)\n" .
 			"🔍 Find a design — /search plus a name or keyword, e.g. \"/search labs\"\n" .
 			"🔗 Connect your account — /link plus the code from My Account → Connect Telegram, so I can message you directly and let you approve proofs right here\n" .
-			"❓ Questions — ask about sizes, materials, shipping, the custom design fee, or accounts\n\n" .
+			"❓ Questions — ask about sizes, materials, shipping, the custom design fee, accounts, QR codes, or adding the Peptide Calculator or Dose Tracker to your Home Screen\n\n" .
 			'Commands: /order, /orders, /reorder, /address, /search, /link, /faq, /help',
 			'yeffoprint-core'
 		);
