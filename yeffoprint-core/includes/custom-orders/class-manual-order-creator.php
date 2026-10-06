@@ -459,6 +459,26 @@ class YeffoPrint_Manual_Order_Creator {
 	}
 
 	/**
+	 * Direct report: "I cannot add to an order that is in processing."
+	 * True for an unpaid order (items go straight onto it) and for a paid
+	 * one that hasn't shipped yet (items go on a linked add-on order, see
+	 * add_linked_items()).
+	 */
+	public static function can_add_items( \WC_Order $order ): bool {
+		return self::is_editable( $order ) || self::paid_addon_root( $order ) instanceof \WC_Order;
+	}
+
+	/** The order a paid, not-yet-shipped order's add-ons ship under, or null when it can't take one. */
+	private static function paid_addon_root( \WC_Order $order ): ?\WC_Order {
+		if ( ! class_exists( 'YeffoPrint_Order_Addon' ) ) {
+			return null;
+		}
+
+		$eligibility = YeffoPrint_Order_Addon::eligibility( $order, false );
+		return $eligibility['eligible'] ? $eligibility['root'] : null;
+	}
+
+	/**
 	 * Adds more items to an existing unpaid order — same payload groups
 	 * (custom_design/sticker/template/web_design + requires_proof) and the
 	 * same pricing as create(), just onto $order instead of a new one. The
@@ -469,7 +489,8 @@ class YeffoPrint_Manual_Order_Creator {
 	 */
 	public static function add_items( \WC_Order $order, array $payload ) {
 		if ( ! self::is_editable( $order ) ) {
-			return self::not_editable_error();
+			$root = self::paid_addon_root( $order );
+			return $root ? self::add_linked_items( $root, $payload ) : self::not_editable_error();
 		}
 
 		$groups = self::validate_groups( $payload );
@@ -506,6 +527,74 @@ class YeffoPrint_Manual_Order_Creator {
 			wp_get_current_user()->display_name
 		) );
 		$order->save();
+
+		if ( ! empty( $payload['send_invoice_email'] ) && function_exists( 'WC' ) && WC()->mailer() ) {
+			WC()->mailer()->customer_invoice( $order );
+		}
+
+		return [ 'order' => $order, 'custom_orders' => $custom_orders ];
+	}
+
+	/**
+	 * Items for an order that's already paid but hasn't shipped. The paid
+	 * total can't grow (WooCommerce won't take a second payment on a
+	 * Processing order), so the items go on a new unpaid order for the
+	 * same customer and address, linked to $root the same way a
+	 * customer's own "Add to Order" checkout is
+	 * (YeffoPrint_Order_Addon::SHIP_WITH_ORDER_ID_META): no shipping line,
+	 * grouped with $root on the board, and its own pay link.
+	 *
+	 * @return array{order:\WC_Order, custom_orders: array<int, array{id:int, order_type:string}>}|\WP_Error
+	 */
+	private static function add_linked_items( \WC_Order $root, array $payload ) {
+		$groups = self::validate_groups( $payload );
+		if ( is_wp_error( $groups ) ) {
+			return $groups;
+		}
+
+		$order = wc_create_order( [
+			'customer_id' => $root->get_customer_id(),
+			'status'      => 'pending',
+			'created_via' => 'yeffoprint-admin',
+		] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		$order->set_address( $root->get_address( 'billing' ), 'billing' );
+		$order->set_address( $root->get_address( 'shipping' ), 'shipping' );
+
+		$user           = $root->get_customer_id() ? get_user_by( 'id', $root->get_customer_id() ) : false;
+		$shell_customer = $user
+			? self::shell_customer( $user )
+			: [
+				'id'    => 0,
+				'email' => $root->get_billing_email(),
+				'name'  => trim( $root->get_formatted_billing_full_name() ),
+			];
+
+		$custom_orders = self::add_groups( $order, $groups, ! empty( $payload['requires_proof'] ), $shell_customer );
+		if ( is_wp_error( $custom_orders ) ) {
+			$order->delete( true );
+			return $custom_orders;
+		}
+
+		$order->calculate_totals();
+		$order->update_meta_data( '_yp_manually_created', 1 );
+		$order->update_meta_data( YeffoPrint_Order_Addon::SHIP_WITH_ORDER_ID_META, $root->get_id() );
+		$order->add_order_note( sprintf(
+			/* translators: 1: staff display name, 2: the paid order this one ships with */
+			__( 'Items added by %1$s via the admin app to paid Order %2$s. Ships together with it, no separate shipping charge.', 'yeffoprint-core' ),
+			wp_get_current_user()->display_name,
+			$root->get_order_number()
+		) );
+		$order->save();
+
+		$root->add_order_note( sprintf(
+			/* translators: %s: the new add-on order that ships together with this one */
+			__( 'Order %s was added on to this order — pack and ship them together.', 'yeffoprint-core' ),
+			$order->get_order_number()
+		) );
 
 		if ( ! empty( $payload['send_invoice_email'] ) && function_exists( 'WC' ) && WC()->mailer() ) {
 			WC()->mailer()->customer_invoice( $order );

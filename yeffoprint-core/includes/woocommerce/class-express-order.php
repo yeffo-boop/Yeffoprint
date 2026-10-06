@@ -35,8 +35,7 @@ class YeffoPrint_Express_Order {
 	private const SESSION_KEY = 'yp_express';
 
 	public function __construct() {
-		// Priority 18: after class-order-addon-checkout.php's shipping
-		// waiver (15), before class-card-surcharge.php (20) — a card
+		// Priority 18: before class-card-surcharge.php (20) — a card
 		// surcharge should cover the express fee too, since it's charged
 		// to the same card.
 		add_action( 'woocommerce_cart_calculate_fees', [ $this, 'apply_fee' ], 18 );

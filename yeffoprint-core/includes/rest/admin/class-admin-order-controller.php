@@ -579,6 +579,9 @@ class YeffoPrint_Admin_Order_Controller {
 			// Direct request: edit an order "before it's been paid" — lets
 			// the drawer offer Edit order, and show the pay link it keeps.
 			'editable'             => YeffoPrint_Manual_Order_Creator::is_editable( $order ),
+			// Paid but not shipped yet: Add items still works, onto a
+			// linked add-on order (YeffoPrint_Manual_Order_Creator::add_items()).
+			'can_add_items'        => YeffoPrint_Manual_Order_Creator::can_add_items( $order ),
 			'payment_url'          => $order->needs_payment() ? $order->get_checkout_payment_url() : null,
 			'customer_picks_shipping' => YeffoPrint_Order_Pay_Address::customer_picks_shipping( $order ),
 			// Record payment panel (class-partial-payments.php): what has

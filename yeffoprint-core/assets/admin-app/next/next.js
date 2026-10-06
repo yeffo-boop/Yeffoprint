@@ -975,6 +975,8 @@
 			}
 			if ( order.editable ) {
 				actions.push( '<button type="button" class="ypn-act" data-ypn-act="edit">Edit items <span>›</span></button>' );
+			}
+			if ( order.editable || order.can_add_items ) {
 				actions.push( '<a class="ypn-act" href="#/manual-order/' + order.id + '">Add items <span>+</span></a>' );
 			}
 			if ( order.customer_email ) {

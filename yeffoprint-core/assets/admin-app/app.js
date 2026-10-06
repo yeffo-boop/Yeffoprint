@@ -1493,8 +1493,8 @@
 
 			'<div class="yp-panel" data-yp-items-panel>' +
 				'<div class="yp-panel__head"><h2>Items</h2>' +
-					( order.editable
-						? '<span><button type="button" class="yp-row-action" data-yp-edit-order>Edit order</button> <button type="button" class="yp-row-action" data-yp-add-items>Add items</button></span>'
+					( order.editable || order.can_add_items
+						? '<span>' + ( order.editable ? '<button type="button" class="yp-row-action" data-yp-edit-order>Edit order</button> ' : '' ) + '<button type="button" class="yp-row-action" data-yp-add-items>Add items</button></span>'
 						: '' ) +
 				'</div>' +
 				'<div data-yp-items-view>' +
@@ -1566,18 +1566,23 @@
 	 * the Create Order screen in "add to this order" mode
 	 * (#/manual-order/{id}), so new items get the exact same pickers and
 	 * pricing. The pay link never changes; it just charges the new total.
+	 * A paid order that hasn't shipped (order.can_add_items) offers Add
+	 * items only: those go on a linked add-on order with its own pay link.
 	 */
 	function bindOrderEditor( order, drawer, bodyEl ) {
 		var editButton = bodyEl.querySelector( '[data-yp-edit-order]' );
 		var addButton  = bodyEl.querySelector( '[data-yp-add-items]' );
+
+		if ( addButton ) {
+			addButton.addEventListener( 'click', function () {
+				YP.closeDrawer( drawer );
+				window.location.hash = '#/manual-order/' + order.id;
+			} );
+		}
+
 		if ( ! editButton ) {
 			return;
 		}
-
-		addButton.addEventListener( 'click', function () {
-			YP.closeDrawer( drawer );
-			window.location.hash = '#/manual-order/' + order.id;
-		} );
 
 		editButton.addEventListener( 'click', function () {
 			editButton.hidden = true;
