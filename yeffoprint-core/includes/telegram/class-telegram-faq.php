@@ -68,13 +68,14 @@ class YeffoPrint_Telegram_Faq {
 		];
 	}
 
-	/** Steps match the install cards on the pages themselves (assets/tracker/tracker.js, yeffoprint/assets/js/peptide-calculator.js). */
+	/** Picture version: /home-screen/ (class-home-screen-help.php). Steps match the install cards on the pages themselves (assets/tracker/tracker.js, yeffoprint/assets/js/peptide-calculator.js). */
 	private static function home_screen_answer(): string {
 		return sprintf(
-			/* translators: 1: Peptide Calculator URL, 2: Dose Tracker URL */
-			__( "You can put the YeffoHealth Peptide Calculator and Dose Tracker on your Home Screen so they open like an app. They're free, and there's nothing to download from an app store.\n\nPeptide Calculator: %1\$s\nDose Tracker: %2\$s\n\n📱 iPhone or iPad (Safari)\n1. Open the link above in Safari.\n2. Tap the Share button (the square with an arrow pointing up). On newer iPhones, tap ••• at the bottom first, then Share.\n3. Scroll down and tap \"Add to Home Screen\".\n4. If you see \"Open as Web App\", leave it on, then tap Add.\n\n🤖 Android (Chrome)\n1. Open the link above in Chrome.\n2. If the page shows an \"Install app\" button, tap it and you're done.\n3. Otherwise tap ⋮ at the top right, then \"Add to Home screen\" (or \"Install app\"), then Install.\n\nThe calculator and the tracker are two separate icons, so add each one you want. For the Dose Tracker, open it from the new icon and sign in once; it keeps you signed in. On iPhone, dose reminders only work when the tracker is opened from the Home Screen (iOS 16.4 or newer).", 'yeffoprint-core' ),
+			/* translators: 1: Peptide Calculator URL, 2: Dose Tracker URL, 3: picture guide URL */
+			__( "You can put the YeffoHealth Peptide Calculator and Dose Tracker on your Home Screen so they open like an app. They're free, and there's nothing to download from an app store.\n\nPeptide Calculator: %1\$s\nDose Tracker: %2\$s\n\nStep-by-step with pictures: %3\$s\n\n📱 iPhone or iPad (Safari)\n1. Open the link above in Safari.\n2. Tap the Share button (the square with an arrow pointing up). On newer iPhones, tap ••• at the bottom first, then Share.\n3. Scroll down and tap \"Add to Home Screen\".\n4. If you see \"Open as Web App\", leave it on, then tap Add.\n\n🤖 Android (Chrome)\n1. Open the link above in Chrome.\n2. If the page shows an \"Install app\" button, tap it and you're done.\n3. Otherwise tap ⋮ at the top right, then \"Add to Home screen\" (or \"Install app\"), then Install.\n\nThe calculator and the tracker are two separate icons, so add each one you want. For the Dose Tracker, open it from the new icon and sign in once; it keeps you signed in. On iPhone, dose reminders only work when the tracker is opened from the Home Screen (iOS 16.4 or newer).", 'yeffoprint-core' ),
 			home_url( '/peptide-calculator/' ),
-			home_url( '/tracker/' )
+			home_url( '/tracker/' ),
+			YeffoPrint_Home_Screen_Help::url()
 		);
 	}
 

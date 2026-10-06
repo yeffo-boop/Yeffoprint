@@ -178,6 +178,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-deletion.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/legal/class-legal-pages.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/health/class-health-domains.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/health/class-home-screen-help.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-core-email-theme.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-webhook-secret.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-settings.php';
@@ -340,6 +341,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Tracker_App();
 		new YeffoPrint_Calculator_App();
 		new YeffoPrint_Health_Domains();
+		new YeffoPrint_Home_Screen_Help();
 		new YeffoPrint_Tracker_Controller();
 		new YeffoPrint_Telegram_Admin_Alerts();
 		new YeffoPrint_Telegram_Order_Notifications();
