@@ -1,6 +1,6 @@
 {
-  "appId": "com.yeffodesign.dosetracker",
-  "appName": "Dose Tracker",
+  "appId": "com.yeffohealth.app",
+  "appName": "YeffoHealth",
   "webDir": "www",
   "server": {
     "url": "https://yeffodesign.com/tracker/",
@@ -14,7 +14,7 @@
     "allowMixedContent": false,
     "captureInput": true,
     "webContentsDebuggingEnabled": false,
-    "appendUserAgent": "YeffoDoseTracker/1.0"
+    "appendUserAgent": "YeffoHealth/1.0"
   },
   "plugins": {
     "SplashScreen": {

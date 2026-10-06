@@ -218,6 +218,8 @@ class YeffoPrint_Tracker_App {
 			'registerUrl'   => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_registration_url(),
 			'logoutUrl'     => $user->ID ? wp_logout_url( self::url() ) : '',
 			'homeUrl'       => home_url( '/' ),
+			// Google Play asks for a way to delete the whole account from inside the app (class-account-deletion.php).
+			'deleteAccountUrl' => function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( 'edit-account' ) . '#delete-account' : '',
 			'labelsUrl'     => home_url( '/shop-labels/' ),
 			'cartUrl'       => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/cart/' ),
 			'qtyPresets'    => function_exists( 'yeffoprint_core_quantity_presets' ) ? array_values( array_map( 'intval', yeffoprint_core_quantity_presets() ) ) : [ 10, 20, 30, 50, 100 ],

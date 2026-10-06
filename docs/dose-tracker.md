@@ -149,6 +149,10 @@ web app shows up in the Android app on the next open, with no app update.
   hidden on sign-in pages: Google blocks sign-in from an app's built-in
   browser, and Telegram's needs a pop-up. Email/password, Discord and
   Apple work.
+- The app is called **YeffoHealth** (`com.yeffohealth.app`), with the
+  same striped vial icon as the web app.
+- Me › Privacy links to "Delete my account" (`deleteAccountUrl`), which
+  Google Play requires to be reachable from inside the app.
 
 ## Injection site rotation
 

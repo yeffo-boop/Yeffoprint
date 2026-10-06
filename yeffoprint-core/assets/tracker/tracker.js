@@ -6016,7 +6016,8 @@
 					forgetNative();
 				} }, 'Sign out' ),
 				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--danger', onclick: confirmDeleteAll }, 'Delete my data' )
-			)
+			),
+			CFG.deleteAccountUrl ? h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '12px 0 0' } }, 'To close your YeffoDesign account and erase everything, ', h( 'a', { href: CFG.deleteAccountUrl }, 'delete your account' ), '.' ) : null
 		) );
 
 		wrap.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '16px 4px 0' } },

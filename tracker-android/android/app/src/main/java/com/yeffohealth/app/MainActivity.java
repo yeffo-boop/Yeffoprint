@@ -1,4 +1,4 @@
-package com.yeffodesign.dosetracker;
+package com.yeffohealth.app;
 
 import com.getcapacitor.BridgeActivity;
 
