@@ -70,6 +70,11 @@ unlogged dose on Today has the same button (`POST /tracker/snooze`).
 Either way a `snooze` record keeps only the slot ids and the time; the
 next sweep after that time rebuilds the reminder from the protocols and
 skips it if the dose was logged meanwhile. A dose can be snoozed 6 times.
+In the Android app (tracker-android/) reminders are scheduled on the
+phone, so the Today button snoozes there too: tracker.js keeps the snooze
+in localStorage `ypt-native-snooze:<user>` and adds one more local
+reminder 30 minutes out, dropped again if the dose gets logged. The
+server isn't involved.
 
 ## Order labels
 

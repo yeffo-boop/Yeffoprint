@@ -2041,10 +2041,11 @@
 	 * iPhone's don't, so this is where iPhone users snooze.
 	 */
 	function snoozeLine( s ) {
-		if ( s.log || s.date !== todayStr() || nowTime() < s.time || ! ( state.push.devices > 0 ) ) {
+		// In the Android app reminders are scheduled on the phone, so the snooze is too.
+		if ( s.log || s.date !== todayStr() || nowTime() < s.time || ! ( NATIVE ? state.pushOnHere === true : state.push.devices > 0 ) ) {
 			return null;
 		}
-		var open = state.snoozes.filter( function ( z ) {
+		var open = ( NATIVE ? nativeSnoozes() : state.snoozes ).filter( function ( z ) {
 			return ( z.slots || [] ).indexOf( s.id ) !== -1 && z.at * 1000 > Date.now();
 		} )[ 0 ];
 		if ( open ) {
@@ -2052,6 +2053,12 @@
 		}
 		var btn = h( 'button', { type: 'button', class: 'ypt-snooze', onclick: function () {
 			btn.disabled = true;
+			if ( NATIVE ) {
+				snoozeNative( s.id );
+				render();
+				toast( 'We’ll remind you again in 30 minutes' );
+				return;
+			}
 			api( 'POST', 'tracker/snooze', { slots: [ s.id ] } ).then( function ( json ) {
 				state.snoozes = Array.isArray( json.snoozes ) ? json.snoozes : state.snoozes;
 				persist();
@@ -6867,6 +6874,10 @@
 	// Android limits how many alarms one app can have waiting (about 500).
 	var NATIVE_MAX = 150;
 	var NATIVE_CHANNEL = 'yp-reminders';
+	// Snoozed reminders waiting on this phone ({slots, at, n}, at in seconds like the server's).
+	var NATIVE_SNOOZE_KEY = 'ypt-native-snooze:' + ( CFG.userKey || 'anon' );
+	var NATIVE_SNOOZE_MINUTES = 30;
+	var NATIVE_MAX_SNOOZES = 6;
 	var nativeChecked = false;
 	var nativeLast = '';
 	var nativeTimer = null;
@@ -6927,6 +6938,24 @@
 				} );
 			} );
 		}
+		nativeSnoozes().forEach( function ( z ) {
+			var due = slotsOn( today ).filter( function ( sl ) {
+				return ! sl.log && z.slots.indexOf( sl.id ) !== -1;
+			} );
+			if ( ! due.length || z.at * 1000 <= now ) {
+				return;
+			}
+			var one = due.length === 1;
+			out.push( {
+				tag: 'yp-snooze-' + z.slots.join( '+' ) + '-' + z.n,
+				at: z.at * 1000,
+				title: names ? ( one ? 'Time for ' + due[ 0 ].protocol.compound : 'Time for your doses' ) : 'Dose reminder',
+				body: names ? due.map( function ( sl ) {
+					var dose = doseOn( sl.protocol, today );
+					return ( sl.protocol.compound + ' ' + ( dose > 0 ? amountLabel( dose, sl.protocol.unit, sl.protocol ) + ( sl.protocol.doseOf ? ' ' + sl.protocol.doseOf : '' ) : '' ) ).trim();
+				} ).join( ' + ' ) : ( one ? 'You have a dose due. Open your tracker to see it.' : 'You have ' + due.length + ' doses due. Open your tracker to see them.' ),
+			} );
+		} );
 		supplyAlerts().forEach( function ( a ) {
 			var at = Date.parse( wallToIso( a.date, a.time ) );
 			if ( at <= now ) {
@@ -6969,6 +6998,36 @@
 				};
 			} ) } );
 		} );
+	}
+
+	/** Today's snoozes that haven't come due yet (older ones are dropped as they're read). */
+	function nativeSnoozes() {
+		var now = Date.now();
+		var list = loadJSON( NATIVE_SNOOZE_KEY, [] );
+		return ( Array.isArray( list ) ? list : [] ).filter( function ( z ) {
+			return z && Array.isArray( z.slots ) && z.at * 1000 > now && z.at * 1000 - now <= NATIVE_SNOOZE_MINUTES * 60000;
+		} );
+	}
+
+	/** "Remind me in 30 min" in the app: one more reminder for that dose, scheduled on the phone. */
+	function snoozeNative( slotIdStr ) {
+		var list = loadJSON( NATIVE_SNOOZE_KEY, [] );
+		list = Array.isArray( list ) ? list : [];
+		var n = list.filter( function ( z ) {
+			return z && Array.isArray( z.slots ) && z.slots.indexOf( slotIdStr ) !== -1;
+		} ).reduce( function ( max, z ) {
+			return Math.max( max, z.n || 0 );
+		}, 0 );
+		if ( n >= NATIVE_MAX_SNOOZES ) {
+			return;
+		}
+		list = list.filter( function ( z ) {
+			return z && Array.isArray( z.slots ) && z.slots.indexOf( slotIdStr ) === -1 && z.at * 1000 > Date.now();
+		} );
+		list.push( { slots: [ slotIdStr ], at: Math.floor( Date.now() / 1000 ) + NATIVE_SNOOZE_MINUTES * 60, n: n + 1 } );
+		saveJSON( NATIVE_SNOOZE_KEY, list );
+		nativeLast = '';
+		syncNativeReminders();
 	}
 
 	function syncNativeReminders() {
@@ -7049,6 +7108,7 @@
 			return;
 		}
 		removeKey( NATIVE_KEY );
+		removeKey( NATIVE_SNOOZE_KEY );
 		state.pushOnHere = false;
 		nativeLast = '';
 		nativeCall( 'cancelAll' ).catch( function () {} );
@@ -8624,7 +8684,7 @@
 			api( 'DELETE', 'tracker/all' ).then( function () {
 				return ( NATIVE ? disableNative() : disablePush() ).catch( function () {} );
 			} ).then( function () {
-				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {} };
+				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {} };
 				state.shares = [];
 				forgetPhotos();
 				queue = [];
@@ -8757,7 +8817,7 @@
 	// signed in on this browser earlier shouldn't leave theirs behind.
 	try {
 		Object.keys( window.localStorage ).forEach( function ( k ) {
-			if ( ( k.indexOf( 'ypt:' ) === 0 && k !== STORE_KEY ) || ( k.indexOf( 'ypt-q:' ) === 0 && k !== QUEUE_KEY ) || ( k.indexOf( 'ypt-native-reminders:' ) === 0 && k !== NATIVE_KEY ) ) {
+			if ( ( k.indexOf( 'ypt:' ) === 0 && k !== STORE_KEY ) || ( k.indexOf( 'ypt-q:' ) === 0 && k !== QUEUE_KEY ) || ( k.indexOf( 'ypt-native-reminders:' ) === 0 && k !== NATIVE_KEY ) || ( k.indexOf( 'ypt-native-snooze:' ) === 0 && k !== NATIVE_SNOOZE_KEY ) ) {
 				removeKey( k );
 			}
 		} );
