@@ -243,8 +243,8 @@
 				state.stickers = [ newSticker() ];
 				state.webDesignPackages = results[ 2 ];
 				state.addToOrder = results[ 3 ];
-				if ( state.addToOrder && ! state.addToOrder.editable ) {
-					viewEl.innerHTML = '<p class="yp-form__error">Order #' + YP.escapeHtml( String( state.addToOrder.number ) ) + ' has already been paid, so items can’t be added to it.</p>';
+				if ( state.addToOrder && ! state.addToOrder.editable && ! state.addToOrder.can_add_items ) {
+					viewEl.innerHTML = '<p class="yp-form__error">Order #' + YP.escapeHtml( String( state.addToOrder.number ) ) + ' has already shipped or closed, so items can’t be added to it.</p>';
 					return;
 				}
 				render();
@@ -268,7 +268,11 @@
 			viewEl.innerHTML =
 				'<div class="yp-mo">' +
 				( adding
-					? '<p class="yp-app__intro">Adding items to <strong>Order #' + YP.escapeHtml( String( adding.number ) ) + '</strong>' + ( adding.customer_name ? ' for ' + YP.escapeHtml( adding.customer_name ) : '' ) + ' (currently $' + adding.total.toFixed( 2 ) + '). Its payment link stays the same and charges the new total. <a href="#/manual-order">Start a new order instead</a></p>'
+					? '<p class="yp-app__intro">Adding items to <strong>Order #' + YP.escapeHtml( String( adding.number ) ) + '</strong>' + ( adding.customer_name ? ' for ' + YP.escapeHtml( adding.customer_name ) : '' ) +
+						( adding.editable
+							? ' (currently $' + adding.total.toFixed( 2 ) + '). Its payment link stays the same and charges the new total.'
+							: '. It’s already paid, so these items go on a linked add-on order with its own payment link and no shipping charge. Both orders ship together in one box.' ) +
+						' <a href="#/manual-order">Start a new order instead</a></p>'
 					: '<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' ) +
 
 				'<div class="yp-panel">' +
@@ -304,7 +308,7 @@
 						: '' ) +
 					'<div class="yp-field yp-field--checkbox">' +
 						'<input type="checkbox" id="yp-mo-send-invoice"' + ( adding ? '' : ' checked' ) + ' />' +
-						'<label for="yp-mo-send-invoice">' + ( adding ? 'Email the customer the updated order and payment link' : 'Email the customer their order details and a payment link' ) + '</label>' +
+						'<label for="yp-mo-send-invoice">' + ( adding ? ( adding.editable ? 'Email the customer the updated order and payment link' : 'Email the customer the add-on order and its payment link' ) : 'Email the customer their order details and a payment link' ) + '</label>' +
 					'</div>' +
 					'<p class="yp-panel__hint">Sent right away via WooCommerce’s own Order details email, with the order’s real payment link — skip this if you’re taking payment another way (over the phone, in person) instead.</p>' +
 				'</div>' +
