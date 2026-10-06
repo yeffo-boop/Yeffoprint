@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">YeffoHealth</string>
+    <string name="title_activity_main">YeffoHealth</string>
+    <string name="package_name">com.yeffohealth.app</string>
+    <string name="custom_url_scheme">com.yeffohealth.app</string>
+</resources>

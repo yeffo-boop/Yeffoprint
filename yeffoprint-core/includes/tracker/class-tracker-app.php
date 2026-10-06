@@ -40,6 +40,23 @@ class YeffoPrint_Tracker_App {
 		add_action( 'template_redirect', [ $this, 'maybe_serve' ], 0 );
 		add_action( 'wp_footer', [ $this, 'forget_device_copy' ] );
 		add_action( 'login_footer', [ $this, 'forget_device_copy' ] );
+		add_action( 'wp_footer', [ $this, 'app_sign_in_options' ] );
+		add_action( 'login_footer', [ $this, 'app_sign_in_options' ] );
+	}
+
+	/**
+	 * Inside the Android app (tracker-android/) Google refuses to sign
+	 * anyone in from an app's built-in browser, and Telegram's sign-in
+	 * needs a pop-up window the app doesn't open, so those two buttons
+	 * are hidden there. Email and password, Discord and Apple all work.
+	 */
+	public function app_sign_in_options(): void {
+		if ( is_user_logged_in() ) {
+			return;
+		}
+		?>
+<script>(function(){try{var C=window.Capacitor;if(!(C&&C.isNativePlatform&&C.isNativePlatform())){return;}var s=document.createElement('style');s.textContent='.yp-social-login__button--google,.yp-telegram-login{display:none!important}';document.head.appendChild(s);}catch(e){}})();</script>
+		<?php
 	}
 
 	/**
@@ -49,13 +66,15 @@ class YeffoPrint_Tracker_App {
 	 * didn't, which left the entries readable on a shared computer. Every
 	 * signed-out page now clears it: the saved copy and unsynced changes
 	 * (localStorage ypt:* / ypt-q:*) and the offline copy of the app page.
+	 * In the Android app (tracker-android/) it also cancels the reminders
+	 * scheduled on the phone, which carry medication names.
 	 */
 	public function forget_device_copy(): void {
 		if ( is_user_logged_in() ) {
 			return;
 		}
 		?>
-<script>(function(){try{var s=window.localStorage,k=[];for(var i=0;i<s.length;i++){var n=s.key(i);if(n&&(n.indexOf('ypt:')===0||n.indexOf('ypt-q:')===0)){k.push(n);}}k.forEach(function(n){s.removeItem(n);});}catch(e){}try{if(window.caches){caches.keys().then(function(ks){ks.forEach(function(c){if(c.indexOf('yp-tracker-')===0){caches.delete(c);}});});}}catch(e){}})();</script>
+<script>(function(){try{var s=window.localStorage,k=[];for(var i=0;i<s.length;i++){var n=s.key(i);if(n&&(n.indexOf('ypt:')===0||n.indexOf('ypt-q:')===0||n.indexOf('ypt-native-reminders:')===0)){k.push(n);}}k.forEach(function(n){s.removeItem(n);});}catch(e){}try{if(window.caches){caches.keys().then(function(ks){ks.forEach(function(c){if(c.indexOf('yp-tracker-')===0){caches.delete(c);}});});}}catch(e){}try{var C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform()&&C.nativePromise){C.nativePromise('LocalNotifications','cancelAll',{}).catch(function(){});}}catch(e){}})();</script>
 		<?php
 	}
 
@@ -199,6 +218,8 @@ class YeffoPrint_Tracker_App {
 			'registerUrl'   => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_registration_url(),
 			'logoutUrl'     => $user->ID ? wp_logout_url( self::url() ) : '',
 			'homeUrl'       => home_url( '/' ),
+			// Google Play asks for a way to delete the whole account from inside the app (class-account-deletion.php).
+			'deleteAccountUrl' => function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( 'edit-account' ) . '#delete-account' : '',
 			'labelsUrl'     => home_url( '/shop-labels/' ),
 			'cartUrl'       => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/cart/' ),
 			'qtyPresets'    => function_exists( 'yeffoprint_core_quantity_presets' ) ? array_values( array_map( 'intval', yeffoprint_core_quantity_presets() ) ) : [ 10, 20, 30, 50, 100 ],
