@@ -17,9 +17,26 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Telegram_Faq {
 
-	/** @return array{keywords:string[],answer:string}[] */
+	/**
+	 * `requires` (optional): the entry only counts when at least one of
+	 * these also appears, so a booster keyword like "iphone" alone
+	 * ("my proof won't load on my iphone") doesn't pull up this answer
+	 * instead of escalating to a person.
+	 *
+	 * @return array{keywords:string[],requires?:string[],answer:string}[]
+	 */
 	private static function entries(): array {
 		return [
+			[
+				// Direct request: a customer asked the bot how to add the
+				// calculator/tracker to their Home Screen and it couldn't
+				// answer. Listed before the order-tracking entry so
+				// "tracker" questions don't tie with its "track" keyword
+				// and lose (ties go to the earlier entry).
+				'keywords' => [ 'home screen', 'homescreen', 'home-screen', 'add to home', 'install', 'shortcut', 'an app', 'the app', 'app store', 'play store', 'download', 'calculator', 'tracker', 'yeffohealth', 'yeffo health', 'iphone', 'ipad', ' ios', 'android', 'safari', 'chrome', 'phone' ],
+				'requires' => [ 'home screen', 'homescreen', 'home-screen', 'add to home', 'install', 'shortcut', 'an app', 'the app', 'app store', 'play store', 'download', 'calculator', 'tracker', 'yeffohealth', 'yeffo health' ],
+				'answer'   => self::home_screen_answer(),
+			],
 			[
 				'keywords' => [ 'size', 'sizes', 'material', 'materials', 'finish', 'finishes', 'ml', 'glossy', 'matte', 'holographic', 'metallic' ],
 				'answer'   => __( 'We launch with 3 mL and 10 mL sizes across five finishes: Glossy White, Matte White, Holographic, Clear, and Metallic. Availability is shown per design in the configurator.', 'yeffoprint-core' ),
@@ -49,6 +66,16 @@ class YeffoPrint_Telegram_Faq {
 				'answer'   => __( "Send me your order number and the email you used at checkout — for example:\nYP-1042 jane@example.com\n— and I'll pull up its status.", 'yeffoprint-core' ),
 			],
 		];
+	}
+
+	/** Steps match the install cards on the pages themselves (assets/tracker/tracker.js, yeffoprint/assets/js/peptide-calculator.js). */
+	private static function home_screen_answer(): string {
+		return sprintf(
+			/* translators: 1: Peptide Calculator URL, 2: Dose Tracker URL */
+			__( "You can put the YeffoHealth Peptide Calculator and Dose Tracker on your Home Screen so they open like an app. They're free, and there's nothing to download from an app store.\n\nPeptide Calculator: %1\$s\nDose Tracker: %2\$s\n\n📱 iPhone or iPad (Safari)\n1. Open the link above in Safari.\n2. Tap the Share button (the square with an arrow pointing up). On newer iPhones, tap ••• at the bottom first, then Share.\n3. Scroll down and tap \"Add to Home Screen\".\n4. If you see \"Open as Web App\", leave it on, then tap Add.\n\n🤖 Android (Chrome)\n1. Open the link above in Chrome.\n2. If the page shows an \"Install app\" button, tap it and you're done.\n3. Otherwise tap ⋮ at the top right, then \"Add to Home screen\" (or \"Install app\"), then Install.\n\nThe calculator and the tracker are two separate icons, so add each one you want. For the Dose Tracker, open it from the new icon and sign in once; it keeps you signed in. On iPhone, dose reminders only work when the tracker is opened from the Home Screen (iOS 16.4 or newer).", 'yeffoprint-core' ),
+			home_url( '/peptide-calculator/' ),
+			home_url( '/tracker/' )
+		);
 	}
 
 	/**
@@ -100,6 +127,10 @@ class YeffoPrint_Telegram_Faq {
 		$best_answer = null;
 
 		foreach ( self::entries() as $entry ) {
+			if ( isset( $entry['requires'] ) && ! self::contains_any( $haystack, $entry['requires'] ) ) {
+				continue;
+			}
+
 			$score = 0;
 			foreach ( $entry['keywords'] as $keyword ) {
 				if ( false !== strpos( $haystack, strtolower( $keyword ) ) ) {
@@ -116,7 +147,17 @@ class YeffoPrint_Telegram_Faq {
 		return $best_answer;
 	}
 
+	/** @param string[] $keywords */
+	private static function contains_any( string $haystack, array $keywords ): bool {
+		foreach ( $keywords as $keyword ) {
+			if ( false !== strpos( $haystack, strtolower( $keyword ) ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static function topics_text(): string {
-		return __( "Ask me about:\n• Sizes & materials\n• Bulk pricing & discounts\n• Multi-design batches\n• The \$25 custom design fee\n• Shipping\n• Guest checkout & accounts\n\nOr send your order number and checkout email to check an order's status.", 'yeffoprint-core' );
+		return __( "Ask me about:\n• Sizes & materials\n• Bulk pricing & discounts\n• Multi-design batches\n• The \$25 custom design fee\n• Shipping\n• Guest checkout & accounts\n• Adding the Peptide Calculator or Dose Tracker to your Home Screen\n\nOr send your order number and checkout email to check an order's status.", 'yeffoprint-core' );
 	}
 }
