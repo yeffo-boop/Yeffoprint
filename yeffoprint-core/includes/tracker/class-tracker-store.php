@@ -12,11 +12,13 @@
  *   vial     — a mixed/opened vial, for units-to-draw and doses-left
  *   stock    — unmixed vials, pens or pills on hand (the Supply tab)
  *   progress — a weigh-in: weight, measurements, note and the ids of its photos
+ *   lab      — one lab result: test name, value, unit, the report's normal range, note
  *   photo    — one progress photo (a shrunk JPEG), only ever read one at a
  *              time through /tracker/photos/{id}, never with the rest of the state
  *   settings — the "me" record (timezone, reminders, travel) and "alerts"
  *              (upcoming running-low / mix-day notifications the app works out)
  *   push     — this customer's browser push subscriptions
+ *   snooze   — a dose reminder put off for a while: slot ids and when (class-tracker-reminders.php)
  *
  * Created lazily with the same stored-version + dbDelta pattern as
  * class-customer-notes.php.
@@ -26,7 +28,7 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Tracker_Store {
 
-	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push', 'progress', 'photo' ];
+	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push', 'progress', 'photo', 'lab', 'snooze' ];
 
 	/** Per-record plaintext ceiling — a dose note or protocol is a few hundred bytes; this only stops abuse. */
 	public const MAX_RECORD_BYTES = 8192;

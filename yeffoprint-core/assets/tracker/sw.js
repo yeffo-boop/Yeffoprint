@@ -7,13 +7,15 @@
  *   with no signal. API responses are never cached here: the app keeps
  *   its own copy of the customer's data and syncs it.
  * - Shows dose reminders pushed by class-tracker-reminders.php and
- *   opens the tracker when one is tapped.
+ *   opens the tracker when one is tapped. Its "Remind me in 30 min"
+ *   button posts the reminder's signed snooze token, without opening
+ *   anything (iPhone shows no buttons; Today has the same choice).
  */
 /* global self, caches, clients */
 ( function () {
 	'use strict';
 
-	var cfg = self.YP_TRACKER_SW || { version: '0', shell: [], appUrl: '/tracker/' };
+	var cfg = self.YP_TRACKER_SW || { version: '0', shell: [], appUrl: '/tracker/', snoozeUrl: '' };
 	var CACHE = 'yp-tracker-' + cfg.version;
 
 	self.addEventListener( 'install', function ( event ) {
@@ -99,6 +101,8 @@
 			data = event.data ? event.data.json() : {};
 		} catch ( e ) {}
 
+		var snooze = data.snooze && cfg.snoozeUrl ? String( data.snooze ) : '';
+		var actions = snooze && Array.isArray( data.actions ) ? data.actions.slice( 0, 1 ) : [];
 		event.waitUntil(
 			self.registration.showNotification( data.title || 'Dose reminder', {
 				body: data.body || '',
@@ -106,13 +110,39 @@
 				renotify: true,
 				icon: new URL( 'icons/icon-192.png', cfg.shell[ 0 ] || self.location.href ).href,
 				badge: new URL( 'icons/badge-96.png', cfg.shell[ 0 ] || self.location.href ).href,
-				data: { url: data.url || cfg.appUrl },
+				actions: actions,
+				data: { url: data.url || cfg.appUrl, snooze: snooze },
 			} )
 		);
 	} );
 
 	self.addEventListener( 'notificationclick', function ( event ) {
 		event.notification.close();
+		var info = event.notification.data || {};
+		if ( event.action === 'snooze' && info.snooze ) {
+			event.waitUntil(
+				fetch( cfg.snoozeUrl, {
+					method: 'POST',
+					credentials: 'omit',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( { token: info.snooze } ),
+				} ).then( function ( res ) {
+					if ( ! res.ok ) {
+						throw new Error( 'snooze' );
+					}
+				} ).catch( function () {
+					// Offline or refused: say so instead of quietly losing the reminder.
+					return self.registration.showNotification( 'Couldn’t snooze that reminder', {
+						body: 'Open YeffoHealth to log your dose.',
+						tag: event.notification.tag,
+						icon: new URL( 'icons/icon-192.png', cfg.shell[ 0 ] || self.location.href ).href,
+						badge: new URL( 'icons/badge-96.png', cfg.shell[ 0 ] || self.location.href ).href,
+						data: { url: info.url || cfg.appUrl },
+					} );
+				} )
+			);
+			return;
+		}
 		var target = ( event.notification.data && event.notification.data.url ) || cfg.appUrl;
 		event.waitUntil(
 			clients.matchAll( { type: 'window', includeUncontrolled: true } ).then( function ( list ) {

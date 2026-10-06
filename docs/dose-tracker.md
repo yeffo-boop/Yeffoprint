@@ -61,6 +61,16 @@ tracker added to the Home Screen; Android and desktop browsers work
 directly. The push signing key is created once and stored sealed with the
 master key (`yeffoprint_tracker_vapid` option).
 
+**Snooze.** Each dose reminder has a "Remind me in 30 min" button on
+Android and desktop. It posts the reminder's signed token (HMAC with the
+site's auth salt: one customer, those dose slots, good for 12 hours) to
+`POST /tracker/snooze/push`, which needs no session because the service
+worker has none. iPhone notifications can't show buttons, so a due,
+unlogged dose on Today has the same button (`POST /tracker/snooze`).
+Either way a `snooze` record keeps only the slot ids and the time; the
+next sweep after that time rebuilds the reminder from the protocols and
+skips it if the dose was logged meanwhile. A dose can be snoozed 6 times.
+
 ## Order labels
 
 The Vials tab's **Order labels** button turns the customer's vials into
@@ -197,11 +207,28 @@ any other record. They are fetched one at a time
 (`GET /tracker/photos/{id}`), kept only in memory, never in the offline
 copy, and are erased with Delete my data.
 
+## Lab results
+
+The Progress tab's **Lab results** (also Add › Lab result) keeps
+bloodwork the customer types in from their report: test name (with
+suggestions and usual units for common tests), value, unit, the report's
+normal range and a note, one `lab` record each. Results of the same test
+group together; each test's sheet charts them with the normal range
+shaded and the doses taken in lanes underneath, and marks results High
+or Low against the range. The PDF report has a Lab results section.
+
+## Appearance
+
+The app follows the phone's light or dark setting. Me › Appearance can
+force Light or Dark on that device (saved in the browser, not synced).
+Dark mode only swaps the color tokens at the top of `tracker.css`; new
+CSS should use those tokens rather than fixed colors.
+
 ## Printable report
 
 History's **Create PDF report** (also Me › Tools) builds a PDF in the
 browser, nothing is uploaded: a summary, each medication's schedule,
 titration, cycle and doses taken vs scheduled, progress (first, latest,
-change, weight chart), side effects, injection spots and the full dose
+change, weight chart), lab results, side effects, injection spots and the full dose
 log, for 30 / 90 days, 6 months or everything. Sections can be switched
 off. It can be downloaded or shared from the phone's share sheet.

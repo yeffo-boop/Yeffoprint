@@ -113,9 +113,11 @@ class YeffoPrint_Tracker_App {
 		// The shell assets' content-hashed URLs are baked in, so a deploy
 		// that changes them produces a new service worker (and a fresh cache).
 		$config = [
-			'version' => substr( md5( implode( '|', self::asset_urls() ) ), 0, 12 ),
-			'shell'   => array_values( self::asset_urls() ),
-			'appUrl'  => self::url(),
+			'version'   => substr( md5( implode( '|', self::asset_urls() ) ), 0, 12 ),
+			'shell'     => array_values( self::asset_urls() ),
+			'appUrl'    => self::url(),
+			// A reminder's "Remind me in 30 min" button (class-tracker-reminders.php).
+			'snoozeUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/tracker/snooze/push' ) ),
 		];
 		echo 'self.YP_TRACKER_SW = ' . wp_json_encode( $config ) . ";\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON.
 		readfile( YEFFOPRINT_CORE_PATH . 'assets/tracker/sw.js' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
