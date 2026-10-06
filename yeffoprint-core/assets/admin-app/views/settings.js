@@ -153,7 +153,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Express Orders</h2></div>' +
-					'<p class="yp-panel__hint">Customers can tick "Express: skip the line" at checkout for a flat fee per order. Once an express order is paid, your Telegram alerts chat (Telegram Bot below) gets pinged right away and every 30 minutes until you tap "Got it" or reply /ack, or the order moves to In Production or Shipped. Express is paused automatically while Away Mode is on.</p>' +
+					'<p class="yp-panel__hint">Customers can tick "Express: skip the line" at checkout for a flat fee per order. Once an express order is paid, you get a phone alert right away and every 30 minutes until you tap Acknowledge on the order (or "Got it" on the alert), or the order moves to In Production or Shipped. Express is paused automatically while Away Mode is on.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-express-enabled"' + ( settings.express_enabled ? ' checked' : '' ) + ' /><label for="yp-set-express-enabled">Offer Express at checkout</label></div>' +
 					'<div class="yp-field"><label for="yp-set-express-fee">Express fee ($ per order)</label><input type="number" min="0" step="0.01" id="yp-set-express-fee" value="' + YP.escapeAttr( String( settings.express_fee ) ) + '" /></div>' +
 				'</div>' +
@@ -252,8 +252,10 @@
 					( settings.telegram_status ? '<p class="yp-panel__hint">' + YP.escapeHtml( settings.telegram_status ) + '</p>' : '' ) +
 					'<div class="yp-field"><label for="yp-set-telegram-username">Public @username</label><input type="text" id="yp-set-telegram-username" value="' + YP.escapeAttr( settings.telegram_bot_username ) + '" placeholder="yeffoprint_bot" /></div>' +
 					'<p class="yp-panel__hint">The bot\'s public handle from @BotFather (no "@") — powers the "Chat on Telegram" link on the homepage and in order emails. Separate from the token above, which is private and never shown to customers.</p>' +
-					'<div class="yp-field"><label for="yp-set-telegram-admin-chat-id">Your chat ID (for alerts)</label><input type="text" id="yp-set-telegram-admin-chat-id" value="' + YP.escapeAttr( settings.telegram_admin_chat_id ) + '" placeholder="123456789" /></div>' +
-					'<p class="yp-panel__hint">Message <code>/whoami</code> to the bot from your own Telegram to get this number. New paid orders, custom design requests, and Contact form messages get sent here.</p>' +
+					'<div class="yp-field"><label for="yp-set-telegram-admin-chat-id">Your chat ID</label><input type="text" id="yp-set-telegram-admin-chat-id" value="' + YP.escapeAttr( settings.telegram_admin_chat_id ) + '" placeholder="123456789" /></div>' +
+					'<p class="yp-panel__hint">Message <code>/whoami</code> to the bot from your own Telegram to get this number. Lets you use the owner commands like <code>/pending</code> and <code>/ack</code>.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-owner-alerts"' + ( settings.telegram_owner_alerts ? ' checked' : '' ) + ' /><label for="yp-set-telegram-owner-alerts">Also send my store alerts to Telegram</label></div>' +
+					'<p class="yp-panel__hint">New orders, express reminders, abandoned carts, messages, reviews and tracker feedback always come to the phone app as push alerts. Tick this to get a copy in your Telegram chat too. Customers\' Telegram messages and order updates aren\'t affected.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-login-enabled"' + ( settings.telegram_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-login-enabled">Log in with Telegram</label></div>' +
 					'<p class="yp-panel__hint">Shows a "Log in with Telegram" button on the login/account pages, using the same bot token above — no separate app registration needed. One extra step on Telegram\'s side: message @BotFather with <code>/setdomain</code> and authorize this site\'s domain, or Telegram refuses to render the button.</p>' +
 				'</div>' +
@@ -401,6 +403,7 @@
 				telegram_bot_username: viewEl.querySelector( '#yp-set-telegram-username' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,
 				telegram_admin_chat_id: viewEl.querySelector( '#yp-set-telegram-admin-chat-id' ).value,
+				telegram_owner_alerts: viewEl.querySelector( '#yp-set-telegram-owner-alerts' ).checked,
 				telegram_login_enabled: viewEl.querySelector( '#yp-set-telegram-login-enabled' ).checked,
 				google_login_enabled: viewEl.querySelector( '#yp-set-google-enabled' ).checked,
 				google_client_id: viewEl.querySelector( '#yp-set-google-id' ).value,

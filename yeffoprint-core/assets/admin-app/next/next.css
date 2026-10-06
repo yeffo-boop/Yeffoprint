@@ -414,6 +414,28 @@ a.ypn-kpi:focus {
 	font-size: 13px;
 }
 
+/* Express order still sending reminders (order page). */
+.ypn-ack {
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	border-left: 6px solid #FFF200;
+}
+
+.ypn-ack b,
+.ypn-ack span {
+	display: block;
+}
+
+.ypn-ack .ypn-btn {
+	flex: none;
+	background: #FFF200;
+	border-color: #FFF200;
+	color: #141414;
+	font-weight: 700;
+}
+
 /* ---------- Production board ---------- */
 
 .ypn-toolbar {

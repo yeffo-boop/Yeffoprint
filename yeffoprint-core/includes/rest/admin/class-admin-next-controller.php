@@ -163,6 +163,7 @@ class YeffoPrint_Admin_Next_Controller {
 			'items'          => $first_name . ( $more ? sprintf( ' + %d more', $more ) : '' ),
 			'total'          => (float) $order->get_total(),
 			'express'        => YeffoPrint_Express_Order::is_express( $order ),
+			'express_waiting' => YeffoPrint_Telegram_Express_Alerts::is_waiting( $order ),
 			'payment_method' => $order->get_payment_method_title(),
 			'shipping'       => $order->get_shipping_method(),
 		];

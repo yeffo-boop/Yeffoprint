@@ -57,6 +57,15 @@ class YeffoPrint_Telegram_Admin_Alerts {
 			return;
 		}
 
+		// An express order's own "⚡ EXPRESS order paid" alert (class-
+		// telegram-express-alerts.php, sent when it reached Processing just
+		// before this hook) already covers it; a second alert under the
+		// same phone notification tag would replace the one with the
+		// Acknowledge button.
+		if ( '' !== (string) $order->get_meta( YeffoPrint_Telegram_Express_Alerts::ALERT_COUNT_META ) ) {
+			return;
+		}
+
 		$heading = $this->has_custom_design( $order )
 			/* translators: 1: order number, 2: formatted order total */
 			? __( 'New custom design request paid: %1$s (%2$s)', 'yeffoprint-core' )
@@ -149,13 +158,30 @@ class YeffoPrint_Telegram_Admin_Alerts {
 	public static function notify( string $text, array $context = [] ): void {
 		do_action( 'yeffoprint_owner_alert', $text, $context );
 
-		$chat_id = (int) get_option( YeffoPrint_Admin_Menu::TELEGRAM_ADMIN_CHAT_ID_OPTION, 0 );
-		$token   = YeffoPrint_Telegram_Settings::get_bot_token();
-
-		if ( ! $chat_id || '' === $token || ! YeffoPrint_Telegram_Settings::is_enabled() ) {
+		$chat_id = self::telegram_chat_id();
+		if ( ! $chat_id ) {
 			return;
 		}
 
-		( new YeffoPrint_Telegram_Client( $token ) )->send_message( $chat_id, $text );
+		( new YeffoPrint_Telegram_Client( YeffoPrint_Telegram_Settings::get_bot_token() ) )->send_message( $chat_id, $text );
+	}
+
+	/**
+	 * The owner's chat when owner alerts should also go to Telegram, else
+	 * 0. Off unless Settings > Integrations > "Also send my alerts to
+	 * Telegram" is ticked (TELEGRAM_OWNER_ALERTS_OPTION), so the phone
+	 * push from the admin app is the only copy. Every owner alert sent to
+	 * Telegram checks this: notify() above, express reminders, abandoned
+	 * carts and tracker feedback.
+	 */
+	public static function telegram_chat_id(): int {
+		if ( ! get_option( YeffoPrint_Admin_Menu::TELEGRAM_OWNER_ALERTS_OPTION, false ) ) {
+			return 0;
+		}
+		$chat_id = (int) get_option( YeffoPrint_Admin_Menu::TELEGRAM_ADMIN_CHAT_ID_OPTION, 0 );
+		if ( ! $chat_id || '' === YeffoPrint_Telegram_Settings::get_bot_token() || ! YeffoPrint_Telegram_Settings::is_enabled() ) {
+			return 0;
+		}
+		return $chat_id;
 	}
 }

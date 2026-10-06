@@ -170,7 +170,7 @@
 					'<div class="yp-panel__head"><h2>Review settings</h2></div>' +
 					checkbox( 'yp-rv-enabled', settings.enabled, 'Ask for a review in the Delivered email and on My Account orders' ) +
 					checkbox( 'yp-rv-auto', settings.auto_publish, 'Publish new reviews right away (skip approval)' ) +
-					'<p class="yp-panel__hint">You get a Telegram message for every new review either way.</p>' +
+					'<p class="yp-panel__hint">You get a phone alert for every new review either way.</p>' +
 					checkbox( 'yp-rv-request', settings.request_email, 'Email a review request after delivery' ) +
 					'<div class="yp-field"><label for="yp-rv-days">Days after delivery</label><input type="number" min="1" max="30" id="yp-rv-days" value="' + YP.escapeAttr( String( settings.request_days ) ) + '" /></div>' +
 					'<p class="yp-panel__hint">Sent once per order, only for the customer’s most recent delivered order, and never if they already left a review.</p>' +
