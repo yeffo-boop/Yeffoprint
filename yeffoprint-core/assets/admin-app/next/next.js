@@ -824,12 +824,24 @@
 
 	var mediaUrl = yeffoprintAdminApp.restUrl.replace( /yeffoprint-core\/v1\/?$/, '' ) + 'wp/v2/media';
 
+	/**
+	 * Header values must be plain ASCII, or fetch() throws a TypeError
+	 * before sending anything. Mac screenshots ("… at 4.05.12 PM.png"
+	 * has a narrow space before PM) and accented names would otherwise
+	 * fail, so swap anything outside printable ASCII for a dash.
+	 */
+	function headerFilename( name ) {
+		var ascii = String( name || '' ).normalize( 'NFKD' ).replace( /[\u0300-\u036f]/g, '' )
+			.replace( /[^\x20-\x7e]/g, '-' ).replace( /["\\]/g, '' ).trim();
+		return /[A-Za-z0-9]/.test( ascii.replace( /\.[^.]*$/, '' ) ) ? ascii : 'proof' + ( ascii.match( /\.[A-Za-z0-9]+$/ ) || [ '' ] )[ 0 ];
+	}
+
 	function uploadProof( file, customOrderId ) {
 		return YP.request( mediaUrl, {
 			method: 'POST',
 			headers: {
 				'Content-Type': file.type || 'application/octet-stream',
-				'Content-Disposition': 'attachment; filename="' + file.name.replace( /["\\\r\n]/g, '' ) + '"'
+				'Content-Disposition': 'attachment; filename="' + headerFilename( file.name ) + '"'
 			},
 			body: file
 		} ).then( function ( media ) {
