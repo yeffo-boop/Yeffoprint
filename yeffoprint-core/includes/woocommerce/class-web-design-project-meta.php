@@ -182,6 +182,7 @@ class YeffoPrint_Web_Design_Project_Meta {
 		}
 
 		return wc_get_orders( [
+			'type' => 'shop_order',
 			'limit'      => 200,
 			'orderby'    => 'date',
 			'order'      => 'DESC',

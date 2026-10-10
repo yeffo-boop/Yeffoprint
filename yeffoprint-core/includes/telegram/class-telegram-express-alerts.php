@@ -159,6 +159,7 @@ class YeffoPrint_Telegram_Express_Alerts {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'     => [ 'processing' ],
 			'limit'      => 50,
 			'meta_query' => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- small, flagged set; no indexed alternative.
@@ -280,6 +281,7 @@ class YeffoPrint_Telegram_Express_Alerts {
 	/** @return int[] */
 	public static function escalating_order_ids(): array {
 		return wc_get_orders( [
+			'type' => 'shop_order',
 			'status'     => [ 'processing' ],
 			'limit'      => 50,
 			'return'     => 'ids',

@@ -105,8 +105,8 @@
 							( isInStock ? '' : '<span class="yp-pill yp-pill--crit">Out of Stock</span>' ) +
 						'</td>' +
 						'<td class="yp-row-actions">' +
-							'<button type="button" class="yp-row-action" data-yp-move-up="' + material.id + '" ' + ( 0 === index ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
-							'<button type="button" class="yp-row-action" data-yp-move-down="' + material.id + '" ' + ( index === filtered.length - 1 ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-up="' + material.id + '" ' + ( 0 === index || query ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-down="' + material.id + '" ' + ( index === filtered.length - 1 || query ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
 							'<button type="button" class="yp-row-action" data-yp-edit="' + material.id + '" aria-label="Edit">Edit</button>' +
 							'<button type="button" class="yp-row-action" data-yp-delete="' + material.id + '" aria-label="Delete">Delete</button>' +
 						'</td>' +

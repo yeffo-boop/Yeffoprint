@@ -265,6 +265,7 @@ class YeffoPrint_Rewards {
 		// $limit rows overall are newer than it, so fewer than $limit
 		// orders specifically are newer than it too.
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'customer_id' => $user_id,
 			'limit'       => $limit,
 			'orderby'     => 'date',

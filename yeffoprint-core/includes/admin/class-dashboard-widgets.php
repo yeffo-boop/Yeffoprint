@@ -109,6 +109,7 @@ class YeffoPrint_Dashboard_Widgets {
 	/** Regular WooCommerce orders, paid but not yet fulfilled — "Processing" is this store's own established meaning for that (class-custom-order-payment.php treats it as one of the three "payment confirmed" triggers). */
 	private function render_orders_section( int $due_date_days ): void {
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'  => 'processing',
 			'limit'   => self::ROW_LIMIT,
 			'orderby' => 'date',

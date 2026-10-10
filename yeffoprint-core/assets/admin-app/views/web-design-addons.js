@@ -75,7 +75,7 @@
 			}
 
 			rowsEl.innerHTML = filtered.map( function ( addon, index ) {
-				var price = addon.meta ? ( addon.meta[ META.price ] || '&mdash;' ) : '&mdash;';
+				var price = addon.meta ? ( addon.meta[ META.price ] || '—' ) : '—';
 				var ctaUrl = addon.meta ? ( addon.meta[ META.ctaUrl ] || '' ) : '';
 				var isPublished = 'publish' === addon.status;
 
@@ -88,8 +88,8 @@
 							: '<span class="yp-pill yp-pill--neutral">Quote form</span>' ) + '</td>' +
 						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span></td>' +
 						'<td class="yp-row-actions">' +
-							'<button type="button" class="yp-row-action" data-yp-move-up="' + addon.id + '" ' + ( 0 === index ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
-							'<button type="button" class="yp-row-action" data-yp-move-down="' + addon.id + '" ' + ( index === filtered.length - 1 ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-up="' + addon.id + '" ' + ( 0 === index || query ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-down="' + addon.id + '" ' + ( index === filtered.length - 1 || query ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
 							'<button type="button" class="yp-row-action" data-yp-edit="' + addon.id + '" aria-label="Edit">Edit</button>' +
 							'<button type="button" class="yp-row-action" data-yp-delete="' + addon.id + '" aria-label="Delete">Delete</button>' +
 						'</td>' +

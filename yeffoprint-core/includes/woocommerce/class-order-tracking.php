@@ -314,6 +314,7 @@ class YeffoPrint_Order_Tracking {
 		}
 
 		$order_ids = wc_get_orders( [
+			'type' => 'shop_order',
 			'meta_key'   => self::TRACKING_INDEX_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- a small, purpose-built index, not an ad hoc query.
 			'meta_value' => $tracking_number, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			'limit'      => 1,

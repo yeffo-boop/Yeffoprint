@@ -91,7 +91,10 @@ class YeffoPrint_Admin_Sales_Controller {
 				$start = new \DateTimeImmutable( 'first day of this month 00:00', $tz );
 				$end   = $tomorrow;
 				// Same days of last month, so a half-done month compares fairly.
-				return [ $start, $end, $start->modify( '-1 month' ), $end->modify( '-1 month' ) ];
+				// Counted in days from the 1st: "-1 month" from Mar 31 lands on Mar 3.
+				$prev_start = $start->modify( '-1 month' );
+				$prev_end   = min( $prev_start->modify( '+' . $start->diff( $end )->days . ' days' ), $start );
+				return [ $start, $end, $prev_start, $prev_end ];
 			case 'last_month':
 				$start = new \DateTimeImmutable( 'first day of last month 00:00', $tz );
 				$end   = new \DateTimeImmutable( 'first day of this month 00:00', $tz );
@@ -132,14 +135,20 @@ class YeffoPrint_Admin_Sales_Controller {
 		$refunds  = 0.0;
 		$units    = 0;
 		$shipping = 0.0;
+		$count    = 0;
 		foreach ( $orders as $order ) {
+			$refunded = (float) $order->get_total_refunded();
+			$refunds += $refunded;
+			// Fully refunded orders count toward refunds only, not orders,
+			// items sold or the average.
+			if ( $refunded > 0 && $this->net( $order ) <= 0 ) {
+				continue;
+			}
+			++$count;
 			$revenue  += $this->net( $order );
-			$refunds  += (float) $order->get_total_refunded();
 			$shipping += (float) $order->get_shipping_total();
 			$units    += (int) $order->get_item_count();
 		}
-		$count = count( $orders );
-
 		return [
 			'revenue'  => round( $revenue, 2 ),
 			'orders'   => $count,

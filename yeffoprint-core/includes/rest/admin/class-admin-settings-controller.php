@@ -81,7 +81,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			);
 		}
 
-		update_option( $M::LIVE_PREVIEW_ENABLED_OPTION, (bool) ( $params['live_preview_enabled'] ?? false ) );
+		update_option( $M::LIVE_PREVIEW_ENABLED_OPTION, (int) ! empty( $params['live_preview_enabled'] ) ); // Int, not bool: update_option( key, false ) never creates a missing row, and these default to on.
 
 		// Only when sent: the Settings screen no longer offers this choice
 		// (every Template always shares the Label Fields screen's fields,
@@ -110,7 +110,7 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::AWAY_MODE_ENABLED_OPTION, (bool) ( $params['away_mode_enabled'] ?? false ) );
 		update_option( $M::AWAY_MODE_RETURN_DATE_OPTION, sanitize_text_field( (string) ( $params['away_mode_return_date'] ?? '' ) ) );
 
-		update_option( $M::EXPRESS_ENABLED_OPTION, (bool) ( $params['express_enabled'] ?? false ) );
+		update_option( $M::EXPRESS_ENABLED_OPTION, (int) ! empty( $params['express_enabled'] ) ); // Int, not bool: update_option( key, false ) never creates a missing row, and these default to on.
 		update_option( $M::EXPRESS_FEE_OPTION, max( 0, round( (float) ( $params['express_fee'] ?? $M::EXPRESS_FEE_DEFAULT ), 2 ) ) );
 
 		update_option( $M::DASHBOARD_DUE_DATE_DAYS_OPTION, max( 1, (int) ( $params['dashboard_due_date_days'] ?? $M::DASHBOARD_DUE_DATE_DAYS_DEFAULT ) ) );

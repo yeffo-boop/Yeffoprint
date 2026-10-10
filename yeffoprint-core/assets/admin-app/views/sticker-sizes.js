@@ -89,8 +89,8 @@
 						'<td><span class="yp-chip">' + ( isCustom ? '$/sq in rate' : '$' + price.toFixed( 2 ) ) + '</span></td>' +
 						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span></td>' +
 						'<td class="yp-row-actions">' +
-							'<button type="button" class="yp-row-action" data-yp-move-up="' + size.id + '" ' + ( 0 === index ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
-							'<button type="button" class="yp-row-action" data-yp-move-down="' + size.id + '" ' + ( index === filtered.length - 1 ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-up="' + size.id + '" ' + ( 0 === index || query ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-down="' + size.id + '" ' + ( index === filtered.length - 1 || query ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
 							'<button type="button" class="yp-row-action" data-yp-edit="' + size.id + '" aria-label="Edit">Edit</button>' +
 							'<button type="button" class="yp-row-action" data-yp-delete="' + size.id + '" aria-label="Delete">Delete</button>' +
 						'</td>' +
