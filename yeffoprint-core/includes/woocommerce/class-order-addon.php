@@ -54,6 +54,7 @@ class YeffoPrint_Order_Addon {
 		}
 
 		return wc_get_orders( [
+			'type' => 'shop_order',
 			'limit'      => self::MAX_ADDONS + 1, // Defensive only — this count itself is what keeps it from ever really exceeding MAX_ADDONS.
 			'return'     => 'ids',
 			'meta_key'   => self::SHIP_WITH_ORDER_ID_META, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key

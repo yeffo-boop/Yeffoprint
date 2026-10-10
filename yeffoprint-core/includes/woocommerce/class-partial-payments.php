@@ -76,6 +76,7 @@ class YeffoPrint_Partial_Payments {
 	 */
 	public static function open_orders_for_gateway( string $gateway_id ): array {
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'         => self::OPEN_STATUSES,
 			'payment_method' => $gateway_id,
 			'limit'          => -1,

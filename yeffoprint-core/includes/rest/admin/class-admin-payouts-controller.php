@@ -262,6 +262,7 @@ class YeffoPrint_Admin_Payouts_Controller {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'    => self::PAID_STATUSES,
 			'date_paid' => '>' . ( time() - self::OTHER_DAYS * DAY_IN_SECONDS ),
 			'limit'     => -1,

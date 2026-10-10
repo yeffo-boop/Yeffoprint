@@ -28,7 +28,7 @@ class YeffoPrint_Web_Design_Order_Backfill_Command {
 			return;
 		}
 
-		$order_ids = wc_get_orders( [ 'limit' => -1, 'return' => 'ids' ] );
+		$order_ids = wc_get_orders( [ 'type' => 'shop_order', 'limit' => -1, 'return' => 'ids' ] );
 		$flagged   = 0;
 
 		foreach ( $order_ids as $order_id ) {

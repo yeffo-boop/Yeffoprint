@@ -1122,7 +1122,8 @@
 				var daysLate = Math.max( 1, Math.round( ( Date.now() - new Date( alert.due_date + 'T00:00:00' ).getTime() ) / 86400000 ) );
 				return { text: daysLate + ( 1 === daysLate ? ' day overdue' : ' days overdue' ), pill: 'crit' };
 			}
-			var today = new Date().toISOString().slice( 0, 10 );
+			var now = new Date(); // Local date: toISOString() is UTC, a day ahead on US evenings.
+			var today = now.getFullYear() + '-' + String( now.getMonth() + 1 ).padStart( 2, '0' ) + '-' + String( now.getDate() ).padStart( 2, '0' );
 			if ( alert.due_date === today ) {
 				return { text: 'Due today', pill: 'warn' };
 			}
@@ -2682,7 +2683,7 @@
 				return;
 			}
 
-			var short = owed - amount >= 0.01;
+			var short = Math.round( ( owed - amount ) * 100 ) >= 1;
 			var message = short
 				? 'That’s $' + ( owed - amount ).toFixed( 2 ) + ' short of the $' + owed.toFixed( 2 ) + ' owed. The order stays unpaid' +
 					( emailCustomer ? ', and the customer gets an email asking for the remaining $' + ( owed - amount ).toFixed( 2 ) + '.' : '. The customer is not emailed.' )

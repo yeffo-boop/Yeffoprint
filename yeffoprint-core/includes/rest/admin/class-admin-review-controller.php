@@ -53,7 +53,7 @@ class YeffoPrint_Admin_Review_Controller {
 
 			$row['email']        = (string) $comment->comment_author_email;
 			$row['order_number'] = $order instanceof \WC_Order ? $order->get_order_number() : '';
-			$row['items']        = $order instanceof \WC_Order ? array_column( YeffoPrint_Order_Reviews::order_lines( $order ), 'name' ) : [ get_the_title( (int) $comment->comment_post_ID ) ];
+			$row['items']        = $order instanceof \WC_Order ? array_column( YeffoPrint_Order_Reviews::order_lines( $order ), 'name' ) : [ html_entity_decode( get_the_title( (int) $comment->comment_post_ID ), ENT_QUOTES, 'UTF-8' ) ];
 			$rows[]              = $row;
 		}
 

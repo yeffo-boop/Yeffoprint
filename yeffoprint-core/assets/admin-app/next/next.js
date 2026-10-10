@@ -57,8 +57,13 @@
 	// Lets the board refresh after the order window closes (a status,
 	// payment or label may have changed in it).
 	var closeDrawer = YP.closeDrawer;
+	// Confirm dialogs are skipped: closing one (OK or Cancel) used to reload
+	// the order page mid-action, wiping a half-typed note and racing deletes.
 	YP.closeDrawer = function ( drawerEl ) {
 		closeDrawer( drawerEl );
+		if ( drawerEl && drawerEl.classList && drawerEl.classList.contains( 'yp-drawer--confirm' ) ) {
+			return;
+		}
 		document.dispatchEvent( new CustomEvent( 'ypn:drawer-closed' ) );
 	};
 
@@ -134,7 +139,7 @@
 
 	function payoutDay( iso ) {
 		var d = iso ? new Date( iso ) : null;
-		return d && ! isNaN( d.getTime() ) ? d.toLocaleDateString( undefined, { weekday: 'short', month: 'short', day: 'numeric' } ) : '—';
+		return d && ! isNaN( d.getTime() ) ? d.toLocaleDateString( undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' } ) : '—';
 	}
 
 	function payoutTile( label, value, note, extra ) {
@@ -981,7 +986,9 @@
 			var printable = 'processing' === order.status && ! website;
 			var shipStage = ! website && [ 'processing', 'in-production', 'shipped', 'completed' ].indexOf( order.status ) !== -1;
 			var units     = order.items.reduce( function ( n, item ) { return n + Number( item.quantity || 0 ); }, 0 );
-			var other     = Math.round( ( order.total - order.subtotal - order.shipping_total ) * 100 ) / 100;
+			var discount  = Number( order.discount_total || 0 );
+			var tax       = Number( order.total_tax || 0 );
+			var other     = Math.round( ( order.total - order.subtotal - order.shipping_total + discount - tax ) * 100 ) / 100;
 			var needsProofFor = customOrders.filter( function ( c ) {
 				return c.paid && ( 'design_in_progress' === c.status || 'proof_ready' === c.status );
 			} )[ 0 ];
@@ -1082,7 +1089,9 @@
 							'<section class="ypn-card"><h3 class="ypn-card__title">Payment</h3>' + kv( [
 								[ 'Items', esc( money( order.subtotal ) ) ],
 								[ 'Shipping', esc( money( order.shipping_total ) ) ],
+								discount > 0 ? [ 'Discount', '−' + esc( money( discount ) ) ] : null,
 								other > 0 ? [ 'Fees', esc( money( other ) ) ] : null,
+								tax > 0 ? [ 'Tax', esc( money( tax ) ) ] : null,
 								[ 'Total', '<b>' + esc( money( order.total ) ) + '</b>' ],
 								paid
 									? [ 'Paid', '<b class="ypn-good">' + esc( money( order.total ) ) + ( order.payment_method_title ? ' ' + esc( order.payment_method_title ) : '' ) + '</b>' ]
@@ -1149,7 +1158,7 @@
 					} else if ( 'label' === act ) {
 						window.location.hash = '#/ship/' + order.id;
 					} else if ( 'record' === act ) {
-						YP.next.openDetails( order.id, 'Record' );
+						YP.next.openDetails( order.id, 'Payment received' );
 					} else if ( 'edit' === act ) {
 						YP.next.openDetails( order.id, 'edit' );
 					} else if ( 'status' === act ) {
@@ -1169,7 +1178,8 @@
 				var input = zone.querySelector( 'input[type="file"]' );
 
 				function send( file ) {
-					if ( ! file ) {
+					input.value = ''; // So picking the same file again after an error still fires change.
+					if ( ! file || zone.classList.contains( 'is-busy' ) ) {
 						return;
 					}
 					zone.classList.add( 'is-busy' );
@@ -1338,7 +1348,7 @@
 		viewEl.innerHTML = '<p class="yp-field__hint">Loading&hellip;</p>';
 
 		function load() {
-			Promise.all( [ YP.request( api( 'admin/order/' + id ) ), stationStatus() ] ).then( function ( results ) {
+			return Promise.all( [ YP.request( api( 'admin/order/' + id ) ), stationStatus() ] ).then( function ( results ) {
 				order = results[ 0 ];
 				station = results[ 1 ];
 				draw();
@@ -1513,6 +1523,8 @@
 			if ( desc ) {
 				parcel.customs_description = desc.value;
 				parcel.customs_value = viewEl.querySelector( '[data-ypn-customs-value]' ).value;
+				// Kept so the redraw after rates (and Refresh rates) uses what was typed.
+				order.shippo_customs = Object.assign( {}, order.shippo_customs, { description: parcel.customs_description, value: parcel.customs_value } );
 			}
 			order.shippo_default_package = parcel;
 
@@ -1563,7 +1575,11 @@
 						var label = response.label || {};
 						rates = [];
 						if ( station.station_online && label.tracking_number ) {
-							return queueLabel( id, label.tracking_number ).catch( function () {} ).then( load );
+							return queueLabel( id, label.tracking_number ).then( load, function () {
+								return load().then( function () {
+									window.alert( 'The label was bought but couldn’t be sent to the label printer. Use Print here on the label below.' );
+								} );
+							} );
 						}
 						if ( printWindow && label.label_url ) {
 							printWindow.location.href = label.label_url;
@@ -1652,9 +1668,12 @@
 	   phone sent ("Send to label printer"). Chrome started with
 	   --kiosk-printing prints straight to the default printer. */
 
-	var stationTimer = null;
+	// Stops the previous visit's loop; each visit keeps its own timer so an
+	// old visit finishing a print can't cancel the new visit's polling.
+	var stopPreviousStation = null;
 
 	YP.views[ 'print-station' ] = function ( viewEl ) {
+		var stationTimer = null;
 		var running = false;
 		var printed = {};
 		var wakeLock = null;
@@ -1834,7 +1853,10 @@
 			}
 		}
 
-		window.clearTimeout( stationTimer );
+		if ( stopPreviousStation ) {
+			stopPreviousStation();
+		}
+		stopPreviousStation = stop;
 
 		toggle.addEventListener( 'click', function () {
 			if ( running ) {
@@ -1974,7 +1996,9 @@
 				[ 'payments', 'Payments', 'Turn Venmo, Zelle, crypto and cards on or off.', GRN ],
 				[ 'surcharge', 'Card Surcharge', 'Extra fee on card payments.', YEL ],
 				[ 'web-design-packages', 'Web Design Packages', 'Packages customers can pick.', GRN ],
-				[ 'web-design-addons', 'Web Design Add-ons', 'Extras for web design orders.', GRN ]
+				[ 'web-design-addons', 'Web Design Add-ons', 'Extras for web design orders.', GRN ],
+				// The phone bottom bar has no Customers tab, so this is the way in there.
+				[ 'people', 'Customers', 'Customers, messages, reviews, rewards and coupons.', CY ]
 			] );
 
 		YP.request( api( 'admin/next/switches' ) ).then( function ( values ) {
@@ -2067,7 +2091,7 @@
 
 			body.innerHTML =
 				'<div class="ypn-phone__row">' +
-					'<span class="ypn-phone__state' + ( on ? ' is-on' : '' ) + '">' + ( on ? 'Alerts are on for this ' + esc( deviceName() ) : 'Alerts are off on this ' + esc( deviceName() ) ) + '</span>' +
+					'<span class="ypn-phone__state' + ( on ? ' is-on' : '' ) + '">' + ( on ? 'Alerts are on for this ' : 'Alerts are off on this ' ) + esc( 'This device' === deviceName() ? 'device' : deviceName() ) + '</span>' +
 					( on
 						? '<button type="button" class="ypn-btn" data-ypn-push-test>Send a test</button><button type="button" class="ypn-btn" data-ypn-push-off>Turn off</button>'
 						: '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-push-on>Turn on alerts</button>' ) +

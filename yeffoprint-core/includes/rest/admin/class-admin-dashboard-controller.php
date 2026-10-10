@@ -126,6 +126,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'  => [ 'processing', YeffoPrint_Order_Production_Status::STATUS ],
 			'limit'   => self::ROW_LIMIT,
 			'orderby' => 'date',
@@ -216,6 +217,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'  => YeffoPrint_Order_Shipment_Status::STATUS,
 			'limit'   => self::ROW_LIMIT,
 			'orderby' => 'date',
@@ -275,7 +277,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 
 			return [
 				'id'       => $post->ID,
-				'label'    => get_the_title( $post ),
+				'label'    => html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
 				'customer' => (string) $customer,
 				'date'     => $date ? $date->format( 'c' ) : null,
 			];
@@ -290,7 +292,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		return array_map( function ( \WP_Post $post ) {
 			return [
 				'id'     => $post->ID,
-				'name'   => get_the_title( $post ),
+				'name'   => html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
 				'plan'   => (string) get_post_meta( $post->ID, YeffoPrint_Maintenance_Sub_Meta::PLAN_LABEL, true ),
 				'renews' => (int) get_post_meta( $post->ID, YeffoPrint_Maintenance_Sub_Meta::CURRENT_PERIOD_END, true ) ?: null,
 			];

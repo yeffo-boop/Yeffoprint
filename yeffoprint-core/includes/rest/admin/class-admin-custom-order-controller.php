@@ -196,7 +196,7 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 
 		return [
 			'id'                    => $post->ID,
-			'title'                 => get_the_title( $post ),
+			'title'                 => html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
 			'order_type'            => YeffoPrint_Custom_Order_Meta::get_order_type( $post->ID ),
 			'order_type_label'      => YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ YeffoPrint_Custom_Order_Meta::get_order_type( $post->ID ) ],
 			'status'                => $status,
@@ -229,7 +229,7 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 
 		$payload = [
 			'id'                  => $post->ID,
-			'title'               => get_the_title( $post ),
+			'title'               => html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
 			'order_type'          => $order_type,
 			'order_type_label'    => YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ $order_type ],
 			'status'              => $status,
@@ -274,11 +274,11 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 				'shape_label'        => YeffoPrint_Sticker_Pricing::SHAPES[ $shape ] ?? '',
 				'is_custom_size'     => $is_custom_size,
 				'size_id'            => $size_id,
-				'size_label'         => $is_custom_size ? '' : ( $size_id ? get_the_title( $size_id ) : '' ),
+				'size_label'         => $is_custom_size ? '' : ( $size_id ? html_entity_decode( get_the_title( $size_id ), ENT_QUOTES, 'UTF-8' ) : '' ),
 				'custom_width_in'    => (string) $m( YeffoPrint_Custom_Order_Meta::CUSTOM_WIDTH_IN ),
 				'custom_height_in'   => (string) $m( YeffoPrint_Custom_Order_Meta::CUSTOM_HEIGHT_IN ),
 				'material_id'        => $material_id,
-				'material_label'     => $material_id ? get_the_title( $material_id ) : '',
+				'material_label'     => $material_id ? html_entity_decode( get_the_title( $material_id ), ENT_QUOTES, 'UTF-8' ) : '',
 				'quantity'           => (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ),
 				'instructions'       => (string) $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ),
 				'artwork_uploads'    => $this->upload_payload( (array) $m( YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS ) ),
@@ -307,11 +307,11 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 
 			$payload['template'] = [
 				'template_id'    => $template_id,
-				'template_title' => $template_id ? get_the_title( $template_id ) : '',
+				'template_title' => $template_id ? html_entity_decode( get_the_title( $template_id ), ENT_QUOTES, 'UTF-8' ) : '',
 				'size_id'        => $size_id,
-				'size_label'     => $size_id ? get_the_title( $size_id ) : '',
+				'size_label'     => $size_id ? html_entity_decode( get_the_title( $size_id ), ENT_QUOTES, 'UTF-8' ) : '',
 				'material_id'    => $material_id,
-				'material_label' => $material_id ? get_the_title( $material_id ) : '',
+				'material_label' => $material_id ? html_entity_decode( get_the_title( $material_id ), ENT_QUOTES, 'UTF-8' ) : '',
 				'variants'       => array_map( static function ( array $variant ) use ( $field_schema ) {
 					return [
 						'quantity' => (int) ( $variant['quantity'] ?? 0 ),
@@ -324,9 +324,9 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			$batch_rows = array_map( function ( array $row ) {
 				return [
 					'size_id'           => (int) ( $row['size_id'] ?? 0 ),
-					'size_label'        => ! empty( $row['size_id'] ) ? get_the_title( (int) $row['size_id'] ) : '',
+					'size_label'        => ! empty( $row['size_id'] ) ? html_entity_decode( get_the_title( (int) $row['size_id'] ), ENT_QUOTES, 'UTF-8' ) : '',
 					'material_id'       => (int) ( $row['material_id'] ?? 0 ),
-					'material_label'    => ! empty( $row['material_id'] ) ? get_the_title( (int) $row['material_id'] ) : '',
+					'material_label'    => ! empty( $row['material_id'] ) ? html_entity_decode( get_the_title( (int) $row['material_id'] ), ENT_QUOTES, 'UTF-8' ) : '',
 					'quantity'          => (int) ( $row['quantity'] ?? 0 ),
 					'compound_strength' => (string) ( $row['compound_strength'] ?? '' ),
 					'qr_url'            => (string) ( $row['qr_url'] ?? '' ),
@@ -370,7 +370,7 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			$file_id = (int) get_post_meta( $proof_id, YeffoPrint_Proof_Meta::FILE_ID, true );
 			return [
 				'id'    => $proof_id,
-				'title' => get_the_title( $proof_id ) ?: __( 'Proof', 'yeffoprint-core' ),
+				'title' => html_entity_decode( get_the_title( $proof_id ), ENT_QUOTES, 'UTF-8' ) ?: __( 'Proof', 'yeffoprint-core' ),
 				'date'  => get_the_date( 'c', $proof_id ),
 				'file_url' => $file_id ? wp_get_attachment_url( $file_id ) : '',
 			];

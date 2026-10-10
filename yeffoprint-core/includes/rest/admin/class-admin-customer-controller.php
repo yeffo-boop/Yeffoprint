@@ -121,6 +121,7 @@ class YeffoPrint_Admin_Customer_Controller {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'customer_id' => $user->ID,
 			'limit'       => 10,
 			'orderby'     => 'date',
@@ -178,6 +179,9 @@ class YeffoPrint_Admin_Customer_Controller {
 			$owner = email_exists( $email );
 			if ( $owner && (int) $owner !== $user->ID ) {
 				return new \WP_Error( 'yeffoprint_email_taken', __( 'Another account already uses that email.', 'yeffoprint-core' ), [ 'status' => 409 ] );
+			}
+			if ( class_exists( 'YeffoPrint_Customer_Notes' ) ) {
+				YeffoPrint_Customer_Notes::rename_email( (string) $user->user_email, $email );
 			}
 			$customer->set_email( $email );
 		}
