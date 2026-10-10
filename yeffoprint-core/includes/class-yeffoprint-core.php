@@ -59,6 +59,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-custom-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-proof-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-order-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-order-actions-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/customers/class-customer-notes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-customer-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-coupon-controller.php';
@@ -260,6 +261,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Custom_Order_Controller();
 		new YeffoPrint_Admin_Proof_Controller();
 		new YeffoPrint_Admin_Order_Controller();
+		new YeffoPrint_Admin_Order_Actions_Controller();
 		new YeffoPrint_Customer_Notes();
 		new YeffoPrint_Admin_Customer_Controller();
 		new YeffoPrint_Admin_Coupon_Controller();
