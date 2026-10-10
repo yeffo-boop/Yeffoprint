@@ -127,6 +127,7 @@ class YeffoPrint_NOWPayments_Webhook_Controller {
 		}
 
 		$order_ids = wc_get_orders( [
+			'type' => 'shop_order',
 			'meta_key'   => '_yeffoprint_nowpayments_invoice_id', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- one invoice's own lookup, not a listing screen.
 			'meta_value' => $invoice_id, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			'limit'      => 1,

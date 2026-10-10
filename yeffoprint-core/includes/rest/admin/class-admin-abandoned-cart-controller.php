@@ -80,11 +80,14 @@ class YeffoPrint_Admin_Abandoned_Cart_Controller {
 			return new \WP_Error( 'yeffoprint_abandoned_cart_optout', __( 'This customer asked not to get cart reminders.', 'yeffoprint-core' ), [ 'status' => 409 ] );
 		}
 
-		YeffoPrint_Abandoned_Carts::send_stage( $row, $stage );
+		$sent = YeffoPrint_Abandoned_Carts::send_stage( $row, $stage );
 
 		$after = YeffoPrint_Abandoned_Carts::get_row( (int) $row['id'] );
 		if ( $after && YeffoPrint_Abandoned_Carts::STATUS_ORDERED === $after['status'] ) {
 			return new \WP_Error( 'yeffoprint_abandoned_cart_ordered', __( 'Not sent: this customer has placed an order since leaving this cart.', 'yeffoprint-core' ), [ 'status' => 409 ] );
+		}
+		if ( ! $sent ) {
+			return new \WP_Error( 'yeffoprint_abandoned_cart_not_sent', __( 'The email could not be sent. Check the site’s email setup and try again.', 'yeffoprint-core' ), [ 'status' => 500 ] );
 		}
 		return rest_ensure_response( [ 'ok' => true, 'stage' => $stage ] );
 	}

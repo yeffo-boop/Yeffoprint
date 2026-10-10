@@ -1054,10 +1054,16 @@
 				);
 			} );
 
+			// A new template whose first save half-failed already exists: retry
+			// updates it instead of creating a second copy.
+			if ( ! existing && drawer.dataset.savedId ) {
+				existing = { id: parseInt( drawer.dataset.savedId, 10 ) };
+			}
 			var coreUrl = existing ? endpoint( '/' + existing.id ) : endpoint();
 
 			YP.request( coreUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( coreBody ) } )
 				.then( function ( saved ) {
+					drawer.dataset.savedId = saved.id;
 					var gapBody = {
 						compatible_sizes: Array.prototype.map.call( drawer.querySelectorAll( '[data-compat-size]:checked' ), function ( el ) { return parseInt( el.getAttribute( 'data-compat-size' ), 10 ); } ),
 						compatible_materials: Array.prototype.map.call( drawer.querySelectorAll( '[data-compat-material]:checked' ), function ( el ) { return parseInt( el.getAttribute( 'data-compat-material' ), 10 ); } ),

@@ -135,6 +135,17 @@ class YeffoPrint_Customer_Notes {
 		return false !== $wpdb->delete( self::table_name(), [ 'id' => $note_id ], [ '%d' ] );
 	}
 
+	/** Moves a customer's notes to their new email, so changing it doesn't orphan them. */
+	public static function rename_email( string $old_email, string $new_email ): void {
+		global $wpdb;
+		$old_email = self::normalize_email( $old_email );
+		$new_email = self::normalize_email( $new_email );
+		if ( '' === $old_email || '' === $new_email || $old_email === $new_email ) {
+			return;
+		}
+		$wpdb->update( self::table_name(), [ 'customer_email' => $new_email ], [ 'customer_email' => $old_email ], [ '%s' ], [ '%s' ] );
+	}
+
 	public static function count_notes( string $email ): int {
 		global $wpdb;
 		$email = self::normalize_email( $email );

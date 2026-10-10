@@ -154,7 +154,7 @@
 
 			preview.innerHTML =
 				'<p class="yp-field__hint">' + YP.escapeHtml( i18n.dragHint || 'Drag a label to reposition it, or set exact percentages below.' ) + '</p>' +
-				'<div class="yp-field-position-stage" data-yp-fs-stage">' +
+				'<div class="yp-field-position-stage" data-yp-fs-stage>' +
 					'<img src="' + YP.escapeAttr( previewImageUrl ) + '" alt="" />' +
 					markersHtml +
 				'</div>';
@@ -247,6 +247,11 @@
 			draggingIndex = parseInt( marker.getAttribute( 'data-index' ), 10 );
 			marker.classList.add( 'is-dragging' );
 			event.preventDefault();
+			// Only while dragging, so closed editors don't leave listeners on document.
+			document.addEventListener( 'mousemove', onDragMove );
+			document.addEventListener( 'touchmove', onDragMove, { passive: false } );
+			document.addEventListener( 'mouseup', endDrag );
+			document.addEventListener( 'touchend', endDrag );
 		}
 
 		function onDragMove( event ) {
@@ -259,6 +264,10 @@
 		}
 
 		function endDrag() {
+			document.removeEventListener( 'mousemove', onDragMove );
+			document.removeEventListener( 'touchmove', onDragMove, { passive: false } );
+			document.removeEventListener( 'mouseup', endDrag );
+			document.removeEventListener( 'touchend', endDrag );
 			if ( null === draggingIndex ) {
 				return;
 			}
@@ -268,11 +277,6 @@
 			}
 			draggingIndex = null;
 		}
-
-		document.addEventListener( 'mousemove', onDragMove );
-		document.addEventListener( 'touchmove', onDragMove, { passive: false } );
-		document.addEventListener( 'mouseup', endDrag );
-		document.addEventListener( 'touchend', endDrag );
 
 		function setValue( index, key, value ) {
 			if ( key.indexOf( '.' ) !== -1 ) {

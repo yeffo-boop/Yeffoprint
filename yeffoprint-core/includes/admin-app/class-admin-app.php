@@ -195,6 +195,10 @@ class YeffoPrint_Admin_App {
 		wp_localize_script( 'yeffoprint-admin-app', 'yeffoprintAdminApp', [
 			'restUrl'         => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
 			'wpApiUrl'        => esc_url_raw( rest_url( 'wp/v2/' ) ),
+			'wcApiUrl'        => esc_url_raw( rest_url( 'wc/v3/' ) ),
+			// Printable invoice / packing slip page; the app adds &kind= and &ids=.
+			'printOrdersUrl'  => YeffoPrint_Admin_Order_Actions_Controller::print_base_url(),
+			'orderEmails'     => YeffoPrint_Admin_Order_Actions_Controller::email_options(),
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
 			'nonceUrl'        => esc_url_raw( admin_url( 'admin-ajax.php?action=yeffoprint_admin_nonce' ) ),
 			'exitUrl'         => esc_url_raw( admin_url() ),
@@ -290,7 +294,7 @@ class YeffoPrint_Admin_App {
 		// 'yeffoprint-admin-app' and shares its `defer` strategy, so they
 		// always finish loading (and registering) before app.js's own
 		// DOMContentLoaded-triggered first route() call needs them.
-		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'label-fields', 'label-colors', 'compound-list', 'filament-colors', 'prints', 'web-design-packages', 'web-design-addons', 'maintenance', 'pricing', 'orders', 'order-history', 'abandoned-carts', 'web-design-orders', 'customers', 'reviews', 'tracker-feedback', 'coupons', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order', 'sales', 'messages', 'disputes', 'payments' ] as $view ) {
+		foreach ( [ 'materials', 'sizes', 'sticker-sizes', 'templates', 'label-fields', 'label-colors', 'compound-list', 'filament-colors', 'prints', 'web-design-packages', 'web-design-addons', 'maintenance', 'pricing', 'orders', 'order-history', 'abandoned-carts', 'web-design-orders', 'customers', 'reviews', 'tracker-feedback', 'coupons', 'proofs', 'rewards', 'surcharge', 'settings', 'manual-order', 'sales', 'messages', 'disputes', 'payments', 'shipping-zones', 'template-categories' ] as $view ) {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',

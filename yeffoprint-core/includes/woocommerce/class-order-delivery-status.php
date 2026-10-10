@@ -76,6 +76,7 @@ class YeffoPrint_Order_Delivery_Status {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status' => YeffoPrint_Order_Shipment_Status::STATUS,
 			'limit'  => -1,
 		] );

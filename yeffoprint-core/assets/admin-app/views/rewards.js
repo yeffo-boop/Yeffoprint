@@ -107,6 +107,8 @@
 					} )
 				} ).then( function ( updated ) {
 					renderRates( updated );
+					button.disabled = false;
+					button.textContent = 'Save Rates';
 					viewEl.querySelector( '[data-yp-rates-status]' ).innerHTML = '<p class="yp-panel__hint">Saved.</p>';
 				} ).catch( function ( error ) {
 					button.disabled = false;
@@ -209,7 +211,7 @@
 							entries.map( function ( entry ) {
 								return (
 									'<tr>' +
-										'<td>' + ( entry.date ? new Date( entry.date ).toLocaleString() : '—' ) + '</td>' +
+										'<td>' + ( entry.date ? new Date( String( entry.date ).replace( ' ', 'T' ) ).toLocaleString() : '—' ) + '</td>' +
 										'<td>' + YP.escapeHtml( entry.customer_email || '(deleted user)' ) + '</td>' +
 										'<td>' + formatDelta( entry.delta ) + '</td>' +
 										'<td>' + YP.escapeHtml( entry.reason ) + '</td>' +

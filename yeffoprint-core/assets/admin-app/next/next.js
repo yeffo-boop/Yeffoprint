@@ -57,8 +57,13 @@
 	// Lets the board refresh after the order window closes (a status,
 	// payment or label may have changed in it).
 	var closeDrawer = YP.closeDrawer;
+	// Confirm dialogs are skipped: closing one (OK or Cancel) used to reload
+	// the order page mid-action, wiping a half-typed note and racing deletes.
 	YP.closeDrawer = function ( drawerEl ) {
 		closeDrawer( drawerEl );
+		if ( drawerEl && drawerEl.classList && drawerEl.classList.contains( 'yp-drawer--confirm' ) ) {
+			return;
+		}
 		document.dispatchEvent( new CustomEvent( 'ypn:drawer-closed' ) );
 	};
 
@@ -134,7 +139,7 @@
 
 	function payoutDay( iso ) {
 		var d = iso ? new Date( iso ) : null;
-		return d && ! isNaN( d.getTime() ) ? d.toLocaleDateString( undefined, { weekday: 'short', month: 'short', day: 'numeric' } ) : '—';
+		return d && ! isNaN( d.getTime() ) ? d.toLocaleDateString( undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' } ) : '—';
 	}
 
 	function payoutTile( label, value, note, extra ) {
@@ -243,6 +248,7 @@
 
 	var todayDisputes = [];
 	var todayMessages = 0;
+	var todayDueDays  = 0; // Settings › General "Order due date (days)": older open orders float up as late.
 
 	// Disputes waiting on an answer and unread website messages join the
 	// queue. Both are optional extras: a failure just leaves them out.
@@ -272,6 +278,7 @@
 
 	// The dashboard summary app.js already loads; lost or returned packages join the queue.
 	YP.next.onDashboard = function ( summary ) {
+		todayDueDays = parseInt( summary.due_date_days, 10 ) || 0;
 		todayProblems = ( summary.shipped_packages || [] ).filter( function ( pkg ) {
 			return 'FAILURE' === pkg.tracking_status || 'RETURNED' === pkg.tracking_status;
 		} );
@@ -322,7 +329,10 @@
 		var day = 86400000;
 		( todayBoard || [] ).forEach( function ( o ) {
 			var age = o.date ? Date.now() - new Date( o.date ).getTime() : 0;
-			var base = { id: o.id, express: o.express, date: o.date, meta: ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
+			// Same rule as the old dashboard's "Needs attention": open longer than the due date setting.
+			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays : 0;
+			var late = lateBy > 0 ? lateBy : 0;
+			var base = { id: o.id, express: o.express, date: o.date, late: late, meta: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
@@ -346,6 +356,10 @@
 			}
 			if ( !! a.express !== !! b.express ) {
 				return a.express ? -1 : 1;
+			}
+			// Late work next, most overdue first.
+			if ( ( a.late || 0 ) !== ( b.late || 0 ) ) {
+				return ( b.late || 0 ) - ( a.late || 0 );
 			}
 			if ( QUEUE_KINDS[ a.kind ].rank !== QUEUE_KINDS[ b.kind ].rank ) {
 				return QUEUE_KINDS[ a.kind ].rank - QUEUE_KINDS[ b.kind ].rank;
@@ -377,7 +391,7 @@
 				return (
 					'<div class="ypn-q' + ( item.express || 'problem' === item.kind || 'dispute' === item.kind ? ' is-hot' : '' ) + '">' +
 						'<i style="background:' + QUEUE_KINDS[ item.kind ].color + '"></i>' +
-						'<a class="ypn-q__text" href="' + escAttr( href ) + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
+						'<a class="ypn-q__text" href="' + escAttr( href ) + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( item.late ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : '' ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
 						( item.ack
 							? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-q-ack="' + item.id + '">' + esc( item.action ) + '</button>'
 							: ( item.print
@@ -630,6 +644,34 @@
 		}
 	};
 
+	/* Resend one of the customer emails (class-admin-order-actions-controller.php). */
+	function resendEmail( order, onSent ) {
+		var options = yeffoprintAdminApp.orderEmails || {};
+		YP.confirmModal( {
+			title: 'Resend an email',
+			message: 'Goes to ' + order.customer_email + '. A note is added to the order.',
+			bodyHtml: '<div class="ypn-email-pick">' + Object.keys( options ).map( function ( key, i ) {
+				return '<label class="ypn-check"><input type="radio" name="ypn-email" value="' + escAttr( key ) + '"' + ( 0 === i ? ' checked' : '' ) + '> ' + esc( options[ key ] ) + '</label>';
+			} ).join( '' ) + '</div>',
+			confirmLabel: 'Send',
+			onConfirm: function ( dialog ) {
+				var picked = dialog.querySelector( 'input[name="ypn-email"]:checked' );
+				YP.request( api( 'admin/order/' + order.id + '/email' ), {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( { email: picked ? picked.value : '' } )
+				} ).then( function ( result ) {
+					window.alert( 'Sent to ' + result.to + '.' );
+					if ( onSent ) {
+						onSent();
+					}
+				} ).catch( function ( error ) {
+					window.alert( 'Couldn’t send: ' + error.message );
+				} );
+			}
+		} );
+	}
+
 	/* ---------- Progress tracker (order page + order window) ---------- */
 
 	var STEPS = [ 'Placed', 'Paid', 'Printing', 'Shipped', 'Delivered' ];
@@ -824,12 +866,24 @@
 
 	var mediaUrl = yeffoprintAdminApp.restUrl.replace( /yeffoprint-core\/v1\/?$/, '' ) + 'wp/v2/media';
 
+	/**
+	 * Header values must be plain ASCII, or fetch() throws a TypeError
+	 * before sending anything. Mac screenshots ("… at 4.05.12 PM.png"
+	 * has a narrow space before PM) and accented names would otherwise
+	 * fail, so swap anything outside printable ASCII for a dash.
+	 */
+	function headerFilename( name ) {
+		var ascii = String( name || '' ).normalize( 'NFKD' ).replace( /[\u0300-\u036f]/g, '' )
+			.replace( /[^\x20-\x7e]/g, '-' ).replace( /["\\]/g, '' ).trim();
+		return /[A-Za-z0-9]/.test( ascii.replace( /\.[^.]*$/, '' ) ) ? ascii : 'proof' + ( ascii.match( /\.[A-Za-z0-9]+$/ ) || [ '' ] )[ 0 ];
+	}
+
 	function uploadProof( file, customOrderId ) {
 		return YP.request( mediaUrl, {
 			method: 'POST',
 			headers: {
 				'Content-Type': file.type || 'application/octet-stream',
-				'Content-Disposition': 'attachment; filename="' + file.name.replace( /["\\\r\n]/g, '' ) + '"'
+				'Content-Disposition': 'attachment; filename="' + headerFilename( file.name ) + '"'
 			},
 			body: file
 		} ).then( function ( media ) {
@@ -969,7 +1023,9 @@
 			var printable = 'processing' === order.status && ! website;
 			var shipStage = ! website && [ 'processing', 'in-production', 'shipped', 'completed' ].indexOf( order.status ) !== -1;
 			var units     = order.items.reduce( function ( n, item ) { return n + Number( item.quantity || 0 ); }, 0 );
-			var other     = Math.round( ( order.total - order.subtotal - order.shipping_total ) * 100 ) / 100;
+			var discount  = Number( order.discount_total || 0 );
+			var tax       = Number( order.total_tax || 0 );
+			var other     = Math.round( ( order.total - order.subtotal - order.shipping_total + discount - tax ) * 100 ) / 100;
 			var needsProofFor = customOrders.filter( function ( c ) {
 				return c.paid && ( 'design_in_progress' === c.status || 'proof_ready' === c.status );
 			} )[ 0 ];
@@ -1006,7 +1062,15 @@
 				actions.push( '<a class="ypn-act" href="mailto:' + escAttr( order.customer_email ) + '?subject=' + encodeURIComponent( 'Your YeffoDesign order #' + order.number ) + '">Message customer <span>›</span></a>' );
 			}
 			actions.push( '<button type="button" class="ypn-act" data-ypn-act="status">Change status <span>' + esc( order.status_label ) + '</span></button>' );
+			if ( order.customer_email && 'trash' !== order.status ) {
+				actions.push( '<button type="button" class="ypn-act" data-ypn-act="email">Resend an email <span>✉</span></button>' );
+			}
+			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'slip' ) ) + '" target="_blank" rel="noopener">Print packing slip <span>⎙</span></a>' );
+			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'invoice' ) ) + '" target="_blank" rel="noopener">Print invoice <span>⎙</span></a>' );
 			actions.push( '<button type="button" class="ypn-act" data-ypn-act="details">Refunds &amp; all details <span>›</span></button>' );
+			actions.push( 'trash' === order.status
+				? '<button type="button" class="ypn-act" data-ypn-act="restore">Restore from trash <span>↺</span></button>'
+				: '<button type="button" class="ypn-act ypn-act--quiet" data-ypn-act="trash">Move to trash <span>🗑</span></button>' );
 
 			var shipTo = order.needs_customer_address
 				? '<span class="ypn-pill ypn-pill--yel">Customer adds it when paying</span>'
@@ -1070,7 +1134,9 @@
 							'<section class="ypn-card"><h3 class="ypn-card__title">Payment</h3>' + kv( [
 								[ 'Items', esc( money( order.subtotal ) ) ],
 								[ 'Shipping', esc( money( order.shipping_total ) ) ],
+								discount > 0 ? [ 'Discount', '−' + esc( money( discount ) ) ] : null,
 								other > 0 ? [ 'Fees', esc( money( other ) ) ] : null,
+								tax > 0 ? [ 'Tax', esc( money( tax ) ) ] : null,
 								[ 'Total', '<b>' + esc( money( order.total ) ) + '</b>' ],
 								paid
 									? [ 'Paid', '<b class="ypn-good">' + esc( money( order.total ) ) + ( order.payment_method_title ? ' ' + esc( order.payment_method_title ) : '' ) + '</b>' ]
@@ -1137,11 +1203,39 @@
 					} else if ( 'label' === act ) {
 						window.location.hash = '#/ship/' + order.id;
 					} else if ( 'record' === act ) {
-						YP.next.openDetails( order.id, 'Record' );
+						YP.next.openDetails( order.id, 'Payment received' );
 					} else if ( 'edit' === act ) {
 						YP.next.openDetails( order.id, 'edit' );
 					} else if ( 'status' === act ) {
 						YP.next.openDetails( order.id, 'Status' );
+					} else if ( 'email' === act ) {
+						resendEmail( order, load );
+					} else if ( 'trash' === act || 'restore' === act ) {
+						var run = function () {
+							button.disabled = true;
+							YP.request( api( 'admin/orders/bulk' ), {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify( { ids: [ order.id ], action: act } )
+							} ).then( function ( result ) {
+								if ( result.failed && result.failed.length ) {
+									throw new Error( 'the order couldn’t be changed' );
+								}
+								if ( 'trash' === act ) {
+									window.location.hash = '#/order-history';
+								} else {
+									load();
+								}
+							} ).catch( function ( error ) {
+								button.disabled = false;
+								window.alert( 'Couldn’t do that: ' + error.message );
+							} );
+						};
+						if ( 'trash' === act ) {
+							YP.confirmModal( { title: 'Move order ' + order.number + ' to the trash?', message: 'It leaves your order lists. You can restore it from All orders › Trash.', confirmLabel: 'Move to trash', danger: true, onConfirm: run } );
+						} else {
+							run();
+						}
 					} else {
 						YP.next.openDetails( order.id );
 					}
@@ -1157,7 +1251,8 @@
 				var input = zone.querySelector( 'input[type="file"]' );
 
 				function send( file ) {
-					if ( ! file ) {
+					input.value = ''; // So picking the same file again after an error still fires change.
+					if ( ! file || zone.classList.contains( 'is-busy' ) ) {
 						return;
 					}
 					zone.classList.add( 'is-busy' );
@@ -1326,7 +1421,7 @@
 		viewEl.innerHTML = '<p class="yp-field__hint">Loading&hellip;</p>';
 
 		function load() {
-			Promise.all( [ YP.request( api( 'admin/order/' + id ) ), stationStatus() ] ).then( function ( results ) {
+			return Promise.all( [ YP.request( api( 'admin/order/' + id ) ), stationStatus() ] ).then( function ( results ) {
 				order = results[ 0 ];
 				station = results[ 1 ];
 				draw();
@@ -1501,6 +1596,8 @@
 			if ( desc ) {
 				parcel.customs_description = desc.value;
 				parcel.customs_value = viewEl.querySelector( '[data-ypn-customs-value]' ).value;
+				// Kept so the redraw after rates (and Refresh rates) uses what was typed.
+				order.shippo_customs = Object.assign( {}, order.shippo_customs, { description: parcel.customs_description, value: parcel.customs_value } );
 			}
 			order.shippo_default_package = parcel;
 
@@ -1551,7 +1648,11 @@
 						var label = response.label || {};
 						rates = [];
 						if ( station.station_online && label.tracking_number ) {
-							return queueLabel( id, label.tracking_number ).catch( function () {} ).then( load );
+							return queueLabel( id, label.tracking_number ).then( load, function () {
+								return load().then( function () {
+									window.alert( 'The label was bought but couldn’t be sent to the label printer. Use Print here on the label below.' );
+								} );
+							} );
 						}
 						if ( printWindow && label.label_url ) {
 							printWindow.location.href = label.label_url;
@@ -1640,9 +1741,12 @@
 	   phone sent ("Send to label printer"). Chrome started with
 	   --kiosk-printing prints straight to the default printer. */
 
-	var stationTimer = null;
+	// Stops the previous visit's loop; each visit keeps its own timer so an
+	// old visit finishing a print can't cancel the new visit's polling.
+	var stopPreviousStation = null;
 
 	YP.views[ 'print-station' ] = function ( viewEl ) {
+		var stationTimer = null;
 		var running = false;
 		var printed = {};
 		var wakeLock = null;
@@ -1822,7 +1926,10 @@
 			}
 		}
 
-		window.clearTimeout( stationTimer );
+		if ( stopPreviousStation ) {
+			stopPreviousStation();
+		}
+		stopPreviousStation = stop;
 
 		toggle.addEventListener( 'click', function () {
 			if ( running ) {
@@ -1867,6 +1974,7 @@
 		viewEl.innerHTML = '<div data-ypn-tiles></div><section class="ypn-card ypn-best" data-ypn-best><h3 class="ypn-card__title">Best sellers <span>last 30 days</span></h3><p class="yp-field__hint">Loading&hellip;</p></section>';
 		viewEl.querySelector( '[data-ypn-tiles]' ).innerHTML = tilesHtml( [
 			[ 'templates', 'Templates', 'Label designs, categories, descriptions and photos.', MAG ],
+			[ 'template-categories', 'Template Categories', 'Product types, styles, colors and materials the shop filters by.', MAG ],
 			[ 'sizes', 'Sizes', 'Label sizes, what they fit, and round lid stickers.', CY ],
 			[ 'sticker-sizes', 'Sticker Sizes', 'Custom sticker sizes and prices.', CY ],
 			[ 'materials', 'Materials', 'Paper and finish choices with swatches.', YEL ],
@@ -1958,11 +2066,14 @@
 				[ 'settings/general', 'General', 'Away mode, express fee, dashboard and contact form.', INK ],
 				[ 'settings/storefront', 'Storefront', 'Announcement bar, homepage promo, splash and search.', MAG ],
 				[ 'settings/shipping', 'Shipping', 'Shippo, shipping options and local pickup.', CY ],
+				[ 'shipping-zones', 'Shipping Zones', 'Checkout shipping choices and prices by region.', CY ],
 				[ 'settings/integrations', 'Integrations', 'Telegram, social logins and payment keys.', VIO ],
 				[ 'payments', 'Payments', 'Turn Venmo, Zelle, crypto and cards on or off.', GRN ],
 				[ 'surcharge', 'Card Surcharge', 'Extra fee on card payments.', YEL ],
 				[ 'web-design-packages', 'Web Design Packages', 'Packages customers can pick.', GRN ],
-				[ 'web-design-addons', 'Web Design Add-ons', 'Extras for web design orders.', GRN ]
+				[ 'web-design-addons', 'Web Design Add-ons', 'Extras for web design orders.', GRN ],
+				// The phone bottom bar has no Customers tab, so this is the way in there.
+				[ 'people', 'Customers', 'Customers, messages, reviews, rewards and coupons.', CY ]
 			] );
 
 		YP.request( api( 'admin/next/switches' ) ).then( function ( values ) {
@@ -2055,7 +2166,7 @@
 
 			body.innerHTML =
 				'<div class="ypn-phone__row">' +
-					'<span class="ypn-phone__state' + ( on ? ' is-on' : '' ) + '">' + ( on ? 'Alerts are on for this ' + esc( deviceName() ) : 'Alerts are off on this ' + esc( deviceName() ) ) + '</span>' +
+					'<span class="ypn-phone__state' + ( on ? ' is-on' : '' ) + '">' + ( on ? 'Alerts are on for this ' : 'Alerts are off on this ' ) + esc( 'This device' === deviceName() ? 'device' : deviceName() ) + '</span>' +
 					( on
 						? '<button type="button" class="ypn-btn" data-ypn-push-test>Send a test</button><button type="button" class="ypn-btn" data-ypn-push-off>Turn off</button>'
 						: '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-push-on>Turn on alerts</button>' ) +

@@ -78,7 +78,7 @@ class YeffoPrint_Admin_Proof_Controller {
 			'post_type'   => 'yp_proof',
 			'post_status' => 'publish',
 			/* translators: 1: custom order title, 2: current date */
-			'post_title'  => sprintf( __( 'Proof for %1$s — %2$s', 'yeffoprint-core' ), get_the_title( $custom_order ), wp_date( get_option( 'date_format' ) ) ),
+			'post_title'  => sprintf( __( 'Proof for %1$s — %2$s', 'yeffoprint-core' ), html_entity_decode( get_the_title( $custom_order ), ENT_QUOTES, 'UTF-8' ), wp_date( get_option( 'date_format' ) ) ),
 		], true );
 
 		if ( is_wp_error( $proof_id ) ) {
@@ -108,10 +108,10 @@ class YeffoPrint_Admin_Proof_Controller {
 
 		return [
 			'id'                 => $post->ID,
-			'title'              => get_the_title( $post ),
+			'title'              => html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
 			'date'               => get_the_date( 'c', $post ),
 			'custom_order_id'    => $custom_order_id,
-			'custom_order_title' => $custom_order_id ? get_the_title( $custom_order_id ) : '',
+			'custom_order_title' => $custom_order_id ? html_entity_decode( get_the_title( $custom_order_id ), ENT_QUOTES, 'UTF-8' ) : '',
 			'file_url'           => $file_id ? wp_get_attachment_url( $file_id ) : '',
 		];
 	}

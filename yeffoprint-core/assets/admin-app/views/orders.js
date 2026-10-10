@@ -102,14 +102,17 @@
 		var searchEl       = viewEl.querySelector( '[data-yp-search]' );
 		var statusFilterEl = viewEl.querySelector( '[data-yp-status-filter]' );
 
-		function load() {
+		/** `skipDetail`: the caller just rendered a fresh detail itself (after a save). */
+		function load( skipDetail ) {
 			rowsEl.innerHTML = '<p class="yp-field__hint" style="padding:1rem;">Loading&hellip;</p>';
 			var query = statusFilterEl.value ? '?status=' + encodeURIComponent( statusFilterEl.value ) : '';
 			YP.request( endpoint( 'custom-orders' + query ) )
 				.then( function ( orders ) {
 					allOrders = orders || [];
 					renderRows( allOrders );
-					if ( selectedId ) {
+					if ( selectedId && ! skipDetail ) {
+						// Phones hide the detail pane without this (links like #/orders/{id}).
+						splitEl.classList.add( 'has-selection' );
 						loadDetail( selectedId );
 					}
 				} )
@@ -164,14 +167,23 @@
 			loadDetail( id );
 		}
 
+		var detailRequest = 0;
+
 		function loadDetail( id ) {
+			var token = ++detailRequest; // Arrowing quickly: only the latest request may render.
 			detailEl.innerHTML = '<div class="yp-split__empty"><p class="yp-field__hint">Loading&hellip;</p></div>';
 			YP.request( endpoint( 'custom-order/' + id ) )
 				.then( function ( order ) {
+					if ( token !== detailRequest ) {
+						return;
+					}
 					detailOrder = order;
 					renderDetail( order );
 				} )
 				.catch( function ( error ) {
+					if ( token !== detailRequest ) {
+						return;
+					}
 					detailEl.innerHTML = '<div class="yp-split__empty"><p class="yp-form__error">Couldn’t load this order: ' + YP.escapeHtml( error.message ) + '</p></div>';
 				} );
 		}
@@ -400,7 +412,7 @@
 			YP.request( endpoint( 'custom-order/' + order.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { status: select.value } ) } )
 				.then( function ( updated ) {
 					renderDetail( updated );
-					load();
+					load( true );
 				} )
 				.catch( function ( error ) {
 					button.disabled = false;
@@ -425,7 +437,7 @@
 					.then( function () { return YP.request( endpoint( 'custom-order/' + order.id ) ); } )
 					.then( function ( updated ) {
 						renderDetail( updated );
-						load();
+						load( true );
 					} )
 					.catch( function ( error ) {
 						listEl.innerHTML = '<p class="yp-form__error">Couldn’t add proof: ' + YP.escapeHtml( error.message ) + '</p>';
@@ -484,7 +496,7 @@
 		document.addEventListener( 'keydown', handleKeydown );
 
 		searchEl.addEventListener( 'input', function () { renderRows( allOrders ); } );
-		statusFilterEl.addEventListener( 'change', load );
+		statusFilterEl.addEventListener( 'change', function () { load(); } );
 
 		load();
 	};

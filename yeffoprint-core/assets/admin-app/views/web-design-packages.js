@@ -66,7 +66,7 @@
 			}
 
 			rowsEl.innerHTML = filtered.map( function ( pkg, index ) {
-				var price = pkg.meta ? ( pkg.meta[ META.price ] || '&mdash;' ) : '&mdash;';
+				var price = pkg.meta ? ( pkg.meta[ META.price ] || '—' ) : '—';
 				var checkoutPrice = pkg.meta ? parseFloat( pkg.meta[ META.checkoutPrice ] ) : 0;
 				var tagline = pkg.meta ? ( pkg.meta[ META.tagline ] || '' ) : '';
 				var isFeatured = !! ( pkg.meta && pkg.meta[ META.featured ] );
@@ -83,8 +83,8 @@
 						'<td>' + ( isFeatured ? '<span class="yp-pill yp-pill--good">Featured</span>' : '&mdash;' ) + '</td>' +
 						'<td><span class="yp-pill ' + ( isPublished ? 'yp-pill--good' : 'yp-pill--neutral' ) + '">' + ( isPublished ? 'Active' : 'Draft' ) + '</span></td>' +
 						'<td class="yp-row-actions">' +
-							'<button type="button" class="yp-row-action" data-yp-move-up="' + pkg.id + '" ' + ( 0 === index ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
-							'<button type="button" class="yp-row-action" data-yp-move-down="' + pkg.id + '" ' + ( index === filtered.length - 1 ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-up="' + pkg.id + '" ' + ( 0 === index || query ? 'disabled' : '' ) + ' aria-label="Move up">&uarr;</button>' +
+							'<button type="button" class="yp-row-action" data-yp-move-down="' + pkg.id + '" ' + ( index === filtered.length - 1 || query ? 'disabled' : '' ) + ' aria-label="Move down">&darr;</button>' +
 							'<button type="button" class="yp-row-action" data-yp-edit="' + pkg.id + '" aria-label="Edit">Edit</button>' +
 							'<button type="button" class="yp-row-action" data-yp-delete="' + pkg.id + '" aria-label="Delete">Delete</button>' +
 						'</td>' +

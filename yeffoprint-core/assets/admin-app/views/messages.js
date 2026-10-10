@@ -76,6 +76,12 @@
 		}
 
 		function render( data ) {
+			// Acting on the last message of a later page leaves that page empty.
+			if ( ! data.messages.length && page > 1 ) {
+				page = Math.max( 1, data.max_num_pages || 1 );
+				load();
+				return;
+			}
 			viewEl.querySelector( '[data-yp-msg-count="new"]' ).textContent = data.new_count ? ' (' + data.new_count + ')' : '';
 
 			pagesEl.innerHTML = data.max_num_pages > 1
