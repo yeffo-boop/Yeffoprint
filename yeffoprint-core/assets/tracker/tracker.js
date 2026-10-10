@@ -21,6 +21,7 @@
  *             A pen is a 3 mL cartridge the customer mixes like a vial; its dial is read as U-100 units (0.01 mL each).
  *   settings  { tz, reminders, reminderNames, units:'us'|'metric', tags[] }   (tags: the customer's own feeling tags)
  *   progress  { date, weight, wUnit:'lb'|'kg', m:{ waist, chest, hips, arm, thigh, neck }, mUnit:'in'|'cm', fat, note, photos[] }
+ *   food      { date, protein (g), water (mL), kcal, hc:{ protein, water, kcal } }   one per day, id = the date; hc is what Health Connect brought in
  *             photos are ids of encrypted photo records, fetched one at a time from /tracker/photos/{id}.
  *
  * The Mix a vial calculator is the same math as the Peptide & Hormone
@@ -83,7 +84,7 @@
 	var THEME_KEY = 'ypt-theme';
 
 	var state = {
-		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {} },
+		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {} },
 		push: { publicKey: '', devices: 0 },
 		shares: [],
 		snoozes: [],
@@ -191,6 +192,9 @@
 		camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
 		scale: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 9a4 4 0 0 1 8 0zM12 9l1.5-2.5',
 		flask: 'M9 3h6M10 3v6l-5.2 9.1A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.9L14 9V3M7.4 15h9.2',
+		food: 'M6 3h12l-1.6 16.2a2 2 0 0 1-2 1.8H9.6a2 2 0 0 1-2-1.8zM6.6 9h10.8',
+		book: 'M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h8',
+		heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
 	};
 
 	function icon( name ) {
@@ -1392,7 +1396,7 @@
 		var cached = loadJSON( STORE_KEY, null );
 		queue = loadJSON( QUEUE_KEY, [] ) || [];
 		if ( cached && cached.records ) {
-			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {} }, cached.records );
+			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {} }, cached.records );
 			state.push = cached.push || state.push;
 			state.shares = cached.shares || [];
 			state.snoozes = cached.snoozes || [];
@@ -1402,7 +1406,7 @@
 
 		return api( 'GET', 'tracker/state' ).then( function ( json ) {
 			var fresh = json.records || {};
-			[ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab' ].forEach( function ( k ) {
+			[ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food' ].forEach( function ( k ) {
 				state.records[ k ] = fresh[ k ] && ! Array.isArray( fresh[ k ] ) ? fresh[ k ] : {};
 			} );
 			// Re-apply anything still waiting to upload on top.
@@ -1422,6 +1426,7 @@
 			ensureSettings();
 			render();
 			flush();
+			hcAutoSync();
 		} ).catch( function ( err ) {
 			if ( handleAuthError( err ) ) {
 				return;
@@ -1576,6 +1581,7 @@
 		if ( ! guest ) {
 			syncAlerts();
 			syncNativeReminders();
+			syncWidget();
 		}
 		if ( focusedId && document.getElementById( focusedId ) && ! ui.sheet ) {
 			document.getElementById( focusedId ).focus();
@@ -1766,6 +1772,9 @@
 				row( 'flask', 'Lab result', 'Bloodwork values, charted with your doses', function () {
 					openLabSheet( null );
 				} ),
+				row( 'food', 'Food & water', foodGoals().on ? 'Protein, water and calories for today' : 'Count protein, water and calories', function () {
+					openFoodSheet( today );
+				} ),
 				lastTaken ? row( 'feel', 'How I feel', 'Side effects, sleep, energy · on your ' + lastTaken.compound + ' dose', function () {
 					openLogSheet( lastTaken );
 				} ) : null
@@ -1780,7 +1789,9 @@
 		wrap.appendChild( h( 'header', { class: 'ypt-top' },
 			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Weight, photos & lab results' ), h( 'h1', null, 'Progress' ) )
 		) );
+		wrap.appendChild( renderLevels() );
 		wrap.appendChild( renderProgress() );
+		wrap.appendChild( renderFood() );
 		wrap.appendChild( renderLabs() );
 		return wrap;
 	}
@@ -1880,6 +1891,10 @@
 		var clockNote = travelNote();
 		if ( clockNote ) {
 			wrap.appendChild( clockNote );
+		}
+		var food = foodCard( date );
+		if ( food ) {
+			wrap.appendChild( food );
 		}
 
 		if ( ! protocols().length ) {
@@ -6480,6 +6495,11 @@
 			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, themePref() === 'auto' ? 'Matches your phone’s light or dark setting.' : 'Just on this device.' )
 		) );
 
+		var health = healthCard();
+		if ( health ) {
+			wrap.appendChild( health );
+		}
+
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Help & feedback' ) );
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list ypt-help' }, FEEDBACK_TYPES.map( function ( t ) {
 			return h( 'button', { type: 'button', class: 'ypt-help__row', onclick: function () {
@@ -6528,6 +6548,7 @@
 			! isStandalone() && installPrompt ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: promptInstall }, h( 'span', null, 'Install the app' ), h( 'span', null, '›' ) ) : null,
 			! isStandalone() && isIOS() ? h( 'div', { class: 'ypt-list-row' }, h( 'span', null, 'Add to Home Screen' ), h( 'span', null, 'Share → Add to Home Screen' ) ) : null,
 			h( 'a', { class: 'ypt-list-row', href: CFG.calculatorUrl }, h( 'span', null, 'Peptide & Hormone Calculator' ), h( 'span', null, '›' ) ),
+			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openLibrarySheet }, h( 'span', null, 'Compound library' ), h( 'span', null, 'Half-lives & storage ›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openReportSheet }, h( 'span', null, 'Printable report (PDF)' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: exportCsv }, h( 'span', null, 'Export dose history (CSV)' ), h( 'span', null, '›' ) ),
 			h( 'a', { class: 'ypt-list-row', href: CFG.homeUrl }, h( 'span', null, 'YeffoDesign.com' ), h( 'span', null, '›' ) )
@@ -6932,6 +6953,1034 @@
 	}
 
 	/* =========================================================
+	 * Compound library and estimated levels
+	 * (includes/tracker/class-tracker-compounds.php)
+	 *
+	 * The library is facts only: approval status, half-life and storage.
+	 * Never a dose (Jeff's call, so it reads as a reference for the app
+	 * stores). The levels chart adds up every logged dose with its
+	 * compound's half-life: first-order elimination, plus a slower rise
+	 * for injections the library says are absorbed slowly (Bateman).
+	 * A rough picture, labeled as one.
+	 * ======================================================= */
+
+	var LIBRARY = Array.isArray( CFG.library ) ? CFG.library : [];
+	var LEVEL_RANGES = [ [ 14, '2W' ], [ 30, '1M' ], [ 90, '3M' ] ];
+	// Half-lives shorter than this leave nothing between doses worth charting.
+	var LEVEL_MIN_HOURS = 2;
+	var libIndex = null;
+
+	function libNorm( s ) {
+		return String( s || '' ).toLowerCase().replace( /[^a-z0-9]/g, '' );
+	}
+
+	/** The library entry for a name as the customer typed it ("Ozempic (semaglutide)" finds Semaglutide), or null. */
+	function libFor( name ) {
+		if ( ! libIndex ) {
+			libIndex = {};
+			LIBRARY.forEach( function ( e ) {
+				[ e.n ].concat( e.a || [] ).forEach( function ( k ) {
+					var key = libNorm( k );
+					if ( key && ! libIndex[ key ] ) {
+						libIndex[ key ] = e;
+					}
+				} );
+			} );
+		}
+		var n = libNorm( name );
+		if ( ! n ) {
+			return null;
+		}
+		if ( libIndex[ n ] ) {
+			return libIndex[ n ];
+		}
+		// A blend has several compounds in its name: no single half-life fits it.
+		if ( /[+&/]/.test( String( name ) ) ) {
+			return null;
+		}
+		var best = '';
+		Object.keys( libIndex ).forEach( function ( k ) {
+			if ( k.length >= 4 && k.length > best.length && n.indexOf( k ) !== -1 ) {
+				best = k;
+			}
+		} );
+		return best ? libIndex[ best ] : null;
+	}
+
+	/** { hl, abs } in hours for a compound: the customer's own half-life first, then the library's; null if neither. */
+	function halfLifeFor( name ) {
+		var own = ( state.records.settings.me || {} ).halfLives || {};
+		var e = libFor( name );
+		var key = libNorm( e ? e.n : name );
+		if ( +own[ key ] > 0 ) {
+			return { hl: +own[ key ], abs: null, own: true };
+		}
+		return e && +e.hl > 0 ? { hl: +e.hl, abs: +e.abs || null, own: false } : null;
+	}
+
+	function fmtDuration( hours ) {
+		if ( hours < 1 ) {
+			return Math.max( 5, Math.round( ( hours * 60 ) / 5 ) * 5 ) + ' minutes';
+		}
+		if ( hours < 36 ) {
+			var hr = hours < 10 ? Math.round( hours * 2 ) / 2 : Math.round( hours );
+			return fmtNum( hr, 1 ) + ' hour' + ( hr === 1 ? '' : 's' );
+		}
+		var d = Math.round( ( hours / 24 ) * 2 ) / 2;
+		return fmtNum( d, 1 ) + ' day' + ( d === 1 ? '' : 's' );
+	}
+
+	/** Me › Compound library: search, then tap one for its facts. */
+	function openLibrarySheet() {
+		var q = '';
+		var listBox = h( 'div', null );
+		function draw() {
+			listBox.textContent = '';
+			var nq = libNorm( q );
+			var hits = LIBRARY.filter( function ( e ) {
+				return ! nq || [ e.n ].concat( e.a || [] ).some( function ( k ) {
+					return libNorm( k ).indexOf( nq ) !== -1;
+				} );
+			} );
+			if ( ! hits.length ) {
+				listBox.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '12px 4px' } }, 'Nothing by that name. The library covers common peptides, hormones and medications.' ) );
+				return;
+			}
+			var groups = [];
+			hits.forEach( function ( e ) {
+				var g = groups.filter( function ( x ) {
+					return x.name === e.g;
+				} )[ 0 ];
+				if ( ! g ) {
+					groups.push( g = { name: e.g, list: [] } );
+				}
+				g.list.push( e );
+			} );
+			groups.forEach( function ( g ) {
+				listBox.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, g.name ) );
+				listBox.appendChild( h( 'div', { class: 'ypt-card ypt-list' }, g.list.map( function ( e ) {
+					return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+						openLibraryEntry( e );
+					} },
+						h( 'span', { class: 'ypt-lib-row' }, h( 'b', null, e.n ), e.a && e.a.length ? h( 'span', { class: 'ypt-muted ypt-small' }, e.a.slice( 0, 3 ).join( ', ' ) ) : null ),
+						h( 'span', { class: 'ypt-muted ypt-small' }, ( +e.hl > 0 ? '½ ' + fmtDuration( +e.hl ) : '' ) + ' ›' )
+					);
+				} ) ) );
+			} );
+		}
+		draw();
+		openSheet( 'Compound library', 'Reference', [
+			h( 'input', { class: 'ypt-input', id: 'ypt-lib-q', type: 'search', placeholder: 'Search, like semaglutide or BPC-157', autocomplete: 'off', oninput: function ( ev ) {
+				q = ev.target.value;
+				draw();
+			} } ),
+			listBox,
+			h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '16px 4px 0' } }, 'General reference from published studies, rounded. It isn’t medical advice and never suggests a dose. Your provider decides what’s right for you.' ),
+		] );
+	}
+
+	/** One compound: status, half-life in plain words, and storage. */
+	function openLibraryEntry( e ) {
+		var tracked = values( state.records.dose ).some( function ( d ) {
+			return d.status === 'taken' && libFor( d.compound ) === e;
+		} );
+		var own = halfLifeFor( e.n );
+		var hl = +e.hl > 0 ? +e.hl : 0;
+		var body = [
+			e.a && e.a.length ? h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '0' } }, 'Also called ' + e.a.join( ', ' ) + '.' ) : null,
+			h( 'div', { class: 'ypt-card ypt-lib-hl' },
+				h( 'div', { class: 'ypt-eyebrow' }, 'Half-life' ),
+				h( 'div', { class: 'ypt-lib-hl__big' }, hl ? 'About ' + fmtDuration( hl ) : 'Not well established' ),
+				e.hn ? h( 'p', { class: 'ypt-small', style: { margin: '6px 0 0' } }, e.hn ) : null,
+				hl >= LEVEL_MIN_HOURS ? h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '8px 0 0' } }, 'About half is gone ' + fmtDuration( hl ) + ' after a dose. It takes about 5 half-lives (' + fmtDuration( hl * 5 ) + ') to clear almost completely, and about as long to level out on a regular schedule.' ) : null,
+				hl && hl < LEVEL_MIN_HOURS ? h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '8px 0 0' } }, 'It clears quickly, so nothing builds up between doses.' ) : null,
+				own && own.own ? h( 'p', { class: 'ypt-small', style: { margin: '8px 0 0' } }, 'Your levels chart uses your own half-life: ' + fmtDuration( own.hl ) + '.' ) : null
+			),
+			h( 'div', { class: 'ypt-card', style: { marginTop: '12px' } },
+				h( 'div', { class: 'ypt-eyebrow' }, 'Status' ),
+				h( 'p', { class: 'ypt-small', style: { margin: '4px 0 0' } }, e.s )
+			),
+			h( 'div', { class: 'ypt-card', style: { marginTop: '12px' } },
+				h( 'div', { class: 'ypt-eyebrow' }, 'Storage' ),
+				h( 'p', { class: 'ypt-small', style: { margin: '4px 0 0' } }, e.before ),
+				e.after ? h( 'p', { class: 'ypt-small', style: { margin: '6px 0 0' } }, e.after ) : null
+			),
+			h( 'p', { style: { margin: '14px 4px 0' } }, h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
+				openHalfLifeSheet( e.n );
+			} }, own && own.own ? 'Change my own half-life' : 'Use my own half-life for the chart' ) ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '14px 4px 0' } }, 'General reference from published studies, rounded. Not medical advice. Your provider decides your dose.' ),
+		];
+		openSheet( e.n, 'Compound library', body, tracked ? h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			closeSheet();
+			ui.levelSel = libNorm( e.n );
+			go( 'progress' );
+		} }, 'See my estimated levels' ) : null );
+	}
+
+	/** A half-life the customer sets for the levels chart (for anything the library lacks, or a figure their provider gave). */
+	function openHalfLifeSheet( name ) {
+		var e = libFor( name );
+		var key = libNorm( e ? e.n : name );
+		var me = state.records.settings.me || {};
+		var cur = +( me.halfLives || {} )[ key ] || 0;
+		var unit = cur && cur >= 48 ? 'days' : 'hours';
+		var val = cur ? String( Math.round( ( unit === 'days' ? cur / 24 : cur ) * 100 ) / 100 ) : '';
+		var err = h( 'p', { class: 'ypt-error', hidden: true } );
+		function saveLives( next ) {
+			put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { halfLives: next } ) );
+		}
+		openSheet( 'Half-life', e ? e.n : name, [
+			h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, 'The estimated levels chart uses this for ' + ( e ? e.n : name ) + ( e && +e.hl > 0 ? ' instead of the library’s ' + fmtDuration( +e.hl ) : '' ) + '.' ),
+			h( 'div', { class: 'ypt-field' },
+				h( 'label', { for: 'ypt-hl-val' }, 'Half-life' ),
+				h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+					h( 'input', { class: 'ypt-input', id: 'ypt-hl-val', type: 'number', inputmode: 'decimal', step: 'any', min: '0', placeholder: '24', value: val, oninput: function ( ev ) {
+						val = ev.target.value;
+					} } ),
+					seg( [ [ 'hours', 'Hours' ], [ 'days', 'Days' ] ], unit, function ( u ) {
+						unit = u;
+					} )
+				)
+			),
+			cur ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '8px' }, onclick: function () {
+				var next = Object.assign( {}, me.halfLives || {} );
+				delete next[ key ];
+				closeSheet();
+				saveLives( next );
+				toast( e && +e.hl > 0 ? 'Back to the library’s half-life' : 'Half-life removed' );
+			} }, 'Remove mine' ) : null,
+			err,
+		], h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			var n = parseFloat( val );
+			var hours = unit === 'days' ? n * 24 : n;
+			if ( ! ( hours > 0 ) || hours > 24 * 120 ) {
+				err.textContent = 'Enter a half-life between a few minutes and 120 days.';
+				err.hidden = false;
+				return;
+			}
+			var next = Object.assign( {}, me.halfLives || {} );
+			next[ key ] = Math.round( hours * 100 ) / 100;
+			closeSheet();
+			saveLives( next );
+			toast( 'Half-life saved' );
+		} }, 'Save' ) );
+	}
+
+	/** Share of a dose still in the body `t` hours after it (0 before). */
+	function levelFraction( t, hl, abs ) {
+		if ( t < 0 ) {
+			return 0;
+		}
+		var ke = Math.LN2 / hl;
+		if ( ! abs ) {
+			return Math.exp( -ke * t );
+		}
+		var ka = Math.LN2 / abs;
+		if ( Math.abs( ka - ke ) < 1e-9 ) {
+			ka *= 1.01;
+		}
+		return ( ka / ( ka - ke ) ) * ( Math.exp( -ke * t ) - Math.exp( -ka * t ) );
+	}
+
+	/** A taken dose as an amount to add up: mcg and g become mg, pills with a strength become mg; null when it can't be summed. */
+	function levelAmount( d ) {
+		var dose = +d.dose;
+		if ( ! ( dose > 0 ) ) {
+			return null;
+		}
+		var mass = { mcg: 0.001, mg: 1, g: 1000 };
+		if ( mass[ d.unit ] ) {
+			return { v: dose * mass[ d.unit ], u: 'mg' };
+		}
+		if ( +d.strength > 0 && mass[ d.strengthUnit ] ) {
+			return { v: dose * +d.strength * mass[ d.strengthUnit ], u: 'mg' };
+		}
+		return { v: dose, u: d.unit || '' };
+	}
+
+	/** Taken doses grouped by compound: [{ key, name, color, hl, doses:[{ t (ms), v }], u }], plus the compounds without a half-life. */
+	function levelGroups() {
+		var by = {};
+		values( state.records.dose ).forEach( function ( d ) {
+			if ( d.status !== 'taken' ) {
+				return;
+			}
+			var p = state.records.protocol[ d.protocolId ] || null;
+			var name = d.compound || ( p && p.compound ) || '';
+			var e = libFor( name );
+			var key = libNorm( e ? e.n : name );
+			var amt = levelAmount( d );
+			var t = Date.parse( d.at || '' ) || Date.parse( wallToIso( d.date, d.time || '09:00' ) );
+			if ( ! key || ! amt || ! t ) {
+				return;
+			}
+			var g = by[ key ] || ( by[ key ] = { key: key, name: e ? e.n : name, color: p ? protocolColor( p ) : colorForCompound( name ), hl: halfLifeFor( name ), all: [] } );
+			if ( p ) {
+				g.color = protocolColor( p );
+			}
+			g.all.push( { t: t, v: amt.v, u: amt.u } );
+		} );
+		var charted = [];
+		var missing = [];
+		Object.keys( by ).forEach( function ( k ) {
+			var g = by[ k ];
+			// One unit per chart line: the one most of its doses use.
+			var count = {};
+			g.all.forEach( function ( x ) {
+				count[ x.u ] = ( count[ x.u ] || 0 ) + 1;
+			} );
+			g.u = Object.keys( count ).sort( function ( a, b ) {
+				return count[ b ] - count[ a ];
+			} )[ 0 ];
+			g.doses = g.all.filter( function ( x ) {
+				return x.u === g.u;
+			} ).sort( function ( a, b ) {
+				return a.t - b.t;
+			} );
+			if ( g.hl && g.hl.hl >= LEVEL_MIN_HOURS ) {
+				charted.push( g );
+			} else {
+				missing.push( g );
+			}
+		} );
+		var byName = function ( a, b ) {
+			return a.name.localeCompare( b.name );
+		};
+		return { charted: charted.sort( byName ), missing: missing.sort( byName ) };
+	}
+
+	function levelAt( g, t ) {
+		var sum = 0;
+		for ( var i = 0; i < g.doses.length && g.doses[ i ].t <= t; i++ ) {
+			sum += g.doses[ i ].v * levelFraction( ( t - g.doses[ i ].t ) / 3600000, g.hl.hl, g.hl.abs );
+		}
+		return sum;
+	}
+
+	function fmtLevel( v, u ) {
+		if ( u === 'mg' ) {
+			return v < 1 ? fmtNum( v * 1000, v < 0.01 ? 1 : 0 ) + ' mcg' : fmtNum( v, v < 10 ? 2 : v < 100 ? 1 : 0 ) + ' mg';
+		}
+		return fmtNum( v, v < 10 ? 2 : v < 100 ? 1 : 0 ) + ( u ? ' ' + unitLabel( u, v ) : '' );
+	}
+
+	/** Progress › Estimated levels: one line per compound (or just the one picked), the next week dashed. */
+	function renderLevels() {
+		var lg = levelGroups();
+		var wrap = h( 'div', null );
+		if ( ! lg.charted.length && ! lg.missing.length ) {
+			return wrap;
+		}
+		wrap.appendChild( h( 'div', { class: 'ypt-row ypt-section-label', style: { alignItems: 'baseline', justifyContent: 'space-between' } },
+			h( 'div', { class: 'ypt-eyebrow' }, 'Estimated levels' ),
+			h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: openLibrarySheet }, 'Compound library ›' )
+		) );
+		var card = h( 'div', { class: 'ypt-card' } );
+		wrap.appendChild( card );
+		if ( lg.charted.length ) {
+			var sel = lg.charted.filter( function ( g ) {
+				return g.key === ui.levelSel;
+			} )[ 0 ] || null;
+			if ( lg.charted.length === 1 ) {
+				sel = lg.charted[ 0 ];
+			}
+			var range = ui.levelRange || 30;
+			if ( lg.charted.length > 1 ) {
+				card.appendChild( h( 'div', { class: 'ypt-chips', style: { marginBottom: '8px' } },
+					h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': sel ? 'false' : 'true', onclick: function () {
+						ui.levelSel = '';
+						render();
+					} }, 'All' ),
+					lg.charted.map( function ( g ) {
+						return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': sel === g ? 'true' : 'false', onclick: function () {
+							ui.levelSel = g.key;
+							render();
+						} }, h( 'i', { class: 'ypt-chip__dot', style: { background: g.color } } ), g.name );
+					} )
+				) );
+			}
+			card.appendChild( h( 'div', { class: 'ypt-prog-ranges' }, LEVEL_RANGES.map( function ( r ) {
+				return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': r[ 0 ] === range ? 'true' : 'false', onclick: function () {
+					ui.levelRange = r[ 0 ];
+					render();
+				} }, r[ 1 ] );
+			} ) ) );
+			card.appendChild( levelsChart( sel ? [ sel ] : lg.charted, range ) );
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '8px 0 0' } }, 'A rough estimate from published half-lives and the doses you logged, not a measurement. Bodies differ. The dashed part is the week ahead if you skip nothing and add nothing.' ) );
+		}
+		if ( lg.missing.length ) {
+			card.appendChild( h( 'div', { class: 'ypt-list', style: { marginTop: lg.charted.length ? '10px' : '0' } }, lg.missing.map( function ( g ) {
+				var e = libFor( g.name );
+				var short = g.hl && g.hl.hl < LEVEL_MIN_HOURS;
+				return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+					if ( e ) {
+						openLibraryEntry( e );
+					} else {
+						openHalfLifeSheet( g.name );
+					}
+				} },
+					h( 'span', { class: 'ypt-lib-row' }, h( 'b', null, g.name ), h( 'span', { class: 'ypt-muted ypt-small' }, short ? 'Clears within ' + fmtDuration( g.hl.hl * 5 ) + ', so there’s no build-up to chart' : e ? 'No half-life for people on file' : 'Not in the library yet' ) ),
+					h( 'span', { class: 'ypt-small' }, short || e ? 'About ›' : 'Add half-life ›' )
+				);
+			} ) ) );
+		}
+		return wrap;
+	}
+
+	function levelsChart( groups, days ) {
+		var now = Date.now();
+		var DAY = 86400000;
+		var t0 = now - days * DAY;
+		var t1 = now + Math.max( 7, Math.round( days / 4 ) ) * DAY;
+		var W = 340;
+		var L = groups.length === 1 ? 40 : 30;
+		var R = 10;
+		var TOP = 14;
+		var CH = 130;
+		var plotW = W - L - R;
+		var N = 160;
+		var norm = groups.length > 1;
+		function xOf( t ) {
+			return L + ( ( t - t0 ) / ( t1 - t0 ) ) * plotW;
+		}
+		var series = groups.map( function ( g ) {
+			var pts = [];
+			for ( var i = 0; i <= N; i++ ) {
+				var t = t0 + ( ( t1 - t0 ) * i ) / N;
+				pts.push( { t: t, v: levelAt( g, t ) } );
+			}
+			// Each dose peaks between samples, so the curve also passes through every dose.
+			g.doses.forEach( function ( d ) {
+				if ( d.t > t0 && d.t < t1 ) {
+					pts.push( { t: d.t, v: levelAt( g, d.t ) } );
+				}
+			} );
+			pts.sort( function ( a, b ) {
+				return a.t - b.t;
+			} );
+			var max = Math.max.apply( null, pts.map( function ( p ) {
+				return p.v;
+			} ) );
+			return { g: g, pts: pts, max: max, now: levelAt( g, now ) };
+		} );
+		var hi = norm ? 100 : Math.max.apply( null, series.map( function ( s ) {
+			return s.max;
+		} ) ) * 1.12 || 1;
+		function yOf( v ) {
+			return TOP + CH - ( v / hi ) * CH;
+		}
+		var lanesTop = TOP + CH + 22;
+		var H = lanesTop + 14;
+		var s = svg( 'svg', { class: 'ypt-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Estimated levels: ' + series.map( function ( x ) {
+			return x.g.name + ' about ' + fmtLevel( x.now, x.g.u ) + ' now';
+		} ).join( ', ' ) } );
+		for ( var gl = 1; gl <= 3; gl++ ) {
+			var gv = ( hi * gl ) / 3.4;
+			svg( 'line', { x1: L, x2: W - R, y1: yOf( gv ), y2: yOf( gv ), class: 'g-grid' }, s );
+			svg( 'text', { x: L - 5, y: yOf( gv ) + 3, class: 'g-axis g-axis--y' }, s ).textContent = norm ? Math.round( gv ) + '%' : fmtLevel( gv, groups[ 0 ].u ).replace( / (mg|mcg)$/, '' );
+		}
+		if ( ! norm ) {
+			svg( 'text', { x: L - 5, y: TOP - 4, class: 'g-axis g-axis--y' }, s ).textContent = groups[ 0 ].u === 'mg' && hi < 1.12 ? 'mcg' : groups[ 0 ].u === 'mg' ? 'mg' : unitLabel( groups[ 0 ].u, 2 );
+		}
+		var nowX = xOf( now );
+		svg( 'line', { x1: nowX, x2: nowX, y1: TOP, y2: TOP + CH, class: 'g-now' }, s );
+		svg( 'text', { x: nowX, y: TOP - 4, class: 'g-now-label' }, s ).textContent = 'Now';
+		[ t0, now, t1 ].forEach( function ( t, i ) {
+			var d = new Date( t );
+			if ( i === 1 ) {
+				return;
+			}
+			svg( 'text', { x: xOf( t ), y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : ' is-end' ) }, s ).textContent = MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate();
+		} );
+		series.forEach( function ( x ) {
+			var scale = norm ? ( x.max > 0 ? 100 / x.max : 0 ) : 1;
+			var past = [];
+			var future = [];
+			x.pts.forEach( function ( p ) {
+				var xy = xOf( p.t ).toFixed( 1 ) + ' ' + yOf( p.v * scale ).toFixed( 1 );
+				( p.t <= now ? past : future ).push( xy );
+			} );
+			// Join the two halves at "now".
+			var nowXY = nowX.toFixed( 1 ) + ' ' + yOf( x.now * scale ).toFixed( 1 );
+			past.push( nowXY );
+			future.unshift( nowXY );
+			svg( 'path', { d: 'M' + past.join( ' L' ), class: 'g-level', stroke: x.g.color }, s );
+			svg( 'path', { d: 'M' + future.join( ' L' ), class: 'g-level g-level--ahead', stroke: x.g.color }, s );
+			svg( 'circle', { cx: nowX, cy: yOf( x.now * scale ), r: 3.5, fill: x.g.color, class: 'g-level-dot' }, s );
+			x.g.doses.forEach( function ( d ) {
+				if ( d.t >= t0 && d.t <= now ) {
+					svg( 'rect', { x: xOf( d.t ) - 1, y: lanesTop, width: 2, height: 9, rx: 1, fill: x.g.color }, s );
+				}
+			} );
+		} );
+		return h( 'div', { class: 'ypt-chartwrap' }, s,
+			h( 'div', { class: 'ypt-legend', style: { justifyContent: 'flex-start' } }, series.map( function ( x ) {
+				return h( 'span', null, h( 'i', { style: { background: x.g.color } } ), x.g.name + ' · about ' + fmtLevel( x.now, x.g.u ) + ' now' + ( x.g.hl.own ? ' (your half-life)' : '' ) );
+			} ) ),
+			norm ? h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '4px 0 0' } }, 'Each line is shown against its own highest point. Tick marks are your doses.' ) : null
+		);
+	}
+
+	/* =========================================================
+	 * Food & water: protein, water and calories for the day, against
+	 * the customer's own goals (GLP-1 users watch protein and water).
+	 * One food record per day, id = the date. Health Connect's numbers
+	 * sit in its own `hc` field so a re-sync never double-counts.
+	 * ======================================================= */
+
+	var FOOD_KEYS = [ 'protein', 'water', 'kcal' ];
+	var ML_PER_OZ = 29.5735;
+	var FOOD_RANGES = [ [ 14, '2W' ], [ 30, '1M' ] ];
+
+	function foodGoals() {
+		var f = ( state.records.settings.me || {} ).food || {};
+		return { on: !! f.on, protein: +f.protein || 0, water: +f.water || 0, kcal: +f.kcal || 0 };
+	}
+
+	function waterUnit() {
+		return unitsPref() === 'metric' ? 'mL' : 'oz';
+	}
+
+	/** mL in the customer's water unit. */
+	function waterShow( ml ) {
+		return waterUnit() === 'oz' ? ml / ML_PER_OZ : ml;
+	}
+
+	function waterStore( v ) {
+		return waterUnit() === 'oz' ? v * ML_PER_OZ : v;
+	}
+
+	function foodName( k ) {
+		return { protein: 'Protein', water: 'Water', kcal: 'Calories' }[ k ];
+	}
+
+	function fmtFood( k, v ) {
+		if ( k === 'water' ) {
+			return fmtNum( waterShow( v ), 0 ) + ' ' + waterUnit();
+		}
+		return fmtNum( v, 0 ) + ( k === 'protein' ? ' g' : ' cal' );
+	}
+
+	/** A day's totals: what the customer added plus what Health Connect brought in. */
+	function foodDay( date ) {
+		var r = state.records.food[ date ] || {};
+		var hc = r.hc || {};
+		var out = { rec: r };
+		FOOD_KEYS.forEach( function ( k ) {
+			out[ k ] = ( +r[ k ] || 0 ) + ( +hc[ k ] || 0 );
+		} );
+		return out;
+	}
+
+	function addFood( date, k, amount ) {
+		var r = Object.assign( { date: date }, state.records.food[ date ] || {} );
+		r[ k ] = Math.max( 0, Math.round( ( ( +r[ k ] || 0 ) + amount ) * 10 ) / 10 );
+		put( 'food', date, r );
+	}
+
+	/** The quick add on each Today row: 10 g protein, a glass of water. Calories open the sheet. */
+	function foodQuick( k ) {
+		if ( k === 'protein' ) {
+			return { label: '+10 g', amount: 10 };
+		}
+		if ( k === 'water' ) {
+			return waterUnit() === 'oz' ? { label: '+8 oz', amount: 8 * ML_PER_OZ } : { label: '+250 mL', amount: 250 };
+		}
+		return null;
+	}
+
+	/** Today's Food & water card (when it's switched on). */
+	function foodCard( date ) {
+		var goals = foodGoals();
+		if ( ! goals.on || date > todayStr() ) {
+			return null;
+		}
+		var day = foodDay( date );
+		return h( 'div', { class: 'ypt-card ypt-food' },
+			h( 'div', { class: 'ypt-food__head' },
+				h( 'b', null, 'Food & water' ),
+				h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
+					openFoodSheet( date );
+				} }, 'Add or edit' )
+			),
+			FOOD_KEYS.filter( function ( k ) {
+				return goals[ k ] > 0 || day[ k ] > 0 || k !== 'kcal';
+			} ).map( function ( k ) {
+				var goal = goals[ k ];
+				var pct = goal ? Math.min( 100, Math.round( ( day[ k ] / goal ) * 100 ) ) : 0;
+				var quick = foodQuick( k );
+				return h( 'div', { class: 'ypt-food__row' },
+					h( 'div', { class: 'ypt-food__main' },
+						h( 'div', { class: 'ypt-food__label' }, h( 'span', null, foodName( k ) ), h( 'span', { class: 'ypt-muted ypt-small' }, fmtFood( k, day[ k ] ) + ( goal ? ' of ' + fmtFood( k, goal ) : '' ) ) ),
+						goal ? h( 'div', { class: 'ypt-food__bar ypt-food__bar--' + k + ( pct >= 100 ? ' is-done' : '' ), role: 'img', 'aria-label': pct + '% of your ' + foodName( k ).toLowerCase() + ' goal' }, h( 'i', { style: { width: pct + '%' } } ) ) : null
+					),
+					quick ? h( 'button', { type: 'button', class: 'ypt-pill ypt-food__add', onclick: function () {
+						addFood( date, k, quick.amount );
+					} }, quick.label ) : h( 'button', { type: 'button', class: 'ypt-pill ypt-food__add', 'aria-label': 'Add calories', onclick: function () {
+						openFoodSheet( date );
+					} }, '+' )
+				);
+			} )
+		);
+	}
+
+	/** Add to a day, fix its totals, or set goals. Before food tracking is on, it starts with the goals. */
+	function openFoodSheet( date ) {
+		date = date || todayStr();
+		var goals = foodGoals();
+		var starting = ! goals.on;
+		var r = state.records.food[ date ] || {};
+		var hc = r.hc || {};
+		var vals = {};
+		var goalVals = {};
+		FOOD_KEYS.forEach( function ( k ) {
+			var mine = +r[ k ] || 0;
+			vals[ k ] = mine ? String( Math.round( k === 'water' ? waterShow( mine ) : mine ) ) : '';
+			goalVals[ k ] = goals[ k ] ? String( Math.round( k === 'water' ? waterShow( goals[ k ] ) : goals[ k ] ) ) : '';
+		} );
+		if ( starting && ! goalVals.water ) {
+			goalVals.water = waterUnit() === 'oz' ? '64' : '2000';
+		}
+		function unitOf( k ) {
+			return k === 'water' ? waterUnit() : k === 'protein' ? 'g' : 'cal';
+		}
+		function numRow( k, store, id, placeholder ) {
+			var input = h( 'input', { class: 'ypt-input', id: id, type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: placeholder, value: store[ k ], oninput: function ( ev ) {
+				store[ k ] = ev.target.value;
+			} } );
+			return h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } }, input, h( 'span', { class: 'ypt-muted ypt-shrink' }, unitOf( k ) ) );
+		}
+		var adds = FOOD_KEYS.map( function ( k ) {
+			var chips = k === 'protein' ? [ 10, 20, 30 ] : k === 'water' ? ( waterUnit() === 'oz' ? [ 8, 16, 24 ] : [ 250, 500, 750 ] ) : [ 100, 250, 500 ];
+			var id = 'ypt-food-' + k;
+			var hcNote = +hc[ k ] > 0 ? 'Plus ' + fmtFood( k, +hc[ k ] ) + ' from Health Connect.' : null;
+			return h( 'div', { class: 'ypt-field' },
+				h( 'label', { for: id }, foodName( k ) + ( date === todayStr() ? ' today' : ' on ' + fmtDay( date ).replace( /^\w+, /, '' ) ) ),
+				numRow( k, vals, id, '0' ),
+				h( 'div', { class: 'ypt-chips', style: { marginTop: '6px' } }, chips.map( function ( c ) {
+					return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', onclick: function () {
+						var el = document.getElementById( id );
+						vals[ k ] = String( Math.round( ( parseFloat( vals[ k ] ) || 0 ) + c ) );
+						el.value = vals[ k ];
+					} }, '+' + c + ' ' + unitOf( k ) );
+				} ) ),
+				hcNote ? h( 'p', { class: 'ypt-hint' }, hcNote ) : null
+			);
+		} );
+		var goalsBox = h( 'div', null,
+			h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Daily goals' ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '0' } }, 'Your own targets, from your provider or your plan. Leave one blank to just keep count.' ),
+			FOOD_KEYS.map( function ( k ) {
+				return field( foodName( k ), numRow( k, goalVals, 'ypt-goal-' + k, k === 'protein' ? '120' : k === 'water' ? ( waterUnit() === 'oz' ? '64' : '2000' ) : '1800' ), null, 'ypt-goal-' + k );
+			} ),
+			! starting ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '8px' }, onclick: function () {
+				closeSheet();
+				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { food: Object.assign( {}, ( state.records.settings.me || {} ).food || {}, { on: false } ) } ) );
+				toast( 'Food & water is off. What you logged is kept.' );
+			} }, 'Stop tracking food & water' ) : null
+		);
+		var save = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			var g = { on: true };
+			FOOD_KEYS.forEach( function ( k ) {
+				var n = parseFloat( goalVals[ k ] );
+				g[ k ] = n > 0 ? Math.round( k === 'water' ? waterStore( n ) : n ) : 0;
+			} );
+			var me = state.records.settings.me || {};
+			if ( JSON.stringify( g ) !== JSON.stringify( me.food || {} ) ) {
+				put( 'settings', 'me', Object.assign( {}, me, { food: g } ) );
+			}
+			if ( ! starting ) {
+				var next = Object.assign( { date: date }, r );
+				FOOD_KEYS.forEach( function ( k ) {
+					var n = parseFloat( vals[ k ] );
+					next[ k ] = n > 0 ? Math.round( ( k === 'water' ? waterStore( n ) : n ) * 10 ) / 10 : 0;
+				} );
+				if ( JSON.stringify( next ) !== JSON.stringify( Object.assign( { date: date }, r ) ) ) {
+					put( 'food', date, next );
+				}
+			}
+			closeSheet();
+			toast( starting ? 'Food & water is on your Today screen' : 'Saved' );
+		} }, starting ? 'Start tracking' : 'Save' );
+		openSheet( starting ? 'Track food & water' : 'Food & water', starting ? 'Today' : fmtDay( date ), starting ? [
+			h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, 'Keep count of protein, water and calories on your Today screen, with a tap to add a glass of water or 10 g of protein. Many people on GLP-1s watch these.' ),
+			goalsBox,
+		] : [ adds, goalsBox ], save );
+	}
+
+	/** Progress › Food & water: daily bars against the goal. */
+	function renderFood() {
+		var goals = foodGoals();
+		var has = Object.keys( state.records.food || {} ).length > 0;
+		var wrap = h( 'div', null );
+		if ( ! goals.on && ! has ) {
+			return wrap;
+		}
+		var key = FOOD_KEYS.indexOf( ui.foodKey ) !== -1 ? ui.foodKey : 'protein';
+		var days = ui.foodRange || 14;
+		var today = todayStr();
+		var list = [];
+		for ( var i = days - 1; i >= 0; i-- ) {
+			var d = addDays( today, -i );
+			list.push( { date: d, v: foodDay( d )[ key ] } );
+		}
+		var logged = list.filter( function ( x ) {
+			return x.v > 0;
+		} );
+		var goal = goals[ key ];
+		var avg = logged.length ? logged.reduce( function ( a, x ) {
+			return a + x.v;
+		}, 0 ) / logged.length : 0;
+		var met = goal ? logged.filter( function ( x ) {
+			return x.v >= goal;
+		} ).length : 0;
+
+		wrap.appendChild( h( 'div', { class: 'ypt-row ypt-section-label', style: { alignItems: 'baseline', justifyContent: 'space-between' } },
+			h( 'div', { class: 'ypt-eyebrow' }, 'Food & water' ),
+			h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
+				openFoodSheet( today );
+			} }, goals.on ? 'Add or edit ›' : 'Turn on ›' )
+		) );
+		var W = 340;
+		var L = 34;
+		var R = 10;
+		var TOP = 10;
+		var CH = 110;
+		var plotW = W - L - R;
+		var hi = Math.max( goal, Math.max.apply( null, list.map( function ( x ) {
+			return x.v;
+		} ) ), 1 ) * 1.15;
+		var bw = plotW / list.length;
+		function yOf( v ) {
+			return TOP + CH - ( v / hi ) * CH;
+		}
+		var s = svg( 'svg', { class: 'ypt-chart', viewBox: '0 0 ' + W + ' ' + ( TOP + CH + 18 ), role: 'img', 'aria-label': foodName( key ) + ', last ' + days + ' days' + ( logged.length ? ', average ' + fmtFood( key, avg ) : '' ) } );
+		[ 0.5, 1 ].forEach( function ( f ) {
+			var gv = ( hi / 1.15 ) * f;
+			svg( 'line', { x1: L, x2: W - R, y1: yOf( gv ), y2: yOf( gv ), class: 'g-grid' }, s );
+			svg( 'text', { x: L - 5, y: yOf( gv ) + 3, class: 'g-axis g-axis--y' }, s ).textContent = fmtNum( key === 'water' ? waterShow( gv ) : gv, 0 );
+		} );
+		list.forEach( function ( x, j ) {
+			if ( x.v > 0 ) {
+				svg( 'rect', { x: L + j * bw + bw * 0.18, y: yOf( x.v ), width: Math.max( 2, bw * 0.64 ), height: Math.max( 1, TOP + CH - yOf( x.v ) ), rx: 2, class: 'g-bar g-bar--' + key + ( goal && x.v >= goal ? ' is-met' : '' ) }, s );
+			}
+		} );
+		if ( goal ) {
+			svg( 'line', { x1: L, x2: W - R, y1: yOf( goal ), y2: yOf( goal ), class: 'g-goal' }, s );
+			svg( 'text', { x: W - R, y: yOf( goal ) - 4, class: 'g-goal-label' }, s ).textContent = 'Goal ' + fmtFood( key, goal );
+		}
+		[ 0, list.length - 1 ].forEach( function ( j ) {
+			var d = parseDate( list[ j ].date );
+			svg( 'text', { x: L + j * bw + bw / 2, y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( j ? ' is-end' : ' is-start' ) }, s ).textContent = MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate();
+		} );
+		wrap.appendChild( h( 'div', { class: 'ypt-card' },
+			h( 'div', { class: 'ypt-chips', style: { marginBottom: '8px' } }, FOOD_KEYS.map( function ( k ) {
+				return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': k === key ? 'true' : 'false', onclick: function () {
+					ui.foodKey = k;
+					render();
+				} }, foodName( k ) );
+			} ) ),
+			h( 'div', { class: 'ypt-prog-ranges' }, FOOD_RANGES.map( function ( r ) {
+				return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': r[ 0 ] === days ? 'true' : 'false', onclick: function () {
+					ui.foodRange = r[ 0 ];
+					render();
+				} }, r[ 1 ] );
+			} ) ),
+			h( 'div', { class: 'ypt-chartwrap' }, s ),
+			h( 'p', { class: 'ypt-small', style: { margin: '8px 0 0' } }, logged.length ? 'Average ' + fmtFood( key, avg ) + ' a day on the ' + logged.length + ' day' + ( logged.length === 1 ? '' : 's' ) + ' you logged' + ( goal ? ' · goal met ' + met + ' of ' + days + ' days' : '' ) + '.' : 'Nothing logged in this range yet.' )
+		) );
+		return wrap;
+	}
+
+	/* =========================================================
+	 * Android app extras (tracker-android, YeffoHealth plugin):
+	 * Health Connect and the Home Screen widget. Both need app
+	 * version 1.1 or later, so everything checks the plugin is there
+	 * first; older installs and the website simply don't show them.
+	 * ======================================================= */
+
+	var HC_KEY = 'ypt-hc:' + ( CFG.userKey || 'anon' );
+	// Re-read the last few days on every sync: phones and watches add records late.
+	var HC_OVERLAP_DAYS = 3;
+	var HC_FIRST_DAYS = 30;
+	var HC_EVERY = 30 * 60000;
+	var widgetLast = '';
+	var widgetTimer = null;
+	var hcBusy = false;
+
+	function appPlugin() {
+		return NATIVE && typeof window.Capacitor.isPluginAvailable === 'function' && window.Capacitor.isPluginAvailable( 'YeffoHealth' );
+	}
+
+	function appCall( method, options ) {
+		return window.Capacitor.nativePromise( 'YeffoHealth', method, options || {} );
+	}
+
+	/** This phone's Health Connect link: { on, last (ms of the last good sync) }. */
+	function hcState() {
+		var st = loadJSON( HC_KEY, null );
+		return st && typeof st === 'object' ? st : { on: false, last: 0 };
+	}
+
+	function hcConnect() {
+		return appCall( 'healthAvailability' ).then( function ( r ) {
+			if ( ! r || r.status !== 'available' ) {
+				if ( r && r.status === 'update' ) {
+					appCall( 'healthInstall' ).catch( function () {} );
+					throw new Error( 'Health Connect needs an update first. We opened Google Play for it.' );
+				}
+				throw new Error( 'Health Connect isn’t on this phone. It comes with Android 14 and later, or from Google Play on older phones.' );
+			}
+			return appCall( 'healthRequest' );
+		} ).then( function ( r ) {
+			if ( ! r || ! Array.isArray( r.granted ) || ! r.granted.length ) {
+				throw new Error( 'Nothing was allowed, so there’s nothing to bring in. You can try again any time.' );
+			}
+			saveJSON( HC_KEY, { on: true, last: 0 } );
+			return hcSync( true );
+		} );
+	}
+
+	function hcDisconnect() {
+		saveJSON( HC_KEY, { on: false, last: 0 } );
+		render();
+		toast( 'Health Connect is off. What it brought in stays in your tracker.' );
+	}
+
+	/** Brings in what's new from Health Connect. `manual` says so with a toast. */
+	function hcSync( manual ) {
+		var st = hcState();
+		if ( ! st.on || ! appPlugin() || hcBusy ) {
+			return Promise.resolve();
+		}
+		hcBusy = true;
+		// From a midnight, so every day it returns is a whole day.
+		var since = new Date( st.last ? st.last - HC_OVERLAP_DAYS * 86400000 : Date.now() - HC_FIRST_DAYS * 86400000 );
+		since.setHours( 0, 0, 0, 0 );
+		return appCall( 'healthRead', { since: since.toISOString() } ).then( function ( r ) {
+			var n = applyHealth( r || {}, dateStr( since ) );
+			saveJSON( HC_KEY, { on: true, last: Date.now() } );
+			if ( manual ) {
+				toast( n ? 'Health Connect: ' + n + ' day' + ( n === 1 ? '' : 's' ) + ' updated' : 'Health Connect: you’re up to date' );
+			}
+		} ).catch( function ( err ) {
+			if ( manual ) {
+				toast( err && err.message ? err.message : 'Health Connect couldn’t be read.' );
+			}
+		} ).then( function () {
+			hcBusy = false;
+			render();
+		} );
+	}
+
+	function hcAutoSync() {
+		var st = hcState();
+		if ( st.on && Date.now() - ( st.last || 0 ) > HC_EVERY ) {
+			hcSync( false );
+		}
+	}
+
+	/**
+	 * Health Connect's records into the tracker: the day's last weigh-in
+	 * (and body fat) as a Progress entry, and the day's protein, calories
+	 * and water into that day's food record. A weigh-in the customer typed
+	 * in that day wins. Returns how many days changed.
+	 */
+	function applyHealth( r, fromDate ) {
+		var changed = {};
+		function dayOf( at ) {
+			var t = Date.parse( at );
+			return t ? dateStr( new Date( t ) ) : '';
+		}
+		// Weight: the last of each day.
+		var wByDay = {};
+		var fatByDay = {};
+		( r.weight || [] ).forEach( function ( x ) {
+			var d = dayOf( x.at );
+			if ( d && +x.kg > 0 && ( ! wByDay[ d ] || x.at > wByDay[ d ].at ) ) {
+				wByDay[ d ] = x;
+			}
+		} );
+		( r.fat || [] ).forEach( function ( x ) {
+			var d = dayOf( x.at );
+			if ( d && +x.pct > 0 && ( ! fatByDay[ d ] || x.at > fatByDay[ d ].at ) ) {
+				fatByDay[ d ] = x;
+			}
+		} );
+		var typed = {};
+		values( state.records.progress ).forEach( function ( e ) {
+			if ( e.src !== 'hc' && +e.weight > 0 ) {
+				typed[ e.date ] = true;
+			}
+		} );
+		Object.keys( wByDay ).concat( Object.keys( fatByDay ) ).forEach( function ( d ) {
+			if ( typed[ d ] || changed[ 'p' + d ] ) {
+				return;
+			}
+			var id = 'hc-' + d;
+			var old = state.records.progress[ id ] || null;
+			var w = wByDay[ d ];
+			var next = {
+				date: d,
+				weight: w ? Math.round( convert( +w.kg, 'kg', weightUnit() ) * 10 ) / 10 : old ? old.weight : '',
+				wUnit: w ? weightUnit() : old ? old.wUnit : weightUnit(),
+				m: old ? old.m || {} : {},
+				mUnit: old ? old.mUnit : lengthUnit(),
+				fat: fatByDay[ d ] ? Math.round( +fatByDay[ d ].pct * 10 ) / 10 : old ? old.fat : '',
+				note: old ? old.note || '' : '',
+				photos: old ? old.photos || [] : [],
+				src: 'hc',
+			};
+			changed[ 'p' + d ] = true;
+			if ( JSON.stringify( old ) !== JSON.stringify( next ) ) {
+				quietPut( 'progress', id, next );
+				changed[ d ] = true;
+			}
+		} );
+		// Food: whole days from `fromDate` on (a day with nothing now clears what came before).
+		var food = {};
+		[ [ 'protein', 'protein', 'g' ], [ 'kcal', 'energy', 'kcal' ], [ 'water', 'water', 'mL' ] ].forEach( function ( m ) {
+			( r[ m[ 1 ] ] || [] ).forEach( function ( x ) {
+				var d = dayOf( x.at );
+				if ( d && d >= fromDate && +x[ m[ 2 ] ] > 0 ) {
+					food[ d ] = food[ d ] || { protein: 0, kcal: 0, water: 0 };
+					food[ d ][ m[ 0 ] ] += +x[ m[ 2 ] ];
+				}
+			} );
+		} );
+		var dates = Object.keys( food );
+		values( state.records.food ).forEach( function ( f ) {
+			if ( f.id >= fromDate && f.hc && dates.indexOf( f.id ) === -1 ) {
+				dates.push( f.id );
+			}
+		} );
+		dates.forEach( function ( d ) {
+			var t = food[ d ] || { protein: 0, kcal: 0, water: 0 };
+			var hc = { protein: Math.round( t.protein ), kcal: Math.round( t.kcal ), water: Math.round( t.water ) };
+			var old = state.records.food[ d ] || {};
+			if ( JSON.stringify( old.hc || {} ) === JSON.stringify( hc ) ) {
+				return;
+			}
+			var next = Object.assign( { date: d }, old, { hc: hc } );
+			if ( ! hc.protein && ! hc.kcal && ! hc.water ) {
+				delete next.hc;
+			}
+			quietPut( 'food', d, next );
+			changed[ d ] = true;
+		} );
+		persist();
+		flush();
+		return Object.keys( changed ).filter( function ( k ) {
+			return k.charAt( 0 ) !== 'p';
+		} ).length;
+	}
+
+	/** put() without a render per record, for a batch (the caller persists, flushes and renders once). */
+	function quietPut( kind, id, data ) {
+		state.records[ kind ][ id ] = data;
+		queue = queue.filter( function ( q ) {
+			return ! ( q.kind === kind && q.id === id );
+		} );
+		queue.push( { op: 'put', kind: kind, id: id, data: data } );
+	}
+
+	/** Me › Health Connect (Android app only). */
+	function healthCard() {
+		if ( ! appPlugin() ) {
+			return null;
+		}
+		var st = hcState();
+		var wrap = h( 'div', null, h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Health Connect' ) );
+		var card = h( 'div', { class: 'ypt-card' } );
+		wrap.appendChild( card );
+		if ( ! st.on ) {
+			card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, 'Bring in your weight, body fat, protein, calories and water from Health Connect. Samsung Health, Fitbit, smart scales and food apps like MyFitnessPal can all write there.' ) );
+			card.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function ( ev ) {
+				var btn = ev.currentTarget;
+				btn.disabled = true;
+				hcConnect().catch( function ( err ) {
+					toast( err.message || 'Health Connect couldn’t be connected.' );
+				} ).then( function () {
+					btn.disabled = false;
+				} );
+			} }, icon( 'heart' ), ' Connect Health Connect' ) );
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '10px 0 0' } }, 'Read only: nothing from your tracker is written there. Imported numbers are encrypted here like everything else.' ) );
+			return wrap;
+		}
+		card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, h( 'b', null, 'Connected. ' ), st.last ? 'Last brought in ' + fmtDay( dateStr( new Date( st.last ) ) ).replace( /^\w+, /, '' ) + ' at ' + fmtTime( pad( new Date( st.last ).getHours() ) + ':' + pad( new Date( st.last ).getMinutes() ) ) + '.' : 'Bringing in your data…' ) );
+		card.appendChild( h( 'div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+			h( 'button', { type: 'button', class: 'ypt-btn', disabled: hcBusy, onclick: function () {
+				hcSync( true );
+			} }, hcBusy ? 'Syncing…' : 'Sync now' ),
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--ghost', onclick: function () {
+				appCall( 'healthSettings' ).catch( function () {} );
+			} }, 'Permissions' ),
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--ghost', onclick: hcDisconnect }, 'Turn off' )
+		) );
+		return wrap;
+	}
+
+	/** What the Home Screen widget shows: today's count and the next doses (today and tomorrow, not yet logged). */
+	function widgetData() {
+		var me = state.records.settings.me || {};
+		var today = todayStr();
+		var todays = slotsOn( today );
+		var items = [];
+		[ today, addDays( today, 1 ) ].forEach( function ( date ) {
+			( date === today ? todays : slotsOn( date ) ).forEach( function ( sl ) {
+				if ( sl.log ) {
+					return;
+				}
+				var dose = doseOn( sl.protocol, date );
+				items.push( {
+					at: Date.parse( wallToIso( date, sl.time ) ),
+					name: sl.protocol.compound,
+					dose: dose > 0 ? amountLabel( dose, sl.protocol.unit, sl.protocol ) : '',
+					color: protocolColor( sl.protocol ),
+				} );
+			} );
+		} );
+		items.sort( function ( a, b ) {
+			return a.at - b.at;
+		} );
+		return {
+			date: today,
+			done: todays.filter( function ( sl ) {
+				return sl.log;
+			} ).length,
+			due: todays.length,
+			// "Hide names in reminders" hides them on the Home Screen too.
+			names: me.reminderNames !== false,
+			items: items.slice( 0, 12 ),
+		};
+	}
+
+	function syncWidget() {
+		if ( ! appPlugin() || ! state.loaded ) {
+			return;
+		}
+		clearTimeout( widgetTimer );
+		widgetTimer = setTimeout( function () {
+			var sig = JSON.stringify( widgetData() );
+			if ( sig === widgetLast ) {
+				return;
+			}
+			widgetLast = sig;
+			appCall( 'widgetUpdate', { data: sig } ).catch( function () {
+				widgetLast = '';
+			} );
+		}, 800 );
+	}
+
+	/** Signing out: the widget forgets this account. */
+	function forgetWidget() {
+		if ( appPlugin() ) {
+			widgetLast = '';
+			appCall( 'widgetUpdate', { data: '' } ).catch( function () {} );
+		}
+	}
+
+	/* =========================================================
 	 * Push
 	 * ======================================================= */
 
@@ -7265,6 +8314,7 @@
 		state.pushOnHere = false;
 		nativeLast = '';
 		nativeCall( 'cancelAll' ).catch( function () {} );
+		forgetWidget();
 	}
 
 	function testNative() {
@@ -8837,7 +9887,7 @@
 			api( 'DELETE', 'tracker/all' ).then( function () {
 				return ( NATIVE ? disableNative() : disablePush() ).catch( function () {} );
 			} ).then( function () {
-				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {} };
+				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {} };
 				state.shares = [];
 				forgetPhotos();
 				queue = [];

@@ -15,6 +15,24 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-10r',
+		'date'  => '2026-10-10',
+		'title' => 'Food & water',
+		'text'  => 'Keep count of protein, water and calories against your own daily goals. Turn it on from + Add, then tap to add a glass of water or 10 g of protein right on Today. Progress shows how your days add up.',
+	],
+	[
+		'id'    => '2026-10-10q',
+		'date'  => '2026-10-10',
+		'title' => 'Estimated levels',
+		'text'  => 'The Progress tab now charts roughly how much of each medication is still active, worked out from its half-life and the doses you logged, with the week ahead dashed in. It\'s an estimate, not a measurement.',
+	],
+	[
+		'id'    => '2026-10-10p',
+		'date'  => '2026-10-10',
+		'title' => 'Compound library',
+		'text'  => 'Look up the half-life, approval status and storage for common peptides, hormones and medications. Find it on Me under Tools.',
+	],
+	[
 		'id'    => '2026-10-10n',
 		'date'  => '2026-10-10',
 		'title' => 'Add your profile picture',

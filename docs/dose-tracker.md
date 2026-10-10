@@ -184,6 +184,26 @@ web app shows up in the Android app on the next open, with no app update.
   same striped vial icon as the web app.
 - Me › Privacy links to "Delete my account" (`deleteAccountUrl`), which
   Google Play requires to be reachable from inside the app.
+- **Health Connect** (app 1.1+, Me › Health Connect): read only. The
+  app's own plugin (`YeffoHealthPlugin.kt`) asks for weight, body fat,
+  nutrition and hydration, then tracker.js brings them in on open (at most
+  every 30 minutes) and on Sync now: the first sync covers 30 days, later
+  ones re-read the last 3 whole days. A day's last weigh-in becomes a
+  Progress entry `hc-<date>` (`src: 'hc'`) unless the customer typed a
+  weight that day; protein, calories and water are Health Connect's own
+  day totals (so two apps logging one meal count once) and go in that
+  day's food record under `hc`, separate from what the customer added.
+  The link is per phone (`ypt-hc:<user>` in local storage). Play needs the
+  Health apps declaration for these permissions, and Health Connect's
+  privacy link opens `HealthPrivacyActivity` (the privacy policy page).
+- **Home Screen widget** (app 1.1+): `YeffoWidget.kt` shows today's
+  count and the next dose not yet logged. tracker.js `widgetData()` sends
+  today's and tomorrow's doses whenever they change; the widget never
+  reads the tracker itself, and hides names when Show names in reminders
+  is off. Signing out clears it.
+- Both features check the plugin is there (`isPluginAvailable`), so older
+  installs and the website just don't show them. iPhone has neither: Apple
+  Health and widgets need a native iPhone app.
 
 ## Injection site rotation
 
@@ -267,6 +287,38 @@ normal range and a note, one `lab` record each. Results of the same test
 group together; each test's sheet charts them with the normal range
 shaded and the doses taken in lanes underneath, and marks results High
 or Low against the range. The PDF report has a Lab results section.
+
+## Compound library
+
+Me › Tools › **Compound library** (also from Estimated levels) lists
+common peptides, hormones and medications from
+`class-tracker-compounds.php`: what it's also called, approval status,
+half-life in plain words and storage. Facts only, never a dose or a
+mixing amount, so it reads as a reference for the app stores (Apple
+guideline 1.4.2). Half-lives are rounded published figures; entries with
+no good figure for people say so and aren't charted. Names match loosely
+("Ozempic (semaglutide)" finds Semaglutide); blends never match.
+
+## Estimated levels
+
+The top of the Progress tab estimates how much of each medication is
+still active: every taken dose added up with first-order elimination
+from its half-life, plus a slower rise for injections the library marks
+as slowly absorbed (`abs`). The next week is dashed (no more doses). One
+compound charts in its own unit (mg, IU…); several are each scaled to
+their own peak. Half-lives under 2 hours aren't charted. A customer can
+set their own half-life for anything (`settings.me.halfLives`, keyed by
+the library name or the compound), which wins over the library's.
+
+## Food & water
+
+Off until turned on from Add › Food & water, which asks for optional
+daily goals (`settings.me.food`: protein g, water mL, calories). Then
+Today shows a card with bars and quick adds (+10 g protein, +8 oz or
+250 mL water), and Progress charts each day against the goal. One `food`
+record per day, id = the date; Health Connect's numbers sit in its `hc`
+field and are added on top. Water shows in oz or mL with the lb/kg
+setting.
 
 ## Appearance
 

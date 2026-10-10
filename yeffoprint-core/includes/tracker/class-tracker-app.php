@@ -230,6 +230,7 @@ class YeffoPrint_Tracker_App {
 			'calculatorUrl' => home_url( '/peptide-calculator/' ),
 			'compounds'     => self::compound_names(),
 			'medications'   => YeffoPrint_Tracker_Medications::all(),
+			'library'       => YeffoPrint_Tracker_Compounds::all(),
 			'whatsNew'      => include YEFFOPRINT_CORE_PATH . 'includes/tracker/whats-new.php',
 			'share'         => '' !== $share_code ? [ 'code' => $share_code, 'protocol' => $share ] : null,
 		];
