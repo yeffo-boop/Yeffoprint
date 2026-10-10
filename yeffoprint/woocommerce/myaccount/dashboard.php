@@ -20,15 +20,28 @@ $current_user = wp_get_current_user();
 $display_name = $current_user->first_name ?: $current_user->display_name;
 ?>
 
-<p class="yp-account-welcome">
+<div class="yp-account-hello">
 	<?php
-	printf(
-		/* translators: %s: customer's first name or display name */
-		esc_html__( 'Welcome back, %s.', 'yeffoprint' ),
-		esc_html( $display_name )
-	);
+	// The profile picture set on Account details (yeffoprint-core class-profile-photo.php), else the first initial.
+	$photo_url = class_exists( 'YeffoPrint_Profile_Photo' ) ? YeffoPrint_Profile_Photo::url( $current_user->ID ) : '';
 	?>
-</p>
+	<a class="yp-account-avatar" href="<?php echo esc_url( wc_get_account_endpoint_url( 'edit-account' ) . '#profile-photo' ); ?>" aria-label="<?php echo esc_attr( $photo_url ? __( 'Change your profile picture', 'yeffoprint' ) : __( 'Add a profile picture', 'yeffoprint' ) ); ?>">
+		<?php if ( $photo_url ) : ?>
+			<img src="<?php echo esc_url( $photo_url ); ?>" alt="" width="56" height="56">
+		<?php else : ?>
+			<?php echo esc_html( strtoupper( mb_substr( trim( (string) $display_name ), 0, 1 ) ) ); ?>
+		<?php endif; ?>
+	</a>
+	<p class="yp-account-welcome">
+		<?php
+		printf(
+			/* translators: %s: customer's first name or display name */
+			esc_html__( 'Welcome back, %s.', 'yeffoprint' ),
+			esc_html( $display_name )
+		);
+		?>
+	</p>
+</div>
 
 <div class="yp-account-quicklinks">
 	<a class="yp-account-quicklink" href="<?php echo esc_url( wc_get_account_endpoint_url( 'orders' ) ); ?>">

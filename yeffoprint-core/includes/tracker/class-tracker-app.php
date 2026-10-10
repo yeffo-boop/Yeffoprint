@@ -210,6 +210,8 @@ class YeffoPrint_Tracker_App {
 			'ready'         => YeffoPrint_Tracker_Crypto::is_ready(),
 			'firstName'     => $user->ID ? ( $user->first_name ?: $user->display_name ) : '',
 			'email'         => $user->ID ? $user->user_email : '',
+			// The account's profile picture (class-profile-photo.php), in the app bar and on Me. Same site, so the CSP's img-src 'self' covers it.
+			'photoUrl'      => $user->ID && class_exists( 'YeffoPrint_Profile_Photo' ) ? YeffoPrint_Profile_Photo::url( $user->ID ) : '',
 			'version'       => YEFFOPRINT_CORE_VERSION,
 			'userKey'       => $user->ID ? substr( hash_hmac( 'sha256', (string) $user->ID, wp_salt( 'auth' ) ), 0, 16 ) : '',
 			'restUrl'       => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),

@@ -261,6 +261,49 @@ a { color: var(--ypt-cyan-deep); }
 }
 
 .ypt-appbar__me svg { width: 20px; height: 20px; }
+.ypt-appbar__me { overflow: hidden; padding: 0; }
+.ypt-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
+
+/* Me's header: profile picture (class-profile-photo.php) beside the name. */
+.ypt-top.ypt-me-top { justify-content: flex-start; align-items: center; gap: 16px; }
+.ypt-me-top__name { min-width: 0; }
+.ypt-me-photo { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: none; }
+.ypt-me-photo__pic {
+	position: relative;
+	width: 72px;
+	height: 72px;
+	border-radius: 50%;
+	border: 0;
+	padding: 0;
+	background: var(--ypt-cyan);
+	color: #fff;
+	display: grid;
+	place-items: center;
+	font: 700 30px var(--ypt-heading);
+}
+.ypt-me-photo__pic > svg { width: 32px; height: 32px; }
+.ypt-me-photo__cam {
+	position: absolute;
+	right: -2px;
+	bottom: -2px;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: var(--ypt-card);
+	color: var(--ypt-ink);
+	border: 2px solid var(--ypt-bg);
+	display: grid;
+	place-items: center;
+}
+.ypt-me-photo__cam svg { width: 14px; height: 14px; }
+.ypt-me-photo__remove {
+	border: 0;
+	background: none;
+	padding: 2px 6px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ypt-mute);
+}
 .ypt-appbar__me[aria-current="page"] { box-shadow: 0 0 0 2px var(--ypt-bg), 0 0 0 4px var(--ypt-cyan); }
 
 .ypt-appbar__nav { display: none; }
