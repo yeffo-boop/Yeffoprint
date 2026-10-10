@@ -80,7 +80,7 @@
 
 			rowsEl.innerHTML = filtered.map( function ( sub ) {
 				var status = sub.meta ? ( sub.meta[ META.status ] || '' ) : '';
-				var plan = sub.meta ? ( sub.meta[ META.plan ] || '&mdash;' ) : '&mdash;';
+				var plan = sub.meta ? ( sub.meta[ META.plan ] || '—' ) : '—';
 
 				return (
 					'<tr data-id="' + sub.id + '">' +
@@ -127,12 +127,12 @@
 					'</div>' +
 					'<div class="yp-drawer__body">' +
 						'<div class="yp-form">' +
-							'<div class="yp-field"><label>Plan</label><p>' + YP.escapeHtml( meta[ META.plan ] || '&mdash;' ) + '</p></div>' +
+							'<div class="yp-field"><label>Plan</label><p>' + YP.escapeHtml( meta[ META.plan ] || '—' ) + '</p></div>' +
 							'<div class="yp-field"><label>Status</label><p><span class="yp-pill ' + ( STATUS_PILLS[ status ] || 'yp-pill--neutral' ) + '">' + YP.escapeHtml( STATUS_LABELS[ status ] || status || 'Unknown' ) + '</span></p></div>' +
 							'<div class="yp-field"><label>Renews / renewed</label><p>' + formatDate( meta[ META.periodEnd ] ) + '</p></div>' +
 							'<div class="yp-field"><label>WordPress account</label><p>' + ( userId ? '<a href="' + YP.escapeAttr( yeffoprintAdminApp.exitUrl + 'user-edit.php?user_id=' + userId ) + '">View account &rarr;</a>' : 'No matching account' ) + '</p></div>' +
-							'<div class="yp-field"><label>Stripe subscription ID</label><p><span class="yp-chip">' + YP.escapeHtml( meta[ META.subscriptionId ] || '&mdash;' ) + '</span></p></div>' +
-							'<div class="yp-field"><label>Stripe customer ID</label><p><span class="yp-chip">' + YP.escapeHtml( meta[ META.customerId ] || '&mdash;' ) + '</span></p></div>' +
+							'<div class="yp-field"><label>Stripe subscription ID</label><p><span class="yp-chip">' + YP.escapeHtml( meta[ META.subscriptionId ] || '—' ) + '</span></p></div>' +
+							'<div class="yp-field"><label>Stripe customer ID</label><p><span class="yp-chip">' + YP.escapeHtml( meta[ META.customerId ] || '—' ) + '</span></p></div>' +
 							'<div class="yp-form__actions">' +
 								'<button type="button" class="wp-block-button__link is-style-outline" data-yp-drawer-close>Close</button>' +
 							'</div>' +

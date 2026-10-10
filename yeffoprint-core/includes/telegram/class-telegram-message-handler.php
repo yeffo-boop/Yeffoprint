@@ -287,6 +287,7 @@ class YeffoPrint_Telegram_Message_Handler {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'customer_id' => $user_id,
 			'limit'       => 10,
 			'orderby'     => 'date',

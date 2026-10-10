@@ -120,7 +120,16 @@ class YeffoPrint_Admin_Coupon_Controller {
 			return new \WP_Error( 'yeffoprint_coupon_missing_code', __( 'Enter a coupon code.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$existing_id = wc_get_coupon_id_by_code( $code, $coupon->get_id() );
+		// wc_get_coupon_id_by_code() only sees active (published) coupons;
+		// inactive ones here are drafts and would end up sharing the code.
+		$existing_id = wc_get_coupon_id_by_code( $code, $coupon->get_id() ) ?: (int) current( get_posts( [
+			'post_type'      => 'shop_coupon',
+			'post_status'    => [ 'publish', 'draft', 'pending', 'future' ],
+			'title'          => $code,
+			'post__not_in'   => [ (int) $coupon->get_id() ],
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		] ) );
 		if ( $existing_id ) {
 			return new \WP_Error( 'yeffoprint_coupon_duplicate_code', __( 'A coupon with that code already exists.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}

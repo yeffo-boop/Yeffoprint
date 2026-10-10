@@ -369,6 +369,11 @@
 					waiveFeeToggle._wired = true;
 					waiveFeeToggle.addEventListener( 'change', refreshPricePreview );
 				}
+				var requiresProofToggle = viewEl.querySelector( '#yp-mo-requires-proof' );
+				if ( requiresProofToggle && ! requiresProofToggle._wired ) {
+					requiresProofToggle._wired = true;
+					requiresProofToggle.addEventListener( 'change', refreshPricePreview );
+				}
 			}
 
 			if ( state.activeTypes.sticker ) {
@@ -497,7 +502,10 @@
 			// the preview shouldn't show a fee that's about to be left off
 			// the actual order.
 			var waiveFeeEl = viewEl.querySelector( '#yp-mo-waive-fee' );
-			var mode = waiveFeeEl && waiveFeeEl.checked ? 'own_design' : 'new_design';
+			// The order only adds the fee alongside a proof (class-manual-order-creator.php
+			// add_custom_design_rows), so no proof approval means no fee here either.
+			var requiresProofEl = viewEl.querySelector( '#yp-mo-requires-proof' );
+			var mode = ( waiveFeeEl && waiveFeeEl.checked ) || ( requiresProofEl && ! requiresProofEl.checked ) ? 'own_design' : 'new_design';
 
 			YP.request( coreEndpoint( 'custom-orders/pricing-preview' ), {
 				method: 'POST',
@@ -955,7 +963,7 @@
 					return;
 				}
 				searchTimer = setTimeout( function () {
-					YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_template?search=' + encodeURIComponent( term ) + '&status=publish&per_page=20&orderby=title&order=asc' )
+					YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_template?search=' + encodeURIComponent( term ) + '&status=publish&per_page=20&orderby=title&order=asc&context=edit' )
 						.then( function ( results ) { renderTemplateResults( results, resultsEl ); } )
 						.catch( function () { resultsEl.innerHTML = ''; } );
 				}, 300 );
@@ -967,12 +975,12 @@
 					return;
 				}
 				resultsEl.innerHTML = results.map( function ( post ) {
-					return '<li><button type="button" class="yp-row-action" data-yp-pick-template="' + post.id + '">' + YP.escapeHtml( post.title.rendered ) + '</button></li>';
+					return '<li><button type="button" class="yp-row-action" data-yp-pick-template="' + post.id + '">' + YP.escapeHtml( post.title.raw || post.title.rendered ) + '</button></li>';
 				} ).join( '' );
 
 				resultsEl.querySelectorAll( '[data-yp-pick-template]' ).forEach( function ( button, index ) {
 					button.addEventListener( 'click', function () {
-						pickTemplate( results[ index ].id, results[ index ].title.rendered );
+						pickTemplate( results[ index ].id, results[ index ].title.raw || results[ index ].title.rendered );
 					} );
 				} );
 			}
@@ -1604,11 +1612,10 @@
 				body: JSON.stringify( body )
 			} )
 				.then( function ( result ) {
-					submitButton.disabled = false;
-					submitButton.innerHTML = submitLabel();
-
 					// Add-to-order mode: straight back to the updated order.
 					if ( state.addToOrder ) {
+						submitButton.disabled = false;
+						submitButton.innerHTML = submitLabel();
 						window.location.hash = '#/order-history';
 						if ( YP.openWcOrderDrawer ) {
 							YP.openWcOrderDrawer( result.order_id );
@@ -1628,6 +1635,12 @@
 					// established elsewhere — this one spot just still linked
 					// out. The drawer's own footer still links to the classic
 					// screen for anyone who wants it.
+					// The form stays filled in, so a second click would create a
+					// duplicate order (and a second invoice email). Lock it and
+					// offer a clean form instead.
+					submitButton.disabled = true;
+					submitButton.textContent = 'Order created';
+
 					var links = '<a href="#" data-yp-view-order="' + result.order_id + '">View order</a>';
 					// One "Add a proof" link per shell — an order can now
 					// carry more than one (see the class docblock in
@@ -1656,7 +1669,14 @@
 						'</div>'
 						: '';
 
+					links += ' &middot; <a href="#" data-yp-new-order>Start another order</a>';
+
 					statusEl.innerHTML = '<p class="yp-panel__hint">Order created. ' + links + '</p>' + paymentLinkHtml;
+					statusEl.querySelector( '[data-yp-new-order]' ).addEventListener( 'click', function ( event ) {
+						event.preventDefault();
+						// A different hash so the router builds a fresh, empty form.
+						window.location.hash = '#/manual-order/new' === window.location.hash ? '#/manual-order' : '#/manual-order/new';
+					} );
 
 					var viewOrderLink = statusEl.querySelector( '[data-yp-view-order]' );
 					if ( viewOrderLink && YP.openWcOrderDrawer ) {

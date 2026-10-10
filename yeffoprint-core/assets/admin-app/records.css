@@ -2872,3 +2872,59 @@ body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
 		grid-template-columns: 1fr;
 	}
 }
+
+/* Order History bulk actions: tick boxes + the bar that appears above the table. */
+.yp-bulk-check { width: 32px; }
+.yp-bulk-check input { width: 18px; height: 18px; margin: 0; cursor: pointer; }
+.yp-bulk-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: var(--wp--preset--spacing--sm, 12px);
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: #fff4fa;
+	border: 1px solid #f6c3df;
+}
+.yp-bulk-bar b { margin-right: 4px; }
+.yp-bulk-bar__group { display: inline-flex; gap: 6px; align-items: center; }
+.yp-bulk-bar .wp-block-button__link { padding: 6px 12px; font-size: 13px; }
+@media (max-width: 640px) {
+	.yp-bulk-bar { position: sticky; top: 0; z-index: 5; }
+	.yp-bulk-bar__group { width: 100%; }
+	.yp-bulk-bar__group select { flex: 1; min-width: 0; }
+}
+
+/* Shipping zones (views/shipping-zones.js). */
+.yp-ship-zone { margin-bottom: var(--wp--preset--spacing--sm, 12px); }
+.yp-ship-zone__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.yp-ship-zone__head h3 { margin: 0 0 2px; }
+.yp-ship-zone__head p { margin: 0; }
+.yp-ship-method, .yp-ship-zone__form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10px;
+	padding: 12px 0;
+	border-top: 1px solid #ecebe8;
+}
+.yp-ship-method__on { display: inline-flex; gap: 6px; align-items: center; padding-bottom: 8px; font-weight: 600; }
+.yp-ship-method__field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 180px; min-width: 0; }
+.yp-ship-method__field span { font-size: 12px; color: #6b6b70; }
+.yp-ship-method__cost { flex: 0 1 120px; }
+.yp-ship-zone__regions { flex-basis: 100%; }
+.yp-ship-zone__form .yp-field__hint { flex-basis: 100%; margin: 0; }
+.yp-ship-method__actions { display: inline-flex; gap: 10px; align-items: center; padding-bottom: 4px; }
+.yp-ship-method__msg { font-size: 12px; color: #1f7a3d; padding-bottom: 8px; }
+.yp-ship-zone__add { display: flex; gap: 8px; align-items: center; padding-top: 12px; border-top: 1px solid #ecebe8; }
+
+/* Template categories (views/template-categories.js). */
+.yp-terms { margin-bottom: var(--wp--preset--spacing--sm, 12px); }
+.yp-terms h3 { margin: 0 0 2px; }
+.yp-terms__list { list-style: none; margin: 8px 0; padding: 0; }
+.yp-terms__list li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid #ecebe8; }
+.yp-terms__list input { flex: 1 1 auto; min-width: 0; }
+.yp-terms__list .yp-field__hint { margin: 0; white-space: nowrap; }
+.yp-terms__add { display: flex; gap: 8px; margin-top: 8px; }
+.yp-terms__add input { flex: 1 1 auto; min-width: 0; }

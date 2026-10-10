@@ -241,7 +241,8 @@
 	 *   (Void a label) rather than a routine one (Purchase a label).
 	 *   `onConfirm` only ever fires from the confirm button — Cancel,
 	 *   the backdrop, and Escape all just close the dialog, same as
-	 *   every other drawer.
+	 *   every other drawer. Optional `bodyHtml` adds inputs under the
+	 *   message; `onConfirm` gets the dialog element to read them from.
 	 */
 	YP.confirmModal = function ( options ) {
 		var drawer = document.createElement( 'div' );
@@ -255,6 +256,7 @@
 				'</div>' +
 				'<div class="yp-drawer__body">' +
 					'<p class="yp-panel__hint">' + YP.escapeHtml( options.message || '' ) + '</p>' +
+					( options.bodyHtml || '' ) +
 					'<div class="yp-confirm-modal__actions">' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-confirm-cancel>Cancel</button>' +
 						'<button type="button" class="wp-block-button__link ' + ( options.danger ? 'yp-button--danger' : 'is-style-accent' ) + '" data-yp-confirm-ok>' + YP.escapeHtml( options.confirmLabel || 'Confirm' ) + '</button>' +
@@ -270,7 +272,7 @@
 		drawer.querySelector( '[data-yp-confirm-ok]' ).addEventListener( 'click', function () {
 			YP.closeDrawer( drawer );
 			if ( options.onConfirm ) {
-				options.onConfirm();
+				options.onConfirm( drawer );
 			}
 		} );
 	};
@@ -306,6 +308,11 @@
 		} ).join( '' ) + '</div>';
 	};
 
+	/** Printable invoice / packing slip page for these order ids (class-admin-order-actions-controller.php). `kind`: 'invoice' or 'slip'. */
+	YP.printOrdersUrl = function ( ids, kind ) {
+		return yeffoprintAdminApp.printOrdersUrl + '&kind=' + encodeURIComponent( kind ) + '&ids=' + ids.map( Number ).join( ',' );
+	};
+
 	YP.readAddressFields = function ( container, type ) {
 		var out = {};
 		var wrap = container.querySelector( '[data-yp-address="' + type + '"]' );
@@ -335,6 +342,7 @@
 			{ id: 'sizes', label: 'Sizes' },
 			{ id: 'sticker-sizes', label: 'Sticker Sizes' },
 			{ id: 'templates', label: 'Templates' },
+			{ id: 'template-categories', label: 'Template Categories' },
 			{ id: 'label-fields', label: 'Label Fields' },
 			{ id: 'label-colors', label: 'Label Colors' },
 			{ id: 'compound-list', label: 'Compound List' },
@@ -363,6 +371,7 @@
 			{ id: 'rewards', label: 'Rewards' },
 			{ id: 'surcharge', label: 'Card Surcharge' },
 			{ id: 'payments', label: 'Payments' },
+			{ id: 'shipping-zones', label: 'Shipping Zones' },
 			{ id: 'settings', label: 'Settings' }
 		] }
 	];
@@ -391,9 +400,9 @@
 	var NEXT_TABS = [
 		{ id: 'dashboard', label: 'Today', icon: 'sun', sections: [ 'dashboard', 'sales' ] },
 		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders', 'disputes' ] },
-		{ id: 'catalog', label: 'Catalog', icon: 'box', sections: [ 'catalog', 'templates', 'sizes', 'sticker-sizes', 'materials', 'label-fields', 'label-colors', 'compound-list', 'prints', 'filament-colors', 'pricing' ] },
+		{ id: 'catalog', label: 'Catalog', icon: 'box', sections: [ 'catalog', 'templates', 'template-categories', 'sizes', 'sticker-sizes', 'materials', 'label-fields', 'label-colors', 'compound-list', 'prints', 'filament-colors', 'pricing' ] },
 		{ id: 'people', label: 'Customers', icon: 'people', sections: [ 'people', 'customers', 'messages', 'reviews', 'tracker-feedback', 'rewards', 'coupons', 'maintenance' ] },
-		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'payments', 'print-station', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
+		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'payments', 'shipping-zones', 'print-station', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
 	];
 	var NEXT_SUB_LABELS = {
 		dashboard: 'Today',
@@ -618,6 +627,14 @@
 		if ( NEXT ) {
 			renderNextChrome( id );
 		}
+
+		// Fresh view element on every route: views bind delegated click
+		// handlers on viewEl itself, so reusing it stacked one more handler
+		// per visit (opening #/ship three times made Print here open the
+		// label in three tabs).
+		var freshViewEl = viewEl.cloneNode( false );
+		viewEl.parentNode.replaceChild( freshViewEl, viewEl );
+		viewEl = freshViewEl;
 
 		if ( 'dashboard' === id ) {
 			renderDashboard();
@@ -1114,7 +1131,8 @@
 				var daysLate = Math.max( 1, Math.round( ( Date.now() - new Date( alert.due_date + 'T00:00:00' ).getTime() ) / 86400000 ) );
 				return { text: daysLate + ( 1 === daysLate ? ' day overdue' : ' days overdue' ), pill: 'crit' };
 			}
-			var today = new Date().toISOString().slice( 0, 10 );
+			var now = new Date(); // Local date: toISOString() is UTC, a day ahead on US evenings.
+			var today = now.getFullYear() + '-' + String( now.getMonth() + 1 ).padStart( 2, '0' ) + '-' + String( now.getDate() ).padStart( 2, '0' );
 			if ( alert.due_date === today ) {
 				return { text: 'Due today', pill: 'warn' };
 			}
@@ -2674,7 +2692,7 @@
 				return;
 			}
 
-			var short = owed - amount >= 0.01;
+			var short = Math.round( ( owed - amount ) * 100 ) >= 1;
 			var message = short
 				? 'That’s $' + ( owed - amount ).toFixed( 2 ) + ' short of the $' + owed.toFixed( 2 ) + ' owed. The order stays unpaid' +
 					( emailCustomer ? ', and the customer gets an email asking for the remaining $' + ( owed - amount ).toFixed( 2 ) + '.' : '. The customer is not emailed.' )

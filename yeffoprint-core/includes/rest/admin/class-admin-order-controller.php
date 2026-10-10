@@ -131,6 +131,7 @@ class YeffoPrint_Admin_Order_Controller {
 		$per_page = min( 100, max( 1, (int) ( $request->get_param( 'per_page' ) ?: 20 ) ) );
 
 		$args = [
+			'type'     => 'shop_order',
 			'paginate' => true,
 			'limit'    => $per_page,
 			'page'     => $page,
@@ -138,16 +139,14 @@ class YeffoPrint_Admin_Order_Controller {
 			'order'    => 'DESC',
 		];
 
-		if ( '' !== $status && array_key_exists( $status, $this->status_options() ) ) {
+		if ( '' !== $status && ( 'trash' === $status || array_key_exists( $status, $this->status_options() ) ) ) {
 			$args['status'] = $status;
 		}
 
 		if ( '' !== $search ) {
 			$order_ids = \WC_Data_Store::load( 'order' )->search_orders( wc_clean( $search ) );
-			if ( empty( $order_ids ) ) {
-				return rest_ensure_response( [ 'orders' => [], 'total' => 0, 'max_num_pages' => 0, 'page' => $page ] );
-			}
-			$args['post__in'] = $order_ids;
+			// No matches: [0] finds nothing but still returns the tab counts below.
+			$args['post__in'] = $order_ids ?: [ 0 ];
 		}
 
 		$result          = wc_get_orders( $args );
@@ -168,6 +167,7 @@ class YeffoPrint_Admin_Order_Controller {
 			'counts'        => [
 				'pending'        => wc_orders_count( 'pending' ),
 				'checkout-draft' => wc_orders_count( 'checkout-draft' ) + count( $unpaid_requests ),
+				'trash'          => count( wc_get_orders( [ 'type' => 'shop_order', 'status' => 'trash', 'limit' => -1, 'return' => 'ids' ] ) ),
 			],
 		] );
 	}
@@ -216,7 +216,7 @@ class YeffoPrint_Admin_Order_Controller {
 
 			$rows[] = [
 				'id'               => (int) $id,
-				'title'            => get_the_title( $id ),
+				'title'            => html_entity_decode( get_the_title( $id ), ENT_QUOTES, 'UTF-8' ),
 				'order_type_label' => YeffoPrint_Custom_Order_Meta::ORDER_TYPES[ $order_type ],
 				'date'             => get_post_datetime( $id ) ? get_post_datetime( $id )->format( 'c' ) : null,
 				'customer_name'    => (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true ),
@@ -576,6 +576,8 @@ class YeffoPrint_Admin_Order_Controller {
 			'items'                => array_values( array_filter( array_map( [ $this, 'item_payload' ], $order->get_items() ) ) ),
 			'subtotal'             => (float) $order->get_subtotal(),
 			'shipping_total'       => (float) $order->get_shipping_total(),
+			'discount_total'       => (float) $order->get_discount_total(),
+			'total_tax'            => (float) $order->get_total_tax(),
 			'total'                => (float) $order->get_total(),
 			'edit_url'             => $order->get_edit_order_url(),
 			// Direct request: edit an order "before it's been paid" — lets

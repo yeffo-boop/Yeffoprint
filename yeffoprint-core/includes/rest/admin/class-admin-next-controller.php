@@ -99,6 +99,7 @@ class YeffoPrint_Admin_Next_Controller {
 		}
 
 		$open = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'  => [ 'pending', 'on-hold', 'processing', YeffoPrint_Order_Design_Status::STATUS, YeffoPrint_Order_Production_Status::STATUS ],
 			'limit'   => 200,
 			'orderby' => 'date',
@@ -106,6 +107,7 @@ class YeffoPrint_Admin_Next_Controller {
 		] );
 
 		$shipped = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'        => YeffoPrint_Order_Shipment_Status::STATUS,
 			'limit'         => 100,
 			'orderby'       => 'modified',
@@ -203,6 +205,7 @@ class YeffoPrint_Admin_Next_Controller {
 		$range_start = $today_start->modify( '-13 days' );
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'       => array_merge( self::PAID_STATUSES, [ 'pending', 'on-hold' ] ),
 			'limit'        => -1,
 			'date_created' => '>=' . $range_start->getTimestamp(),
@@ -243,7 +246,7 @@ class YeffoPrint_Admin_Next_Controller {
 			'orders_today'       => $today['orders'],
 			'revenue_7_days'     => round( array_sum( array_column( $week, 'revenue' ) ), 2 ),
 			'days'               => $week,
-			'in_production'      => count( wc_get_orders( [ 'status' => YeffoPrint_Order_Production_Status::STATUS, 'limit' => -1, 'return' => 'ids' ] ) ),
+			'in_production'      => count( wc_get_orders( [ 'type' => 'shop_order', 'status' => YeffoPrint_Order_Production_Status::STATUS, 'limit' => -1, 'return' => 'ids' ] ) ),
 			'currency_symbol'    => html_entity_decode( get_woocommerce_currency_symbol() ),
 		] );
 	}
@@ -276,7 +279,9 @@ class YeffoPrint_Admin_Next_Controller {
 			return new \WP_Error( 'yeffoprint_invalid_switch', __( 'Unknown switch.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		update_option( $switches[ $key ][0], (bool) ( $params['value'] ?? false ) );
+		// Int, not bool: update_option( key, false ) never creates a missing row, so
+		// Express (on when unset) could never be switched off.
+		update_option( $switches[ $key ][0], (int) ! empty( $params['value'] ) );
 
 		return $this->get_switches();
 	}
@@ -359,6 +364,7 @@ class YeffoPrint_Admin_Next_Controller {
 		}
 
 		$orders = wc_get_orders( [
+			'type' => 'shop_order',
 			'status'       => self::PAID_STATUSES,
 			'limit'        => -1,
 			'date_created' => '>=' . ( time() - self::BEST_SELLER_DAYS * DAY_IN_SECONDS ),
@@ -400,15 +406,15 @@ class YeffoPrint_Admin_Next_Controller {
 		$print_id    = $product_id ? (int) get_post_meta( $product_id, YeffoPrint_Print_Product::META_PRINT_ID, true ) : 0;
 
 		if ( $template_id ) {
-			$name    = get_the_title( $template_id );
+			$name    = html_entity_decode( get_the_title( $template_id ), ENT_QUOTES, 'UTF-8' );
 			$kind    = 'Template';
 			$section = 'templates';
 		} elseif ( $print_id ) {
-			$name    = get_the_title( $print_id );
+			$name    = html_entity_decode( get_the_title( $print_id ), ENT_QUOTES, 'UTF-8' );
 			$kind    = '3D print';
 			$section = 'prints';
 		} else {
-			$name    = $product_id ? get_the_title( $product_id ) : $fallback_name;
+			$name    = $product_id ? html_entity_decode( get_the_title( $product_id ), ENT_QUOTES, 'UTF-8' ) : $fallback_name;
 			$kind    = 'Custom';
 			$section = 'orders';
 		}
