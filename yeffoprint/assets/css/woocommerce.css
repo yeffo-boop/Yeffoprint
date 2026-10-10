@@ -1327,6 +1327,133 @@
 	letter-spacing: 2px;
 }
 
+/* My Account: profile picture (yeffoprint-core class-profile-photo.php),
+   beside the dashboard welcome and at the top of Account details. */
+.yp-account-hello {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.yp-account-hello .yp-account-welcome {
+	margin: 0;
+}
+
+.yp-account-avatar,
+.yp-profile-photo__pic {
+	flex: none;
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	overflow: hidden;
+	display: grid;
+	place-items: center;
+	background: var(--wp--preset--color--cyan-deep);
+	color: #fff;
+	font-weight: 700;
+	font-size: 1.5rem;
+	text-decoration: none;
+}
+
+.yp-account-avatar img,
+.yp-profile-photo__pic img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.yp-profile-photo {
+	display: flex;
+	align-items: center;
+	gap: 1.25rem;
+	margin-bottom: 2rem;
+	padding: 1.25rem 1.5rem;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 14px;
+}
+
+.yp-profile-photo__pic {
+	width: 88px;
+	height: 88px;
+	font-size: 2.25rem;
+}
+
+.yp-profile-photo h2 {
+	margin: 0 0 0.25rem;
+	font-size: 1.125rem;
+}
+
+.yp-profile-photo p {
+	margin: 0 0 0.75rem;
+	font-size: 0.9375rem;
+	color: #6b6b6e;
+}
+
+.yp-profile-photo__form {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.75rem;
+}
+
+.yp-profile-photo__pick {
+	position: relative;
+	display: inline-block;
+	margin: 0;
+	cursor: pointer;
+	border-radius: var(--wp--custom--radius--input);
+	background: var(--wp--preset--color--near-black);
+	color: var(--wp--preset--color--warm-white);
+	padding: 0.7rem 1.25rem;
+	font-weight: 600;
+	font-size: 0.9375rem;
+	line-height: 1.2;
+}
+
+.yp-profile-photo__pick:hover {
+	background: var(--wp--preset--color--charcoal);
+}
+
+.yp-profile-photo__pick input[type="file"] {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+	width: 100%;
+}
+
+.yp-profile-photo__pick:focus-within {
+	outline: 2px solid var(--wp--preset--color--cyan-deep);
+	outline-offset: 2px;
+}
+
+.woocommerce .yp-profile-photo button.yp-profile-photo__remove {
+	background: none !important;
+	color: var(--wp--preset--color--magenta-deep) !important;
+	border: 0;
+	padding: 0.25rem 0.5rem !important;
+	margin: 0;
+	min-height: 0;
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+	.yp-profile-photo {
+		align-items: flex-start;
+		padding: 1rem;
+	}
+
+	.yp-profile-photo__pic {
+		width: 64px;
+		height: 64px;
+		font-size: 1.75rem;
+	}
+}
+
 /* My Account > Account details: "Delete my account"
    (yeffoprint-core class-account-deletion.php). */
 .yp-delete-account {

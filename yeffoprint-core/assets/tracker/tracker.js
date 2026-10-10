@@ -1649,7 +1649,7 @@
 					} }, icon( bellOn ? 'bell' : 'belloff' ) ),
 					h( 'button', { type: 'button', class: 'ypt-appbar__me', 'aria-label': 'Me', 'aria-current': current === 'me' ? 'page' : null, onclick: function () {
 						go( 'me' );
-					} }, initial || icon( 'me' ) )
+					} }, avatarFace( initial ) )
 				)
 			),
 			h( 'div', { class: 'ypt-stripe', 'aria-hidden': 'true' } )
@@ -6462,8 +6462,9 @@
 	function renderMe() {
 		var s = state.records.settings.me || {};
 		var wrap = h( 'div', null );
-		wrap.appendChild( h( 'header', { class: 'ypt-top' },
-			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Signed in' ), h( 'h1', null, CFG.firstName || 'Me' ) )
+		wrap.appendChild( h( 'header', { class: 'ypt-top ypt-me-top' },
+			profilePhoto(),
+			h( 'div', { class: 'ypt-me-top__name' }, h( 'div', { class: 'ypt-eyebrow' }, 'Signed in' ), h( 'h1', null, CFG.firstName || 'Me' ) )
 		) );
 
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label', id: 'ypt-reminders' }, 'Reminders' ) );
@@ -6550,6 +6551,102 @@
 			'YeffoHealth is not a healthcare provider and doesn’t give medical advice. It simply keeps track of the information that matters to you. Talk to a qualified healthcare provider before starting, changing or stopping any peptide, medication, dose or schedule.' ) );
 
 		return wrap;
+	}
+
+	/* ---------- Profile picture (includes/accounts/class-profile-photo.php) ---------- */
+
+	/**
+	 * What the avatar shows: the account's profile picture (the same one
+	 * as My Account on the site), else the first initial. If the picture
+	 * can't load (offline, or removed on the site) it falls back to the
+	 * initial too.
+	 */
+	function avatarFace( initial ) {
+		var fallback = initial || icon( 'me' );
+		if ( ! CFG.photoUrl ) {
+			return fallback;
+		}
+		var img = h( 'img', { class: 'ypt-avatar-img', src: CFG.photoUrl, alt: '' } );
+		img.onerror = function () {
+			if ( img.parentNode ) {
+				img.parentNode.replaceChild( typeof fallback === 'string' ? document.createTextNode( fallback ) : fallback, img );
+			}
+		};
+		return img;
+	}
+
+	/** A picked image cropped to its centre square, at most `px` across, as a JPEG data URL (no photo metadata). */
+	function squareImage( file, px ) {
+		return new Promise( function ( resolve, reject ) {
+			var url = URL.createObjectURL( file );
+			var img = new Image();
+			img.onload = function () {
+				var side = Math.min( img.naturalWidth, img.naturalHeight );
+				var out = Math.max( 1, Math.min( px, side ) );
+				var c = document.createElement( 'canvas' );
+				c.width = out;
+				c.height = out;
+				var ctx = c.getContext( '2d' );
+				ctx.fillStyle = '#fff';
+				ctx.fillRect( 0, 0, out, out );
+				ctx.drawImage( img, ( img.naturalWidth - side ) / 2, ( img.naturalHeight - side ) / 2, side, side, 0, 0, out, out );
+				URL.revokeObjectURL( url );
+				resolve( c.toDataURL( 'image/jpeg', 0.9 ) );
+			};
+			img.onerror = function () {
+				URL.revokeObjectURL( url );
+				reject( new Error( 'That file isn’t an image we can read.' ) );
+			};
+			img.src = url;
+		} );
+	}
+
+	/** Me's header picture with Add / Change / Remove. Saved to the YeffoDesign account, so it shows on the site too. */
+	function profilePhoto() {
+		var initial = String( CFG.firstName || '' ).trim().charAt( 0 ).toUpperCase();
+		var busy = false;
+		var picker = h( 'input', { type: 'file', accept: 'image/*', hidden: true, onchange: function () {
+			var file = picker.files && picker.files[ 0 ];
+			picker.value = '';
+			if ( ! file || busy ) {
+				return;
+			}
+			busy = true;
+			toast( 'Saving your picture…' );
+			squareImage( file, 512 ).then( function ( data ) {
+				return api( 'POST', 'account/photo', { data: data } );
+			} ).then( function ( res ) {
+				CFG.photoUrl = res.url || '';
+				toast( 'Profile picture updated' );
+				render();
+			} ).catch( function ( e ) {
+				toast( e && e.message && ! isNetworkError( e ) ? e.message : 'Couldn’t save your picture. Check your connection and try again.' );
+			} ).then( function () {
+				busy = false;
+			} );
+		} } );
+		function remove() {
+			if ( busy || ! window.confirm( 'Remove your profile picture?' ) ) {
+				return;
+			}
+			busy = true;
+			api( 'DELETE', 'account/photo' ).then( function () {
+				CFG.photoUrl = '';
+				toast( 'Profile picture removed' );
+				render();
+			} ).catch( function () {
+				toast( 'Couldn’t remove your picture. Check your connection and try again.' );
+			} ).then( function () {
+				busy = false;
+			} );
+		}
+		return h( 'div', { class: 'ypt-me-photo' },
+			h( 'button', { type: 'button', class: 'ypt-me-photo__pic', 'aria-label': CFG.photoUrl ? 'Change profile picture' : 'Add a profile picture', onclick: function () {
+				picker.click();
+			} }, avatarFace( initial ), h( 'span', { class: 'ypt-me-photo__cam', 'aria-hidden': 'true' }, icon( 'camera' ) ) ),
+			CFG.photoUrl ? h( 'button', { type: 'button', class: 'ypt-me-photo__remove', onclick: remove }, 'Remove' ) : null,
+			picker
+		);
 	}
 
 	/* ---------- Help & feedback (includes/tracker/class-tracker-feedback.php) ---------- */

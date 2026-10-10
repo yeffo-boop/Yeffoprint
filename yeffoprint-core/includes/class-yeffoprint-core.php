@@ -177,6 +177,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-stay-signed-in.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-email-verification.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-account-deletion.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/accounts/class-profile-photo.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/legal/class-legal-pages.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/health/class-health-domains.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/health/class-home-screen-help.php';
@@ -329,6 +330,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Stay_Signed_In();
 		new YeffoPrint_Email_Verification();
 		new YeffoPrint_Account_Deletion();
+		new YeffoPrint_Profile_Photo();
 		new YeffoPrint_Legal_Pages();
 		new YeffoPrint_Core_Email_Theme();
 		new YeffoPrint_Telegram_Webhook_Sync();

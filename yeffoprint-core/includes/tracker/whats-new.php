@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-10n',
+		'date'  => '2026-10-10',
+		'title' => 'Add your profile picture',
+		'text'  => 'Tap your initial at the top, then the circle on Me, to add a photo of yourself. It\'s also your picture on your YeffoDesign account, and you can change it in My Account too.',
+	],
+	[
 		'id'    => '2026-10-10m',
 		'date'  => '2026-10-10',
 		'title' => 'Pens look like pens',
