@@ -1548,26 +1548,35 @@
 	 * ======================================================= */
 
 	function render() {
-		if ( ! state.loaded ) {
+		var guest = ! CFG.signedIn;
+		if ( ! state.loaded && ! guest ) {
 			return;
 		}
 		var scrollY = window.scrollY;
 		var focusedId = document.activeElement && document.activeElement.id;
 		root.textContent = '';
 		root.appendChild( appBar() );
-		if ( state.offline ) {
-			root.appendChild( h( 'div', { class: 'ypt-offline' }, queue.length ? 'Offline · ' + queue.length + ' change' + ( queue.length === 1 ? '' : 's' ) + ' will sync' : 'Offline · showing your saved copy' ) );
+		if ( guest ) {
+			// Signed out: the calculator, with the rest of the app a sign-in away.
+			root.appendChild( renderCalc() );
+			root.appendChild( guestAbout() );
+		} else {
+			if ( state.offline ) {
+				root.appendChild( h( 'div', { class: 'ypt-offline' }, queue.length ? 'Offline · ' + queue.length + ' change' + ( queue.length === 1 ? '' : 's' ) + ' will sync' : 'Offline · showing your saved copy' ) );
+			}
+			var screens = { today: renderToday, history: renderHistory, progress: renderProgressTab, vials: renderSupply, calc: renderCalc, me: renderMe };
+			root.appendChild( ( screens[ ui.tab ] || renderToday )() );
+			root.appendChild( lockLine() );
 		}
-		var screens = { today: renderToday, history: renderHistory, progress: renderProgressTab, vials: renderSupply, me: renderMe };
-		root.appendChild( ( screens[ ui.tab ] || renderToday )() );
-		root.appendChild( lockLine() );
 		root.appendChild( renderTabs() );
 		if ( ui.sheet ) {
 			root.appendChild( ui.sheet.node );
 		}
 		window.scrollTo( 0, scrollY );
-		syncAlerts();
-		syncNativeReminders();
+		if ( ! guest ) {
+			syncAlerts();
+			syncNativeReminders();
+		}
 		if ( focusedId && document.getElementById( focusedId ) && ! ui.sheet ) {
 			document.getElementById( focusedId ).focus();
 		}
@@ -1575,29 +1584,59 @@
 
 	/**
 	 * The YeffoHealth bar across the top of every tab: logo (back to
-	 * Today), reminders bell and the Me button. On wide screens the tabs
-	 * move up into it (tracker.css hides the bottom bar there).
+	 * Today), reminders bell and the Me button (the avatar; Me's tab
+	 * went to the Calculator). On wide screens the tabs move up into it
+	 * (tracker.css hides the bottom bar there). Signed out it has the
+	 * Calculator, the locked tabs and a Sign in button.
 	 */
 	function appBar() {
-		var current = ui.tab === 'history' ? 'today' : ui.tab;
+		var guest = ! CFG.signedIn;
+		var current = guest ? 'calc' : ui.tab === 'history' ? 'today' : ui.tab;
 		var bellOn = state.pushOnHere === true;
 		var initial = String( CFG.firstName || '' ).trim().charAt( 0 ).toUpperCase();
 		function tab( id, label ) {
-			return h( 'button', { type: 'button', class: 'ypt-appbar__tab', 'aria-current': current === id ? 'page' : null, onclick: function () {
-				go( id );
-			} }, label );
+			var locked = guest && id !== 'calc';
+			return h( 'button', { type: 'button', class: 'ypt-appbar__tab' + ( locked ? ' is-locked' : '' ), 'aria-current': current === id ? 'page' : null, 'aria-haspopup': locked ? 'dialog' : null, onclick: function () {
+				if ( locked ) {
+					guestLocked( id );
+				} else {
+					go( id );
+				}
+			} }, locked ? icon( 'lock' ) : null, label );
+		}
+		var brand = h( 'button', { type: 'button', class: 'ypt-appbar__brand', 'aria-label': guest ? 'YeffoHealth' : 'YeffoHealth, go to Today', onclick: function () {
+			if ( guest ) {
+				window.scrollTo( 0, 0 );
+				return;
+			}
+			ui.day = todayStr();
+			go( 'today' );
+		} }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), h( 'span', null, 'Yeffo', h( 'span', { class: 'ypt-appbar__h' }, 'Health' ) ) );
+		if ( guest ) {
+			return h( 'header', { class: 'ypt-appbar' },
+				h( 'div', { class: 'ypt-appbar__inner' },
+					brand,
+					h( 'nav', { class: 'ypt-appbar__nav', 'aria-label': 'YeffoHealth' },
+						tab( 'calc', 'Calculator' ),
+						tab( 'today', 'Today' ),
+						tab( 'progress', 'Progress' ),
+						tab( 'vials', 'Supply' )
+					),
+					h( 'div', { class: 'ypt-appbar__actions' },
+						h( 'a', { class: 'ypt-appbar__signin', href: CFG.loginUrl }, 'Sign in' )
+					)
+				),
+				h( 'div', { class: 'ypt-stripe', 'aria-hidden': 'true' } )
+			);
 		}
 		return h( 'header', { class: 'ypt-appbar' },
 			h( 'div', { class: 'ypt-appbar__inner' },
-				h( 'button', { type: 'button', class: 'ypt-appbar__brand', 'aria-label': 'YeffoHealth, go to Today', onclick: function () {
-					ui.day = todayStr();
-					go( 'today' );
-				} }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), h( 'span', null, 'Yeffo', h( 'span', { class: 'ypt-appbar__h' }, 'Health' ) ) ),
+				brand,
 				h( 'nav', { class: 'ypt-appbar__nav', 'aria-label': 'Tracker' },
 					tab( 'today', 'Today' ),
 					tab( 'progress', 'Progress' ),
 					tab( 'vials', 'Supply' ),
-					tab( 'me', 'Me' ),
+					tab( 'calc', 'Calculator' ),
 					h( 'button', { type: 'button', class: 'ypt-appbar__tab ypt-appbar__add', 'aria-haspopup': 'dialog', onclick: openAddMenu }, '+ Add' )
 				),
 				h( 'div', { class: 'ypt-appbar__actions' },
@@ -1655,11 +1694,28 @@
 
 	function renderTabs() {
 		// History (the full dose log) opens from Today's calendar button, so Today stays lit there.
-		var current = ui.tab === 'history' ? 'today' : ui.tab;
+		var guest = ! CFG.signedIn;
+		var current = guest ? 'calc' : ui.tab === 'history' ? 'today' : ui.tab;
 		function tab( id, label, ic ) {
-			return h( 'button', { type: 'button', class: 'ypt-tab', 'aria-current': current === id ? 'page' : null, onclick: function () {
-				go( id );
-			} }, icon( ic ), label );
+			// Signed out, everything but the calculator explains what an account adds.
+			var locked = guest && id !== 'calc';
+			return h( 'button', { type: 'button', class: 'ypt-tab' + ( locked ? ' is-locked' : '' ), 'aria-current': current === id ? 'page' : null, 'aria-haspopup': locked ? 'dialog' : null, 'aria-label': locked ? label + ' (needs a free account)' : null, onclick: function () {
+				if ( locked ) {
+					guestLocked( id );
+				} else {
+					go( id );
+				}
+			} }, icon( ic ), label, locked ? h( 'span', { class: 'ypt-tab__lock', 'aria-hidden': 'true' }, icon( 'lock' ) ) : null );
+		}
+		if ( guest ) {
+			return h( 'nav', { class: 'ypt-tabs', 'aria-label': 'YeffoHealth' },
+				h( 'div', { class: 'ypt-tabs__inner' },
+					tab( 'calc', 'Calculator', 'calc' ),
+					tab( 'today', 'Today', 'today' ),
+					tab( 'progress', 'Progress', 'progress' ),
+					tab( 'vials', 'Supply', 'vials' )
+				)
+			);
 		}
 		return h( 'nav', { class: 'ypt-tabs', 'aria-label': 'Tracker' },
 			h( 'div', { class: 'ypt-tabs__inner' },
@@ -1667,7 +1723,7 @@
 				tab( 'progress', 'Progress', 'progress' ),
 				h( 'button', { type: 'button', class: 'ypt-tab ypt-tab--add', 'aria-haspopup': 'dialog', onclick: openAddMenu }, h( 'span', { class: 'ypt-tab__plus' }, icon( 'plus' ) ), 'Add' ),
 				tab( 'vials', 'Supply', 'vials' ),
-				tab( 'me', 'Me', 'me' )
+				tab( 'calc', 'Calculator', 'calc' )
 			)
 		);
 	}
@@ -2235,7 +2291,7 @@
 				p.notes ? check( 'notes', 'My note', '“' + p.notes.slice( 0, 40 ) + ( p.notes.length > 40 ? '…' : '' ) + '”' ) : null,
 				! v && ! +p.weeks && ! p.notes && ! hasPlan ? h( 'p', { class: 'ypt-list-row ypt-muted ypt-small' }, 'The dose and schedule above.' ) : null
 			),
-			h( 'p', { class: 'ypt-hint ypt-share-privacy' }, icon( 'lock' ), 'Never shared: your name, your history, your vials. The link only holds what’s on the card above, and anyone with it can see that. You can stop sharing it any time from Me › Shared links.' ),
+			h( 'p', { class: 'ypt-hint ypt-share-privacy' }, icon( 'lock' ), 'Never shared: your name, your history, your vials. The link only holds what’s on the card above, and anyone with it can see that. You can stop sharing it any time from Me (your initial at the top) › Shared links.' ),
 			linkBox,
 		], foot );
 	}
@@ -5269,7 +5325,7 @@
 		} );
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-note' }, icon( 'bell' ),
 			h( 'div', null, warnsOn
-				? 'We’ll warn you here and on Today before anything runs out' + ( state.pushOnHere ? ', with a notification too.' : '. Turn on reminders on the Me tab to get a notification too.' )
+				? 'We’ll warn you here and on Today before anything runs out' + ( state.pushOnHere ? ', with a notification too.' : '. Turn on reminders (tap the bell at the top) to get a notification too.' )
 				: 'Running-low warnings are off for everything here.',
 			list.some( function ( s ) {
 				return s.form === 'count';
@@ -5407,7 +5463,7 @@
 				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { expiryReminders: ! expOn } ) );
 			} );
 			wrap.appendChild( h( 'div', { class: 'ypt-card', style: { padding: '2px 14px' } }, h( 'div', { class: 'ypt-toggle' },
-				h( 'div', null, h( 'b', null, 'Remind me on mix days' ), h( 'div', { class: 'ypt-muted ypt-small' }, state.pushOnHere ? 'A notification the evening before.' : 'A notification the evening before, once reminders are on (Me tab).' ) ),
+				h( 'div', null, h( 'b', null, 'Remind me on mix days' ), h( 'div', { class: 'ypt-muted ypt-small' }, state.pushOnHere ? 'A notification the evening before.' : 'A notification the evening before, once reminders are on (tap the bell at the top).' ) ),
 				sw ), h( 'div', { class: 'ypt-toggle', style: { borderTop: '1px solid var(--ypt-soft)' } },
 				h( 'div', null, h( 'b', null, 'Remind me before a vial expires' ), h( 'div', { class: 'ypt-muted ypt-small' }, EXPIRY_NOTICE_DAYS + ' days before, counted from the day you mixed it.' ) ),
 				expSw ) ) );
@@ -7892,7 +7948,7 @@
 		var nameLabel;
 		var id = existing ? existing.id : uid( 'v' );
 		var p = null;
-		var calc = { dose: opts.dose || '', unit: opts.unit || 'mcg', doseOf: '' };
+		var calc = { dose: opts.dose || '', unit: opts.unit || 'mcg', doseOf: opts.doseOf || '' };
 		if ( v.compound && ! opts.dose ) {
 			p = protocols().filter( function ( x ) {
 				return sameCompound( x.compound, v.compound );
@@ -8306,7 +8362,7 @@
 		renderInputs();
 		renderResult();
 
-		openSheet( existing ? ( isPen( v ) ? 'Edit pen' : 'Edit vial' ) : opts.kind === 'pen' ? 'Mix a pen' : 'Mix a vial or pen', 'Vial & pen calculator', body,
+		openSheet( existing ? ( isPen( v ) ? 'Edit pen' : 'Edit vial' ) : opts.title || ( opts.kind === 'pen' ? 'Mix a pen' : 'Mix a vial or pen' ), 'Vial & pen calculator', body,
 			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
 				err.hidden = true;
 				var problem = v.mode === 'blend' && blendParts().length < 2 ? 'Add at least two peptides with their mg.'
@@ -8711,6 +8767,417 @@
 	 * Signed-out / not-ready screens
 	 * ======================================================= */
 
+	/* ---------- Calculator tab (also the signed-out home screen) ---------- */
+
+	/*
+	 * Jeff: one place for the calculator and the tracker, without making
+	 * anyone sign in just to do the math. Signed out, /tracker/ opens on
+	 * this screen with the other tabs locked; signed in it's a tab (Me
+	 * moved to the avatar in the app bar). Same math as the Mix a vial
+	 * sheet (see the top of this file). Nothing typed here is stored
+	 * unless a signed-out visitor taps Save: then the numbers wait in
+	 * CALC_DRAFT_KEY (no ypt: prefix, so signing in on wp-login.php
+	 * doesn't clear them) and open as a new vial once they're signed in.
+	 */
+	var CALC_DRAFT_KEY = 'ypt-calc-draft';
+	var CALC_DRAFT_DAYS = 7;
+	var CALC_MODES = [ [ 'mg', 'Peptides' ], [ 'iu', 'HGH / HCG' ], [ 'hormone', 'Hormones' ], [ 'blend', 'Blends' ] ];
+
+	function calcState() {
+		if ( ! ui.calc ) {
+			ui.calc = { mode: 'mg', kind: 'vial', compound: '', amount: '', water: '', conc: '', volume: '', per: 'week', weekly: '', perWeek: '2', dose: '', unit: 'mcg', doseOf: '', parts: [ { name: '', amount: '' }, { name: '', amount: '' } ], syringe: 50 };
+		}
+		return ui.calc;
+	}
+
+	function calcParts( c ) {
+		return c.parts.filter( function ( x ) {
+			return String( x.name || '' ).trim() && +x.amount > 0;
+		} ).map( function ( x ) {
+			return { name: String( x.name ).trim(), amount: +x.amount };
+		} );
+	}
+
+	/** The calculator's inputs as a vial record, so vialConcentration() and friends read it. */
+	function calcVial( c ) {
+		if ( c.mode === 'hormone' ) {
+			return { kind: c.kind, mode: 'conc', conc: c.conc, volume: c.volume };
+		}
+		if ( c.mode === 'blend' ) {
+			var parts = calcParts( c );
+			return { kind: c.kind, mode: 'blend', parts: parts, blend: 'bought', water: c.water, amount: parts.reduce( function ( n, x ) {
+				return n + x.amount;
+			}, 0 ) };
+		}
+		return { kind: c.kind, mode: c.mode, amount: c.amount, water: c.water };
+	}
+
+	/** One dose: { dose, unit }. Hormones can be entered per week and split into injections. */
+	function calcDose( c ) {
+		if ( c.mode === 'hormone' ) {
+			var n = Math.round( +c.perWeek );
+			if ( c.per === 'week' ) {
+				return +c.weekly > 0 && n > 0 ? { dose: +c.weekly / n, unit: 'mg' } : { dose: '', unit: 'mg' };
+			}
+			return { dose: c.dose, unit: 'mg' };
+		}
+		return { dose: c.dose, unit: c.mode === 'iu' ? 'IU' : c.unit };
+	}
+
+	/** "Start from a vial I have": fill the calculator from a saved vial and its schedule. */
+	function calcFromVial( v ) {
+		var c = calcState();
+		var p = protocols().filter( function ( x ) {
+			return sameCompound( x.compound, v.compound );
+		} )[ 0 ];
+		c.kind = isPen( v ) ? 'pen' : 'vial';
+		c.compound = v.compound || '';
+		c.syringe = +v.syringe || 50;
+		c.mode = v.mode === 'conc' ? 'hormone' : v.mode === 'iu' || v.mode === 'blend' ? v.mode : 'mg';
+		c.amount = v.mode === 'conc' || v.mode === 'blend' ? '' : v.amount;
+		c.water = v.water || '';
+		c.conc = v.conc || '';
+		c.volume = v.volume || '';
+		c.parts = v.mode === 'blend' && Array.isArray( v.parts ) && v.parts.length ? v.parts.map( function ( x ) {
+			return { name: x.name, amount: x.amount };
+		} ) : [ { name: '', amount: '' }, { name: '', amount: '' } ];
+		c.doseOf = p && p.doseOf ? p.doseOf : '';
+		c.dose = '';
+		if ( p && ( c.mode === 'iu' ? p.unit === 'IU' : p.unit === 'mg' || ( p.unit === 'mcg' && c.mode !== 'hormone' ) ) ) {
+			c.dose = p.dose;
+			c.unit = p.unit;
+		}
+		if ( c.mode === 'hormone' ) {
+			c.per = 'injection';
+		}
+	}
+
+	function calcNum( id, c, key, placeholder, onInput, label ) {
+		return h( 'input', { class: 'ypt-input', id: id, type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: placeholder, value: c[ key ], 'aria-label': label || null, oninput: function ( e ) {
+			c[ key ] = e.target.value;
+			onInput();
+		} } );
+	}
+
+	function calcChips( c, key, list, suffix, onPick ) {
+		return h( 'div', { class: 'ypt-chips', style: { marginTop: '6px' } }, list.map( function ( n ) {
+			return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': +c[ key ] === n ? 'true' : 'false', onclick: function () {
+				c[ key ] = n;
+				var el = document.getElementById( 'ypt-c-' + key );
+				if ( el ) {
+					el.value = n;
+				}
+				[].forEach.call( this.parentNode.children, function ( b ) {
+					b.setAttribute( 'aria-pressed', 'false' );
+				} );
+				this.setAttribute( 'aria-pressed', 'true' );
+				onPick();
+			} }, n + ' ' + suffix );
+		} ) );
+	}
+
+	function renderCalc() {
+		var c = calcState();
+		var guest = ! CFG.signedIn;
+		var pen = c.kind === 'pen';
+		var wrap = h( 'div', { class: 'ypt-calc' } );
+		var result = h( 'div', { class: 'ypt-calc-result ypt-calc-result--main', 'aria-live': 'polite' } );
+		var update = function () {
+			drawCalcResult( result, c );
+		};
+
+		wrap.appendChild( h( 'header', { class: 'ypt-top' },
+			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, guest ? 'Free · no account needed' : 'Vials, pens & doses' ), h( 'h1', null, 'Calculator' ) )
+		) );
+
+		wrap.appendChild( h( 'div', { class: 'ypt-calc-modes', role: 'group', 'aria-label': 'What you’re measuring' }, CALC_MODES.map( function ( m ) {
+			return h( 'button', { type: 'button', class: 'ypt-calc-mode', 'aria-pressed': c.mode === m[ 0 ] ? 'true' : 'false', onclick: function () {
+				if ( c.mode === m[ 0 ] ) {
+					return;
+				}
+				c.mode = m[ 0 ];
+				c.dose = '';
+				c.unit = m[ 0 ] === 'iu' ? 'IU' : 'mcg';
+				c.compound = '';
+				render();
+			} }, m[ 1 ] );
+		} ) ) );
+
+		var mine = guest ? [] : vials( false );
+		if ( mine.length ) {
+			wrap.appendChild( h( 'label', { class: 'ypt-calc-from' },
+				h( 'span', { class: 'ypt-calc-from__ic' }, icon( 'vials' ) ),
+				h( 'span', { class: 'ypt-calc-from__text' }, h( 'b', null, c.compound ? 'Using your ' + c.compound + ( pen ? ' pen' : ' vial' ) : 'Start from a vial I have' ), mine.slice( 0, 3 ).map( function ( v ) {
+					return v.compound;
+				} ).join( ' · ' ) ),
+				h( 'span', { class: 'ypt-calc-from__pick' }, c.compound ? 'Change' : 'Pick' ),
+				h( 'select', { class: 'ypt-calc-from__select', 'aria-label': 'Start from a vial I have', onchange: function ( e ) {
+					var v = e.target.value === '' ? null : mine.filter( function ( x ) {
+						return x.id === e.target.value;
+					} )[ 0 ];
+					if ( v ) {
+						calcFromVial( v );
+					} else {
+						ui.calc = null;
+					}
+					render();
+				} }, [ h( 'option', { value: '' }, c.compound ? 'Start over (blank)' : 'Choose a vial or pen…' ) ].concat( mine.map( function ( v ) {
+					return h( 'option', { value: v.id }, v.compound + ( isPen( v ) ? ' (pen)' : '' ) + ( v.mode === 'conc' ? ' · ' + fmtNum( +v.conc ) + ' mg/mL' : v.mode === 'blend' ? '' : ' · ' + fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) ) );
+				} ) ) )
+			) );
+		}
+
+		var form = h( 'div', { class: 'ypt-card ypt-calc-form' } );
+		var where = pen ? 'pen' : 'vial';
+		if ( c.mode === 'hormone' ) {
+			form.appendChild( h( 'div', { class: 'ypt-row' },
+				field( 'Strength (mg/mL)', calcNum( 'ypt-c-conc', c, 'conc', '200', update ), 'On the label', 'ypt-c-conc' ),
+				field( ( pen ? 'Pen' : 'Vial' ) + ' size (mL)', calcNum( 'ypt-c-volume', c, 'volume', '10', update ), null, 'ypt-c-volume' )
+			) );
+			form.appendChild( h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'My dose is' ),
+				seg( [ [ 'week', 'Per week' ], [ 'injection', 'Per injection' ] ], c.per, function ( v ) {
+					c.per = v;
+					render();
+				} )
+			) );
+			if ( c.per === 'week' ) {
+				form.appendChild( h( 'div', { class: 'ypt-row' },
+					field( 'Weekly dose (mg)', calcNum( 'ypt-c-weekly', c, 'weekly', '200', update ), null, 'ypt-c-weekly' ),
+					field( 'Injections per week', calcNum( 'ypt-c-perWeek', c, 'perWeek', '2', update ), null, 'ypt-c-perWeek' )
+				) );
+			} else {
+				form.appendChild( field( 'Dose per injection (mg)', calcNum( 'ypt-c-dose', c, 'dose', '100', update ), null, 'ypt-c-dose' ) );
+			}
+		} else {
+			if ( c.mode === 'blend' ) {
+				var rows = h( 'div', { class: 'ypt-blend' } );
+				c.parts.forEach( function ( x, i ) {
+					rows.appendChild( h( 'div', { class: 'ypt-blend__row' },
+						h( 'div', { class: 'ypt-blend__name' }, compoundInput( 'ypt-c-part-' + i, x.name, function ( name ) {
+							x.name = name;
+							update();
+						}, 'Peptide ' + ( i + 1 ) ) ),
+						h( 'div', { class: 'ypt-blend__amt' }, h( 'input', { class: 'ypt-input', id: 'ypt-c-part-amt-' + i, type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: '5', value: x.amount, 'aria-label': ( x.name || 'Peptide ' + ( i + 1 ) ) + ' mg', oninput: function ( e ) {
+							x.amount = e.target.value;
+							update();
+						} } ), h( 'span', null, 'mg' ) ),
+						c.parts.length > 2 ? h( 'button', { type: 'button', class: 'ypt-btn ypt-shrink', 'aria-label': 'Remove ' + ( x.name || 'this peptide' ), onclick: function () {
+							c.parts.splice( i, 1 );
+							render();
+						} }, '×' ) : null
+					) );
+				} );
+				if ( c.parts.length < 5 ) {
+					rows.appendChild( h( 'button', { type: 'button', class: 'ypt-link', style: { alignSelf: 'flex-start' }, onclick: function () {
+						c.parts.push( { name: '', amount: '' } );
+						render();
+					} }, '+ Add a peptide' ) );
+				}
+				form.appendChild( h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Peptides in the ' + where ), rows,
+					h( 'p', { class: 'ypt-hint' }, 'As printed on the label. Mixing your own from separate vials? ', h( 'a', { href: CFG.calculatorUrl + '#blend-mix' }, 'Use the blend mixer' ), '.' ) ) );
+				form.appendChild( field( 'Bacteriostatic water added (mL)', calcNum( 'ypt-c-water', c, 'water', '2', update ), null, 'ypt-c-water' ) );
+				form.appendChild( calcChips( c, 'water', [ 1, 2, 2.5, 3 ], 'mL', update ) );
+			} else {
+				var unit = c.mode === 'iu' ? 'IU' : 'mg';
+				form.appendChild( h( 'div', { class: 'ypt-row' },
+					field( ( c.mode === 'iu' ? 'IU' : 'Peptide' ) + ' in the ' + where, h( 'div', { class: 'ypt-input-unit' }, calcNum( 'ypt-c-amount', c, 'amount', c.mode === 'iu' ? '10' : '10', update ), h( 'span', null, unit ) ), null, 'ypt-c-amount' ),
+					field( 'Water added', h( 'div', { class: 'ypt-input-unit' }, calcNum( 'ypt-c-water', c, 'water', '2', update ), h( 'span', null, 'mL' ) ), null, 'ypt-c-water' )
+				) );
+				form.appendChild( calcChips( c, 'water', pen ? [ 3 ] : [ 1, 2, 2.5, 3 ], 'mL', update ) );
+			}
+			var doseUnits = c.mode === 'iu' ? [ 'IU' ] : [ 'mcg', 'mg' ];
+			if ( doseUnits.indexOf( c.unit ) === -1 ) {
+				c.unit = doseUnits[ 0 ];
+			}
+			var ofBox = null;
+			var parts = c.mode === 'blend' ? calcParts( c ) : [];
+			if ( parts.length ) {
+				ofBox = h( 'div', { class: 'ypt-row', style: { alignItems: 'center', marginTop: '8px' } },
+					h( 'span', { class: 'ypt-shrink ypt-small' }, 'That dose is' ),
+					h( 'select', { class: 'ypt-select', 'aria-label': 'What the dose measures', onchange: function ( e ) {
+						c.doseOf = e.target.value;
+						update();
+					} }, [ h( 'option', { value: '', selected: ! c.doseOf }, 'the whole blend' ) ].concat( parts.map( function ( x ) {
+						return h( 'option', { value: x.name, selected: sameCompound( x.name, c.doseOf ) }, 'the ' + x.name + ' in it' );
+					} ) ) )
+				);
+			}
+			form.appendChild( h( 'div', { class: 'ypt-field' },
+				h( 'label', { for: 'ypt-c-dose' }, 'Your dose' ),
+				h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+					h( 'div', { style: { flex: '1 1 50%' } }, calcNum( 'ypt-c-dose', c, 'dose', c.mode === 'iu' ? '2' : '250', update ) ),
+					doseUnits.length > 1 ? seg( doseUnits, c.unit, function ( u ) {
+						c.unit = u;
+						update();
+					} ) : h( 'div', { class: 'ypt-seg' }, h( 'button', { type: 'button', 'aria-pressed': 'true' }, 'IU' ) )
+				),
+				ofBox
+			) );
+		}
+		if ( ! pen ) {
+			form.appendChild( h( 'div', { class: 'ypt-field' },
+				h( 'span', { class: 'ypt-label' }, 'Syringe' ),
+				seg( [ [ 30, '0.3 mL · 30u' ], [ 50, '0.5 mL · 50u' ], [ 100, '1 mL · 100u' ] ], +c.syringe || 50, function ( s ) {
+					c.syringe = s;
+					update();
+				}, 'ypt-seg--wrap' )
+			) );
+		}
+		wrap.appendChild( form );
+		wrap.appendChild( result );
+		update();
+
+		if ( guest ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-calc-cta' },
+				h( 'div', null, h( 'b', null, 'Track this vial for free' ), h( 'span', null, 'Reminders, the units to draw on every dose, and a heads-up before it runs out.' ) ),
+				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent', onclick: guestSave }, 'Save' )
+			) );
+		} else {
+			wrap.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent ypt-btn--block', style: { marginTop: '12px' }, onclick: function () {
+				saveCalcAsVial( c );
+			} }, c.compound && vials( false ).some( function ( v ) {
+				return sameCompound( v.compound, c.compound );
+			} ) ? 'Save as a new ' + ( pen ? 'pen' : 'vial' ) : 'Save as a ' + ( pen ? 'pen' : 'vial' ) ) );
+		}
+		wrap.appendChild( h( 'p', { class: 'ypt-hint', style: { marginTop: '12px', textAlign: 'center' } }, 'Math only, not medical advice. Always double-check against your vial’s label and your provider’s instructions.' ) );
+		return wrap;
+	}
+
+	function drawCalcResult( box, c ) {
+		box.textContent = '';
+		box.appendChild( h( 'div', { class: 'ypt-stripe', 'aria-hidden': 'true' } ) );
+		var v = calcVial( c );
+		var d = calcDose( c );
+		var conc = vialConcentration( v );
+		var total = vialTotalUnits( v );
+		var pen = c.kind === 'pen';
+		var cap = +c.syringe || 50;
+		var units = conc ? unitsForDose( d.dose, d.unit, v, c.mode === 'blend' ? c.doseOf : '' ) : null;
+		if ( ! conc ) {
+			box.appendChild( h( 'p', { class: 'ypt-muted' }, c.mode === 'hormone' ? 'Enter the strength on the label to see the units to draw.' : c.mode === 'blend' ? 'Enter at least one peptide’s mg and the water you added.' : 'Enter what’s in the ' + ( pen ? 'pen' : 'vial' ) + ' and the water you added.' ) );
+			if ( ! pen ) {
+				box.appendChild( drawSyringe( 0, cap ) );
+			}
+			return;
+		}
+		if ( units == null ) {
+			box.appendChild( h( 'p', { class: 'ypt-muted' }, 'Now enter your dose to see how many units to draw.' ) );
+		} else {
+			box.appendChild( h( 'div', { class: 'ypt-eyebrow' }, pen ? 'Dial to' : 'Draw to' ) );
+			box.appendChild( h( 'div', { class: 'ypt-calc-big' }, fmtNum( units, 1 ), h( 'small', null, 'units · ' + fmtNum( units / 100, 3 ) + ' mL' ) ) );
+			if ( c.mode === 'hormone' && c.per === 'week' ) {
+				box.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '6px' } }, fmtNum( d.dose, 2 ) + ' mg per injection (' + fmtNum( +c.weekly, 2 ) + ' mg ÷ ' + Math.round( +c.perWeek ) + ' a week)' ) );
+			}
+			if ( isBlend( v ) ) {
+				box.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '6px' } }, 'Each dose: ' + blendDoseLine( v, units ) ) );
+			}
+			if ( ! pen ) {
+				box.appendChild( drawSyringe( units, cap ) );
+			}
+			if ( ! pen && units > cap ) {
+				box.appendChild( h( 'div', { class: 'ypt-draw ypt-draw--warn' }, 'That’s more than a ' + ( cap / 100 ) + ' mL syringe holds. Pick a bigger syringe' + ( c.mode === 'hormone' ? ', or split it into more injections.' : ', or add less water for a stronger mix.' ) ) );
+			} else if ( units < 2 ) {
+				box.appendChild( h( 'div', { class: 'ypt-draw ypt-draw--warn' }, 'Under 2 units is hard to measure.' + ( c.mode === 'hormone' ? '' : ' Adding more water makes each dose easier to draw.' ) ) );
+			}
+		}
+		var doses = units > 0 && total ? Math.floor( ( total + 0.0001 ) / units ) : 0;
+		box.appendChild( h( 'div', { class: 'ypt-stats' },
+			h( 'div', { class: 'ypt-stat' }, h( 'b', null, fmtNum( conc.amount, 2 ) + ' ' + conc.unit + '/mL' ), h( 'span', null, 'strength' ) ),
+			h( 'div', { class: 'ypt-stat' }, h( 'b', null, conc.unit === 'mg' ? fmtNum( conc.amount * 10, 1 ) + ' mcg' : fmtNum( conc.amount / 100, 2 ) + ' IU' ), h( 'span', null, pen ? 'per unit dialed' : 'per syringe unit' ) ),
+			h( 'div', { class: 'ypt-stat' }, h( 'b', null, doses ? doses + ' doses' : total ? fmtNum( total, 0 ) + ' u' : '–' ), h( 'span', null, doses ? ( c.mode === 'hormone' && c.per === 'week' && +c.perWeek > 0 ? 'about ' + fmtNum( doses / Math.round( +c.perWeek ), 1 ) + ' weeks' : 'per ' + ( pen ? 'pen' : 'vial' ) ) : 'units in the ' + ( pen ? 'pen' : 'vial' ) ) )
+		) );
+	}
+
+	/** Signed in: on to the Mix a vial sheet, filled in. Saving it goes on to the schedule when there isn't one yet. */
+	function saveCalcAsVial( c ) {
+		var v = calcVial( c );
+		var d = calcDose( c );
+		openVialSheet( null, {
+			title: 'Save as a ' + ( c.kind === 'pen' ? 'pen' : 'vial' ),
+			kind: c.kind,
+			compound: c.compound || ( c.mode === 'blend' ? v.parts.map( function ( x ) {
+				return x.name;
+			} ).join( ' + ' ) : '' ),
+			preset: Object.assign( {}, v, { syringe: +c.syringe || 50, blend: c.mode === 'blend' ? 'bought' : '' } ),
+			dose: parseFloat( d.dose ) > 0 ? String( Math.round( parseFloat( d.dose ) * 1000 ) / 1000 ) : '',
+			unit: d.unit,
+			doseOf: c.mode === 'blend' ? c.doseOf : '',
+		} );
+	}
+
+	function guestSave() {
+		var c = calcState();
+		saveJSON( CALC_DRAFT_KEY, { c: c, at: Date.now() } );
+		var v = calcVial( c );
+		var d = calcDose( c );
+		var conc = vialConcentration( v );
+		var units = conc ? unitsForDose( d.dose, d.unit, v, c.mode === 'blend' ? c.doseOf : '' ) : null;
+		var what = c.mode === 'hormone' ? ( +c.conc > 0 ? fmtNum( +c.conc ) + ' mg/mL' + ( +c.volume > 0 ? ', ' + fmtNum( +c.volume ) + ' mL' : '' ) : '' )
+			: conc ? fmtNum( +v.amount ) + ( c.mode === 'iu' ? ' IU' : ' mg' ) + ' + ' + fmtNum( +v.water ) + ' mL water' : '';
+		guestSheet( 'Sign in to save this ' + ( c.kind === 'pen' ? 'pen' : 'vial' ), 'Your numbers stay put. Once you’re signed in, YeffoHealth opens with everything filled in.', what ? h( 'div', { class: 'ypt-calc-kept' },
+			units != null ? h( 'span', { class: 'ypt-calc-kept__n' }, fmtNum( units, 1 ) + ' u' ) : null,
+			h( 'span', null, h( 'b', null, what ), units != null ? fmtNum( +d.dose, 3 ) + ' ' + d.unit + ' dose' : 'No dose entered yet' )
+		) : null );
+	}
+
+	/** The locked tabs and Save: what an account adds, and the way in. */
+	function guestSheet( title, text, extra ) {
+		openSheet( title, 'YeffoHealth', [
+			h( 'p', { class: 'ypt-muted' }, text ),
+			extra,
+			h( 'a', { class: 'ypt-btn ypt-btn--primary ypt-btn--block', style: { marginTop: '16px' }, href: CFG.registerUrl }, 'Create a free account' ),
+			h( 'a', { class: 'ypt-btn ypt-btn--block', style: { marginTop: '10px' }, href: CFG.loginUrl }, 'I already have an account' ),
+			h( 'p', { class: 'ypt-lock', style: { marginTop: '14px' } }, icon( 'lock' ), 'Encrypted · only you can see your doses' ),
+		] );
+	}
+
+	function guestLocked( tab ) {
+		var info = {
+			today: [ 'Today’s doses, one tap to log', 'See what’s due, tap Take or Skip, and get a reminder on your phone when it’s time. Free with an account.' ],
+			progress: [ 'See your progress', 'Weight, measurements, photos and lab results, charted alongside your doses. Free with an account.' ],
+			vials: [ 'Your whole supply', 'Track every vial, pen and bottle, see when to mix the next one, and get a heads-up before you run low. Free with an account.' ],
+		}[ tab ];
+		guestSheet( info[ 0 ], info[ 1 ], null );
+	}
+
+	/** Below the signed-out calculator: what else the app does. */
+	function guestAbout() {
+		function feature( ic, title, text ) {
+			return h( 'li', null, icon( ic ), h( 'div', null, h( 'b', null, title ), text ) );
+		}
+		return h( 'div', null,
+			h( 'div', { class: 'ypt-eyebrow ypt-section-label', style: { marginTop: '28px' } }, 'Free with an account' ),
+			h( 'ul', { class: 'ypt-features' },
+				feature( 'check', 'Today’s doses at a glance', 'Tap Take or Skip. Daily, weekly, every few days, or on/off cycles.' ),
+				feature( 'syringe', 'Units on every dose', 'Save your vial once; every dose shows exactly what to draw.' ),
+				feature( 'bell', 'Reminders', 'A notification on your phone when a dose is due, and before you run low.' ),
+				feature( 'vials', 'Your whole supply', 'Track vials and pills on hand, see when to mix the next one and when to reorder.' ),
+				feature( 'lock', 'Private and encrypted', 'Your entries are encrypted with a key only your account unlocks.' )
+			),
+			h( 'a', { class: 'ypt-btn ypt-btn--primary ypt-btn--block', href: CFG.registerUrl }, 'Create a free account' ),
+			h( 'p', { class: 'ypt-muted', style: { textAlign: 'center', marginTop: '14px' } }, 'Already have one? ', h( 'a', { href: CFG.loginUrl }, 'Sign in' ) ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { textAlign: 'center', marginTop: '24px' } },
+				'YeffoHealth is not a healthcare provider and doesn’t give medical advice. It simply keeps track of the information that matters to you.' )
+		);
+	}
+
+	/** After signing in: a calculation saved while signed out opens as a new vial. */
+	function takeCalcDraft() {
+		var draft = loadJSON( CALC_DRAFT_KEY, null );
+		removeKey( CALC_DRAFT_KEY );
+		if ( ! draft || ! draft.c || ! ( Date.now() - ( +draft.at || 0 ) < CALC_DRAFT_DAYS * 86400000 ) ) {
+			return;
+		}
+		ui.calc = null;
+		var c = Object.assign( calcState(), draft.c );
+		if ( ! Array.isArray( c.parts ) || ! c.parts.length ) {
+			c.parts = [ { name: '', amount: '' }, { name: '', amount: '' } ];
+		}
+		go( 'calc' );
+		saveCalcAsVial( c );
+	}
+
 	function renderMessage( title, text, retry ) {
 		root.textContent = '';
 		root.appendChild( h( 'div', { class: 'ypt-card ypt-empty', style: { marginTop: '30vh' } },
@@ -8801,11 +9268,19 @@
 	}
 
 	if ( ! CFG.signedIn ) {
-		if ( CFG.share && CFG.share.protocol ) {
-			// Signing up goes through My Account, not back here: remember the link so the tracker offers it next time.
-			saveJSON( PENDING_SHARE_KEY, CFG.share );
+		if ( CFG.share ) {
+			if ( CFG.share.protocol ) {
+				// Signing up goes through My Account, not back here: remember the link so the tracker offers it next time.
+				saveJSON( PENDING_SHARE_KEY, CFG.share );
+			}
+			renderSignedOut();
+			return;
 		}
-		renderSignedOut();
+		// Anyone can use the calculator; the rest of the app needs an account.
+		removeKey( STORE_KEY );
+		removeKey( QUEUE_KEY );
+		forgetNative();
+		render();
 		return;
 	}
 	if ( ! CFG.ready ) {
@@ -8846,6 +9321,8 @@
 		if ( incoming && state.loaded ) {
 			removeKey( PENDING_SHARE_KEY );
 			openReceivedShare( incoming );
+		} else if ( state.loaded ) {
+			takeCalcDraft();
 		}
 	} );
 }() );

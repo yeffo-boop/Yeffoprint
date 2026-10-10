@@ -12,7 +12,7 @@
  * and push reminders. Same rewrite-rule approach as
  * class-admin-app-shortcut.php's /design/.
  *
- *   /tracker/                        the app (sign-in screen when logged out)
+ *   /tracker/                        the app (signed out: the dose calculator, other tabs locked)
  *   /tracker/sw.js                   service worker (must be served from inside /tracker/ to control it)
  *   /tracker/manifest.webmanifest    Home Screen install metadata
  *   /tracker/session                 a fresh REST nonce for the signed-in customer

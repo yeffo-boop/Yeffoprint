@@ -6,6 +6,22 @@ Customers' peptide dose log at **/tracker/**: a phone-friendly web app
 `assets/tracker/`). Customers sign in with their normal YeffoDesign
 account.
 
+## Calculator tab (no sign-in needed)
+
+Signed out, `/tracker/` opens on the dose calculator (Peptides, HGH / HCG,
+Hormones, Blends) with Today, Progress and Supply shown locked; tapping one,
+or Save, explains what a free account adds and links to sign in or sign up.
+Save keeps the calculation in `localStorage` `ypt-calc-draft` (no `ypt:`
+prefix, so the signed-out cleanup on wp-login.php leaves it) for 7 days;
+the next signed-in load opens it as a filled-in "Save as a vial" sheet,
+which goes on to the schedule if there isn't one for that peptide. Nothing
+else typed into the calculator is stored.
+
+Signed in, Calculator is the fifth bottom tab (Me moved to the initial in
+the app bar). "Start from a vial I have" fills it from a saved vial and its
+schedule. The math is the same as the Mix a vial sheet. Shared protocol
+links opened signed out still show the old share landing page.
+
 ## What's stored, and how
 
 - One table, `wp_yeffoprint_tracker_records`. Every compound, dose, time,
