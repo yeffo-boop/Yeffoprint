@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-10m',
+		'date'  => '2026-10-10',
+		'title' => 'Pens look like pens',
+		'text'  => 'On the Supply tab, pens you\'ve mixed now show an injection pen picture instead of a vial, so you can tell them apart at a glance.',
+	],
+	[
 		'id'    => '2026-10-10k',
 		'date'  => '2026-10-10',
 		'title' => 'The calculator is now a tab',

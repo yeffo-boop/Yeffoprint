@@ -5228,7 +5228,7 @@
 			}
 
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-vial' },
-				h( 'div', { class: 'ypt-vial__img', 'aria-hidden': 'true' }, h( 'i', { style: { height: 'calc(' + info.pct + '% - 8px)', background: color, minHeight: info.pct > 0 ? '4px' : '0' } } ) ),
+				h( 'div', { class: 'ypt-vial__img' + ( isPen( v ) ? ' ypt-vial__img--pen' : '' ), 'aria-hidden': 'true' }, h( 'i', { style: { height: 'calc(' + info.pct + '% - 8px)', background: color, minHeight: info.pct > 0 ? '4px' : '0' } } ) ),
 				h( 'div', { style: { flex: '1', minWidth: '0' } },
 					h( 'h2', null, v.compound + ( v.mode !== 'conc' && ! isBlend( v ) && +v.amount ? ' · ' + fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) : '' ) ),
 					h( 'div', { class: 'ypt-muted ypt-small', style: { marginTop: '2px' } }, detail.join( ' · ' ) ),

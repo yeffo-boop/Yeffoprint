@@ -1013,6 +1013,37 @@ a { color: var(--ypt-cyan-deep); }
 	border-radius: 4px;
 }
 
+/* Pens: a slim injection pen, needle on top and dose dial below. */
+.ypt-vial__img--pen {
+	width: 20px;
+	height: 62px;
+	margin: 14px 12px 0;
+	border-radius: 6px 6px 4px 4px;
+	background: linear-gradient(var(--ypt-solid), var(--ypt-solid)) bottom / 100% 10px no-repeat, var(--ypt-card);
+}
+
+.ypt-vial__img--pen::before {
+	left: 5px;
+	right: 5px;
+	top: -8px;
+	height: 6px;
+	border-radius: 2px 2px 0 0;
+}
+
+.ypt-vial__img--pen::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: -13px;
+	width: 2px;
+	height: 6px;
+	margin-left: -1px;
+	background: var(--ypt-ink);
+	border-radius: 1px;
+}
+
+.ypt-vial__img--pen i { left: 3px; right: 3px; bottom: 14px; border-radius: 3px; max-height: calc(100% - 20px); }
+
 .ypt-bar { height: 8px; border-radius: 4px; background: var(--ypt-line); overflow: hidden; margin: 10px 0 6px; }
 .ypt-bar i { display: block; height: 100%; border-radius: 4px; }
 
