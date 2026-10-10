@@ -248,6 +248,7 @@
 
 	var todayDisputes = [];
 	var todayMessages = 0;
+	var todayDueDays  = 0; // Settings › General "Order due date (days)": older open orders float up as late.
 
 	// Disputes waiting on an answer and unread website messages join the
 	// queue. Both are optional extras: a failure just leaves them out.
@@ -277,6 +278,7 @@
 
 	// The dashboard summary app.js already loads; lost or returned packages join the queue.
 	YP.next.onDashboard = function ( summary ) {
+		todayDueDays = parseInt( summary.due_date_days, 10 ) || 0;
 		todayProblems = ( summary.shipped_packages || [] ).filter( function ( pkg ) {
 			return 'FAILURE' === pkg.tracking_status || 'RETURNED' === pkg.tracking_status;
 		} );
@@ -327,7 +329,10 @@
 		var day = 86400000;
 		( todayBoard || [] ).forEach( function ( o ) {
 			var age = o.date ? Date.now() - new Date( o.date ).getTime() : 0;
-			var base = { id: o.id, express: o.express, date: o.date, meta: ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
+			// Same rule as the old dashboard's "Needs attention": open longer than the due date setting.
+			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays : 0;
+			var late = lateBy > 0 ? lateBy : 0;
+			var base = { id: o.id, express: o.express, date: o.date, late: late, meta: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
@@ -351,6 +356,10 @@
 			}
 			if ( !! a.express !== !! b.express ) {
 				return a.express ? -1 : 1;
+			}
+			// Late work next, most overdue first.
+			if ( ( a.late || 0 ) !== ( b.late || 0 ) ) {
+				return ( b.late || 0 ) - ( a.late || 0 );
 			}
 			if ( QUEUE_KINDS[ a.kind ].rank !== QUEUE_KINDS[ b.kind ].rank ) {
 				return QUEUE_KINDS[ a.kind ].rank - QUEUE_KINDS[ b.kind ].rank;
@@ -382,7 +391,7 @@
 				return (
 					'<div class="ypn-q' + ( item.express || 'problem' === item.kind || 'dispute' === item.kind ? ' is-hot' : '' ) + '">' +
 						'<i style="background:' + QUEUE_KINDS[ item.kind ].color + '"></i>' +
-						'<a class="ypn-q__text" href="' + escAttr( href ) + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
+						'<a class="ypn-q__text" href="' + escAttr( href ) + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( item.late ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : '' ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
 						( item.ack
 							? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-q-ack="' + item.id + '">' + esc( item.action ) + '</button>'
 							: ( item.print
@@ -634,6 +643,34 @@
 			window.location.replace( '#/order/' + subId );
 		}
 	};
+
+	/* Resend one of the customer emails (class-admin-order-actions-controller.php). */
+	function resendEmail( order, onSent ) {
+		var options = yeffoprintAdminApp.orderEmails || {};
+		YP.confirmModal( {
+			title: 'Resend an email',
+			message: 'Goes to ' + order.customer_email + '. A note is added to the order.',
+			bodyHtml: '<div class="ypn-email-pick">' + Object.keys( options ).map( function ( key, i ) {
+				return '<label class="ypn-check"><input type="radio" name="ypn-email" value="' + escAttr( key ) + '"' + ( 0 === i ? ' checked' : '' ) + '> ' + esc( options[ key ] ) + '</label>';
+			} ).join( '' ) + '</div>',
+			confirmLabel: 'Send',
+			onConfirm: function ( dialog ) {
+				var picked = dialog.querySelector( 'input[name="ypn-email"]:checked' );
+				YP.request( api( 'admin/order/' + order.id + '/email' ), {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( { email: picked ? picked.value : '' } )
+				} ).then( function ( result ) {
+					window.alert( 'Sent to ' + result.to + '.' );
+					if ( onSent ) {
+						onSent();
+					}
+				} ).catch( function ( error ) {
+					window.alert( 'Couldn’t send: ' + error.message );
+				} );
+			}
+		} );
+	}
 
 	/* ---------- Progress tracker (order page + order window) ---------- */
 
@@ -1025,7 +1062,15 @@
 				actions.push( '<a class="ypn-act" href="mailto:' + escAttr( order.customer_email ) + '?subject=' + encodeURIComponent( 'Your YeffoDesign order #' + order.number ) + '">Message customer <span>›</span></a>' );
 			}
 			actions.push( '<button type="button" class="ypn-act" data-ypn-act="status">Change status <span>' + esc( order.status_label ) + '</span></button>' );
+			if ( order.customer_email && 'trash' !== order.status ) {
+				actions.push( '<button type="button" class="ypn-act" data-ypn-act="email">Resend an email <span>✉</span></button>' );
+			}
+			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'slip' ) ) + '" target="_blank" rel="noopener">Print packing slip <span>⎙</span></a>' );
+			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'invoice' ) ) + '" target="_blank" rel="noopener">Print invoice <span>⎙</span></a>' );
 			actions.push( '<button type="button" class="ypn-act" data-ypn-act="details">Refunds &amp; all details <span>›</span></button>' );
+			actions.push( 'trash' === order.status
+				? '<button type="button" class="ypn-act" data-ypn-act="restore">Restore from trash <span>↺</span></button>'
+				: '<button type="button" class="ypn-act ypn-act--quiet" data-ypn-act="trash">Move to trash <span>🗑</span></button>' );
 
 			var shipTo = order.needs_customer_address
 				? '<span class="ypn-pill ypn-pill--yel">Customer adds it when paying</span>'
@@ -1163,6 +1208,34 @@
 						YP.next.openDetails( order.id, 'edit' );
 					} else if ( 'status' === act ) {
 						YP.next.openDetails( order.id, 'Status' );
+					} else if ( 'email' === act ) {
+						resendEmail( order, load );
+					} else if ( 'trash' === act || 'restore' === act ) {
+						var run = function () {
+							button.disabled = true;
+							YP.request( api( 'admin/orders/bulk' ), {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify( { ids: [ order.id ], action: act } )
+							} ).then( function ( result ) {
+								if ( result.failed && result.failed.length ) {
+									throw new Error( 'the order couldn’t be changed' );
+								}
+								if ( 'trash' === act ) {
+									window.location.hash = '#/order-history';
+								} else {
+									load();
+								}
+							} ).catch( function ( error ) {
+								button.disabled = false;
+								window.alert( 'Couldn’t do that: ' + error.message );
+							} );
+						};
+						if ( 'trash' === act ) {
+							YP.confirmModal( { title: 'Move order ' + order.number + ' to the trash?', message: 'It leaves your order lists. You can restore it from All orders › Trash.', confirmLabel: 'Move to trash', danger: true, onConfirm: run } );
+						} else {
+							run();
+						}
 					} else {
 						YP.next.openDetails( order.id );
 					}
@@ -1901,6 +1974,7 @@
 		viewEl.innerHTML = '<div data-ypn-tiles></div><section class="ypn-card ypn-best" data-ypn-best><h3 class="ypn-card__title">Best sellers <span>last 30 days</span></h3><p class="yp-field__hint">Loading&hellip;</p></section>';
 		viewEl.querySelector( '[data-ypn-tiles]' ).innerHTML = tilesHtml( [
 			[ 'templates', 'Templates', 'Label designs, categories, descriptions and photos.', MAG ],
+			[ 'template-categories', 'Template Categories', 'Product types, styles, colors and materials the shop filters by.', MAG ],
 			[ 'sizes', 'Sizes', 'Label sizes, what they fit, and round lid stickers.', CY ],
 			[ 'sticker-sizes', 'Sticker Sizes', 'Custom sticker sizes and prices.', CY ],
 			[ 'materials', 'Materials', 'Paper and finish choices with swatches.', YEL ],
@@ -1992,6 +2066,7 @@
 				[ 'settings/general', 'General', 'Away mode, express fee, dashboard and contact form.', INK ],
 				[ 'settings/storefront', 'Storefront', 'Announcement bar, homepage promo, splash and search.', MAG ],
 				[ 'settings/shipping', 'Shipping', 'Shippo, shipping options and local pickup.', CY ],
+				[ 'shipping-zones', 'Shipping Zones', 'Checkout shipping choices and prices by region.', CY ],
 				[ 'settings/integrations', 'Integrations', 'Telegram, social logins and payment keys.', VIO ],
 				[ 'payments', 'Payments', 'Turn Venmo, Zelle, crypto and cards on or off.', GRN ],
 				[ 'surcharge', 'Card Surcharge', 'Extra fee on card payments.', YEL ],

@@ -60,7 +60,8 @@
 	var QUICK_TABS = [
 		{ status: '',               label: 'All orders' },
 		{ status: 'pending',        label: 'Awaiting payment' },
-		{ status: 'checkout-draft', label: 'Drafts' }
+		{ status: 'checkout-draft', label: 'Drafts' },
+		{ status: 'trash',          label: 'Trash' }
 	];
 
 	// Mirrors YeffoPrint_Draft_Order_Retention::RETENTION_DAYS.
@@ -91,11 +92,14 @@
 					Object.keys( yeffoprintAdminApp.wcOrderStatuses || {} ).map( function ( key ) {
 						return '<option value="' + YP.escapeAttr( key ) + '">' + YP.escapeHtml( yeffoprintAdminApp.wcOrderStatuses[ key ] ) + '</option>';
 					} ).join( '' ) +
+					'<option value="trash">Trash</option>' +
 				'</select>' +
 			'</div>' +
+			'<div class="yp-bulk-bar" data-yp-bulk hidden></div>' +
 			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
+				'<th class="yp-bulk-check"><input type="checkbox" data-yp-check-all aria-label="Select all orders on this page"></th>' +
 				'<th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th>' +
-			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="6">Loading&hellip;</td></tr></tbody></table></div>' +
+			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="7">Loading&hellip;</td></tr></tbody></table></div>' +
 			'<div class="yp-pagination" data-yp-pagination></div>';
 
 		var rowsEl       = viewEl.querySelector( '[data-yp-rows]' );
@@ -105,6 +109,106 @@
 		var draftHintEl  = viewEl.querySelector( '[data-yp-draft-hint]' );
 		var unpaidEl     = viewEl.querySelector( '[data-yp-unpaid-requests]' );
 		var tabEls       = viewEl.querySelectorAll( '[data-yp-quick-tab]' );
+		var bulkEl       = viewEl.querySelector( '[data-yp-bulk]' );
+		var checkAllEl   = viewEl.querySelector( '[data-yp-check-all]' );
+		var selected     = {}; // order id => true, for the bulk bar. Cleared on every reload.
+
+		function selectedIds() {
+			return Object.keys( selected ).map( Number );
+		}
+
+		function drawBulkBar() {
+			var ids = selectedIds();
+			var boxes = rowsEl.querySelectorAll( '[data-yp-check]' );
+			checkAllEl.checked = boxes.length > 0 && ids.length === boxes.length;
+			checkAllEl.indeterminate = ids.length > 0 && ids.length < boxes.length;
+			bulkEl.hidden = ! ids.length;
+			if ( ! ids.length ) {
+				bulkEl.innerHTML = '';
+				return;
+			}
+			var inTrash = 'trash' === statusEl.value;
+			bulkEl.innerHTML =
+				'<b>' + ids.length + ' selected</b>' +
+				( inTrash
+					? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="restore">Restore</button>' +
+						'<button type="button" class="wp-block-button__link yp-button--danger" data-yp-bulk-act="delete">Delete forever</button>'
+					: '<span class="yp-bulk-bar__group"><select data-yp-bulk-status aria-label="New status"><option value="">Change status to&hellip;</option>' +
+							Object.keys( yeffoprintAdminApp.wcOrderStatuses || {} ).filter( function ( key ) { return 'checkout-draft' !== key; } ).map( function ( key ) {
+								return '<option value="' + YP.escapeAttr( key ) + '">' + YP.escapeHtml( yeffoprintAdminApp.wcOrderStatuses[ key ] ) + '</option>';
+							} ).join( '' ) +
+						'</select><button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="status">Apply</button></span>' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="slip">Print packing slips</button>' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="invoice">Print invoices</button>' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="trash">Move to trash</button>' ) +
+				'<button type="button" class="yp-link-button" data-yp-bulk-clear>Clear</button>' +
+				'<span data-yp-bulk-status-msg></span>';
+		}
+
+		function runBulk( action, button ) {
+			var ids = selectedIds();
+			var body = { ids: ids, action: action };
+			if ( 'status' === action ) {
+				body.status = bulkEl.querySelector( '[data-yp-bulk-status]' ).value;
+				if ( ! body.status ) {
+					bulkEl.querySelector( '[data-yp-bulk-status]' ).focus();
+					return;
+				}
+			}
+			var go = function () {
+				bulkEl.querySelectorAll( 'button, select' ).forEach( function ( el ) { el.disabled = true; } );
+				button.textContent = 'Working…';
+				YP.request( yeffoprintAdminApp.restUrl + 'admin/orders/bulk', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( body )
+				} ).then( function ( result ) {
+					if ( result.failed && result.failed.length ) {
+						window.alert( result.done + ' done. ' + result.failed.length + ' couldn’t be changed: #' + result.failed.join( ', #' ) );
+					}
+					load();
+				} ).catch( function ( error ) {
+					drawBulkBar();
+					window.alert( 'Couldn’t do that: ' + error.message );
+				} );
+			};
+			var n = ids.length + ( 1 === ids.length ? ' order' : ' orders' );
+			if ( 'delete' === action ) {
+				YP.confirmModal( { title: 'Delete ' + n + ' forever?', message: 'They’re removed for good, with their notes and history. This can’t be undone.', confirmLabel: 'Delete forever', danger: true, onConfirm: go } );
+			} else if ( 'trash' === action ) {
+				YP.confirmModal( { title: 'Move ' + n + ' to the trash?', message: 'They leave your order lists. You can restore them from the Trash tab.', confirmLabel: 'Move to trash', danger: true, onConfirm: go } );
+			} else if ( 'status' === action ) {
+				var label = ( yeffoprintAdminApp.wcOrderStatuses || {} )[ body.status ] || body.status;
+				YP.confirmModal( { title: 'Change ' + n + ' to ' + label + '?', message: 'Customers get whatever email WooCommerce sends for that status, same as changing them one at a time.', confirmLabel: 'Change status', onConfirm: go } );
+			} else {
+				go();
+			}
+		}
+
+		bulkEl.addEventListener( 'click', function ( event ) {
+			var act = event.target.closest( '[data-yp-bulk-act]' );
+			var print = event.target.closest( '[data-yp-bulk-print]' );
+			if ( act ) {
+				runBulk( act.getAttribute( 'data-yp-bulk-act' ), act );
+			} else if ( print ) {
+				window.open( YP.printOrdersUrl( selectedIds(), print.getAttribute( 'data-yp-bulk-print' ) ), '_blank' );
+			} else if ( event.target.closest( '[data-yp-bulk-clear]' ) ) {
+				selected = {};
+				rowsEl.querySelectorAll( '[data-yp-check]' ).forEach( function ( box ) { box.checked = false; } );
+				drawBulkBar();
+			}
+		} );
+
+		checkAllEl.addEventListener( 'change', function () {
+			selected = {};
+			rowsEl.querySelectorAll( '[data-yp-check]' ).forEach( function ( box ) {
+				box.checked = checkAllEl.checked;
+				if ( box.checked ) {
+					selected[ box.getAttribute( 'data-yp-check' ) ] = true;
+				}
+			} );
+			drawBulkBar();
+		} );
 
 		function syncTabs() {
 			tabEls.forEach( function ( tabEl ) {
@@ -167,7 +271,9 @@
 
 		function load() {
 			var token = ++requestToken;
-			rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">Loading&hellip;</td></tr>';
+			selected = {};
+			drawBulkBar();
+			rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="7">Loading&hellip;</td></tr>';
 			paginationEl.innerHTML = '';
 
 			var query = 'page=' + page + '&per_page=' + PER_PAGE;
@@ -192,13 +298,13 @@
 					if ( token !== requestToken ) {
 						return;
 					}
-					rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">Couldn’t load orders: ' + YP.escapeHtml( error.message ) + '</td></tr>';
+					rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="7">Couldn’t load orders: ' + YP.escapeHtml( error.message ) + '</td></tr>';
 				} );
 		}
 
 		function renderRows( orders ) {
 			if ( ! orders.length ) {
-				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="6">No orders match.</td></tr>';
+				rowsEl.innerHTML = '<tr class="yp-empty-row"><td colspan="7">No orders match.</td></tr>';
 				return;
 			}
 
@@ -206,6 +312,7 @@
 				var pillClass = STATUS_PILLS[ order.status ] || 'neutral';
 				return (
 					'<tr class="yp-row-clickable" data-yp-open-order="' + order.id + '">' +
+						'<td class="yp-bulk-check"><input type="checkbox" data-yp-check="' + order.id + '" aria-label="Select order ' + YP.escapeAttr( order.number ) + '"></td>' +
 						'<td>#' + YP.escapeHtml( order.number ) + '</td>' +
 						'<td>' +
 							'<div>' + YP.escapeHtml( order.customer_name || '—' ) + '</div>' +
@@ -219,8 +326,22 @@
 				);
 			} ).join( '' );
 
+			rowsEl.querySelectorAll( '[data-yp-check]' ).forEach( function ( box ) {
+				box.addEventListener( 'change', function () {
+					if ( box.checked ) {
+						selected[ box.getAttribute( 'data-yp-check' ) ] = true;
+					} else {
+						delete selected[ box.getAttribute( 'data-yp-check' ) ];
+					}
+					drawBulkBar();
+				} );
+			} );
+
 			rowsEl.querySelectorAll( '[data-yp-open-order]' ).forEach( function ( row ) {
-				row.addEventListener( 'click', function () {
+				row.addEventListener( 'click', function ( event ) {
+					if ( event.target.closest( '.yp-bulk-check' ) ) {
+						return; // Ticking a box selects; it doesn't open the order.
+					}
 					YP.openOrder( parseInt( row.getAttribute( 'data-yp-open-order' ), 10 ) );
 				} );
 			} );

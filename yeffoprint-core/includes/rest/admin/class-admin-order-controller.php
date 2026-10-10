@@ -139,7 +139,7 @@ class YeffoPrint_Admin_Order_Controller {
 			'order'    => 'DESC',
 		];
 
-		if ( '' !== $status && array_key_exists( $status, $this->status_options() ) ) {
+		if ( '' !== $status && ( 'trash' === $status || array_key_exists( $status, $this->status_options() ) ) ) {
 			$args['status'] = $status;
 		}
 
@@ -167,6 +167,7 @@ class YeffoPrint_Admin_Order_Controller {
 			'counts'        => [
 				'pending'        => wc_orders_count( 'pending' ),
 				'checkout-draft' => wc_orders_count( 'checkout-draft' ) + count( $unpaid_requests ),
+				'trash'          => count( wc_get_orders( [ 'type' => 'shop_order', 'status' => 'trash', 'limit' => -1, 'return' => 'ids' ] ) ),
 			],
 		] );
 	}

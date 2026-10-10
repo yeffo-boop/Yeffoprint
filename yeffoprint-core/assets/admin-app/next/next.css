@@ -2754,3 +2754,7 @@ body.yp-next .ypn-note-add textarea {
 	border: 0;
 	background: none;
 }
+
+/* Order page: quieter destructive action, and the resend-email choices. */
+.ypn-act--quiet { color: #9f2a17; }
+.ypn-email-pick { display: grid; gap: 8px; margin: 4px 0 16px; }
