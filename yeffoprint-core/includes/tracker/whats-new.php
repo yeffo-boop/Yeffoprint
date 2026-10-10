@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-10k',
+		'date'  => '2026-10-10',
+		'title' => 'The calculator is now a tab',
+		'text'  => 'The dose calculator lives inside YeffoHealth now: tap Calculator at the bottom for peptides, HGH and HCG, hormones and blends, and save the result as a vial in one tap. Me moved to your initial at the top, next to the bell. Friends can use the calculator without an account too.',
+	],
+	[
 		'id'    => '2026-10-06c',
 		'date'  => '2026-10-06',
 		'title' => 'Snooze a reminder',

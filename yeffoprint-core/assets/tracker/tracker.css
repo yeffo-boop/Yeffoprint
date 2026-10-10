@@ -1856,3 +1856,134 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-viewer__bar > div { display: flex; flex-direction: column; }
 .ypt-report-parts { padding-top: 0; padding-bottom: 0; }
 .ypt-report-parts .ypt-toggle + .ypt-toggle { border-top: 1px solid var(--ypt-line); }
+
+/* ---------- Calculator tab (signed out it's the whole app) ---------- */
+
+.ypt-appbar__signin {
+	border: 1.5px solid var(--ypt-ink);
+	border-radius: 12px;
+	padding: 8px 14px;
+	font-weight: 700;
+	font-size: 14px;
+	color: var(--ypt-ink);
+	text-decoration: none;
+}
+
+.ypt-appbar__tab.is-locked { display: inline-flex; gap: 5px; align-items: center; }
+.ypt-appbar__tab.is-locked svg { width: 13px; height: 13px; }
+
+.ypt-tab { position: relative; }
+.ypt-tab.is-locked { color: var(--ypt-line-strong); }
+.ypt-tab__lock {
+	position: absolute;
+	top: -2px;
+	left: calc(50% + 6px);
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--ypt-soft);
+	color: var(--ypt-mute);
+	display: grid;
+	place-items: center;
+}
+.ypt-tab .ypt-tab__lock svg { width: 10px; height: 10px; }
+
+.ypt-calc-modes {
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	margin: 0 -16px 12px;
+	padding: 2px 16px;
+	scrollbar-width: none;
+}
+.ypt-calc-modes::-webkit-scrollbar { display: none; }
+
+.ypt-calc-mode {
+	flex: none;
+	border: 1px solid var(--ypt-line);
+	background: var(--ypt-card);
+	color: var(--ypt-ink);
+	border-radius: 12px;
+	padding: 9px 14px;
+	font-weight: 700;
+	font-size: 14px;
+}
+.ypt-calc-mode[aria-pressed="true"] { background: var(--ypt-solid); border-color: var(--ypt-solid); color: var(--ypt-on-solid); }
+
+.ypt-calc-from {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: var(--ypt-info-soft);
+	border: 1px solid var(--ypt-info-line);
+	border-radius: 14px;
+	padding: 10px 12px;
+	margin-bottom: 12px;
+	cursor: pointer;
+}
+.ypt-calc-from__ic {
+	width: 34px;
+	height: 34px;
+	flex: none;
+	border-radius: 10px;
+	background: var(--ypt-card);
+	border: 1px solid var(--ypt-info-line);
+	color: var(--ypt-cyan-deep);
+	display: grid;
+	place-items: center;
+}
+.ypt-calc-from__ic svg { width: 18px; height: 18px; }
+.ypt-calc-from__text { flex: 1; min-width: 0; font-size: 13px; color: var(--ypt-charcoal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ypt-calc-from__text b { display: block; font-size: 14px; color: var(--ypt-ink); }
+.ypt-calc-from__pick { color: var(--ypt-cyan-deep); font-weight: 700; font-size: 14px; }
+/* The whole row opens the native picker. */
+.ypt-calc-from__select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
+
+.ypt-calc-form .ypt-field:last-child { margin-bottom: 0; }
+
+.ypt-input-unit { position: relative; }
+.ypt-input-unit .ypt-input { padding-right: 40px; }
+.ypt-input-unit span {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ypt-mute);
+	pointer-events: none;
+}
+
+.ypt-calc-result--main { position: relative; overflow: hidden; margin-top: 12px; padding-top: 18px; }
+.ypt-calc-result--main > .ypt-stripe { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.ypt-calc-result--main .ypt-calc-big { font-size: 40px; margin-top: 2px; }
+.ypt-calc-result--main .ypt-calc-big small { font-size: 16px; }
+
+.ypt-calc-cta {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	margin-top: 12px;
+	padding: 14px;
+	border-radius: var(--ypt-radius);
+	background: var(--ypt-banner-bg);
+	border: 1px solid var(--ypt-pink-line);
+}
+.ypt-calc-cta > div { flex: 1; font-size: 13px; color: var(--ypt-charcoal); }
+.ypt-calc-cta b { display: block; font: 700 16px var(--ypt-heading); color: var(--ypt-ink); margin-bottom: 2px; }
+.ypt-calc-cta .ypt-btn { flex: none; padding-left: 20px; padding-right: 20px; }
+
+.ypt-calc-kept {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	background: var(--ypt-soft);
+	border-radius: 14px;
+	padding: 10px 12px;
+	margin-top: 14px;
+	font-size: 13px;
+	color: var(--ypt-charcoal);
+}
+.ypt-calc-kept b { display: block; color: var(--ypt-ink); font-size: 14px; }
+.ypt-calc-kept__n { font: 700 20px var(--ypt-heading); color: var(--ypt-ink); white-space: nowrap; }
