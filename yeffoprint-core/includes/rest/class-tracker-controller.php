@@ -30,7 +30,7 @@ class YeffoPrint_Tracker_Controller {
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
 	/** Kinds the app writes directly; `push` only goes through /tracker/push. */
-	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab' ];
+	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food' ];
 
 	/** What a progress photo may be once decoded. */
 	private const PHOTO_TYPES = [ 'image/jpeg', 'image/png', 'image/webp' ];

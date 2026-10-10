@@ -210,6 +210,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-store.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-usage.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-medications.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-compounds.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-schedule.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-push.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-shares.php';

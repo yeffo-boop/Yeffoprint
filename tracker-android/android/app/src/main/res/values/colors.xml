@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home Screen widget, the tracker's light palette (tracker.css tokens). -->
+    <color name="widget_bg">#FAF9F6</color>
+    <color name="widget_ink">#141414</color>
+    <color name="widget_mute">#6B6A67</color>
+    <color name="widget_brand">#0078A4</color>
+</resources>

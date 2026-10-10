@@ -13,6 +13,7 @@
  *   stock    — unmixed vials, pens or pills on hand (the Supply tab)
  *   progress — a weigh-in: weight, measurements, note and the ids of its photos
  *   lab      — one lab result: test name, value, unit, the report's normal range, note
+ *   food     — one day of protein, water and calories (id is the date), plus what Health Connect brought in
  *   photo    — one progress photo (a shrunk JPEG), only ever read one at a
  *              time through /tracker/photos/{id}, never with the rest of the state
  *   settings — the "me" record (timezone, reminders, travel) and "alerts"
@@ -28,7 +29,7 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Tracker_Store {
 
-	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push', 'progress', 'photo', 'lab', 'snooze' ];
+	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push', 'progress', 'photo', 'lab', 'snooze', 'food' ];
 
 	/** Per-record plaintext ceiling — a dose note or protocol is a few hundred bytes; this only stops abuse. */
 	public const MAX_RECORD_BYTES = 8192;

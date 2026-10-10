@@ -70,6 +70,9 @@ Install that APK on a phone to try it: copy it over and open it (allow
   https://yeffodesign.com/my-account/edit-account/ as the web link.
 - Reviewer access: Play needs a test login (email and password) to get
   past the sign-in page.
+- Health Connect (app 1.1+): fill in the Health apps declaration for the
+  four read permissions (weight, body fat, nutrition, hydration) and say
+  they're used to show the customer's own progress and food totals.
 - Policy risk: Google restricts apps that promote or facilitate
   unapproved substances. Describe the app as a medication and supplement
   tracker, and keep peptide shopping out of the listing and screenshots.
