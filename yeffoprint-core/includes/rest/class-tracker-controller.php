@@ -11,6 +11,8 @@
  *   POST   /tracker/push                  save this browser's push subscription (reminders on)
  *   DELETE /tracker/push                  remove it
  *   POST   /tracker/push/test             send a test reminder to this customer's devices
+ *   POST   /tracker/snooze                remind again about these dose slots in 30 minutes (Today's button)
+ *   POST   /tracker/snooze/push           the same from a notification's button: no session, a signed token instead
  *   DELETE /tracker/all                   "Delete my data" — rows plus the customer's key
  *   GET    /tracker/label-templates       designs offered by "Order labels" (public storefront data)
  *   POST   /tracker/shares                a share link for one protocol (class-tracker-shares.php)
@@ -28,7 +30,7 @@ class YeffoPrint_Tracker_Controller {
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
 	/** Kinds the app writes directly; `push` only goes through /tracker/push. */
-	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress' ];
+	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab' ];
 
 	/** What a progress photo may be once decoded. */
 	private const PHOTO_TYPES = [ 'image/jpeg', 'image/png', 'image/webp' ];
@@ -76,6 +78,20 @@ class YeffoPrint_Tracker_Controller {
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'test_push' ],
 			'permission_callback' => $perm,
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/snooze', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'snooze' ],
+			'permission_callback' => $perm,
+		] );
+
+		// The service worker has no nonce or session to send, so the token
+		// is the permission: signed for one customer's slots, short-lived.
+		register_rest_route( self::NAMESPACE, '/tracker/snooze/push', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'snooze_from_push' ],
+			'permission_callback' => '__return_true',
 		] );
 
 		register_rest_route( self::NAMESPACE, '/tracker/all', [
@@ -161,6 +177,7 @@ class YeffoPrint_Tracker_Controller {
 				'devices'   => count( YeffoPrint_Tracker_Store::all( $user_id, 'push' ) ),
 			],
 			'shares'     => YeffoPrint_Tracker_Shares::list_for_user( $user_id ),
+			'snoozes'    => YeffoPrint_Tracker_Reminders::snoozes_for( $user_id ),
 			'serverTime' => time(),
 		] );
 	}
@@ -266,6 +283,29 @@ class YeffoPrint_Tracker_Controller {
 			return new \WP_Error( 'yeffoprint_tracker_push_failed', __( 'The test reminder couldn’t be sent. Try turning reminders off and on again.', 'yeffoprint-core' ), [ 'status' => 502 ] );
 		}
 		return self::no_store( [ 'ok' => true, 'sent' => $sent ] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function snooze( \WP_REST_Request $request ) {
+		$params  = $request->get_json_params();
+		$user_id = get_current_user_id();
+		$at      = YeffoPrint_Tracker_Reminders::snooze( $user_id, (array) ( $params['slots'] ?? [] ), YeffoPrint_Tracker_Reminders::SNOOZE_MINUTES );
+		if ( null === $at ) {
+			return new \WP_Error( 'yeffoprint_tracker_bad_snooze', __( 'That reminder couldn’t be snoozed.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		return self::no_store( [ 'ok' => true, 'at' => $at, 'snoozes' => YeffoPrint_Tracker_Reminders::snoozes_for( $user_id ) ] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function snooze_from_push( \WP_REST_Request $request ) {
+		$params = $request->get_json_params();
+		$token  = is_string( $params['token'] ?? null ) ? $params['token'] : '';
+		$data   = '' !== $token && YeffoPrint_Tracker_Crypto::is_ready() ? YeffoPrint_Tracker_Reminders::read_snooze_token( $token ) : null;
+		$at     = $data ? YeffoPrint_Tracker_Reminders::snooze( $data['u'], $data['s'], YeffoPrint_Tracker_Reminders::SNOOZE_MINUTES, $data['n'] ) : null;
+		if ( null === $at ) {
+			return new \WP_Error( 'yeffoprint_tracker_bad_snooze', __( 'That reminder couldn’t be snoozed.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		return self::no_store( [ 'ok' => true, 'at' => $at ] );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */

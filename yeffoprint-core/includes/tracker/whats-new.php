@@ -15,6 +15,24 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-06c',
+		'date'  => '2026-10-06',
+		'title' => 'Snooze a reminder',
+		'text'  => 'Not ready for a dose yet? Tap "Remind me in 30 min" on the reminder, or on the dose in Today, and we\'ll remind you again.',
+	],
+	[
+		'id'    => '2026-10-06b',
+		'date'  => '2026-10-06',
+		'title' => 'Lab results',
+		'text'  => 'Keep your bloodwork on the Progress tab. Add results like testosterone, estradiol or A1C from your lab report, see each test charted with your doses underneath, and see which results are outside the normal range. They\'re in your PDF report too.',
+	],
+	[
+		'id'    => '2026-10-06a',
+		'date'  => '2026-10-06',
+		'title' => 'Dark mode and a new look',
+		'text'  => 'YeffoHealth now goes dark when your phone does. You can also pick Light or Dark on the Me tab. There\'s a new bar at the top too: tap the bell to set up reminders.',
+	],
+	[
 		'id'    => '2026-10-04b',
 		'date'  => '2026-10-04',
 		'title' => 'Meet YeffoHealth',

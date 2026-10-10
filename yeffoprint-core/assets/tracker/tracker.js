@@ -80,11 +80,13 @@
 	var STORE_KEY = 'ypt:' + ( CFG.userKey || 'anon' );
 	var QUEUE_KEY = 'ypt-q:' + ( CFG.userKey || 'anon' );
 	var UI_KEY = 'ypt-ui';
+	var THEME_KEY = 'ypt-theme';
 
 	var state = {
-		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {} },
+		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {} },
 		push: { publicKey: '', devices: 0 },
 		shares: [],
+		snoozes: [],
 		loaded: false,
 		offline: ! navigator.onLine,
 		syncing: false,
@@ -179,6 +181,7 @@
 		me: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1-4 4-6 8-6s7 2 8 6',
 		lock: 'M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3',
 		bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
+		belloff: 'M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l2 2H8M10 21h4M3 3l18 18',
 		calc: 'M6 3h12v18H6zM9 7h6M9 12h1M14 12h1M9 16h1M14 16h1',
 		check: 'M5 12l5 5L20 7',
 		help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01',
@@ -187,6 +190,7 @@
 		doc: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
 		camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
 		scale: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 9a4 4 0 0 1 8 0zM12 9l1.5-2.5',
+		flask: 'M9 3h6M10 3v6l-5.2 9.1A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.9L14 9V3M7.4 15h9.2',
 	};
 
 	function icon( name ) {
@@ -1266,7 +1270,7 @@
 	 * ======================================================= */
 
 	function persist() {
-		saveJSON( STORE_KEY, { records: state.records, push: state.push, shares: state.shares, savedAt: Date.now() } );
+		saveJSON( STORE_KEY, { records: state.records, push: state.push, shares: state.shares, snoozes: state.snoozes, savedAt: Date.now() } );
 		saveJSON( QUEUE_KEY, queue );
 	}
 
@@ -1388,16 +1392,17 @@
 		var cached = loadJSON( STORE_KEY, null );
 		queue = loadJSON( QUEUE_KEY, [] ) || [];
 		if ( cached && cached.records ) {
-			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {} }, cached.records );
+			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {} }, cached.records );
 			state.push = cached.push || state.push;
 			state.shares = cached.shares || [];
+			state.snoozes = cached.snoozes || [];
 			state.loaded = true;
 			render();
 		}
 
 		return api( 'GET', 'tracker/state' ).then( function ( json ) {
 			var fresh = json.records || {};
-			[ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress' ].forEach( function ( k ) {
+			[ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab' ].forEach( function ( k ) {
 				state.records[ k ] = fresh[ k ] && ! Array.isArray( fresh[ k ] ) ? fresh[ k ] : {};
 			} );
 			// Re-apply anything still waiting to upload on top.
@@ -1410,6 +1415,7 @@
 			} );
 			state.push = json.push || state.push;
 			state.shares = Array.isArray( json.shares ) ? json.shares : [];
+			state.snoozes = Array.isArray( json.snoozes ) ? json.snoozes : [];
 			state.loaded = true;
 			setOffline( false );
 			persist();
@@ -1548,6 +1554,7 @@
 		var scrollY = window.scrollY;
 		var focusedId = document.activeElement && document.activeElement.id;
 		root.textContent = '';
+		root.appendChild( appBar() );
 		if ( state.offline ) {
 			root.appendChild( h( 'div', { class: 'ypt-offline' }, queue.length ? 'Offline · ' + queue.length + ' change' + ( queue.length === 1 ? '' : 's' ) + ' will sync' : 'Offline · showing your saved copy' ) );
 		}
@@ -1563,6 +1570,75 @@
 		syncNativeReminders();
 		if ( focusedId && document.getElementById( focusedId ) && ! ui.sheet ) {
 			document.getElementById( focusedId ).focus();
+		}
+	}
+
+	/**
+	 * The YeffoHealth bar across the top of every tab: logo (back to
+	 * Today), reminders bell and the Me button. On wide screens the tabs
+	 * move up into it (tracker.css hides the bottom bar there).
+	 */
+	function appBar() {
+		var current = ui.tab === 'history' ? 'today' : ui.tab;
+		var bellOn = state.pushOnHere === true;
+		var initial = String( CFG.firstName || '' ).trim().charAt( 0 ).toUpperCase();
+		function tab( id, label ) {
+			return h( 'button', { type: 'button', class: 'ypt-appbar__tab', 'aria-current': current === id ? 'page' : null, onclick: function () {
+				go( id );
+			} }, label );
+		}
+		return h( 'header', { class: 'ypt-appbar' },
+			h( 'div', { class: 'ypt-appbar__inner' },
+				h( 'button', { type: 'button', class: 'ypt-appbar__brand', 'aria-label': 'YeffoHealth, go to Today', onclick: function () {
+					ui.day = todayStr();
+					go( 'today' );
+				} }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), h( 'span', null, 'Yeffo', h( 'span', { class: 'ypt-appbar__h' }, 'Health' ) ) ),
+				h( 'nav', { class: 'ypt-appbar__nav', 'aria-label': 'Tracker' },
+					tab( 'today', 'Today' ),
+					tab( 'progress', 'Progress' ),
+					tab( 'vials', 'Supply' ),
+					tab( 'me', 'Me' ),
+					h( 'button', { type: 'button', class: 'ypt-appbar__tab ypt-appbar__add', 'aria-haspopup': 'dialog', onclick: openAddMenu }, '+ Add' )
+				),
+				h( 'div', { class: 'ypt-appbar__actions' },
+					h( 'button', { type: 'button', class: 'ypt-appbar__icon' + ( bellOn ? '' : ' is-off' ), 'aria-label': bellOn ? 'Reminders are on' : 'Reminders are off on this device', onclick: function () {
+						go( 'me' );
+						var card = document.getElementById( 'ypt-reminders' );
+						if ( card ) {
+							card.scrollIntoView( { block: 'start' } );
+						}
+					} }, icon( bellOn ? 'bell' : 'belloff' ) ),
+					h( 'button', { type: 'button', class: 'ypt-appbar__me', 'aria-label': 'Me', 'aria-current': current === 'me' ? 'page' : null, onclick: function () {
+						go( 'me' );
+					} }, initial || icon( 'me' ) )
+				)
+			),
+			h( 'div', { class: 'ypt-stripe', 'aria-hidden': 'true' } )
+		);
+	}
+
+	/* ---------- Appearance (dark mode) ---------- */
+
+	var darkQuery = window.matchMedia ? window.matchMedia( '(prefers-color-scheme: dark)' ) : null;
+
+	/** 'auto' follows the phone; 'light' / 'dark' are picked on Me. Kept per device, like the screen it's on. */
+	function themePref() {
+		var t = loadJSON( THEME_KEY, 'auto' );
+		return t === 'light' || t === 'dark' ? t : 'auto';
+	}
+
+	function applyTheme() {
+		var t = themePref();
+		var el = document.documentElement;
+		if ( t === 'auto' ) {
+			el.removeAttribute( 'data-theme' );
+		} else {
+			el.setAttribute( 'data-theme', t );
+		}
+		var dark = t === 'dark' || ( t === 'auto' && !! darkQuery && darkQuery.matches );
+		var meta = document.querySelector( 'meta[name="theme-color"]' );
+		if ( meta ) {
+			meta.setAttribute( 'content', dark ? '#121211' : '#FAF9F6' );
 		}
 	}
 
@@ -1631,6 +1707,9 @@
 				row( 'camera', 'Progress photo', 'Encrypted, only you can see it', function () {
 					openProgressSheet( null, { photo: true } );
 				} ),
+				row( 'flask', 'Lab result', 'Bloodwork values, charted with your doses', function () {
+					openLabSheet( null );
+				} ),
 				lastTaken ? row( 'feel', 'How I feel', 'Side effects, sleep, energy · on your ' + lastTaken.compound + ' dose', function () {
 					openLogSheet( lastTaken );
 				} ) : null
@@ -1643,9 +1722,10 @@
 	function renderProgressTab() {
 		var wrap = h( 'div', null );
 		wrap.appendChild( h( 'header', { class: 'ypt-top' },
-			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Weight, measurements & photos' ), h( 'h1', null, 'Progress' ) )
+			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Weight, photos & lab results' ), h( 'h1', null, 'Progress' ) )
 		) );
 		wrap.appendChild( renderProgress() );
+		wrap.appendChild( renderLabs() );
 		return wrap;
 	}
 
@@ -1877,6 +1957,11 @@
 			)
 		);
 
+		var snoozeRow = snoozeLine( s );
+		if ( snoozeRow ) {
+			card.appendChild( snoozeRow );
+		}
+
 		// Titration: the first week of a new dose says so.
 		var step = stepInfo( p, s.date );
 		if ( step && step.n > 1 && daysBetween( step.since, s.date ) < 7 && ! log ) {
@@ -1948,6 +2033,45 @@
 			card.appendChild( feel );
 		}
 		return card;
+	}
+
+	/**
+	 * A dose that's due and not logged yet: put its reminder off for half
+	 * an hour. Android and desktop reminders have this button themselves;
+	 * iPhone's don't, so this is where iPhone users snooze.
+	 */
+	function snoozeLine( s ) {
+		// In the Android app reminders are scheduled on the phone, so the snooze is too.
+		if ( s.log || s.date !== todayStr() || nowTime() < s.time || ! ( NATIVE ? state.pushOnHere === true : state.push.devices > 0 ) ) {
+			return null;
+		}
+		var open = ( NATIVE ? nativeSnoozes() : state.snoozes ).filter( function ( z ) {
+			return ( z.slots || [] ).indexOf( s.id ) !== -1 && z.at * 1000 > Date.now();
+		} )[ 0 ];
+		if ( open ) {
+			return h( 'div', { class: 'ypt-snooze is-set' }, icon( 'bell' ), h( 'span', null, 'We’ll remind you again at ' + fmtIsoTime( new Date( open.at * 1000 ).toISOString() ) + '.' ) );
+		}
+		var btn = h( 'button', { type: 'button', class: 'ypt-snooze', onclick: function () {
+			btn.disabled = true;
+			if ( NATIVE ) {
+				snoozeNative( s.id );
+				render();
+				toast( 'We’ll remind you again in 30 minutes' );
+				return;
+			}
+			api( 'POST', 'tracker/snooze', { slots: [ s.id ] } ).then( function ( json ) {
+				state.snoozes = Array.isArray( json.snoozes ) ? json.snoozes : state.snoozes;
+				persist();
+				render();
+				toast( 'We’ll remind you again in 30 minutes' );
+			} ).catch( function ( err ) {
+				btn.disabled = false;
+				if ( ! handleAuthError( err ) ) {
+					toast( isNetworkError( err ) ? 'You’re offline. Connect to snooze this reminder.' : err.message || 'That reminder couldn’t be snoozed.' );
+				}
+			} );
+		} }, icon( 'bell' ), h( 'span', null, 'Remind me in 30 min' ) );
+		return btn;
 	}
 
 	/** Under a taken dose: how the customer felt (tap to change), or a nudge to add it on today's doses. */
@@ -2594,8 +2718,8 @@
 			cal,
 			h( 'div', { class: 'ypt-legend' },
 				h( 'span', null, h( 'i', { style: { background: 'var(--ypt-cyan)' } } ), 'All taken' ),
-				h( 'span', null, h( 'i', { style: { background: '#BFE9FA' } } ), 'Some' ),
-				h( 'span', null, h( 'i', { style: { background: '#FDE0EF' } } ), 'Missed' )
+				h( 'span', null, h( 'i', { style: { background: 'var(--ypt-info-line)' } } ), 'Some' ),
+				h( 'span', null, h( 'i', { style: { background: 'var(--ypt-pink-soft)' } } ), 'Missed' )
 			)
 		) );
 
@@ -3087,12 +3211,17 @@
 	 * written in where it changed. Titration steps draw a dashed line up
 	 * through the chart, so a dose change and what followed line up.
 	 */
-	function progressChart( entries, key, from, to ) {
-		var pts = entries.filter( function ( e ) {
+	/** `opts.pts` charts [{ date, v }] instead of a progress metric (lab results), with `opts.name` and an optional `opts.band` { low, high } normal range. */
+	function progressChart( entries, key, from, to, opts ) {
+		opts = opts || {};
+		var pts = opts.pts ? opts.pts.filter( function ( x ) {
+			return x.date >= from && x.date <= to;
+		} ) : entries.filter( function ( e ) {
 			return e.date >= from && e.date <= to && metricValue( e, key ) != null;
 		} ).map( function ( e ) {
 			return { date: e.date, v: metricValue( e, key ) };
 		} );
+		var band = opts.band || null;
 		var span = Math.max( 1, daysBetween( from, to ) );
 		var W = 340;
 		var L = 34;
@@ -3122,24 +3251,38 @@
 		var lanesTop = TOP + CH + 26;
 		var H = lanesTop + lanes.length * LANE + ( lanes.length ? 4 : 0 );
 
-		var s = svg( 'svg', { class: 'ypt-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': metricName( key ) + ' from ' + fmtDay( from ) + ' to ' + fmtDay( to ) + ( pts.length ? ', ' + fmtMetric( pts[ 0 ].v, key ) + ' to ' + fmtMetric( pts[ pts.length - 1 ].v, key ) : '' ) } );
+		var s = svg( 'svg', { class: 'ypt-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': ( opts.name || metricName( key ) ) + ' from ' + fmtDay( from ) + ' to ' + fmtDay( to ) + ( pts.length ? ', ' + ( opts.fmt || function ( v ) {
+			return fmtMetric( v, key );
+		} )( pts[ 0 ].v ) + ' to ' + ( opts.fmt || function ( v ) {
+			return fmtMetric( v, key );
+		} )( pts[ pts.length - 1 ].v ) : '' ) } );
 
 		// Y scale with a little headroom; three gridlines.
 		var vals = pts.map( function ( x ) {
 			return x.v;
 		} );
+		// The normal range counts too, so a result just outside it shows how far out it is.
+		if ( band ) {
+			vals = vals.concat( [ band.low, band.high ].filter( function ( v ) {
+				return v != null;
+			} ) );
+		}
 		var lo = vals.length ? Math.min.apply( null, vals ) : 0;
 		var hi = vals.length ? Math.max.apply( null, vals ) : 1;
-		var pad = Math.max( ( hi - lo ) * 0.15, key === 'weight' ? 1 : 0.5 );
+		var pad = opts.pts ? Math.max( ( hi - lo ) * 0.15, Math.abs( hi ) * 0.05, 0.05 ) : Math.max( ( hi - lo ) * 0.15, key === 'weight' ? 1 : 0.5 );
 		lo -= pad;
 		hi += pad;
 		function yOf( v ) {
 			return TOP + CH - ( ( v - lo ) / ( hi - lo ) ) * CH;
 		}
+		if ( band ) {
+			var bTop = yOf( band.high != null ? band.high : hi );
+			svg( 'rect', { x: L, y: bTop, width: plotW, height: Math.max( 1, yOf( band.low != null ? band.low : lo ) - bTop ), class: 'g-band' }, s );
+		}
 		for ( var g = 0; g < 3; g++ ) {
 			var gv = lo + ( ( hi - lo ) * ( g + 0.5 ) ) / 3;
 			svg( 'line', { x1: L, x2: W - R, y1: yOf( gv ), y2: yOf( gv ), class: 'g-grid' }, s );
-			svg( 'text', { x: L - 6, y: yOf( gv ) + 3, class: 'g-axis g-axis--y' }, s ).textContent = fmtNum( gv, hi - lo < 10 ? 1 : 0 );
+			svg( 'text', { x: L - 6, y: yOf( gv ) + 3, class: 'g-axis g-axis--y' }, s ).textContent = fmtNum( gv, hi - lo < 1 ? 2 : hi - lo < 10 ? 1 : 0 );
 		}
 		// X labels: start, middle, end.
 		[ from, addDays( from, Math.round( span / 2 ) ), to ].forEach( function ( d, i ) {
@@ -3172,7 +3315,7 @@
 			} );
 			var lp = pts[ pts.length - 1 ];
 			var lx = xOf( lp.date );
-			svg( 'text', { x: Math.min( lx, W - R ), y: yOf( lp.v ) - 9, class: 'g-last' + ( lx > W - 60 ? ' is-end' : '' ) }, s ).textContent = fmtNum( lp.v, 1 );
+			svg( 'text', { x: Math.min( lx, W - R ), y: yOf( lp.v ) - 9, class: 'g-last' + ( lx > W - 60 ? ' is-end' : '' ) }, s ).textContent = fmtNum( lp.v, opts.pts ? 2 : 1 );
 		} else {
 			svg( 'text', { x: L + plotW / 2, y: TOP + CH / 2, class: 'g-empty' }, s ).textContent = 'Nothing logged in this range';
 		}
@@ -3202,6 +3345,289 @@
 			lanes.length ? h( 'div', { class: 'ypt-legend', style: { justifyContent: 'flex-start' } }, lanes.map( function ( ln ) {
 				return h( 'span', null, h( 'i', { style: { background: ln.p ? protocolColor( ln.p ) : colorForCompound( ln.name ) } } ), ln.name + ' · ' + ln.doses.length + ' dose' + ( ln.doses.length === 1 ? '' : 's' ) );
 			} ) ) : h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } }, 'Doses you take show up under the chart.' ) );
+	}
+
+	/* ---------- Lab results ---------- */
+
+	/** Common bloodwork, each with the unit US labs usually report it in. Free text is fine too; these are suggestions. */
+	var LAB_TESTS = [
+		[ 'Testosterone, total', 'ng/dL' ], [ 'Testosterone, free', 'pg/mL' ], [ 'Estradiol', 'pg/mL' ], [ 'SHBG', 'nmol/L' ],
+		[ 'LH', 'mIU/mL' ], [ 'FSH', 'mIU/mL' ], [ 'Prolactin', 'ng/mL' ], [ 'PSA', 'ng/mL' ], [ 'IGF-1', 'ng/mL' ],
+		[ 'TSH', 'mIU/L' ], [ 'Free T4', 'ng/dL' ], [ 'Free T3', 'pg/mL' ], [ 'Cortisol', 'µg/dL' ],
+		[ 'A1C', '%' ], [ 'Fasting glucose', 'mg/dL' ], [ 'Fasting insulin', 'µIU/mL' ],
+		[ 'Total cholesterol', 'mg/dL' ], [ 'LDL', 'mg/dL' ], [ 'HDL', 'mg/dL' ], [ 'Triglycerides', 'mg/dL' ], [ 'ApoB', 'mg/dL' ],
+		[ 'Hematocrit', '%' ], [ 'Hemoglobin', 'g/dL' ], [ 'ALT', 'U/L' ], [ 'AST', 'U/L' ], [ 'Creatinine', 'mg/dL' ], [ 'eGFR', 'mL/min' ],
+		[ 'Vitamin D', 'ng/mL' ], [ 'Ferritin', 'ng/mL' ], [ 'hs-CRP', 'mg/L' ],
+	];
+
+	function labResults() {
+		return values( state.records.lab ).filter( function ( r ) {
+			return r && r.name && isFinite( +r.value );
+		} ).sort( function ( a, b ) {
+			return a.date.localeCompare( b.date ) || String( a.id ).localeCompare( String( b.id ) );
+		} );
+	}
+
+	function labKey( name ) {
+		return String( name || '' ).trim().toLowerCase();
+	}
+
+	/** Results grouped by test, newest test first: [{ name, list (oldest first), latest }]. */
+	function labGroups() {
+		var by = {};
+		labResults().forEach( function ( r ) {
+			var k = labKey( r.name );
+			( by[ k ] = by[ k ] || { name: r.name, list: [] } ).list.push( r );
+		} );
+		return Object.keys( by ).map( function ( k ) {
+			var g = by[ k ];
+			g.latest = g.list[ g.list.length - 1 ];
+			g.name = g.latest.name;
+			return g;
+		} ).sort( function ( a, b ) {
+			return b.latest.date.localeCompare( a.latest.date ) || a.name.localeCompare( b.name );
+		} );
+	}
+
+	function labNum( n ) {
+		return n === '' || n == null || ! isFinite( +n ) ? null : +n;
+	}
+
+	function fmtLab( v, unit ) {
+		return fmtNum( +v, 3 ) + ( unit ? ( unit === '%' ? '%' : ' ' + unit ) : '' );
+	}
+
+	/** Where a result sits against the normal range the customer copied from their report. */
+	function labFlag( r ) {
+		var lo = labNum( r.low );
+		var hi = labNum( r.high );
+		if ( lo == null && hi == null ) {
+			return null;
+		}
+		if ( lo != null && +r.value < lo ) {
+			return { tone: 'warn', text: 'Low' };
+		}
+		if ( hi != null && +r.value > hi ) {
+			return { tone: 'warn', text: 'High' };
+		}
+		return { tone: 'ok', text: 'In range' };
+	}
+
+	function labRangeLabel( r ) {
+		var lo = labNum( r.low );
+		var hi = labNum( r.high );
+		if ( lo != null && hi != null ) {
+			return fmtNum( lo, 3 ) + '–' + fmtNum( hi, 3 );
+		}
+		return lo != null ? 'over ' + fmtNum( lo, 3 ) : hi != null ? 'under ' + fmtNum( hi, 3 ) : '';
+	}
+
+	function renderLabs() {
+		var wrap = h( 'div', null );
+		var groups = labGroups();
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Lab results' ) );
+		if ( ! groups.length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-labs-empty' },
+				h( 'span', { class: 'ypt-help__ic ypt-help__ic--flask' }, icon( 'flask' ) ),
+				h( 'div', null,
+					h( 'b', null, 'Keep your bloodwork here' ),
+					h( 'p', { class: 'ypt-muted ypt-small' }, 'Enter results like testosterone, estradiol, A1C or IGF-1 from your lab report. Each test gets a chart with your doses underneath.' ),
+					h( 'button', { type: 'button', class: 'ypt-btn', style: { marginTop: '10px' }, onclick: function () {
+						openLabSheet( null );
+					} }, '+ Add a lab result' )
+				)
+			) );
+			return wrap;
+		}
+		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
+			groups.map( function ( g ) {
+				var r = g.latest;
+				var prev = g.list.length > 1 ? g.list[ g.list.length - 2 ] : null;
+				var flag = labFlag( r );
+				var diff = prev ? +r.value - +prev.value : null;
+				return h( 'button', { type: 'button', class: 'ypt-list-row ypt-lab-row', onclick: function () {
+					openLabTestSheet( g.name );
+				} },
+					h( 'span', { class: 'ypt-lab-row__main' },
+						h( 'b', null, g.name ),
+						h( 'span', { class: 'ypt-muted ypt-small' }, fmtDay( r.date, true ).replace( /^\w+, /, '' ) + ( g.list.length > 1 ? ' · ' + g.list.length + ' results' : '' ) + ( diff != null && diff !== 0 ? ' · ' + ( diff > 0 ? '+' : '−' ) + fmtNum( Math.abs( diff ), 3 ) + ' since last' : '' ) )
+					),
+					h( 'span', { class: 'ypt-lab-row__val' },
+						h( 'b', null, fmtLab( r.value, r.unit ) ),
+						flag ? h( 'span', { class: 'ypt-tag ypt-tag--' + flag.tone }, flag.text ) : null
+					)
+				);
+			} ),
+			h( 'button', { type: 'button', class: 'ypt-list-row ypt-link-row', onclick: function () {
+				openLabSheet( null );
+			} }, h( 'span', null, '+ Add a lab result' ), h( 'span', null, '' ) )
+		) );
+		return wrap;
+	}
+
+	/** One test: its chart (doses underneath) and every result, newest first. */
+	function openLabTestSheet( name ) {
+		var g = labGroups().filter( function ( x ) {
+			return labKey( x.name ) === labKey( name );
+		} )[ 0 ];
+		if ( ! g ) {
+			closeSheet();
+			return;
+		}
+		var last = g.latest;
+		var today = todayStr();
+		var first = g.list[ 0 ].date;
+		// A little room before the first result, so its doses show too.
+		var from = addDays( first < today ? first : today, -14 );
+		var unitMix = g.list.some( function ( r ) {
+			return String( r.unit || '' ) !== String( last.unit || '' );
+		} );
+		var pts = g.list.filter( function ( r ) {
+			return String( r.unit || '' ) === String( last.unit || '' );
+		} ).map( function ( r ) {
+			return { date: r.date, v: +r.value };
+		} );
+		var band = labNum( last.low ) != null || labNum( last.high ) != null ? { low: labNum( last.low ), high: labNum( last.high ) } : null;
+		openSheet( g.name, 'Lab results', [
+			h( 'div', { class: 'ypt-card' },
+				progressChart( [], null, from, today, { pts: pts, band: band, name: g.name, fmt: function ( v ) {
+					return fmtLab( v, last.unit );
+				} } ),
+				band ? h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } }, h( 'span', { class: 'ypt-lab-key' } ), 'Normal range ' + labRangeLabel( last ) + ( last.unit ? ( last.unit === '%' ? '%' : ' ' + last.unit ) : '' ) + ', from your report' ) : null,
+				unitMix ? h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } }, 'Only results in ' + ( last.unit || 'the latest unit' ) + ' are charted.' ) : null
+			),
+			h( 'div', { class: 'ypt-card ypt-list', style: { marginTop: '12px' } }, g.list.slice().reverse().map( function ( r ) {
+				var flag = labFlag( r );
+				return h( 'button', { type: 'button', class: 'ypt-list-row ypt-lab-row', onclick: function () {
+					openLabSheet( r );
+				} },
+					h( 'span', { class: 'ypt-lab-row__main' },
+						h( 'b', null, fmtDay( r.date, true ).replace( /^\w+, /, '' ) ),
+						r.note ? h( 'span', { class: 'ypt-muted ypt-small' }, r.note ) : null
+					),
+					h( 'span', { class: 'ypt-lab-row__val' }, h( 'b', null, fmtLab( r.value, r.unit ) ), flag ? h( 'span', { class: 'ypt-tag ypt-tag--' + flag.tone }, flag.text ) : null )
+				);
+			} ) ),
+		], h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			openLabSheet( null, g.name );
+		} }, '+ Add a result' ) );
+	}
+
+	/** Add or edit one result. A test logged before fills in its unit and normal range. */
+	function openLabSheet( existing, presetName ) {
+		var r = existing ? Object.assign( {}, existing ) : { date: todayStr(), name: presetName || '', value: '', unit: '', low: '', high: '', note: '' };
+		var id = existing ? existing.id : uid( 'lab' );
+		var err = h( 'p', { class: 'ypt-error', hidden: true } );
+		var known = {};
+		labResults().forEach( function ( x ) {
+			known[ labKey( x.name ) ] = x;
+		} );
+		var unitIn = h( 'input', { class: 'ypt-input ypt-lab-unit', id: 'ypt-lab-unit', type: 'text', maxlength: '16', placeholder: 'Unit', 'aria-label': 'Unit', value: r.unit || '', oninput: function ( e ) {
+			r.unit = e.target.value;
+		} } );
+		var lowIn = h( 'input', { class: 'ypt-input', id: 'ypt-lab-low', type: 'number', inputmode: 'decimal', step: 'any', placeholder: 'Low', 'aria-label': 'Normal range, low', value: r.low == null ? '' : r.low, oninput: function ( e ) {
+			r.low = e.target.value;
+		} } );
+		var highIn = h( 'input', { class: 'ypt-input', id: 'ypt-lab-high', type: 'number', inputmode: 'decimal', step: 'any', placeholder: 'High', 'aria-label': 'Normal range, high', value: r.high == null ? '' : r.high, oninput: function ( e ) {
+			r.high = e.target.value;
+		} } );
+		function fillFrom( name ) {
+			var prev = known[ labKey( name ) ];
+			var sug = LAB_TESTS.filter( function ( t ) {
+				return labKey( t[ 0 ] ) === labKey( name );
+			} )[ 0 ];
+			if ( ! String( r.unit || '' ).trim() && ( prev || sug ) ) {
+				r.unit = prev ? prev.unit || '' : sug[ 1 ];
+				unitIn.value = r.unit;
+			}
+			if ( prev && r.low === '' && r.high === '' ) {
+				r.low = prev.low == null ? '' : prev.low;
+				r.high = prev.high == null ? '' : prev.high;
+				lowIn.value = r.low;
+				highIn.value = r.high;
+			}
+		}
+		var names = Object.keys( known ).map( function ( k ) {
+			return known[ k ].name;
+		} );
+		LAB_TESTS.forEach( function ( t ) {
+			if ( ! known[ labKey( t[ 0 ] ) ] ) {
+				names.push( t[ 0 ] );
+			}
+		} );
+		var list = h( 'datalist', { id: 'ypt-lab-names' }, names.map( function ( n ) {
+			return h( 'option', { value: n } );
+		} ) );
+		var nameIn = h( 'input', { class: 'ypt-input', id: 'ypt-lab-name', type: 'text', maxlength: '60', list: 'ypt-lab-names', autocomplete: 'off', placeholder: 'Testosterone, total', value: r.name || '', oninput: function ( e ) {
+			r.name = e.target.value;
+		}, onchange: function ( e ) {
+			fillFrom( e.target.value );
+		} } );
+		if ( presetName && ! existing ) {
+			fillFrom( presetName );
+		}
+
+		var save = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			err.hidden = true;
+			var name = String( r.name || '' ).trim();
+			var value = parseFloat( r.value );
+			var low = labNum( String( r.low ).trim() === '' ? null : parseFloat( r.low ) );
+			var high = labNum( String( r.high ).trim() === '' ? null : parseFloat( r.high ) );
+			var problem = ! name ? 'Enter the test name, like it appears on your report.'
+				: ! isFinite( value ) ? 'Enter the result as a number.'
+				: low != null && high != null && low > high ? 'The low end of the range should be smaller than the high end.' : '';
+			if ( problem ) {
+				err.textContent = problem;
+				err.hidden = false;
+				return;
+			}
+			// Same test, same spelling as before, so results group together.
+			var prev = known[ labKey( name ) ];
+			var data = {
+				date: r.date || todayStr(),
+				name: prev ? prev.name : name,
+				value: Math.round( value * 10000 ) / 10000,
+				unit: String( r.unit || '' ).trim(),
+				low: low,
+				high: high,
+				note: String( r.note || '' ).trim(),
+			};
+			closeSheet();
+			put( 'lab', id, data );
+			go( 'progress' );
+			toast( existing ? 'Result updated' : 'Lab result saved' );
+		} }, 'Save' );
+
+		openSheet( existing ? 'Edit lab result' : 'Add a lab result', 'Lab results', [
+			field( 'Test', h( 'div', null, nameIn, list ), 'Pick one or type it the way your report does.', 'ypt-lab-name' ),
+			h( 'div', { class: 'ypt-field' },
+				h( 'label', { for: 'ypt-lab-value' }, 'Result' ),
+				h( 'div', { class: 'ypt-row' },
+					h( 'input', { class: 'ypt-input', id: 'ypt-lab-value', type: 'number', inputmode: 'decimal', step: 'any', placeholder: '650', value: r.value, oninput: function ( e ) {
+						r.value = e.target.value;
+					} } ),
+					unitIn
+				)
+			),
+			h( 'div', { class: 'ypt-field' },
+				h( 'label', { for: 'ypt-lab-low' }, 'Normal range (optional)' ),
+				h( 'div', { class: 'ypt-row ypt-lab-range' }, lowIn, h( 'span', { class: 'ypt-muted' }, 'to' ), highIn ),
+				h( 'p', { class: 'ypt-hint' }, 'Usually printed next to the result. We use it to mark results high or low.' )
+			),
+			field( 'Date of the test', h( 'input', { class: 'ypt-input', id: 'ypt-lab-date', type: 'date', value: r.date, max: todayStr(), onchange: function ( e ) {
+				r.date = e.target.value || todayStr();
+			} } ), null, 'ypt-lab-date' ),
+			field( 'Note', h( 'textarea', { class: 'ypt-textarea', id: 'ypt-lab-note', maxlength: '300', placeholder: 'Fasted, lab name, trough or peak…', oninput: function ( e ) {
+				r.note = e.target.value;
+			} }, r.note || '' ), null, 'ypt-lab-note' ),
+			existing ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px' }, onclick: function () {
+				if ( window.confirm( 'Delete this result?' ) ) {
+					closeSheet();
+					del( 'lab', id );
+				}
+			} }, 'Delete this result' ) : null,
+			err,
+		], save );
 	}
 
 	/* ---------- Log progress ---------- */
@@ -3462,6 +3888,7 @@
 	var REPORT_PARTS = [
 		[ 'meds', 'Medications & schedule', 'Doses, titration, cycles and how many were taken' ],
 		[ 'progress', 'Progress', 'Weight and measurements, with a weight chart' ],
+		[ 'labs', 'Lab results', 'Each test’s first and latest result, with the normal range' ],
 		[ 'feel', 'Side effects & notes', 'What you tagged and how often' ],
 		[ 'sites', 'Injection spots', 'How often each spot was used' ],
 		[ 'log', 'Dose log', 'Every dose, one per line' ],
@@ -3901,6 +4328,39 @@
 			}
 		}
 
+		var labs = labGroups().map( function ( g ) {
+			return { name: g.name, list: g.list.filter( function ( r ) {
+				return r.date >= from && r.date <= today;
+			} ) };
+		} ).filter( function ( g ) {
+			return g.list.length;
+		} );
+		if ( inc.labs && labs.length ) {
+			var nLabs = labs.reduce( function ( n, g ) {
+				return n + g.list.length;
+			}, 0 );
+			heading( 'Lab results', nLabs + ' result' + ( nLabs === 1 ? '' : 's' ) + ', typed in from lab reports' );
+			var lc = [ M, M + 150, M + 260, M + 370 ];
+			doc.text( lc[ 0 ], y, 'Test', { size: 8.5, bold: true, color: MUTED } );
+			doc.text( lc[ 1 ], y, 'First', { size: 8.5, bold: true, color: MUTED } );
+			doc.text( lc[ 2 ], y, 'Latest', { size: 8.5, bold: true, color: MUTED } );
+			doc.text( lc[ 3 ], y, 'Normal range', { size: 8.5, bold: true, color: MUTED } );
+			y += 14;
+			labs.forEach( function ( g ) {
+				var a = g.list[ 0 ];
+				var b = g.list[ g.list.length - 1 ];
+				var flag = labFlag( b );
+				room( 16 );
+				doc.text( lc[ 0 ], y, pdfFit( g.name, 140, 10, true ), { size: 10, bold: true } );
+				doc.text( lc[ 1 ], y, g.list.length > 1 ? fmtLab( a.value, a.unit ) + '  ' + shortDate( a.date ) : '–', { size: 9.5 } );
+				doc.text( lc[ 2 ], y, fmtLab( b.value, b.unit ) + '  ' + shortDate( b.date ), { size: 9.5, bold: !! flag && flag.tone === 'warn' } );
+				doc.text( lc[ 3 ], y, ( labRangeLabel( b ) || '–' ) + ( flag && flag.tone === 'warn' ? '  (' + flag.text + ')' : '' ), { size: 9.5, color: flag && flag.tone === 'warn' ? '#B26B00' : INK } );
+				y += 6;
+				doc.line( [ [ M, y ], [ R, y ] ], LINE, 0.5 );
+				y += 12;
+			} );
+		}
+
 		if ( inc.feel ) {
 			var st = feelingStats( from, '' );
 			if ( st.rows.length ) {
@@ -4000,7 +4460,7 @@
 	}
 
 	function openReportSheet() {
-		var opts = { range: 90, parts: { meds: true, progress: true, feel: true, sites: true, log: true } };
+		var opts = { range: 90, parts: { meds: true, progress: true, labs: true, feel: true, sites: true, log: true } };
 		var body = h( 'div' );
 		var summary = h( 'p', { class: 'ypt-hint', style: { marginTop: '6px' } } );
 
@@ -5950,8 +6410,18 @@
 			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Signed in' ), h( 'h1', null, CFG.firstName || 'Me' ) )
 		) );
 
-		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Reminders' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label', id: 'ypt-reminders' }, 'Reminders' ) );
 		wrap.appendChild( remindersCard( s ) );
+
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Appearance' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-card' },
+			seg( [ [ 'auto', 'Automatic' ], [ 'light', 'Light' ], [ 'dark', 'Dark' ] ], themePref(), function ( v ) {
+				saveJSON( THEME_KEY, v );
+				applyTheme();
+				render();
+			} ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, themePref() === 'auto' ? 'Matches your phone’s light or dark setting.' : 'Just on this device.' )
+		) );
 
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Help & feedback' ) );
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list ypt-help' }, FEEDBACK_TYPES.map( function ( t ) {
@@ -6404,6 +6874,10 @@
 	// Android limits how many alarms one app can have waiting (about 500).
 	var NATIVE_MAX = 150;
 	var NATIVE_CHANNEL = 'yp-reminders';
+	// Snoozed reminders waiting on this phone ({slots, at, n}, at in seconds like the server's).
+	var NATIVE_SNOOZE_KEY = 'ypt-native-snooze:' + ( CFG.userKey || 'anon' );
+	var NATIVE_SNOOZE_MINUTES = 30;
+	var NATIVE_MAX_SNOOZES = 6;
 	var nativeChecked = false;
 	var nativeLast = '';
 	var nativeTimer = null;
@@ -6464,6 +6938,24 @@
 				} );
 			} );
 		}
+		nativeSnoozes().forEach( function ( z ) {
+			var due = slotsOn( today ).filter( function ( sl ) {
+				return ! sl.log && z.slots.indexOf( sl.id ) !== -1;
+			} );
+			if ( ! due.length || z.at * 1000 <= now ) {
+				return;
+			}
+			var one = due.length === 1;
+			out.push( {
+				tag: 'yp-snooze-' + z.slots.join( '+' ) + '-' + z.n,
+				at: z.at * 1000,
+				title: names ? ( one ? 'Time for ' + due[ 0 ].protocol.compound : 'Time for your doses' ) : 'Dose reminder',
+				body: names ? due.map( function ( sl ) {
+					var dose = doseOn( sl.protocol, today );
+					return ( sl.protocol.compound + ' ' + ( dose > 0 ? amountLabel( dose, sl.protocol.unit, sl.protocol ) + ( sl.protocol.doseOf ? ' ' + sl.protocol.doseOf : '' ) : '' ) ).trim();
+				} ).join( ' + ' ) : ( one ? 'You have a dose due. Open your tracker to see it.' : 'You have ' + due.length + ' doses due. Open your tracker to see them.' ),
+			} );
+		} );
 		supplyAlerts().forEach( function ( a ) {
 			var at = Date.parse( wallToIso( a.date, a.time ) );
 			if ( at <= now ) {
@@ -6506,6 +6998,36 @@
 				};
 			} ) } );
 		} );
+	}
+
+	/** Today's snoozes that haven't come due yet (older ones are dropped as they're read). */
+	function nativeSnoozes() {
+		var now = Date.now();
+		var list = loadJSON( NATIVE_SNOOZE_KEY, [] );
+		return ( Array.isArray( list ) ? list : [] ).filter( function ( z ) {
+			return z && Array.isArray( z.slots ) && z.at * 1000 > now && z.at * 1000 - now <= NATIVE_SNOOZE_MINUTES * 60000;
+		} );
+	}
+
+	/** "Remind me in 30 min" in the app: one more reminder for that dose, scheduled on the phone. */
+	function snoozeNative( slotIdStr ) {
+		var list = loadJSON( NATIVE_SNOOZE_KEY, [] );
+		list = Array.isArray( list ) ? list : [];
+		var n = list.filter( function ( z ) {
+			return z && Array.isArray( z.slots ) && z.slots.indexOf( slotIdStr ) !== -1;
+		} ).reduce( function ( max, z ) {
+			return Math.max( max, z.n || 0 );
+		}, 0 );
+		if ( n >= NATIVE_MAX_SNOOZES ) {
+			return;
+		}
+		list = list.filter( function ( z ) {
+			return z && Array.isArray( z.slots ) && z.slots.indexOf( slotIdStr ) === -1 && z.at * 1000 > Date.now();
+		} );
+		list.push( { slots: [ slotIdStr ], at: Math.floor( Date.now() / 1000 ) + NATIVE_SNOOZE_MINUTES * 60, n: n + 1 } );
+		saveJSON( NATIVE_SNOOZE_KEY, list );
+		nativeLast = '';
+		syncNativeReminders();
 	}
 
 	function syncNativeReminders() {
@@ -6586,6 +7108,7 @@
 			return;
 		}
 		removeKey( NATIVE_KEY );
+		removeKey( NATIVE_SNOOZE_KEY );
 		state.pushOnHere = false;
 		nativeLast = '';
 		nativeCall( 'cancelAll' ).catch( function () {} );
@@ -8161,7 +8684,7 @@
 			api( 'DELETE', 'tracker/all' ).then( function () {
 				return ( NATIVE ? disableNative() : disablePush() ).catch( function () {} );
 			} ).then( function () {
-				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {} };
+				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {} };
 				state.shares = [];
 				forgetPhotos();
 				queue = [];
@@ -8256,6 +8779,11 @@
 	 * Boot
 	 * ======================================================= */
 
+	applyTheme();
+	if ( darkQuery && darkQuery.addEventListener ) {
+		darkQuery.addEventListener( 'change', applyTheme );
+	}
+
 	window.addEventListener( 'beforeinstallprompt', function ( e ) {
 		e.preventDefault();
 		installPrompt = e;
@@ -8289,7 +8817,7 @@
 	// signed in on this browser earlier shouldn't leave theirs behind.
 	try {
 		Object.keys( window.localStorage ).forEach( function ( k ) {
-			if ( ( k.indexOf( 'ypt:' ) === 0 && k !== STORE_KEY ) || ( k.indexOf( 'ypt-q:' ) === 0 && k !== QUEUE_KEY ) || ( k.indexOf( 'ypt-native-reminders:' ) === 0 && k !== NATIVE_KEY ) ) {
+			if ( ( k.indexOf( 'ypt:' ) === 0 && k !== STORE_KEY ) || ( k.indexOf( 'ypt-q:' ) === 0 && k !== QUEUE_KEY ) || ( k.indexOf( 'ypt-native-reminders:' ) === 0 && k !== NATIVE_KEY ) || ( k.indexOf( 'ypt-native-snooze:' ) === 0 && k !== NATIVE_SNOOZE_KEY ) ) {
 				removeKey( k );
 			}
 		} );
