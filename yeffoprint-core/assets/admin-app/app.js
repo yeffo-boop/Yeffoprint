@@ -619,6 +619,14 @@
 			renderNextChrome( id );
 		}
 
+		// Fresh view element on every route: views bind delegated click
+		// handlers on viewEl itself, so reusing it stacked one more handler
+		// per visit (opening #/ship three times made Print here open the
+		// label in three tabs).
+		var freshViewEl = viewEl.cloneNode( false );
+		viewEl.parentNode.replaceChild( freshViewEl, viewEl );
+		viewEl = freshViewEl;
+
 		if ( 'dashboard' === id ) {
 			renderDashboard();
 			return;
