@@ -451,7 +451,10 @@ class YeffoPrint_Order_Item_Meta {
 	 * purchased" snapshot principle as pricing/size/material above.
 	 */
 	public function add_qr_download_links( array $formatted_meta, \WC_Order_Item $item ): array {
-		if ( ! $this->is_order_edit_screen() ) {
+		// Direct report: the new admin app's order page showed the QR
+		// URL as a plain link to the customer's site, with no download —
+		// its REST request never matches is_order_edit_screen().
+		if ( ! $this->is_order_edit_screen() && ! self::$rendering_admin_app_context ) {
 			return $formatted_meta;
 		}
 
