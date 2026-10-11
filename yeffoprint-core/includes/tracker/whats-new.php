@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-11a',
+		'date'  => '2026-10-11',
+		'title' => 'Search foods and scan barcodes',
+		'text'  => 'On the Food & water card, search any food or scan a package\'s barcode, pick how much you had, and its calories, protein, carbs and fat add to your day. Save foods you eat often to My foods for one-tap adding.',
+	],
+	[
 		'id'    => '2026-10-10r',
 		'date'  => '2026-10-10',
 		'title' => 'Food & water',

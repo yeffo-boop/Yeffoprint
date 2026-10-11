@@ -2095,3 +2095,64 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-chart .g-bar.is-met { fill: var(--ypt-ok); opacity: 1; }
 .ypt-chart .g-goal { stroke: var(--ypt-ink); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.6; }
 .ypt-chart .g-goal-label { font-size: 9px; font-weight: 700; fill: var(--ypt-mute); text-anchor: end; }
+
+/* ---------- Food search & barcode scan ---------- */
+.ypt-fmacros { display: flex; gap: 6px; padding-top: 10px; border-top: 1px solid var(--ypt-line); }
+.ypt-fmacro { flex: 1; min-width: 0; background: var(--ypt-soft); border-radius: 10px; padding: 8px 4px; text-align: center; }
+.ypt-fmacro b { display: block; font: 700 16px var(--ypt-heading); color: var(--ypt-ink); }
+.ypt-fmacro span { font-size: 12px; color: var(--ypt-mute); }
+.ypt-fmacro--kcal { background: var(--ypt-warn-soft); }
+.ypt-fmacro--pro { background: var(--ypt-pink-soft); }
+.ypt-factions { display: flex; gap: 8px; margin-top: 10px; }
+.ypt-factions .ypt-btn { flex: 1; min-height: 44px; }
+.ypt-factions svg, .ypt-fsearch svg { width: 18px; height: 18px; flex: none; }
+.ypt-featen { margin-top: 12px; padding-top: 6px; border-top: 1px solid var(--ypt-line); }
+.ypt-featen__h { font: 600 12px var(--ypt-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ypt-mute); padding: 6px 0 2px; }
+.ypt-fitem { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.ypt-fitem + .ypt-fitem { border-top: 1px solid var(--ypt-line); }
+.ypt-fitem__main { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; border: 0; background: none; padding: 2px 0; color: inherit; cursor: pointer; }
+.ypt-fitem__name { font-weight: 600; font-size: 15px; color: var(--ypt-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ypt-fitem__sub { font-size: 13px; color: var(--ypt-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ypt-fitem__right { flex: none; text-align: right; font-size: 14px; font-weight: 600; color: var(--ypt-ink); white-space: nowrap; }
+.ypt-fitem__right small { display: block; font-weight: 400; font-size: 12px; color: var(--ypt-mute); }
+.ypt-fitem__x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: var(--ypt-mute); font-size: 20px; line-height: 1; cursor: pointer; }
+.ypt-fplus { flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--ypt-solid); color: var(--ypt-on-solid); font-size: 22px; line-height: 1; cursor: pointer; }
+.ypt-fsearch { display: flex; gap: 8px; align-items: center; }
+.ypt-fsearch__box { flex: 1; position: relative; }
+.ypt-fsearch__box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ypt-mute); pointer-events: none; }
+.ypt-fsearch__box .ypt-input { padding-left: 40px; }
+.ypt-fscanbtn { flex: none; width: 48px; height: 46px; border: 1px solid var(--ypt-line); border-radius: 12px; background: var(--ypt-card); color: var(--ypt-ink); display: grid; place-items: center; cursor: pointer; }
+.ypt-flist__card { padding: 2px 14px; }
+.ypt-flist__empty { text-align: center; padding: 18px 8px; margin: 0; }
+.ypt-fcredit { font-size: 12px; color: var(--ypt-mute); text-align: center; margin: 14px 0 0; }
+.ypt-fbig { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0 14px; }
+.ypt-fbig .ypt-fmacro b { font-size: 19px; }
+.ypt-fstepper { flex: none !important; display: flex; align-items: center; border: 1px solid var(--ypt-line); border-radius: 12px; background: var(--ypt-card); overflow: hidden; }
+.ypt-fstepper button { width: 46px; height: 46px; border: 0; background: none; font-size: 22px; color: var(--ypt-ink); cursor: pointer; }
+.ypt-fstepper span { min-width: 44px; text-align: center; font-weight: 700; font-size: 17px; }
+.ypt-fnotice { background: var(--ypt-warn-soft); border: 1px solid var(--ypt-warn-line); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px; color: var(--ypt-ink); }
+.ypt-fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.ypt-cf-amt { flex: 0 0 84px !important; }
+.ypt-cf-unit { flex: 0 0 72px !important; }
+
+.ypt-scan { position: fixed; inset: 0; z-index: 70; background: #000; color: #fff; overflow: hidden; }
+.ypt-scan__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ypt-scan__frame { position: absolute; left: 50%; top: 42%; width: min(82vw, 340px); height: min(46vw, 190px); transform: translate(-50%, -50%); border-radius: 18px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); }
+.ypt-scan__frame b { position: absolute; width: 34px; height: 34px; border: 4px solid #fff; }
+.ypt-scan__frame b:nth-child(1) { left: -2px; top: -2px; border-right: 0; border-bottom: 0; border-radius: 18px 0 0 0; }
+.ypt-scan__frame b:nth-child(2) { right: -2px; top: -2px; border-left: 0; border-bottom: 0; border-radius: 0 18px 0 0; }
+.ypt-scan__frame b:nth-child(3) { left: -2px; bottom: -2px; border-right: 0; border-top: 0; border-radius: 0 0 0 18px; }
+.ypt-scan__frame b:nth-child(4) { right: -2px; bottom: -2px; border-left: 0; border-top: 0; border-radius: 0 0 18px 0; }
+.ypt-scan__frame i { position: absolute; left: 14px; right: 14px; top: 50%; height: 2px; background: var(--ypt-magenta); box-shadow: 0 0 12px var(--ypt-magenta); animation: ypt-scanline 1.6s ease-in-out infinite alternate; }
+@keyframes ypt-scanline { from { transform: translateY(-40px); } to { transform: translateY(40px); } }
+.ypt-scan__top { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: center; padding: calc(16px + var(--ypt-safe-top)) 16px 16px; }
+.ypt-scan__btn { background: rgba(0, 0, 0, 0.55); color: #fff; border: 0; border-radius: 999px; padding: 10px 16px; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; cursor: pointer; }
+.ypt-scan__btn svg { width: 20px; height: 20px; }
+.ypt-scan__btn[aria-pressed="true"] { background: #fff; color: #000; }
+.ypt-scan__msg { position: absolute; left: 16px; right: 16px; top: calc(42% + min(23vw, 95px) + 22px); text-align: center; font-size: 17px; font-weight: 600; }
+.ypt-scan__msg small { display: block; font-weight: 400; font-size: 14px; opacity: 0.8; margin-top: 4px; }
+.ypt-scan__foot { position: absolute; left: 16px; right: 16px; bottom: calc(24px + var(--ypt-safe-bottom)); display: flex; gap: 10px; }
+.ypt-scan__foot button { flex: 1; background: rgba(255, 255, 255, 0.14); color: #fff; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 14px; padding: 14px 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) {
+	.ypt-scan__frame i { animation: none; }
+}

@@ -65,6 +65,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Barcode scanning in Food search (the tracker page asks for the camera; nothing is recorded or uploaded). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <!-- Health Connect, read only (Me › Health Connect in the tracker). -->
     <uses-permission android:name="android.permission.health.READ_WEIGHT" />
     <uses-permission android:name="android.permission.health.READ_BODY_FAT" />

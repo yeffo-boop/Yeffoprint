@@ -320,6 +320,32 @@ record per day, id = the date; Health Connect's numbers sit in its `hc`
 field and are added on top. Water shows in oz or mL with the lb/kg
 setting.
 
+### Food search & barcode scan
+
+The card's Search food and Scan barcode (also Add › Food) look foods up
+through `class-tracker-food.php`: USDA FoodData Central for name search
+(everyday foods plus US brands) and Open Food Facts for barcodes, with
+USDA's branded UPCs as the fallback. Both are called from the server
+(`/tracker/food/search`, `/tracker/food/barcode/{code}`), so the USDA key
+stays private and nobody else sees who searched. Answers are cached for
+everyone (a week for searches, a month for barcodes) and each customer
+gets 120 lookups per 10 minutes. The USDA key goes in admin Settings ›
+Integrations › YeffoHealth food search (or `YEFFOPRINT_USDA_API_KEY` in
+wp-config); without one it uses DEMO_KEY, which only lasts a few searches.
+
+A food added this way goes into the day's `food.items` with its numbers
+for one serving and how many servings, so totals are quick adds +
+Health Connect + items. Foods the customer saves, or types in from a
+label when a barcode is unknown, are `myfood` records (My foods); a
+barcode in My foods is found first next time, even offline.
+
+Scanning uses the browser's BarcodeDetector where it exists (Chrome on
+Android, the Android app) and otherwise `barcodeFromImage()` in
+tracker.js, a small EAN-13 / UPC-A / EAN-8 / UPC-E reader for iPhone
+Safari that needs two matching reads. `tools/tracker-barcode-test.js`
+checks it against generated barcodes: `node tools/tracker-barcode-test.js`.
+The camera picture never leaves the phone.
+
 ## Appearance
 
 The app follows the phone's light or dark setting. Me › Appearance can
