@@ -3018,7 +3018,17 @@
 	 * purchase. Clearing .opener by hand right after gives the same
 	 * protection while keeping the handle we need to write into the tab.
 	 */
+	var lastLabelPrint = { url: '', at: 0 };
+
 	function printLabelUrl( url ) {
+		// One tab per tap: ignore a repeat call for the same label a moment
+		// later (a doubled handler or a doubled tap on a phone).
+		var now = Date.now();
+		if ( url === lastLabelPrint.url && now - lastLabelPrint.at < 2000 ) {
+			return;
+		}
+		lastLabelPrint = { url: url, at: now };
+
 		var printWindow = window.open( '', '_blank' );
 		if ( ! printWindow ) {
 			// Popup blocked — fall back to the old direct-open behavior
@@ -3055,6 +3065,12 @@
 	 */
 	function bindShippoPrintButtons( panel ) {
 		panel.querySelectorAll( '[data-yp-shippo-print]' ).forEach( function ( button ) {
+			// Re-called after every purchase/void on the whole panel, so skip
+			// buttons already bound; a second handler opened a second tab.
+			if ( button.hasAttribute( 'data-yp-shippo-print-bound' ) ) {
+				return;
+			}
+			button.setAttribute( 'data-yp-shippo-print-bound', '' );
 			button.addEventListener( 'click', function () {
 				printLabelUrl( button.getAttribute( 'data-yp-shippo-print' ) );
 			} );
