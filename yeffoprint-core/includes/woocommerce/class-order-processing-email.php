@@ -19,6 +19,7 @@ class YeffoPrint_Order_Processing_Email {
 	public function register_email( array $email_classes ): array {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-email-customer-processing-order.php';
 
+		YeffoPrint_Order_Completed_Email::unhook_stock_email( $email_classes['WC_Email_Customer_Processing_Order'] ?? null );
 		$email_classes['WC_Email_Customer_Processing_Order'] = new YeffoPrint_Email_Customer_Processing_Order();
 		return $email_classes;
 	}
