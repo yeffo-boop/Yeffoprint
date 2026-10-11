@@ -14,6 +14,8 @@
  *   progress — a weigh-in: weight, measurements, note and the ids of its photos
  *   lab      — one lab result: test name, value, unit, the report's normal range, note
  *   food     — one day of protein, water and calories (id is the date), plus what Health Connect brought in
+ *              and the foods the customer added from search or a barcode (`items`)
+ *   myfood   — a food the customer saved or typed in from a label, with its barcode if it has one
  *   photo    — one progress photo (a shrunk JPEG), only ever read one at a
  *              time through /tracker/photos/{id}, never with the rest of the state
  *   settings — the "me" record (timezone, reminders, travel) and "alerts"
@@ -29,10 +31,13 @@ defined( 'ABSPATH' ) || exit;
 
 class YeffoPrint_Tracker_Store {
 
-	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push', 'progress', 'photo', 'lab', 'snooze', 'food' ];
+	public const KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'push', 'progress', 'photo', 'lab', 'snooze', 'food', 'myfood' ];
 
 	/** Per-record plaintext ceiling — a dose note or protocol is a few hundred bytes; this only stops abuse. */
 	public const MAX_RECORD_BYTES = 8192;
+
+	/** A food day holds up to 40 foods from search (about 250 bytes each) on top of its totals. */
+	public const MAX_FOOD_DAY_BYTES = 16384;
 
 	/** A progress photo is shrunk on the phone to about 200 KB; this leaves room and stops abuse. */
 	public const MAX_PHOTO_BYTES = 1572864;

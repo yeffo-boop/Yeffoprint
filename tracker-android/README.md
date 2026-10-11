@@ -73,6 +73,8 @@ Install that APK on a phone to try it: copy it over and open it (allow
 - Health Connect (app 1.1+): fill in the Health apps declaration for the
   four read permissions (weight, body fat, nutrition, hydration) and say
   they're used to show the customer's own progress and food totals.
+- Camera (app 1.2+): only for scanning food barcodes in the tracker. The
+  picture stays on the phone; only the barcode number is looked up.
 - Policy risk: Google restricts apps that promote or facilitate
   unapproved substances. Describe the app as a medication and supplement
   tracker, and keep peptide shopping out of the listing and screenshots.

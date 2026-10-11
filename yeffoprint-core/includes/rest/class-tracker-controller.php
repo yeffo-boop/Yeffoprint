@@ -15,6 +15,8 @@
  *   POST   /tracker/snooze/push           the same from a notification's button: no session, a signed token instead
  *   DELETE /tracker/all                   "Delete my data" — rows plus the customer's key
  *   GET    /tracker/label-templates       designs offered by "Order labels" (public storefront data)
+ *   GET    /tracker/food/search?q=        foods matching a name (class-tracker-food.php)
+ *   GET    /tracker/food/barcode/{code}   the product with this barcode, or { food: null }
  *   POST   /tracker/shares                a share link for one protocol (class-tracker-shares.php)
  *   DELETE /tracker/shares/{code}         stop sharing one of the customer's own links
  *   POST   /tracker/feedback              Me > Help & feedback note to the owner (class-tracker-feedback.php)
@@ -30,7 +32,10 @@ class YeffoPrint_Tracker_Controller {
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
 	/** Kinds the app writes directly; `push` only goes through /tracker/push. */
-	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food' ];
+	private const WRITABLE_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food', 'myfood' ];
+
+	/** Saved foods (My foods) per customer. */
+	private const MAX_MY_FOODS = 500;
 
 	/** What a progress photo may be once decoded. */
 	private const PHOTO_TYPES = [ 'image/jpeg', 'image/png', 'image/webp' ];
@@ -136,6 +141,18 @@ class YeffoPrint_Tracker_Controller {
 			],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/tracker/food/search', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'food_search' ],
+			'permission_callback' => $perm,
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/food/barcode/(?P<code>[0-9]{8,14})', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'food_barcode' ],
+			'permission_callback' => $perm,
+		] );
+
 		register_rest_route( self::NAMESPACE, '/tracker/label-templates', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'label_templates' ],
@@ -197,12 +214,16 @@ class YeffoPrint_Tracker_Controller {
 		}
 
 		$data = self::clean( $data, 0 );
-		if ( strlen( (string) wp_json_encode( $data ) ) > YeffoPrint_Tracker_Store::MAX_RECORD_BYTES ) {
+		if ( strlen( (string) wp_json_encode( $data ) ) > ( 'food' === $kind ? YeffoPrint_Tracker_Store::MAX_FOOD_DAY_BYTES : YeffoPrint_Tracker_Store::MAX_RECORD_BYTES ) ) {
 			return new \WP_Error( 'yeffoprint_tracker_too_big', __( 'That entry is too long.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
 		$user_id  = get_current_user_id();
 		$new_dose = 'dose' === $kind && ! YeffoPrint_Tracker_Store::exists( $user_id, $kind, $id );
+
+		if ( 'myfood' === $kind && ! YeffoPrint_Tracker_Store::exists( $user_id, $kind, $id ) && YeffoPrint_Tracker_Store::count( $user_id, $kind ) >= self::MAX_MY_FOODS ) {
+			return new \WP_Error( 'yeffoprint_tracker_full', __( 'My foods is full. Remove a few you don’t use to save more.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
 
 		$result = YeffoPrint_Tracker_Store::put( $user_id, $kind, $id, $data );
 		if ( is_wp_error( $result ) ) {
@@ -220,6 +241,26 @@ class YeffoPrint_Tracker_Controller {
 			YeffoPrint_Tracker_Store::delete( get_current_user_id(), $kind, (string) $request['id'] );
 		}
 		return self::no_store( [ 'ok' => true ] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function food_search( \WP_REST_Request $request ) {
+		$ok = YeffoPrint_Tracker_Food::check_rate( get_current_user_id() );
+		if ( is_wp_error( $ok ) ) {
+			return $ok;
+		}
+		$foods = YeffoPrint_Tracker_Food::search( (string) $request->get_param( 'q' ) );
+		return is_wp_error( $foods ) ? $foods : self::no_store( [ 'foods' => $foods ] );
+	}
+
+	/** @return \WP_REST_Response|\WP_Error */
+	public function food_barcode( \WP_REST_Request $request ) {
+		$ok = YeffoPrint_Tracker_Food::check_rate( get_current_user_id() );
+		if ( is_wp_error( $ok ) ) {
+			return $ok;
+		}
+		$food = YeffoPrint_Tracker_Food::barcode( (string) $request['code'] );
+		return is_wp_error( $food ) ? $food : self::no_store( [ 'food' => $food ] );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */

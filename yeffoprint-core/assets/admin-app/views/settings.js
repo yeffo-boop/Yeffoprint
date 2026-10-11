@@ -245,6 +245,13 @@
 
 			var integrationsHtml =
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>YeffoHealth food search</h2></div>' +
+					'<p class="yp-panel__hint">Lets tracker users search foods by name (USDA FoodData Central) and scan barcodes (Open Food Facts) to add calories and macros. Get a free key at <a href="https://api.data.gov/signup/" target="_blank" rel="noopener">api.data.gov/signup</a>; it allows 1,000 searches an hour, and common searches are saved so they don\'t count again. Without a key, search uses USDA\'s shared demo key, which runs out after a few searches. Barcode scanning works either way.</p>' +
+					( settings.usda_api_key_in_config ? '<p class="yp-panel__hint">A key is set in wp-config.php (YEFFOPRINT_USDA_API_KEY), so that one is used.</p>' : '' ) +
+					'<div class="yp-field"><label for="yp-set-usda-key">USDA API key</label><input type="password" autocomplete="off" id="yp-set-usda-key" value="' + YP.escapeAttr( settings.usda_api_key || '' ) + '" placeholder="40-character key from the signup email" /></div>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Telegram Bot</h2></div>' +
 					'<p class="yp-panel__hint">Answers FAQs and order-status questions for customers on Telegram. Create a bot with <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>, paste its token below, and turn it on — the webhook connects automatically when you save.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-enabled"' + ( settings.telegram_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-enabled">Bot is active</label></div>' +
@@ -399,6 +406,7 @@
 				express_fee: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-express-fee' ).value ) || 0 ),
 				dashboard_due_date_days: parseInt( viewEl.querySelector( '#yp-set-due-date' ).value, 10 ) || 7,
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
+				usda_api_key: viewEl.querySelector( '#yp-set-usda-key' ).value,
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
 				telegram_bot_username: viewEl.querySelector( '#yp-set-telegram-username' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,

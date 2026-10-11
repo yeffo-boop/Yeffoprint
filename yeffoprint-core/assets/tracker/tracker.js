@@ -21,7 +21,9 @@
  *             A pen is a 3 mL cartridge the customer mixes like a vial; its dial is read as U-100 units (0.01 mL each).
  *   settings  { tz, reminders, reminderNames, units:'us'|'metric', tags[] }   (tags: the customer's own feeling tags)
  *   progress  { date, weight, wUnit:'lb'|'kg', m:{ waist, chest, hips, arm, thigh, neck }, mUnit:'in'|'cm', fat, note, photos[] }
- *   food      { date, protein (g), water (mL), kcal, hc:{ protein, water, kcal } }   one per day, id = the date; hc is what Health Connect brought in
+ *   food      { date, protein (g), water (mL), kcal, hc:{ protein, water, kcal }, items[] }   one per day, id = the date; hc is what Health Connect brought in
+ *             items: foods added from search or a barcode, { i, n, b, s, g, u, q, k, p, c, f, fb, m, t, src, fid, code } (see openFoodSearch()).
+ *   myfood    { n, b, s, g, u, k, p, c, f, fb, src, fid, code, used }   a saved food or one typed in from a label (My foods)
  *             photos are ids of encrypted photo records, fetched one at a time from /tracker/photos/{id}.
  *
  * The Mix a vial calculator is the same math as the Peptide & Hormone
@@ -84,7 +86,7 @@
 	var THEME_KEY = 'ypt-theme';
 
 	var state = {
-		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {} },
+		records: { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {}, myfood: {} },
 		push: { publicKey: '', devices: 0 },
 		shares: [],
 		snoozes: [],
@@ -195,6 +197,9 @@
 		food: 'M6 3h12l-1.6 16.2a2 2 0 0 1-2 1.8H9.6a2 2 0 0 1-2-1.8zM6.6 9h10.8',
 		book: 'M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h8',
 		heart: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
+		search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-3.5-3.5',
+		barcode: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M16 8v8',
+		flash: 'M13 2L3 14h9l-1 8 10-12h-9z',
 	};
 
 	function icon( name ) {
@@ -1396,7 +1401,7 @@
 		var cached = loadJSON( STORE_KEY, null );
 		queue = loadJSON( QUEUE_KEY, [] ) || [];
 		if ( cached && cached.records ) {
-			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {} }, cached.records );
+			state.records = Object.assign( { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {}, myfood: {} }, cached.records );
 			state.push = cached.push || state.push;
 			state.shares = cached.shares || [];
 			state.snoozes = cached.snoozes || [];
@@ -1406,7 +1411,7 @@
 
 		return api( 'GET', 'tracker/state' ).then( function ( json ) {
 			var fresh = json.records || {};
-			[ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food' ].forEach( function ( k ) {
+			[ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food', 'myfood' ].forEach( function ( k ) {
 				state.records[ k ] = fresh[ k ] && ! Array.isArray( fresh[ k ] ) ? fresh[ k ] : {};
 			} );
 			// Re-apply anything still waiting to upload on top.
@@ -1772,6 +1777,9 @@
 				row( 'flask', 'Lab result', 'Bloodwork values, charted with your doses', function () {
 					openLabSheet( null );
 				} ),
+				foodGoals().on ? row( 'food', 'Food', 'Search a food or scan its barcode', function () {
+					openFoodSearch( today );
+				} ) : null,
 				row( 'food', 'Food & water', foodGoals().on ? 'Protein, water and calories for today' : 'Count protein, water and calories', function () {
 					openFoodSheet( today );
 				} ),
@@ -7461,13 +7469,21 @@
 		return fmtNum( v, 0 ) + ( k === 'protein' ? ' g' : ' cal' );
 	}
 
-	/** A day's totals: what the customer added plus what Health Connect brought in. */
+	/** A day's totals: the quick adds, what Health Connect brought in, and the foods added from search or a barcode. */
 	function foodDay( date ) {
 		var r = state.records.food[ date ] || {};
 		var hc = r.hc || {};
-		var out = { rec: r };
+		var out = { rec: r, items: foodItems( r ) };
 		FOOD_KEYS.forEach( function ( k ) {
 			out[ k ] = ( +r[ k ] || 0 ) + ( +hc[ k ] || 0 );
+		} );
+		MACRO_KEYS.forEach( function ( k ) {
+			out[ k ] = 0;
+		} );
+		out.items.forEach( function ( it ) {
+			[ 'protein', 'kcal' ].concat( MACRO_KEYS ).forEach( function ( k ) {
+				out[ k ] += itemAmount( it, k );
+			} );
 		} );
 		return out;
 	}
@@ -7520,7 +7536,10 @@
 						openFoodSheet( date );
 					} }, '+' )
 				);
-			} )
+			} ),
+			foodMacros( day ),
+			foodActions( date ),
+			foodEaten( date )
 		);
 	}
 
@@ -7553,7 +7572,11 @@
 		var adds = FOOD_KEYS.map( function ( k ) {
 			var chips = k === 'protein' ? [ 10, 20, 30 ] : k === 'water' ? ( waterUnit() === 'oz' ? [ 8, 16, 24 ] : [ 250, 500, 750 ] ) : [ 100, 250, 500 ];
 			var id = 'ypt-food-' + k;
-			var hcNote = +hc[ k ] > 0 ? 'Plus ' + fmtFood( k, +hc[ k ] ) + ' from Health Connect.' : null;
+			var fromItems = foodItems( r ).reduce( function ( sum, it ) {
+				return sum + ( k === 'water' ? 0 : itemAmount( it, k ) );
+			}, 0 );
+			var hcNote = [ +hc[ k ] > 0 ? fmtFood( k, +hc[ k ] ) + ' from Health Connect' : '', fromItems > 0 ? fmtFood( k, fromItems ) + ' from the foods you added' : '' ].filter( Boolean ).join( ' and ' );
+			hcNote = hcNote ? 'Plus ' + hcNote + '.' : null;
 			return h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: id }, foodName( k ) + ( date === todayStr() ? ' today' : ' on ' + fmtDay( date ).replace( /^\w+, /, '' ) ) ),
 				numRow( k, vals, id, '0' ),
@@ -7691,6 +7714,1187 @@
 		) );
 		return wrap;
 	}
+
+	/* =========================================================
+	 * Food search & barcode scan (class-tracker-food.php): search a food
+	 * by name or scan its barcode, pick a serving, and it adds to the
+	 * day. Each food added is kept on that day's food record as an item
+	 * (`items`) with its nutrients for one serving and how many servings
+	 * (q), so a day's totals are the quick adds, Health Connect and these.
+	 * My foods (`myfood` records) are foods the customer saved, or typed
+	 * in from a label; one with a barcode fills in by itself next scan.
+	 * Food searches go to our own server, never straight to USDA or Open
+	 * Food Facts, so nobody else sees who searched for what.
+	 * ======================================================= */
+
+	// Item and My foods fields, kept short since a day can hold 40 items: n name, b brand,
+	// s serving label, g its amount (in u, 'g' or 'mL'), q servings, k/p/c/f/fb per serving,
+	// m meal, t when added, src 'usda'|'off'|'mine', fid the database id, code the barcode.
+	var NUTRIENT_KEYS = { kcal: 'k', protein: 'p', carbs: 'c', fat: 'f', fiber: 'fb' };
+	var MACRO_KEYS = [ 'carbs', 'fat', 'fiber' ];
+	var MAX_FOOD_ITEMS = 40;
+	var MEALS = [ 'Breakfast', 'Lunch', 'Dinner', 'Snack' ];
+	var FOOD_CREDIT = 'Food data from USDA FoodData Central and Open Food Facts';
+	var foodSearchCache = {};
+
+	function foodItems( r ) {
+		return r && Array.isArray( r.items ) ? r.items : [];
+	}
+
+	function itemAmount( it, key ) {
+		return ( +it[ NUTRIENT_KEYS[ key ] ] || 0 ) * ( +it.q || 1 );
+	}
+
+	function macroName( k ) {
+		return { carbs: 'Carbs', fat: 'Fat', fiber: 'Fiber' }[ k ];
+	}
+
+	/** Nutrients for one serving, times f, as { k, p, c, f, fb }. */
+	function scaleNutrients( n, f ) {
+		var out = {};
+		Object.keys( NUTRIENT_KEYS ).forEach( function ( key ) {
+			var s = NUTRIENT_KEYS[ key ];
+			out[ s ] = Math.round( ( +n[ s ] || 0 ) * f * 10 ) / 10;
+		} );
+		return out;
+	}
+
+	/** The server's per-100 { kcal, protein, … } as { k, p, … }. */
+	function shortNutrients( per ) {
+		var out = {};
+		Object.keys( NUTRIENT_KEYS ).forEach( function ( key ) {
+			out[ NUTRIENT_KEYS[ key ] ] = +( per || {} )[ key ] || 0;
+		} );
+		return out;
+	}
+
+	/** A guess at the meal from the time of day; the customer can change it. */
+	function mealNow() {
+		var hr = new Date().getHours();
+		return hr >= 4 && hr < 11 ? 'Breakfast' : hr >= 11 && hr < 15 ? 'Lunch' : hr >= 17 && hr < 22 ? 'Dinner' : 'Snack';
+	}
+
+	function servingText( it ) {
+		var q = +it.q || 1;
+		return ( q === 1 ? '' : fmtNum( q, 2 ) + ' × ' ) + ( it.s || '1 serving' );
+	}
+
+	function sameCode( a, b ) {
+		return !! a && !! b && String( a ).replace( /^0+/, '' ) === String( b ).replace( /^0+/, '' );
+	}
+
+	function myFoods() {
+		return values( state.records.myfood ).sort( function ( a, b ) {
+			return String( b.used || '' ).localeCompare( String( a.used || '' ) ) || String( a.n ).localeCompare( String( b.n ) );
+		} );
+	}
+
+	function findMyFood( code ) {
+		return myFoods().filter( function ( m ) {
+			return sameCode( m.code, code );
+		} )[ 0 ] || null;
+	}
+
+	/** Foods added in the last 30 days, newest first, one of each. */
+	function recentFoods() {
+		var seen = {};
+		var out = [];
+		Object.keys( state.records.food || {} ).filter( function ( d ) {
+			return d >= addDays( todayStr(), -30 );
+		} ).sort().reverse().forEach( function ( d ) {
+			foodItems( state.records.food[ d ] ).slice().reverse().forEach( function ( it ) {
+				var key = ( it.n + '|' + ( it.b || '' ) + '|' + ( it.s || '' ) ).toLowerCase();
+				if ( ! seen[ key ] && out.length < 25 ) {
+					seen[ key ] = true;
+					out.push( it );
+				}
+			} );
+		} );
+		return out;
+	}
+
+	/**
+	 * What the serving picker works with: { name, brand, code, src, fid,
+	 * unit, mine (a My foods id), opts: [ { label, g, n (per one), grams } ] }.
+	 * `grams` is the "type an amount" choice, which needs per-100 numbers.
+	 */
+	function foodFromServer( f ) {
+		var unit = f.unit === 'mL' ? 'mL' : 'g';
+		var per = shortNutrients( f.per );
+		var opts = ( f.servings || [] ).filter( function ( s ) {
+			return +s.g > 0;
+		} ).map( function ( s ) {
+			return { label: s.label, g: +s.g, n: scaleNutrients( per, +s.g / 100 ) };
+		} );
+		opts.push( { label: '100 ' + unit, g: 100, n: per } );
+		opts.push( { label: unit === 'mL' ? 'Type mL' : 'Grams', grams: true, per: per } );
+		return { name: f.name, brand: f.brand || '', code: f.code || '', src: f.src, fid: f.id, unit: unit, opts: opts };
+	}
+
+	/** A saved food or an item already in the log, back into the serving picker. */
+	function foodFromSaved( m, mineId ) {
+		var unit = m.u === 'mL' ? 'mL' : 'g';
+		var one = shortNutrients( { kcal: m.k, protein: m.p, carbs: m.c, fat: m.f, fiber: m.fb } );
+		var opts = [ { label: m.s || '1 serving', g: +m.g || 0, n: one } ];
+		if ( +m.g > 0 ) {
+			var per = scaleNutrients( one, 100 / +m.g );
+			if ( Math.abs( +m.g - 100 ) > 0.5 ) {
+				opts.push( { label: '100 ' + unit, g: 100, n: per } );
+			}
+			opts.push( { label: unit === 'mL' ? 'Type mL' : 'Grams', grams: true, per: per } );
+		}
+		return { name: m.n, brand: m.b || '', code: m.code || '', src: mineId ? 'mine' : m.src || 'mine', fid: m.fid || '', unit: unit, opts: opts, mine: mineId || '' };
+	}
+
+	function addFoodItem( date, item, quiet ) {
+		var r = state.records.food[ date ] || {};
+		var items = foodItems( r ).slice();
+		if ( items.length >= MAX_FOOD_ITEMS ) {
+			toast( 'That’s the most foods for one day. Add the rest with Add or edit.' );
+			return false;
+		}
+		items.push( item );
+		put( 'food', date, Object.assign( { date: date }, r, { items: items } ) );
+		if ( ! quiet ) {
+			toast( 'Added ' + item.n, function () {
+				removeFoodItem( date, item.i, true );
+			} );
+		}
+		return true;
+	}
+
+	function removeFoodItem( date, id, quiet ) {
+		var r = state.records.food[ date ] || {};
+		var all = foodItems( r );
+		var gone = all.filter( function ( it ) {
+			return it.i === id;
+		} )[ 0 ];
+		put( 'food', date, Object.assign( { date: date }, r, { items: all.filter( function ( it ) {
+			return it.i !== id;
+		} ) } ) );
+		if ( gone && ! quiet ) {
+			toast( 'Removed ' + gone.n, function () {
+				var now = state.records.food[ date ] || {};
+				put( 'food', date, Object.assign( { date: date }, now, { items: foodItems( now ).concat( [ gone ] ) } ) );
+			} );
+		}
+	}
+
+	function replaceFoodItem( date, item ) {
+		var r = state.records.food[ date ] || {};
+		put( 'food', date, Object.assign( { date: date }, r, { items: foodItems( r ).map( function ( it ) {
+			return it.i === item.i ? item : it;
+		} ) } ) );
+	}
+
+	/** An item for the log from a picked serving. */
+	function makeItem( food, opt, q, amount, meal ) {
+		var n = opt.grams ? scaleNutrients( opt.per, amount / 100 ) : opt.n;
+		var item = {
+			i: uid( 'f' ),
+			n: String( food.name ).slice( 0, 90 ),
+			s: opt.grams ? fmtNum( amount, 1 ) + ' ' + food.unit : opt.label,
+			g: opt.grams ? amount : opt.g || 0,
+			u: food.unit,
+			q: opt.grams ? 1 : q,
+			m: meal || '',
+			t: new Date().toISOString(),
+			src: food.src || '',
+		};
+		if ( food.brand ) {
+			item.b = String( food.brand ).slice( 0, 60 );
+		}
+		if ( food.fid ) {
+			item.fid = food.fid;
+		}
+		if ( food.code ) {
+			item.code = food.code;
+		}
+		return Object.assign( item, n );
+	}
+
+	/** Remembers a food in My foods (or bumps one already there to the top). */
+	function saveMyFood( food, item ) {
+		var id = food.mine || ( food.code && findMyFood( food.code ) || {} ).id || uid( 'm' );
+		var old = state.records.myfood[ id ] || {};
+		var keep = food.mine ? old : { n: item.n, b: item.b || '', s: item.s, g: item.g, u: item.u, k: item.k, p: item.p, c: item.c, f: item.f, fb: item.fb, src: item.src === 'mine' ? '' : item.src, fid: item.fid || '', code: item.code || old.code || '' };
+		put( 'myfood', id, Object.assign( {}, old, keep, { used: new Date().toISOString() } ) );
+	}
+
+	/* ---------- Today card pieces ---------- */
+
+	/** Carbs, fat and fiber tiles, once there's any to show. */
+	function foodMacros( day ) {
+		if ( ! MACRO_KEYS.some( function ( k ) {
+			return day[ k ] > 0;
+		} ) ) {
+			return null;
+		}
+		return h( 'div', { class: 'ypt-fmacros' }, MACRO_KEYS.map( function ( k ) {
+			return h( 'div', { class: 'ypt-fmacro' }, h( 'b', null, fmtNum( day[ k ], 0 ) + ' g' ), h( 'span', null, macroName( k ) ) );
+		} ) );
+	}
+
+	function foodActions( date ) {
+		var items = foodItems( state.records.food[ date ] );
+		var yesterday = foodItems( state.records.food[ addDays( date, -1 ) ] );
+		return h( 'div', null,
+			h( 'div', { class: 'ypt-factions' },
+				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+					openFoodSearch( date );
+				} }, icon( 'search' ), 'Search food' ),
+				h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+					openScanner( date );
+				} }, icon( 'barcode' ), 'Scan barcode' )
+			),
+			! items.length && yesterday.length ? h( 'button', { type: 'button', class: 'ypt-link ypt-small', style: { marginTop: '8px' }, onclick: function () {
+				copyFoods( addDays( date, -1 ), date );
+			} }, 'Copy what you ate ' + ( date === todayStr() ? 'yesterday' : 'the day before' ) + ' (' + yesterday.length + ')' ) : null
+		);
+	}
+
+	function copyFoods( from, to ) {
+		var r = state.records.food[ to ] || {};
+		var now = new Date().toISOString();
+		var copied = foodItems( state.records.food[ from ] ).map( function ( it ) {
+			return Object.assign( {}, it, { i: uid( 'f' ), t: now } );
+		} );
+		put( 'food', to, Object.assign( { date: to }, r, { items: foodItems( r ).concat( copied ).slice( 0, MAX_FOOD_ITEMS ) } ) );
+		toast( 'Copied ' + copied.length + ' food' + ( copied.length === 1 ? '' : 's' ), function () {
+			var now2 = state.records.food[ to ] || {};
+			var ids = copied.map( function ( it ) {
+				return it.i;
+			} );
+			put( 'food', to, Object.assign( { date: to }, now2, { items: foodItems( now2 ).filter( function ( it ) {
+				return ids.indexOf( it.i ) === -1;
+			} ) } ) );
+		} );
+	}
+
+	/** What was eaten that day, tap one to change it, × to take it off. */
+	function foodEaten( date ) {
+		var items = foodItems( state.records.food[ date ] );
+		if ( ! items.length ) {
+			return null;
+		}
+		return h( 'div', { class: 'ypt-featen' },
+			h( 'div', { class: 'ypt-featen__h' }, ( date === todayStr() ? 'Eaten today' : 'Eaten' ) + ' · ' + items.length ),
+			items.map( function ( it ) {
+				return h( 'div', { class: 'ypt-fitem' },
+					h( 'button', { type: 'button', class: 'ypt-fitem__main', 'aria-label': 'Change ' + it.n, onclick: function () {
+						openFoodPortion( foodFromSaved( it ), date, { edit: it } );
+					} },
+						h( 'span', { class: 'ypt-fitem__name' }, it.n ),
+						h( 'span', { class: 'ypt-fitem__sub' }, [ it.m, it.b !== it.n ? it.b : '', servingText( it ) ].filter( Boolean ).join( ' · ' ) )
+					),
+					h( 'span', { class: 'ypt-fitem__right' }, fmtNum( itemAmount( it, 'kcal' ), 0 ) + ' cal', h( 'small', null, fmtNum( itemAmount( it, 'protein' ), 0 ) + ' g protein' ) ),
+					h( 'button', { type: 'button', class: 'ypt-fitem__x', 'aria-label': 'Remove ' + it.n, onclick: function () {
+						removeFoodItem( date, it.i );
+					} }, '×' )
+				);
+			} )
+		);
+	}
+
+	/* ---------- Search ---------- */
+
+	/** One food in a list: tap for servings, + adds one of the first serving. */
+	function foodRow( food, date, sub ) {
+		var opt = food.opts[ 0 ];
+		return h( 'div', { class: 'ypt-fitem' },
+			h( 'button', { type: 'button', class: 'ypt-fitem__main', onclick: function () {
+				openFoodPortion( food, date );
+			} },
+				h( 'span', { class: 'ypt-fitem__name' }, food.name ),
+				h( 'span', { class: 'ypt-fitem__sub' }, sub || [ food.brand, opt.label === '100 g' || opt.label === '100 mL' ? 'Per ' + opt.label : opt.label ].filter( Boolean ).join( ' · ' ) )
+			),
+			h( 'span', { class: 'ypt-fitem__right' }, fmtNum( opt.n.k, 0 ) + ' cal', h( 'small', null, fmtNum( opt.n.p, 0 ) + ' g protein' ) ),
+			h( 'button', { type: 'button', class: 'ypt-fplus', 'aria-label': 'Add ' + food.name + ', ' + opt.label, onclick: function () {
+				var item = makeItem( food, opt, 1, 0, mealNow() );
+				if ( addFoodItem( date, item ) && food.mine ) {
+					saveMyFood( food, item );
+				}
+			} }, '+' )
+		);
+	}
+
+	function openFoodSearch( date, startTab ) {
+		date = date || todayStr();
+		var tab = startTab || 'all';
+		var seq = 0;
+		var timer = null;
+		var input = h( 'input', { class: 'ypt-input', id: 'ypt-food-q', type: 'search', placeholder: 'Search foods, like chicken breast', autocomplete: 'off', autocapitalize: 'none', enterkeyhint: 'search', 'aria-label': 'Search foods', oninput: function () {
+			clearTimeout( timer );
+			timer = setTimeout( run, 350 );
+		}, onkeydown: function ( ev ) {
+			if ( ev.key === 'Enter' ) {
+				ev.preventDefault();
+				clearTimeout( timer );
+				run();
+				input.blur();
+			}
+		} } );
+		var list = h( 'div', { class: 'ypt-flist', 'aria-live': 'polite' } );
+		var tabs = h( 'div', { class: 'ypt-chips', style: { margin: '12px 0 8px' } } );
+
+		function paintTabs() {
+			tabs.textContent = '';
+			[ [ 'all', 'All foods' ], [ 'mine', 'My foods' ], [ 'recent', 'Recent' ] ].forEach( function ( t ) {
+				tabs.appendChild( h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': tab === t[ 0 ] ? 'true' : 'false', onclick: function () {
+					tab = t[ 0 ];
+					paintTabs();
+					run();
+				} }, t[ 1 ] ) );
+			} );
+		}
+
+		function show( nodes, empty ) {
+			list.textContent = '';
+			if ( nodes.length ) {
+				list.appendChild( h( 'div', { class: 'ypt-card ypt-flist__card' }, nodes ) );
+			} else if ( empty ) {
+				list.appendChild( h( 'p', { class: 'ypt-muted ypt-small ypt-flist__empty' }, empty ) );
+			}
+		}
+
+		function matches( text, q ) {
+			return ! q || String( text ).toLowerCase().indexOf( q.toLowerCase() ) !== -1;
+		}
+
+		function local( q ) {
+			if ( tab === 'mine' ) {
+				var mine = myFoods().filter( function ( m ) {
+					return matches( m.n + ' ' + ( m.b || '' ), q );
+				} );
+				show( mine.map( function ( m ) {
+					return foodRow( foodFromSaved( m, m.id ), date );
+				} ), q ? 'None of your saved foods match.' : 'Foods you save when adding them, or type in from a label, show here.' );
+				return;
+			}
+			var recent = recentFoods().filter( function ( it ) {
+				return matches( it.n + ' ' + ( it.b || '' ), q );
+			} );
+			show( recent.map( function ( it ) {
+				return foodRow( foodFromSaved( it ), date, [ it.b, it.s ].filter( Boolean ).join( ' · ' ) );
+			} ), tab === 'recent' ? ( q ? 'Nothing you added lately matches.' : 'Foods you add show here for a month.' ) : 'Type a food to search, or scan a barcode.' );
+		}
+
+		function run() {
+			var q = input.value.trim();
+			var mine = ++seq;
+			if ( tab !== 'all' || q.length < 2 ) {
+				local( q );
+				return;
+			}
+			var key = q.toLowerCase();
+			function paint( foods ) {
+				if ( mine !== seq ) {
+					return;
+				}
+				var saved = myFoods().filter( function ( m ) {
+					return matches( m.n + ' ' + ( m.b || '' ), q );
+				} ).slice( 0, 3 );
+				show( saved.map( function ( m ) {
+					return foodRow( foodFromSaved( m, m.id ), date, [ 'My foods', m.b, m.s ].filter( Boolean ).join( ' · ' ) );
+				} ).concat( foods.map( function ( f ) {
+					return foodRow( foodFromServer( f ), date );
+				} ) ), 'No foods found for “' + q + '”. Check the spelling, try fewer words, or add your own below.' );
+			}
+			if ( foodSearchCache[ key ] ) {
+				paint( foodSearchCache[ key ] );
+				return;
+			}
+			list.textContent = '';
+			list.appendChild( h( 'p', { class: 'ypt-muted ypt-small ypt-flist__empty' }, 'Searching…' ) );
+			api( 'GET', 'tracker/food/search?q=' + encodeURIComponent( q ) ).then( function ( json ) {
+				var foods = Array.isArray( json.foods ) ? json.foods : [];
+				foodSearchCache[ key ] = foods;
+				paint( foods );
+			} ).catch( function ( err ) {
+				if ( mine !== seq || handleAuthError( err ) ) {
+					return;
+				}
+				show( [], isNetworkError( err ) ? 'You’re offline. My foods and Recent still work.' : err.message || 'Search didn’t work. Try again.' );
+			} );
+		}
+
+		paintTabs();
+		openSheet( 'Add food', date === todayStr() ? 'Add to today' : 'Add to ' + fmtDay( date ), [
+			h( 'div', { class: 'ypt-fsearch' },
+				h( 'div', { class: 'ypt-fsearch__box' }, icon( 'search' ), input ),
+				h( 'button', { type: 'button', class: 'ypt-fscanbtn', 'aria-label': 'Scan a barcode', onclick: function () {
+					openScanner( date );
+				} }, icon( 'barcode' ) )
+			),
+			tabs,
+			list,
+			h( 'button', { type: 'button', class: 'ypt-link', style: { display: 'block', margin: '14px auto 0' }, onclick: function () {
+				openCustomFood( date, { name: input.value.trim() } );
+			} }, 'Can’t find it? Add your own food' ),
+			h( 'p', { class: 'ypt-fcredit' }, FOOD_CREDIT ),
+		] );
+		run();
+	}
+
+	/* ---------- Serving picker ---------- */
+
+	/**
+	 * Pick a serving and how many, then add it. opts.edit is an item
+	 * already in the log (change how much, the meal, or remove it);
+	 * opts.save ticks "Save to My foods" (on for a scanned product).
+	 */
+	function openFoodPortion( food, date, opts ) {
+		opts = opts || {};
+		var edit = opts.edit || null;
+		var sel = 0;
+		var q = edit ? +edit.q || 1 : 1;
+		var amount = 100;
+		var meal = edit ? edit.m || '' : mealNow();
+		var save = !! opts.save;
+		var tiles = h( 'div', { class: 'ypt-fbig' } );
+		var servingBox = h( 'div', null );
+		var qtyBox = h( 'div', null );
+		var mealBox = h( 'div', { class: 'ypt-chips' } );
+		var addBtn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: commit } );
+
+		function opt() {
+			return food.opts[ sel ];
+		}
+
+		function current() {
+			var o = opt();
+			return o.grams ? scaleNutrients( o.per, ( amount || 0 ) / 100 ) : scaleNutrients( o.n, q || 0 );
+		}
+
+		function paintTotals() {
+			var n = current();
+			tiles.textContent = '';
+			[ [ 'k', 'Calories', '', 'ypt-fmacro--kcal' ], [ 'p', 'Protein', ' g', 'ypt-fmacro--pro' ], [ 'c', 'Carbs', ' g', '' ], [ 'f', 'Fat', ' g', '' ] ].forEach( function ( t ) {
+				tiles.appendChild( h( 'div', { class: 'ypt-fmacro ' + t[ 3 ] }, h( 'b', null, fmtNum( n[ t[ 0 ] ], n[ t[ 0 ] ] < 10 && t[ 0 ] !== 'k' ? 1 : 0 ) + t[ 2 ] ), h( 'span', null, t[ 1 ] ) ) );
+			} );
+			addBtn.textContent = edit ? 'Save' : 'Add ' + fmtNum( n.k, 0 ) + ' cal · ' + fmtNum( n.p, 0 ) + ' g protein';
+			addBtn.disabled = opt().grams ? ! ( amount > 0 ) : ! ( q > 0 );
+		}
+
+		function paintServing() {
+			servingBox.textContent = '';
+			if ( food.opts.length > 1 ) {
+				servingBox.appendChild( h( 'div', { class: 'ypt-field' }, h( 'label', null, 'Serving' ), h( 'div', { class: 'ypt-chips' }, food.opts.map( function ( o, i ) {
+					return h( 'button', { type: 'button', class: 'ypt-chip', 'aria-pressed': i === sel ? 'true' : 'false', onclick: function () {
+						sel = i;
+						paintServing();
+						paintQty();
+						paintTotals();
+					} }, o.label );
+				} ) ) ) );
+			} else {
+				servingBox.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '0 0 12px' } }, 'Serving: ' + food.opts[ 0 ].label ) );
+			}
+		}
+
+		function paintQty() {
+			qtyBox.textContent = '';
+			if ( opt().grams ) {
+				qtyBox.appendChild( field( 'How much', h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+					h( 'input', { class: 'ypt-input', id: 'ypt-food-amount', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: String( amount ), oninput: function ( ev ) {
+						amount = parseFloat( ev.target.value ) || 0;
+						paintTotals();
+					} } ),
+					h( 'span', { class: 'ypt-muted ypt-shrink' }, food.unit )
+				), null, 'ypt-food-amount' ) );
+				return;
+			}
+			var count = h( 'span', { 'aria-live': 'polite' }, fmtNum( q, 2 ) );
+			function setQ( v ) {
+				q = Math.max( 0.25, Math.round( v * 4 ) / 4 );
+				count.textContent = fmtNum( q, 2 );
+				paintTotals();
+			}
+			qtyBox.appendChild( h( 'div', { class: 'ypt-field' }, h( 'label', null, 'How many' ),
+				h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+					h( 'div', { class: 'ypt-fstepper' },
+						h( 'button', { type: 'button', 'aria-label': 'Fewer', onclick: function () {
+							setQ( q > 1 ? q - 1 : q - 0.25 );
+						} }, '−' ),
+						count,
+						h( 'button', { type: 'button', 'aria-label': 'More', onclick: function () {
+							setQ( q < 1 ? q + 0.25 : q + 1 );
+						} }, '+' )
+					),
+					h( 'div', { class: 'ypt-chips' }, [ [ 0.5, '½' ], [ 1.5, '1½' ], [ 2, '2' ] ].map( function ( c ) {
+						return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', onclick: function () {
+							setQ( c[ 0 ] );
+						} }, c[ 1 ] );
+					} ) )
+				)
+			) );
+		}
+
+		function paintMeal() {
+			mealBox.textContent = '';
+			MEALS.forEach( function ( m ) {
+				mealBox.appendChild( h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': meal === m ? 'true' : 'false', onclick: function () {
+					meal = meal === m ? '' : m;
+					paintMeal();
+				} }, m ) );
+			} );
+		}
+
+		function commit() {
+			var item = makeItem( food, opt(), q, amount, meal );
+			if ( edit ) {
+				item.i = edit.i;
+				item.t = edit.t;
+				closeSheet();
+				replaceFoodItem( date, item );
+				toast( 'Saved' );
+				return;
+			}
+			if ( addFoodItem( date, item, true ) ) {
+				if ( save || food.mine ) {
+					saveMyFood( food, item );
+				}
+				closeSheet();
+				toast( 'Added ' + item.n, function () {
+					removeFoodItem( date, item.i, true );
+				} );
+			}
+		}
+
+		paintServing();
+		paintQty();
+		paintMeal();
+		paintTotals();
+		var mine = food.mine ? state.records.myfood[ food.mine ] : null;
+		openSheet( food.name, edit ? 'Change' : opts.eyebrow || ( date === todayStr() ? 'Add to today' : 'Add to ' + fmtDay( date ) ), [
+			food.brand && food.brand !== food.name ? h( 'p', { class: 'ypt-muted', style: { margin: '-4px 0 0' } }, food.brand ) : null,
+			tiles,
+			servingBox,
+			qtyBox,
+			h( 'div', { class: 'ypt-field' }, h( 'label', null, 'Meal' ), mealBox, h( 'p', { class: 'ypt-hint' }, 'Optional.' ) ),
+			! edit && ! food.mine ? h( 'button', { type: 'button', class: 'ypt-check', role: 'checkbox', 'aria-checked': save ? 'true' : 'false', onclick: function ( ev ) {
+				save = ! save;
+				ev.currentTarget.setAttribute( 'aria-checked', save ? 'true' : 'false' );
+			} }, h( 'i', { 'aria-hidden': 'true' } ), h( 'span', null, 'Save to My foods for one-tap adding' ) ) : null,
+			mine ? h( 'button', { type: 'button', class: 'ypt-link ypt-small', style: { marginTop: '10px' }, onclick: function () {
+				openCustomFood( date, { mine: food.mine } );
+			} }, 'Edit or delete this saved food' ) : null,
+			edit ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px', display: 'block' }, onclick: function () {
+				closeSheet();
+				removeFoodItem( date, edit.i );
+			} }, 'Remove from ' + ( date === todayStr() ? 'today' : fmtDay( date ) ) ) : null,
+			food.src === 'usda' || food.src === 'off' ? h( 'p', { class: 'ypt-fcredit' }, food.src === 'off' ? 'From Open Food Facts' : 'From USDA FoodData Central' ) : null,
+		], addBtn );
+	}
+
+	/* ---------- My foods: type one in from a label ---------- */
+
+	/** opts: { code } a barcode nobody knows yet, { name } from the search box, { mine } to edit a saved food. */
+	function openCustomFood( date, opts ) {
+		opts = opts || {};
+		var old = opts.mine ? state.records.myfood[ opts.mine ] || {} : {};
+		var vals = {
+			n: old.n || opts.name || '',
+			b: old.b || '',
+			s: old.s || '',
+			g: old.g ? String( old.g ) : '',
+			k: old.k != null ? String( old.k ) : '',
+			p: old.p != null ? String( old.p ) : '',
+			c: old.c != null ? String( old.c ) : '',
+			f: old.f != null ? String( old.f ) : '',
+			fb: old.fb != null ? String( old.fb ) : '',
+		};
+		var unit = old.u === 'mL' ? 'mL' : 'g';
+		function input( key, label, type, placeholder ) {
+			var id = 'ypt-cf-' + key;
+			return field( label, h( 'input', { class: 'ypt-input', id: id, type: type || 'number', inputmode: type ? null : 'decimal', min: type ? null : '0', step: type ? null : 'any', placeholder: placeholder || '', value: vals[ key ], maxlength: type ? '90' : null, oninput: function ( ev ) {
+				vals[ key ] = ev.target.value;
+			} } ), null, id );
+		}
+		var unitPick = h( 'select', { class: 'ypt-input ypt-cf-unit', 'aria-label': 'Unit', onchange: function ( ev ) {
+			unit = ev.target.value;
+		} }, [ 'g', 'mL' ].map( function ( u ) {
+			return h( 'option', { value: u, selected: u === unit }, u );
+		} ) );
+		var save = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			var name = vals.n.trim();
+			if ( ! name ) {
+				toast( 'Give it a name' );
+				document.getElementById( 'ypt-cf-n' ).focus();
+				return;
+			}
+			if ( vals.k === '' ) {
+				toast( 'Add the calories from the label' );
+				document.getElementById( 'ypt-cf-k' ).focus();
+				return;
+			}
+			var id = opts.mine || ( opts.code && findMyFood( opts.code ) || {} ).id || uid( 'm' );
+			var rec = {
+				n: name.slice( 0, 90 ),
+				b: vals.b.trim().slice( 0, 60 ),
+				s: vals.s.trim().slice( 0, 60 ) || ( parseFloat( vals.g ) > 0 ? fmtNum( parseFloat( vals.g ), 1 ) + ' ' + unit : '1 serving' ),
+				g: Math.max( 0, parseFloat( vals.g ) || 0 ),
+				u: unit,
+				k: Math.max( 0, parseFloat( vals.k ) || 0 ),
+				p: Math.max( 0, parseFloat( vals.p ) || 0 ),
+				c: Math.max( 0, parseFloat( vals.c ) || 0 ),
+				f: Math.max( 0, parseFloat( vals.f ) || 0 ),
+				fb: Math.max( 0, parseFloat( vals.fb ) || 0 ),
+				src: 'mine',
+				code: opts.code || old.code || '',
+				used: new Date().toISOString(),
+			};
+			if ( rec.g && rec.s === fmtNum( rec.g, 1 ) + ' ' + unit ) {
+				rec.s = fmtNum( rec.g, 1 ) + ' ' + unit;
+			} else if ( rec.g && rec.s.indexOf( '(' ) === -1 ) {
+				rec.s += ' (' + fmtNum( rec.g, 1 ) + ' ' + unit + ')';
+			}
+			put( 'myfood', id, Object.assign( {}, old, rec ) );
+			closeSheet();
+			if ( opts.mine ) {
+				toast( 'Saved' );
+				return;
+			}
+			var food = foodFromSaved( rec, id );
+			addFoodItem( date, makeItem( food, food.opts[ 0 ], 1, 0, mealNow() ) );
+		} }, opts.mine ? 'Save' : date === todayStr() ? 'Save and add to today' : 'Save and add' );
+
+		openSheet( opts.mine ? 'Edit saved food' : 'Add from the label', opts.code ? 'Scanned ' + opts.code : 'My foods', [
+			opts.code && ! opts.mine ? h( 'div', { class: 'ypt-fnotice' }, h( 'b', null, 'We don’t know this barcode yet.' ), ' Type what’s on the Nutrition Facts label once. Next time you scan it, it fills in by itself.' ) : null,
+			input( 'n', 'Name', 'text', 'Protein bar, cookie dough' ),
+			input( 'b', 'Brand (optional)', 'text', '' ),
+			h( 'div', { class: 'ypt-field' }, h( 'label', { for: 'ypt-cf-s' }, 'Serving size' ),
+				h( 'div', { class: 'ypt-row' },
+					h( 'input', { class: 'ypt-input', id: 'ypt-cf-s', type: 'text', maxlength: '60', placeholder: '1 bar', value: vals.s, oninput: function ( ev ) {
+						vals.s = ev.target.value;
+					} } ),
+					h( 'input', { class: 'ypt-input ypt-cf-amt', id: 'ypt-cf-g', type: 'number', inputmode: 'decimal', min: '0', step: 'any', placeholder: '60', 'aria-label': 'Serving amount', value: vals.g, oninput: function ( ev ) {
+						vals.g = ev.target.value;
+					} } ),
+					unitPick
+				),
+				h( 'p', { class: 'ypt-hint' }, 'The amount is optional. With it, you can add any number of grams later.' )
+			),
+			h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Per serving' ),
+			h( 'div', { class: 'ypt-fgrid' },
+				input( 'k', 'Calories' ),
+				input( 'p', 'Protein (g)' ),
+				input( 'c', 'Carbs (g)' ),
+				input( 'f', 'Fat (g)' ),
+				input( 'fb', 'Fiber (g)' )
+			),
+			h( 'p', { class: 'ypt-hint' }, 'Saved in your private My foods. Only you can see it.' ),
+			opts.mine ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '8px' }, onclick: function () {
+				var gone = state.records.myfood[ opts.mine ];
+				closeSheet();
+				del( 'myfood', opts.mine );
+				toast( 'Deleted ' + ( gone && gone.n || 'saved food' ), function () {
+					put( 'myfood', opts.mine, gone );
+				} );
+			} }, 'Delete this saved food' ) : null,
+		], save );
+	}
+
+	/* ---------- Barcodes ---------- */
+
+	/** Look a barcode up: My foods first (private, and works offline), then the databases. */
+	function lookupBarcode( date, code ) {
+		var mine = findMyFood( code );
+		if ( mine ) {
+			openFoodPortion( foodFromSaved( mine, mine.id ), date, { eyebrow: 'Scanned · My foods' } );
+			return;
+		}
+		toast( 'Looking up ' + code + '…' );
+		api( 'GET', 'tracker/food/barcode/' + encodeURIComponent( code ) ).then( function ( json ) {
+			var old = document.querySelector( '.ypt-toast' );
+			if ( old ) {
+				old.remove();
+			}
+			if ( json.food ) {
+				openFoodPortion( foodFromServer( json.food ), date, { save: true, eyebrow: 'Scanned · ' + ( json.food.src === 'off' ? 'Open Food Facts' : 'USDA' ) } );
+			} else {
+				openCustomFood( date, { code: code } );
+			}
+		} ).catch( function ( err ) {
+			if ( handleAuthError( err ) ) {
+				return;
+			}
+			if ( isNetworkError( err ) ) {
+				toast( 'You’re offline, so it can’t be looked up. You can type in the label.' );
+				openCustomFood( date, { code: code } );
+				return;
+			}
+			toast( err.message || 'That barcode couldn’t be looked up.' );
+		} );
+	}
+
+	/** Type the number under the barcode (no camera, or it won't read). */
+	function openBarcodeEntry( date, note ) {
+		var val = '';
+		var go = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: submit }, 'Look it up' );
+		function submit() {
+			var code = val.replace( /\D/g, '' );
+			if ( code.length < 8 || code.length > 14 ) {
+				toast( 'A barcode number is 8 to 14 digits' );
+				return;
+			}
+			closeSheet();
+			lookupBarcode( date, code );
+		}
+		openSheet( 'Type the barcode', 'Add food', [
+			note ? h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, note ) : null,
+			field( 'The numbers under the barcode', h( 'input', { class: 'ypt-input', id: 'ypt-bc-num', type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: '0 12345 67890 5', oninput: function ( ev ) {
+				val = ev.target.value;
+			}, onkeydown: function ( ev ) {
+				if ( ev.key === 'Enter' ) {
+					submit();
+				}
+			} } ), 'All of them, including the small ones at each end.', 'ypt-bc-num' ),
+		], go );
+	}
+
+	/**
+	 * The camera scanner. Chrome on Android (and the Android app) has a
+	 * built-in barcode reader (BarcodeDetector); iPhone Safari doesn't, so
+	 * there our own reader below decodes the frames. Either way the
+	 * camera picture never leaves the phone: only the number is looked up.
+	 */
+	function openScanner( date ) {
+		closeSheet();
+		var media = navigator.mediaDevices;
+		if ( ! media || typeof media.getUserMedia !== 'function' ) {
+			openBarcodeEntry( date, 'This browser can’t use the camera here, so type the number under the barcode instead.' );
+			return;
+		}
+		var closed = false;
+		var stream = null;
+		var detector = null;
+		var timer = null;
+		var last = '';
+		var lastAt = 0;
+		var torchOn = false;
+		var canvas = document.createElement( 'canvas' );
+		var ctx = canvas.getContext( '2d', { willReadFrequently: true } );
+		var video = h( 'video', { class: 'ypt-scan__video', playsinline: 'true', muted: 'true', autoplay: 'true', 'aria-hidden': 'true' } );
+		video.muted = true;
+		video.setAttribute( 'playsinline', '' );
+		var msg = h( 'div', { class: 'ypt-scan__msg' }, 'Starting the camera…' );
+		var torch = h( 'button', { type: 'button', class: 'ypt-scan__btn', hidden: true, 'aria-label': 'Flashlight', 'aria-pressed': 'false', onclick: function () {
+			var track = stream && stream.getVideoTracks()[ 0 ];
+			if ( ! track ) {
+				return;
+			}
+			torchOn = ! torchOn;
+			track.applyConstraints( { advanced: [ { torch: torchOn } ] } ).catch( function () {} );
+			torch.setAttribute( 'aria-pressed', torchOn ? 'true' : 'false' );
+		} }, icon( 'flash' ) );
+		var node = h( 'div', { class: 'ypt-scan', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Scan a barcode' },
+			video,
+			h( 'div', { class: 'ypt-scan__frame', 'aria-hidden': 'true' }, h( 'b' ), h( 'b' ), h( 'b' ), h( 'b' ), h( 'i' ) ),
+			h( 'div', { class: 'ypt-scan__top' },
+				h( 'button', { type: 'button', class: 'ypt-scan__btn', onclick: function () {
+					close();
+				} }, 'Cancel' ),
+				torch
+			),
+			msg,
+			h( 'div', { class: 'ypt-scan__foot' },
+				h( 'button', { type: 'button', onclick: function () {
+					close();
+					openBarcodeEntry( date );
+				} }, 'Type the number' ),
+				h( 'button', { type: 'button', onclick: function () {
+					close();
+					openFoodSearch( date );
+				} }, 'Search by name' )
+			)
+		);
+
+		function close() {
+			if ( closed ) {
+				return;
+			}
+			closed = true;
+			clearTimeout( timer );
+			if ( stream ) {
+				stream.getTracks().forEach( function ( t ) {
+					t.stop();
+				} );
+			}
+			document.removeEventListener( 'keydown', onKey );
+			document.removeEventListener( 'visibilitychange', onHide );
+			node.remove();
+			document.body.style.overflow = '';
+		}
+
+		function onKey( ev ) {
+			if ( ev.key === 'Escape' ) {
+				close();
+			}
+		}
+
+		// Leaving the app shouldn't leave the camera on.
+		function onHide() {
+			if ( document.hidden ) {
+				close();
+			}
+		}
+
+		function found( code ) {
+			close();
+			if ( navigator.vibrate ) {
+				navigator.vibrate( 40 );
+			}
+			lookupBarcode( date, code );
+		}
+
+		function tick() {
+			if ( closed ) {
+				return;
+			}
+			if ( video.readyState < 2 || ! video.videoWidth ) {
+				timer = setTimeout( tick, 150 );
+				return;
+			}
+			if ( detector ) {
+				detector.detect( video ).then( function ( codes ) {
+					var hit = ( codes || [] ).map( function ( c ) {
+						return String( c.rawValue || '' ).replace( /\D/g, '' );
+					} ).filter( function ( c ) {
+						return c.length >= 8 && c.length <= 14;
+					} )[ 0 ];
+					if ( hit && ! closed ) {
+						found( hit );
+					} else if ( ! closed ) {
+						timer = setTimeout( tick, 120 );
+					}
+				} ).catch( function () {
+					detector = null;
+					timer = setTimeout( tick, 120 );
+				} );
+				return;
+			}
+			// Our own reader: the middle band of the picture, where the frame is.
+			var vw = video.videoWidth;
+			var vh = video.videoHeight;
+			var sw = Math.round( vw * 0.92 );
+			var sh = Math.round( vh * 0.5 );
+			var cw = Math.min( sw, 1100 );
+			var ch = Math.round( sh * cw / sw );
+			canvas.width = cw;
+			canvas.height = ch;
+			ctx.drawImage( video, Math.round( ( vw - sw ) / 2 ), Math.round( ( vh - sh ) / 2 ), sw, sh, 0, 0, cw, ch );
+			var code = '';
+			try {
+				code = barcodeFromImage( ctx.getImageData( 0, 0, cw, ch ) );
+			} catch ( e ) {
+				code = '';
+			}
+			// Two matching reads in a row, so a smudge can't add the wrong food.
+			if ( code && code === last && Date.now() - lastAt < 1500 ) {
+				found( code );
+				return;
+			}
+			if ( code ) {
+				last = code;
+				lastAt = Date.now();
+			}
+			timer = setTimeout( tick, 90 );
+		}
+
+		document.body.appendChild( node );
+		document.body.style.overflow = 'hidden';
+		document.addEventListener( 'keydown', onKey );
+		document.addEventListener( 'visibilitychange', onHide );
+
+		var start = Promise.resolve();
+		if ( 'BarcodeDetector' in window ) {
+			start = window.BarcodeDetector.getSupportedFormats().then( function ( formats ) {
+				var want = [ 'ean_13', 'ean_8', 'upc_a', 'upc_e' ].filter( function ( f ) {
+					return formats.indexOf( f ) !== -1;
+				} );
+				if ( want.length ) {
+					detector = new window.BarcodeDetector( { formats: want } );
+				}
+			} ).catch( function () {
+				detector = null;
+			} );
+		}
+		start.then( function () {
+			return media.getUserMedia( { audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } } );
+		} ).then( function ( s ) {
+			if ( closed ) {
+				s.getTracks().forEach( function ( t ) {
+					t.stop();
+				} );
+				return;
+			}
+			stream = s;
+			video.srcObject = s;
+			var play = video.play();
+			if ( play && play.catch ) {
+				play.catch( function () {} );
+			}
+			msg.textContent = '';
+			msg.appendChild( document.createTextNode( 'Point at the barcode' ) );
+			msg.appendChild( h( 'small', null, 'It scans on its own. Hold it flat and fill the frame.' ) );
+			var track = s.getVideoTracks()[ 0 ];
+			var caps = track && typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
+			if ( caps.torch ) {
+				torch.hidden = false;
+			}
+			// Close focus helps small barcodes; not every phone offers it.
+			if ( caps.focusMode && caps.focusMode.indexOf( 'continuous' ) !== -1 ) {
+				track.applyConstraints( { advanced: [ { focusMode: 'continuous' } ] } ).catch( function () {} );
+			}
+			tick();
+		} ).catch( function ( err ) {
+			close();
+			var name = err && err.name;
+			openBarcodeEntry( date, name === 'NotAllowedError' || name === 'SecurityError'
+				? 'Camera access is off for YeffoHealth. You can turn it on in your phone’s settings, or type the number under the barcode.'
+				: name === 'NotFoundError' || name === 'OverconstrainedError'
+					? 'No camera was found, so type the number under the barcode instead.'
+					: 'The camera couldn’t start. Type the number under the barcode instead.' );
+		} );
+	}
+
+	/* bc:start — EAN-13, UPC-A, EAN-8 and UPC-E from a camera frame, for phones without BarcodeDetector. */
+
+	// Bar widths of each digit's left-hand (L) code, light-dark-light-dark, in modules. G codes are these
+	// reversed; the right half uses L's widths starting dark. The first EAN-13 digit is the L/G pattern.
+	var BC_L = [ [ 3, 2, 1, 1 ], [ 2, 2, 2, 1 ], [ 2, 1, 2, 2 ], [ 1, 4, 1, 1 ], [ 1, 1, 3, 2 ], [ 1, 2, 3, 1 ], [ 1, 1, 1, 4 ], [ 1, 3, 1, 2 ], [ 1, 2, 1, 3 ], [ 3, 1, 1, 2 ] ];
+	var BC_FIRST = { LLLLLL: 0, LLGLGG: 1, LLGGLG: 2, LLGGGL: 3, LGLLGG: 4, LGGLLG: 5, LGGGLL: 6, LGLGLG: 7, LGLGGL: 8, LGGLGL: 9 };
+	// UPC-E: the L/G pattern gives the check digit (number system 0; number system 1 is the opposite).
+	var BC_UPCE = [ 'GGGLLL', 'GGLGLL', 'GGLLGL', 'GGLLLG', 'GLGGLL', 'GLLGGL', 'GLLLGG', 'GLGLGL', 'GLGLLG', 'GLLGLG' ];
+
+	function bcValid( code ) {
+		var sum = 0;
+		var w = 3;
+		for ( var i = code.length - 2; i >= 0; i-- ) {
+			sum += +code.charAt( i ) * w;
+			w = 4 - w;
+		}
+		return ( 10 - ( sum % 10 ) ) % 10 === +code.charAt( code.length - 1 );
+	}
+
+	/** The digit in 4 runs from i, as { d, p:'L'|'G' }, or null. */
+	function bcDigit( w, i, withG ) {
+		var s = w[ i ] + w[ i + 1 ] + w[ i + 2 ] + w[ i + 3 ];
+		var best = null;
+		var bestErr = 1.5;
+		for ( var d = 0; d < 10; d++ ) {
+			for ( var g = 0; g < ( withG ? 2 : 1 ); g++ ) {
+				var err = 0;
+				for ( var j = 0; j < 4; j++ ) {
+					err += Math.abs( ( w[ i + j ] * 7 ) / s - BC_L[ d ][ g ? 3 - j : j ] );
+				}
+				if ( err < bestErr ) {
+					bestErr = err;
+					best = { d: d, p: g ? 'G' : 'L' };
+				}
+			}
+		}
+		return best;
+	}
+
+	/** n runs from i that are all about one module wide (a guard). */
+	function bcGuard( w, i, n, m ) {
+		for ( var j = 0; j < n; j++ ) {
+			if ( w[ i + j ] < 0.35 * m || w[ i + j ] > 2.3 * m ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	function bcQuiet( w, i, m ) {
+		return i < 0 || i >= w.length || w[ i ] >= 3 * m;
+	}
+
+	function bcSum( w, i, n ) {
+		var s = 0;
+		for ( var j = 0; j < n; j++ ) {
+			s += w[ i + j ];
+		}
+		return s;
+	}
+
+	function bcDigits( w, at, count, withG ) {
+		var out = { d: '', p: '' };
+		for ( var k = 0; k < count; k++ ) {
+			var r = bcDigit( w, at + 4 * k, withG );
+			if ( ! r ) {
+				return null;
+			}
+			out.d += r.d;
+			out.p += r.p;
+		}
+		return out;
+	}
+
+	/** Every barcode type, starting at dark run i of the widths w. */
+	function bcAt( w, i ) {
+		var m;
+		var left;
+		var right;
+		if ( i + 59 <= w.length ) {
+			m = bcSum( w, i, 59 ) / 95;
+			if ( bcQuiet( w, i - 1, m ) && bcQuiet( w, i + 59, m ) && bcGuard( w, i, 3, m ) && bcGuard( w, i + 27, 5, m ) && bcGuard( w, i + 56, 3, m ) ) {
+				left = bcDigits( w, i + 3, 6, true );
+				right = left && bcDigits( w, i + 32, 6, false );
+				if ( right && BC_FIRST[ left.p ] !== undefined ) {
+					var ean = BC_FIRST[ left.p ] + left.d + right.d;
+					if ( bcValid( ean ) ) {
+						return ean;
+					}
+				}
+			}
+		}
+		if ( i + 43 <= w.length ) {
+			m = bcSum( w, i, 43 ) / 67;
+			if ( bcQuiet( w, i - 1, m ) && bcQuiet( w, i + 43, m ) && bcGuard( w, i, 3, m ) && bcGuard( w, i + 19, 5, m ) && bcGuard( w, i + 40, 3, m ) ) {
+				left = bcDigits( w, i + 3, 4, false );
+				right = left && bcDigits( w, i + 24, 4, false );
+				if ( right && bcValid( left.d + right.d ) ) {
+					return left.d + right.d;
+				}
+			}
+		}
+		if ( i + 33 <= w.length ) {
+			m = bcSum( w, i, 33 ) / 51;
+			if ( bcQuiet( w, i - 1, m ) && bcQuiet( w, i + 33, m ) && bcGuard( w, i, 3, m ) && bcGuard( w, i + 27, 6, m ) ) {
+				left = bcDigits( w, i + 3, 6, true );
+				if ( left ) {
+					var ns = 0;
+					var check = BC_UPCE.indexOf( left.p );
+					if ( check === -1 ) {
+						ns = 1;
+						check = BC_UPCE.indexOf( left.p.replace( /[LG]/g, function ( c ) {
+							return c === 'L' ? 'G' : 'L';
+						} ) );
+					}
+					if ( check !== -1 ) {
+						var d = left.d;
+						var x = d.charAt( 5 );
+						var mid = x <= '2' ? d.slice( 0, 2 ) + x + '0000' + d.slice( 2, 5 ) : x === '3' ? d.slice( 0, 3 ) + '00000' + d.slice( 3, 5 ) : x === '4' ? d.slice( 0, 4 ) + '00000' + d.charAt( 4 ) : d.slice( 0, 5 ) + '0000' + x;
+						var upc = ns + mid + check;
+						if ( bcValid( upc ) ) {
+							return upc;
+						}
+					}
+				}
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Light and dark run widths along one row of gray values, or null when
+	 * it's too flat to hold a barcode. Each pixel is compared with its
+	 * neighbourhood (shadows and glare change across a package), with a
+	 * little hysteresis so flat white doesn't break into noise, and each
+	 * edge is placed between pixels where the brightness crosses, so thin
+	 * bars a couple of pixels wide still measure right.
+	 */
+	function bcRuns( row ) {
+		var n = row.length;
+		var min = 255;
+		var max = 0;
+		var x;
+		for ( x = 0; x < n; x++ ) {
+			min = Math.min( min, row[ x ] );
+			max = Math.max( max, row[ x ] );
+		}
+		if ( max - min < 28 ) {
+			return null;
+		}
+		// Halfway between the darkest and lightest nearby: unlike an average, the white
+		// margin around a barcode doesn't pull it off and make the end bars look fatter.
+		var half = Math.max( 6, Math.round( n / 30 ) );
+		var diff = new Float32Array( n );
+		for ( x = 0; x < n; x++ ) {
+			var lo = 255;
+			var hi = 0;
+			for ( var k = Math.max( 0, x - half ); k <= Math.min( n - 1, x + half ); k++ ) {
+				lo = Math.min( lo, row[ k ] );
+				hi = Math.max( hi, row[ k ] );
+			}
+			diff[ x ] = row[ x ] - ( lo + hi ) / 2;
+		}
+		var t = ( max - min ) * 0.04;
+		var dark = diff[ 0 ] < 0;
+		var first = dark;
+		var edge = 0;
+		var widths = [];
+		for ( x = 1; x < n; x++ ) {
+			var next = diff[ x ] < -t ? true : diff[ x ] > t ? false : dark;
+			if ( next === dark ) {
+				continue;
+			}
+			// Back to where it crossed the middle, between two pixels.
+			var j = x - 1;
+			while ( j > edge && ( dark ? diff[ j ] > 0 : diff[ j ] < 0 ) ) {
+				j--;
+			}
+			var d0 = diff[ j ];
+			var d1 = diff[ j + 1 ];
+			var at = j + ( d0 !== d1 ? Math.min( 1, Math.max( 0, d0 / ( d0 - d1 ) ) ) : 1 );
+			at = Math.max( at, edge + 0.5 );
+			widths.push( at - edge );
+			edge = at;
+			dark = next;
+		}
+		widths.push( n - edge );
+		return { w: widths, first: first };
+	}
+
+	function bcFromRuns( runs ) {
+		var w = runs.w;
+		for ( var i = runs.first ? 0 : 1; i < w.length; i += 2 ) {
+			var code = bcAt( w, i );
+			if ( code ) {
+				return code;
+			}
+		}
+		return '';
+	}
+
+	/** A barcode number from an ImageData (several rows, both ways up), or ''. */
+	function barcodeFromImage( img ) {
+		var W = img.width;
+		var H = img.height;
+		var d = img.data;
+		var rows = [ 0.5, 0.42, 0.58, 0.34, 0.66, 0.46, 0.54, 0.26, 0.74 ];
+		for ( var r = 0; r < rows.length; r++ ) {
+			var y = Math.min( H - 2, Math.max( 1, Math.round( H * rows[ r ] ) ) );
+			var row = new Float32Array( W );
+			for ( var x = 0; x < W; x++ ) {
+				var g = 0;
+				for ( var k = -1; k <= 1; k++ ) {
+					var p = ( ( y + k ) * W + x ) * 4;
+					g += d[ p ] * 0.299 + d[ p + 1 ] * 0.587 + d[ p + 2 ] * 0.114;
+				}
+				row[ x ] = g / 3;
+			}
+			var runs = bcRuns( row );
+			if ( ! runs ) {
+				continue;
+			}
+			var code = bcFromRuns( runs );
+			if ( ! code ) {
+				var rev = runs.w.slice().reverse();
+				code = bcFromRuns( { w: rev, first: runs.w.length % 2 ? runs.first : ! runs.first } );
+			}
+			if ( code ) {
+				// A UPC-A read as EAN-13 has a leading 0; keep the 12 digits printed on the pack.
+				return code.length === 13 && code.charAt( 0 ) === '0' ? code.slice( 1 ) : code;
+			}
+		}
+		return '';
+	}
+
+	/* bc:end */
 
 	/* =========================================================
 	 * Android app extras (tracker-android, YeffoHealth plugin):
@@ -9887,7 +11091,7 @@
 			api( 'DELETE', 'tracker/all' ).then( function () {
 				return ( NATIVE ? disableNative() : disablePush() ).catch( function () {} );
 			} ).then( function () {
-				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {} };
+				state.records = { protocol: {}, dose: {}, vial: {}, stock: {}, settings: {}, progress: {}, lab: {}, food: {}, myfood: {} };
 				state.shares = [];
 				forgetPhotos();
 				queue = [];

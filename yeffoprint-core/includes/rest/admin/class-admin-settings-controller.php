@@ -59,6 +59,10 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::USPS_CONSUMER_SECRET_OPTION, sanitize_text_field( (string) ( $params['usps_consumer_secret'] ?? '' ) ) );
 
 		update_option( YeffoPrint_Shippo_Settings::API_KEY_OPTION, sanitize_text_field( (string) ( $params['shippo_api_key'] ?? '' ) ) );
+		// Only when sent, so an older copy of the app open on a phone can't blank it.
+		if ( array_key_exists( 'usda_api_key', $params ) ) {
+			update_option( YeffoPrint_Tracker_Food::KEY_OPTION, sanitize_text_field( (string) $params['usda_api_key'] ), false );
+		}
 		update_option( YeffoPrint_Shippo_Settings::SHIP_FROM_PHONE_OPTION, sanitize_text_field( (string) ( $params['shippo_ship_from_phone'] ?? '' ) ) );
 		update_option( YeffoPrint_Shippo_Settings::DEFAULT_WEIGHT_OZ_OPTION, max( 0.1, (float) ( $params['shippo_default_weight_oz'] ?? 4 ) ) );
 		update_option( YeffoPrint_Shippo_Settings::DEFAULT_LENGTH_IN_OPTION, max( 0.1, (float) ( $params['shippo_default_length_in'] ?? 8 ) ) );
@@ -163,6 +167,8 @@ class YeffoPrint_Admin_Settings_Controller {
 			'usps_consumer_key'          => (string) get_option( $M::USPS_CONSUMER_KEY_OPTION, '' ),
 			'usps_consumer_secret'       => (string) get_option( $M::USPS_CONSUMER_SECRET_OPTION, '' ),
 			'shippo_api_key'             => YeffoPrint_Shippo_Settings::get_api_key(),
+			'usda_api_key'               => (string) get_option( YeffoPrint_Tracker_Food::KEY_OPTION, '' ),
+			'usda_api_key_in_config'     => defined( 'YEFFOPRINT_USDA_API_KEY' ) && YEFFOPRINT_USDA_API_KEY,
 			'shippo_ship_from_phone'     => (string) get_option( YeffoPrint_Shippo_Settings::SHIP_FROM_PHONE_OPTION, '' ),
 			'shippo_default_package'     => YeffoPrint_Shippo_Settings::get_default_package(),
 			'shippo_customs'             => YeffoPrint_Shippo_Settings::get_customs_defaults() + [ 'signer_saved' => (string) get_option( YeffoPrint_Shippo_Settings::CUSTOMS_SIGNER_OPTION, '' ) ],
