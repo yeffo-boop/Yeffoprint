@@ -198,7 +198,9 @@ class YeffoPrint_Proof_Approval_Controller {
 				/* translators: %s: link to the custom order's admin edit screen */
 				__( "The customer approved their proof — ready to move to printing.\n\n%s", 'yeffoprint-core' ),
 				admin_url( 'post.php?post=' . $custom_order_id . '&action=edit' )
-			)
+			),
+			$custom_order_id,
+			__( 'Ready to move to printing.', 'yeffoprint-core' )
 		);
 	}
 
@@ -214,11 +216,28 @@ class YeffoPrint_Proof_Approval_Controller {
 				__( "The customer requested changes to their proof:\n\n%1\$s\n\n%2\$s", 'yeffoprint-core' ),
 				'' !== $notes ? $notes : __( '(No additional notes provided.)', 'yeffoprint-core' ),
 				admin_url( 'post.php?post=' . $custom_order_id . '&action=edit' )
-			)
+			),
+			$custom_order_id,
+			'' !== $notes ? $notes : __( 'No notes added.', 'yeffoprint-core' )
 		);
 	}
 
-	private static function notify_admin( string $subject, string $body ): void {
+	/**
+	 * Email plus the owner alert every other "needs your attention" event
+	 * sends (YeffoPrint_Telegram_Admin_Alerts::notify(): admin app phone
+	 * push, Telegram only if opted in). Direct report: a customer
+	 * approved a proof and no push came, since this only ever emailed.
+	 * $push_text is the push's own short text, without the wp-admin link.
+	 */
+	private static function notify_admin( string $subject, string $body, int $custom_order_id, string $push_text ): void {
 		wp_mail( get_option( 'admin_email' ), $subject, $body );
+
+		$wc_order_id = (int) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::WC_ORDER_ID, true );
+		$customer    = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_NAME, true );
+
+		YeffoPrint_Telegram_Admin_Alerts::notify(
+			implode( "\n", array_filter( [ $subject, $customer, $push_text ], 'strlen' ) ),
+			$wc_order_id ? [ 'order_id' => $wc_order_id ] : [ 'section' => 'production' ]
+		);
 	}
 }

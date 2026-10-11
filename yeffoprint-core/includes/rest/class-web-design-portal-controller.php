@@ -146,6 +146,7 @@ class YeffoPrint_Web_Design_Portal_Controller {
 
 		YeffoPrint_Web_Design_Project_Meta::sign_agreement( $order, $name, $this->client_ip() );
 		$this->notify_admin(
+			$order,
 			sprintf( /* translators: %s: order number */ __( 'Agreement signed — Order #%s', 'yeffoprint-core' ), $order->get_order_number() ),
 			sprintf(
 				/* translators: 1: signer's name, 2: link to the order, 3: Yes or No */
@@ -181,6 +182,7 @@ class YeffoPrint_Web_Design_Portal_Controller {
 
 		YeffoPrint_Web_Design_Project_Meta::record_client_response( $order, 'approved', '' );
 		$this->notify_admin(
+			$order,
 			sprintf( /* translators: %s: order number */ __( 'Staging approved — Order #%s', 'yeffoprint-core' ), $order->get_order_number() ),
 			sprintf( __( "The customer approved their staging site — ready for go-live access.\n\n%s", 'yeffoprint-core' ), $order->get_edit_order_url() )
 		);
@@ -207,6 +209,7 @@ class YeffoPrint_Web_Design_Portal_Controller {
 
 		YeffoPrint_Web_Design_Project_Meta::record_client_response( $order, 'changes_requested', $notes );
 		$this->notify_admin(
+			$order,
 			sprintf( /* translators: %s: order number */ __( 'Changes requested — Order #%s', 'yeffoprint-core' ), $order->get_order_number() ),
 			sprintf(
 				/* translators: 1: the customer's notes, 2: link to the order */
@@ -257,6 +260,7 @@ class YeffoPrint_Web_Design_Portal_Controller {
 
 		YeffoPrint_Web_Design_Project_Meta::submit_golive( $order, $params, $this->client_ip() );
 		$this->notify_admin(
+			$order,
 			sprintf( /* translators: %s: order number */ __( 'Go-live access received — Order #%s', 'yeffoprint-core' ), $order->get_order_number() ),
 			sprintf( __( "The customer submitted their go-live server access.\n\n%s", 'yeffoprint-core' ), $order->get_edit_order_url() )
 		);
@@ -299,8 +303,18 @@ class YeffoPrint_Web_Design_Portal_Controller {
 		return isset( $_SERVER['REMOTE_ADDR'] ) ? (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) : '';
 	}
 
-	/** Same internal "something needs your attention" alert as class-proof-approval-controller.php's own notify_admin(). */
-	private function notify_admin( string $subject, string $body ): void {
+	/**
+	 * Same internal "something needs your attention" alert as class-proof-approval-controller.php's
+	 * own notify_admin(): email plus the admin app phone push (Telegram only if opted in). The push
+	 * drops the body's wp-admin link line; tapping it opens the order in the app instead.
+	 */
+	private function notify_admin( \WC_Order $order, string $subject, string $body ): void {
 		wp_mail( get_option( 'admin_email' ), $subject, $body );
+
+		$lines = array_filter(
+			array_map( 'trim', explode( "\n", $body ) ),
+			static fn( string $line ): bool => '' !== $line && ! preg_match( '#^https?://\S+$#', $line )
+		);
+		YeffoPrint_Telegram_Admin_Alerts::notify( implode( "\n", array_merge( [ $subject ], $lines ) ), [ 'order_id' => $order->get_id() ] );
 	}
 }
