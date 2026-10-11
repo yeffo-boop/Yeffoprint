@@ -58,7 +58,39 @@ class YeffoPrint_Order_Completed_Email {
 	public function register_email( array $email_classes ): array {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-email-customer-completed-order.php';
 
+		self::unhook_stock_email( $email_classes['WC_Email_Customer_Completed_Order'] ?? null );
 		$email_classes['WC_Email_Customer_Completed_Order'] = new YeffoPrint_Email_Customer_Completed_Order();
 		return $email_classes;
+	}
+
+	/**
+	 * Keying by class name alone was not enough: customers still got two
+	 * identical emails ("Completed order" and "Processing order" both
+	 * logged "sent." twice on every order, e.g. YP-532, YP-595). WC_Emails
+	 * ::init() constructs the stock instance BEFORE it applies
+	 * `woocommerce_email_classes`, and that constructor has already hooked
+	 * its trigger() to the order status actions. Swapping the array entry
+	 * drops the stock object from the registry but not from those hooks,
+	 * so it kept firing next to the override. This removes every hook
+	 * still pointing at the stock instance so only the override sends.
+	 */
+	public static function unhook_stock_email( $stock ): void {
+		global $wp_filter;
+		if ( ! is_object( $stock ) || empty( $wp_filter ) ) {
+			return;
+		}
+		foreach ( $wp_filter as $hook_name => $hook ) {
+			if ( ! $hook instanceof \WP_Hook ) {
+				continue;
+			}
+			foreach ( $hook->callbacks as $priority => $callbacks ) {
+				foreach ( $callbacks as $callback ) {
+					$fn = $callback['function'];
+					if ( is_array( $fn ) && isset( $fn[0] ) && $fn[0] === $stock ) {
+						remove_filter( $hook_name, $fn, $priority );
+					}
+				}
+			}
+		}
 	}
 }
