@@ -482,6 +482,17 @@
 				checks.push( result.notes_for_owner );
 			}
 
+			// Direct request: a returning customer's last custom design is the default.
+			var previous      = result.previous_design;
+			var previousLabel = previous ? 'order ' + ( previous.order_number || 'from ' + previous.date ) : '';
+			if ( result.reorder ) {
+				state.draft.fields[ 'yp-mo-waive-fee' ] = { checked: true };
+				state.draft.fields[ 'yp-mo-instructions' ] = { value: 'Reorder: reuse the design from ' + previousLabel + ' (custom order #' + previous.custom_order_id + ').' };
+				checks.push( 'Reorder of their custom design from ' + previousLabel + ', so the design fee is waived. Untick it if this needs new design work.' );
+			} else if ( previous ) {
+				checks.push( 'Returning customer: anything the email left out was filled from their last custom design (' + previousLabel + ').' );
+			}
+
 			var custom    = result.items.filter( function ( item ) { return 'custom_design' === item.kind; } );
 			var templated = result.items.filter( function ( item ) { return 'template' === item.kind; } );
 			var first     = templated[ 0 ];
@@ -495,8 +506,8 @@
 					checks.push( 'Not added: “' + item.source_text + '”' + ( item.note ? '. ' + item.note : '' ) );
 				} else if ( 'template' === item.kind && item.template_id !== first.template_id ) {
 					checks.push( 'Not added (a second design, so add it with Add items once this order is created): ' + label + ', ' + ( item.quantity || '?' ) + ' labels' );
-				} else if ( item.flags.length || item.note ) {
-					checks.push( label + ': ' + item.flags.concat( item.note ? [ item.note ] : [] ).join( '. ' ) );
+				} else if ( item.flags.length || item.note || ( item.from_previous || [] ).length ) {
+					checks.push( label + ': ' + item.flags.concat( item.note ? [ item.note ] : [], ( item.from_previous || [] ).length ? [ 'used their last order’s ' + item.from_previous.join( ', ' ) ] : [] ).join( '. ' ) );
 				}
 			} );
 

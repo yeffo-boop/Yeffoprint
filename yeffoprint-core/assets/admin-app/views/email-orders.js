@@ -108,12 +108,13 @@
 							? YP.escapeHtml( item.compound_strength || '(no text)' ) + '<br><span class="yp-field__hint">Custom design' + ( item.brand_name ? ' · ' + YP.escapeHtml( item.brand_name ) : '' ) + '</span>'
 							: '<span class="yp-field__hint">Not added: </span>' + YP.escapeHtml( item.source_text || '' );
 					var checks = ( item.flags || [] ).concat( item.note ? [ item.note ] : [] );
+					var reused = ( item.from_previous || [] ).length ? '<span class="yp-pill yp-pill--neutral">Last order’s ' + YP.escapeHtml( item.from_previous.join( ', ' ) ) + '</span> ' : '';
 					return '<tr>' +
 						'<td data-label="Label">' + label + '</td>' +
 						'<td data-label="Size">' + YP.escapeHtml( names.sizes[ item.size_id ] || ( 'unclear' === item.kind ? '' : '?' ) ) + '</td>' +
 						'<td data-label="Material">' + YP.escapeHtml( names.materials[ item.material_id ] || ( 'unclear' === item.kind ? '' : '?' ) ) + '</td>' +
 						'<td data-label="Qty">' + ( item.quantity || ( 'unclear' === item.kind ? '' : '?' ) ) + '</td>' +
-						'<td data-label="Check">' + ( checks.length ? '<span class="yp-pill yp-pill--warn">' + YP.escapeHtml( checks.join( '. ' ) ) + '</span>' : '' ) + '</td>' +
+						'<td data-label="Check">' + reused + ( checks.length ? '<span class="yp-pill yp-pill--warn">' + YP.escapeHtml( checks.join( '. ' ) ) + '</span>' : '' ) + '</td>' +
 					'</tr>';
 				} ).join( '' ) +
 			'</tbody></table>';
@@ -183,6 +184,9 @@
 						'</header>' +
 						( result ? '<p>' + who + '</p>' : '' ) +
 						( record.error ? '<p class="yp-form__error">' + YP.escapeHtml( record.error ) + '</p>' : '' ) +
+						( result && result.previous_design
+							? '<p class="yp-panel__hint">' + ( result.reorder ? '<strong>Reorder</strong> of their custom design from ' : 'Returning customer. Blanks filled from their last custom design, ' ) + 'order ' + YP.escapeHtml( result.previous_design.order_number || 'from ' + result.previous_design.date ) + '.</p>'
+							: '' ) +
 						( result && result.notes_for_owner ? '<p class="yp-panel__hint"><strong>To check:</strong> ' + YP.escapeHtml( result.notes_for_owner ) + '</p>' : '' ) +
 						( result ? itemsHtml( result ) : '' ) +
 						'<details><summary class="yp-field__hint">Show the email</summary><p class="yp-review-admin__text" style="white-space:pre-line">' + YP.escapeHtml( record.text ) + '</p></details>' +
