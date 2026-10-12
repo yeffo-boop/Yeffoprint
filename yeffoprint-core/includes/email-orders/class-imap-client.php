@@ -18,8 +18,12 @@ class YeffoPrint_Imap_Client {
 
 	private int $tag = 0;
 
+	/** The selected folder's UIDVALIDITY: UIDs only mean the same messages while it stays the same. */
+	private int $uid_validity = 0;
+
 	/** @throws \RuntimeException */
-	public function connect( string $host, int $port, string $username, string $password ): void {
+	/** $folder: INBOX, or another folder (in Gmail, a label such as "Email Orders"). */
+	public function connect( string $host, int $port, string $username, string $password, string $folder = 'INBOX' ): void {
 		$context = stream_context_create( [
 			'ssl' => [
 				'verify_peer'      => true,
@@ -46,7 +50,34 @@ class YeffoPrint_Imap_Client {
 		}
 
 		$this->command( 'LOGIN ' . self::quote( $username ) . ' ' . self::quote( $password ), 'The mailbox login was refused. Check the username and password (Gmail and Outlook need an app password).' );
-		$this->command( 'SELECT INBOX' );
+		$selected = $this->command( 'SELECT ' . self::quote( $folder ), sprintf( 'The folder "%s" wasn’t found in the mailbox. Check the label name (capitals and spaces count).', $folder ) );
+		foreach ( $selected as $line ) {
+			if ( preg_match( '/\[UIDVALIDITY (\d+)\]/i', $line, $m ) ) {
+				$this->uid_validity = (int) $m[1];
+			}
+		}
+	}
+
+	public function uid_validity(): int {
+		return $this->uid_validity;
+	}
+
+	/** @return int[] UIDs above $last, read or not, oldest first. */
+	public function uids_after( int $last ): array {
+		$lines = $this->command( 'UID SEARCH UID ' . ( $last + 1 ) . ':*' );
+		$uids  = [];
+		foreach ( $lines as $line ) {
+			if ( 0 === strpos( $line, '* SEARCH' ) ) {
+				foreach ( preg_split( '/\s+/', trim( substr( $line, 8 ) ) ) as $uid ) {
+					// "n:*" always matches the newest message, even one at or below $last.
+					if ( ctype_digit( $uid ) && (int) $uid > $last ) {
+						$uids[] = (int) $uid;
+					}
+				}
+			}
+		}
+		sort( $uids );
+		return $uids;
 	}
 
 	/** @return int[] UIDs of unread messages, oldest first. */

@@ -592,7 +592,7 @@
 			return (
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Filled in from an email</h2></div>' +
-					'<p class="yp-panel__hint">“' + YP.escapeHtml( record.subject ) + '”, forwarded by ' + YP.escapeHtml( record.forwarded_by ) + '. Check every field against the email before you create the order. <a href="#/email-orders">Back to Email Orders</a></p>' +
+					'<p class="yp-panel__hint">“' + YP.escapeHtml( record.subject ) + '”, from ' + YP.escapeHtml( record.forwarded_by ) + '. Check every field against the email before you create the order. <a href="#/email-orders">Back to Email Orders</a></p>' +
 					( 'created' === record.state ? '<p class="yp-form__error">An order was already created from this email' + ( record.order_number ? ' (' + YP.escapeHtml( String( record.order_number ) ) + ')' : '' ) + '. Creating another makes a second order.</p>' : '' ) +
 					( state.emailChecks.length
 						? '<p class="yp-panel__hint"><strong>To check:</strong></p><ul>' + state.emailChecks.map( function ( line ) { return '<li>' + YP.escapeHtml( line ) + '</li>'; } ).join( '' ) + '</ul>'
