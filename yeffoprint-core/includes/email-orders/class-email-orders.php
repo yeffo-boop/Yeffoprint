@@ -47,6 +47,9 @@ class YeffoPrint_Email_Orders {
 
 	/** Emails downloaded per check, and how many of them Claude reads per check. */
 	private const FETCH_PER_RUN = 10;
+
+	/** How many label UIDs are grouped into conversations per run. */
+	private const THREAD_LOOKAHEAD = 200;
 	private const READ_PER_RUN  = 3;
 
 	private const META_STATE      = '_yp_eo_state';
@@ -57,6 +60,7 @@ class YeffoPrint_Email_Orders {
 	private const META_ERROR      = '_yp_eo_error';
 	private const META_ORDER_ID   = '_yp_eo_order_id';
 	private const META_EMAIL_DATE = '_yp_eo_email_date';
+	private const META_EARLIER    = '_yp_eo_earlier';
 
 	/** queued: waiting to be read. ready: read, waiting on Jeff. failed: couldn't be read. created / dismissed: done. */
 	public const STATES = [ 'queued', 'ready', 'failed', 'created', 'dismissed' ];
@@ -245,7 +249,25 @@ class YeffoPrint_Email_Orders {
 				$uids   = $imap->uids_after( $same ? (int) $cursor['uid'] : 0 );
 			}
 
-			foreach ( array_slice( $uids, 0, self::FETCH_PER_RUN ) as $uid ) {
+			// A Gmail label holds every message of a tagged conversation. Only the
+			// newest one is the order (the rest is history, quoted inside it anyway).
+			$threads = $inbox ? [] : $imap->thread_ids( array_slice( $uids, 0, self::THREAD_LOOKAHEAD ) );
+			$newest  = [];
+			foreach ( $threads as $uid => $thread ) {
+				$newest[ $thread ] = max( $uid, $newest[ $thread ] ?? 0 );
+			}
+
+			$fetched = 0;
+			foreach ( array_slice( $uids, 0, self::THREAD_LOOKAHEAD ) as $uid ) {
+				$thread = $threads[ $uid ] ?? '';
+				if ( '' !== $thread && $newest[ $thread ] !== $uid ) {
+					update_option( self::CURSOR_OPTION, [ 'folder' => self::folder(), 'validity' => $imap->uid_validity(), 'uid' => $uid ], false );
+					continue;
+				}
+				if ( ++$fetched > self::FETCH_PER_RUN ) {
+					break;
+				}
+
 				$email = YeffoPrint_Mime_Message::parse( $imap->fetch( $uid ) );
 
 				if ( $inbox && ! in_array( $email['from_email'], $allowed, true ) ) {
@@ -290,6 +312,9 @@ class YeffoPrint_Email_Orders {
 		update_post_meta( $id, self::META_FROM_NAME, $email['from_name'] );
 		update_post_meta( $id, self::META_MESSAGE_ID, $email['message_id'] );
 		update_post_meta( $id, self::META_EMAIL_DATE, $email['date'] );
+		if ( '' !== $email['earlier'] ) {
+			update_post_meta( $id, self::META_EARLIER, wp_slash( $email['earlier'] ) );
+		}
 		return (int) $id;
 	}
 
@@ -331,13 +356,21 @@ class YeffoPrint_Email_Orders {
 			return false;
 		}
 
+		$text    = $post->post_content;
+		$earlier = (string) get_post_meta( $id, self::META_EARLIER, true );
+		if ( '' === $earlier ) {
+			// Emails stored before quoted history was split off.
+			[ $text, $earlier ] = YeffoPrint_Mime_Message::split_history( $text );
+		}
+
 		try {
 			$result = YeffoPrint_Email_Order_Reader::read( [
 				'from_email' => (string) get_post_meta( $id, self::META_FROM, true ),
 				'from_name'  => (string) get_post_meta( $id, self::META_FROM_NAME, true ),
 				'subject'    => $post->post_title,
 				'date'       => (string) get_post_meta( $id, self::META_EMAIL_DATE, true ),
-				'text'       => $post->post_content,
+				'text'       => $text,
+				'earlier'    => $earlier,
 			] );
 		} catch ( \RuntimeException $e ) {
 			update_post_meta( $id, self::META_STATE, 'failed' );
@@ -434,6 +467,7 @@ class YeffoPrint_Email_Orders {
 			'state'         => in_array( $state, self::STATES, true ) ? $state : 'queued',
 			'error'         => (string) get_post_meta( $post->ID, self::META_ERROR, true ),
 			'text'          => (string) $post->post_content,
+			'earlier'       => (string) get_post_meta( $post->ID, self::META_EARLIER, true ),
 			'result'        => $result,
 			// An existing account with the customer's email, so the form can pick it instead of making a new one.
 			'customer_user' => $user ? [ 'id' => $user->ID, 'display_name' => $user->display_name, 'email' => $user->user_email ] : null,
@@ -449,6 +483,21 @@ class YeffoPrint_Email_Orders {
 	public static function mark_created( int $id, int $order_id ): void {
 		update_post_meta( $id, self::META_ORDER_ID, $order_id );
 		self::set_state( $id, 'created' );
+	}
+
+	/** Dismisses every open record. @return int how many. */
+	public static function dismiss_open(): int {
+		$ids = get_posts( [
+			'post_type'      => self::POST_TYPE,
+			'post_status'    => 'private',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'meta_query'     => [ [ 'key' => self::META_STATE, 'value' => [ 'queued', 'ready', 'failed' ], 'compare' => 'IN' ] ], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		] );
+		foreach ( $ids as $id ) {
+			self::set_state( (int) $id, 'dismissed' );
+		}
+		return count( $ids );
 	}
 
 	public static function requeue( int $id ): void {

@@ -64,7 +64,8 @@ class YeffoPrint_Email_Order_Reader {
 					'content' => "<catalog>\n" . wp_json_encode( $catalog, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n</catalog>\n\n" .
 						( $previous ? "<previous_custom_designs>\n" . wp_json_encode( $previous, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n</previous_custom_designs>\n\n" : '' ) .
 						'<email from="' . esc_attr( trim( $email['from_name'] . ' <' . $email['from_email'] . '>' ) ) . '" subject="' . esc_attr( $email['subject'] ) . '" date="' . esc_attr( $email['date'] ) . "\">\n" .
-						$email['text'] . "\n</email>",
+						$email['text'] . "\n</email>" .
+						( '' !== ( $email['earlier'] ?? '' ) ? "\n\n<earlier_in_thread>\n" . $email['earlier'] . "\n</earlier_in_thread>" : '' ),
 				],
 			],
 		];
@@ -293,6 +294,8 @@ Two kinds of label line items:
 - "unclear": only for things that are not labels (stickers, 3D prints, questions). Explain in note.
 
 <previous_custom_designs>, when present, lists custom label orders this customer already paid for, newest first, with their rows. If the customer is one of those, then for each custom_design line the email leaves out a size, material, brand or quantity, use the one from the matching row of their newest design (the row with the same compound, else its first row), and say so in the note. If the email asks for the same labels again ("reorder", "same as last time", or the same compounds with no new design wishes), set reorder_custom_order_id to that design's custom_order_id and, when the email doesn't list the labels, copy that design's rows as the items. Otherwise reorder_custom_order_id is 0.
+
+The <email> block is the newest message only. <earlier_in_thread>, when present, is the older back-and-forth quoted below it: past orders, proofs, questions. Never add items from it. Only order what the newest message asks for, and use the earlier messages just to understand references in it ("same as last time", "the second one", a size or brand agreed earlier) and to find the customer's details. If the newest message doesn't ask for labels, return no items and say so in notes_for_owner.
 
 One line item per distinct label (each compound or strength is its own item), with the quantity of labels for it. If the customer gives one quantity for a list ("100 of each"), repeat it on every item. Use 0 for an unknown quantity.
 
