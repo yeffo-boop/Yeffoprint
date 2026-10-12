@@ -247,18 +247,20 @@
 				// Direct request: forward a customer's order email and have the site fill in the order.
 				'<div class="yp-panel" id="email-orders">' +
 					'<div class="yp-panel__head"><h2>Email orders</h2></div>' +
-					'<p class="yp-panel__hint">Forward a customer\'s order email to a mailbox you set up for this, such as orders@yeffodesign.com. Every 5 minutes the site checks it, Claude reads the list, and a filled-in order waits for you under Orders › Email Orders with a phone alert. Nothing is sent to the customer until you check it and press Create Order.</p>' +
+					'<p class="yp-panel__hint">Every 5 minutes the site checks a mailbox folder for order emails, Claude reads the list, and a filled-in order waits for you under Orders › Email Orders with a phone alert. Nothing is sent to the customer until you check it and press Create Order.</p>' +
+					'<p class="yp-panel__hint"><strong>No extra mailbox needed:</strong> use your own Gmail login below and set the folder to a label such as <code>Email Orders</code>. Then tag a customer\'s email with that label, or forward it to your own address with <code>+orders</code> added (yeffo+orders@…) and have a Gmail filter put mail sent to that address under the label. Only emails in that label are read.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-eo-enabled"' + ( settings.email_orders_enabled ? ' checked' : '' ) + ' /><label for="yp-set-eo-enabled">Check the mailbox for forwarded orders</label></div>' +
 					'<div class="yp-form__row">' +
 						'<div class="yp-field"><label for="yp-set-eo-host">IMAP server</label><input type="text" id="yp-set-eo-host" value="' + YP.escapeAttr( settings.email_orders_host || '' ) + '" placeholder="imap.gmail.com" autocomplete="off" /></div>' +
 						'<div class="yp-field"><label for="yp-set-eo-port">Port</label><input type="number" id="yp-set-eo-port" value="' + YP.escapeAttr( settings.email_orders_port || 993 ) + '" min="1" max="65535" /></div>' +
 					'</div>' +
 					'<div class="yp-form__row">' +
-						'<div class="yp-field"><label for="yp-set-eo-user">Mailbox username</label><input type="text" id="yp-set-eo-user" value="' + YP.escapeAttr( settings.email_orders_username || '' ) + '" placeholder="orders@yeffodesign.com" autocomplete="off" /></div>' +
+						'<div class="yp-field"><label for="yp-set-eo-user">Mailbox username</label><input type="text" id="yp-set-eo-user" value="' + YP.escapeAttr( settings.email_orders_username || '' ) + '" placeholder="you@yeffoprint.com" autocomplete="off" /></div>' +
 						'<div class="yp-field"><label for="yp-set-eo-password">Mailbox password</label><input type="password" id="yp-set-eo-password" value="" autocomplete="new-password" placeholder="' + ( settings.email_orders_password_set ? 'Saved. Type a new one to replace it' : 'Password or app password' ) + '" /></div>' +
 					'</div>' +
-					'<p class="yp-panel__hint">Your email host lists its IMAP server (port 993) in its mail settings. Gmail and Outlook need an app password, not your normal one.</p>' +
-					'<div class="yp-field"><label for="yp-set-eo-senders">Only accept emails forwarded from</label><input type="text" id="yp-set-eo-senders" value="' + YP.escapeAttr( settings.email_orders_senders || '' ) + '" placeholder="' + YP.escapeAttr( settings.email_orders_default_senders || '' ) + '" /></div>' +
+					'<div class="yp-field"><label for="yp-set-eo-folder">Folder or Gmail label to read</label><input type="text" id="yp-set-eo-folder" value="' + YP.escapeAttr( settings.email_orders_folder || 'INBOX' ) + '" placeholder="Email Orders" autocomplete="off" /></div>' +
+					'<p class="yp-panel__hint">Gmail: server imap.gmail.com, port 993, and an app password (Google Account › Security › App passwords), not your normal password. Type the label exactly as it shows in Gmail, and start with a new, empty one: everything put in it from then on is read (it doesn’t have to be unread). Use INBOX only for a mailbox that is just for orders.</p>' +
+					'<div class="yp-field"><label for="yp-set-eo-senders">When reading INBOX, only accept emails forwarded from</label><input type="text" id="yp-set-eo-senders" value="' + YP.escapeAttr( settings.email_orders_senders || '' ) + '" placeholder="' + YP.escapeAttr( settings.email_orders_default_senders || '' ) + '" /></div>' +
 					'<p class="yp-panel__hint">Your own addresses, separated by commas. Blank uses the ones shown. Anything else sent to the mailbox is ignored.</p>' +
 					( settings.claude_api_key_in_config
 						? '<p class="yp-panel__hint">A Claude API key is set in wp-config.php (YEFFOPRINT_CLAUDE_API_KEY), so that one is used.</p>'
@@ -453,6 +455,7 @@
 				email_orders_host: viewEl.querySelector( '#yp-set-eo-host' ).value.trim(),
 				email_orders_port: parseInt( viewEl.querySelector( '#yp-set-eo-port' ).value, 10 ) || 993,
 				email_orders_username: viewEl.querySelector( '#yp-set-eo-user' ).value.trim(),
+				email_orders_folder: viewEl.querySelector( '#yp-set-eo-folder' ).value.trim(),
 				email_orders_password: viewEl.querySelector( '#yp-set-eo-password' ).value,
 				email_orders_senders: viewEl.querySelector( '#yp-set-eo-senders' ).value,
 				claude_api_key: viewEl.querySelector( '#yp-set-claude-key' ) ? viewEl.querySelector( '#yp-set-claude-key' ).value.trim() : '',

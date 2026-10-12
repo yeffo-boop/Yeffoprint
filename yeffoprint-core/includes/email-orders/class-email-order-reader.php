@@ -63,7 +63,7 @@ class YeffoPrint_Email_Order_Reader {
 					'role'    => 'user',
 					'content' => "<catalog>\n" . wp_json_encode( $catalog, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n</catalog>\n\n" .
 						( $previous ? "<previous_custom_designs>\n" . wp_json_encode( $previous, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n</previous_custom_designs>\n\n" : '' ) .
-						'<email forwarded_by="' . esc_attr( $email['from_email'] ) . '" subject="' . esc_attr( $email['subject'] ) . '" date="' . esc_attr( $email['date'] ) . "\">\n" .
+						'<email from="' . esc_attr( trim( $email['from_name'] . ' <' . $email['from_email'] . '>' ) ) . '" subject="' . esc_attr( $email['subject'] ) . '" date="' . esc_attr( $email['date'] ) . "\">\n" .
 						$email['text'] . "\n</email>",
 				],
 			],
@@ -142,11 +142,12 @@ class YeffoPrint_Email_Order_Reader {
 		return [ (int) wp_remote_retrieve_response_code( $response ), json_decode( (string) wp_remote_retrieve_body( $response ), true ) ];
 	}
 
-	/** Addresses in the email that could be the customer's: everything but the forwarder and the store's own. */
+	/** Addresses in the email that could be the customer's: the sender and any in the text, minus the store's own. */
 	private static function customer_emails( array $email ): array {
 		preg_match_all( '/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', $email['text'], $matches );
-		$skip = array_merge( [ $email['from_email'] ], class_exists( 'YeffoPrint_Email_Orders' ) ? YeffoPrint_Email_Orders::allowed_senders() : [] );
-		$found = array_diff( array_unique( array_map( 'strtolower', $matches[0] ) ), $skip );
+		// The sender is the customer when Jeff tagged their own email instead of forwarding it.
+		$skip  = class_exists( 'YeffoPrint_Email_Orders' ) ? YeffoPrint_Email_Orders::allowed_senders() : [];
+		$found = array_diff( array_unique( array_map( 'strtolower', array_merge( [ $email['from_email'] ], $matches[0] ) ) ), $skip );
 		return array_slice( array_values( $found ), 0, 3 );
 	}
 
@@ -282,7 +283,7 @@ class YeffoPrint_Email_Order_Reader {
 
 	private static function system_prompt(): string {
 		return <<<'PROMPT'
-You read customer order emails for YeffoDesign, a small business that prints product labels (peptide and vial labels, cosmetics, skincare, supplements, pen labels). The owner forwards an email a customer sent him. You turn it into a draft order he will check before anything is charged or sent, so mark anything you are unsure of rather than guessing.
+You read customer order emails for YeffoDesign, a small business that prints product labels (peptide and vial labels, cosmetics, skincare, supplements, pen labels). The owner forwards an email a customer sent him, or tags the customer's own email so it reaches you directly. You turn it into a draft order he will check before anything is charged or sent, so mark anything you are unsure of rather than guessing.
 
 The <catalog> block lists everything that can be ordered, with ids. Use only those ids. If nothing fits, use 0 and explain in the item's note.
 
@@ -297,7 +298,7 @@ One line item per distinct label (each compound or strength is its own item), wi
 
 Spell compound names the way compound_names lists them when one clearly matches (e.g. "bpc157" is "BPC-157"), but keep the customer's strengths and wording.
 
-The customer is the person who wrote the original email, not the owner who forwarded it: find their name and email in the forwarded headers or signature. Fill in a shipping address only if the email contains one. Use a 2-letter country code (US if it is a US address).
+The customer is the person who wrote the original email, not the owner: if the email was forwarded, find their name and email in the forwarded headers or signature; otherwise the customer is the email's own sender (the from attribute). Fill in a shipping address only if the email contains one. Use a 2-letter country code (US if it is a US address).
 
 notes_for_owner: one or two short sentences on anything he must check or ask the customer (missing size, unclear quantity, artwork attached, a deadline). Empty if nothing.
 

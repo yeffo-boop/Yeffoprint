@@ -4,8 +4,12 @@
  * Is there a way I could forward the email to a special email address
  * and have the site create the order based on the list in the email?"
  *
- * Every five minutes the site checks a mailbox Jeff set up for this
- * (Settings › Integrations › Email orders) over IMAP. Each new email
+ * Every five minutes the site checks a mailbox folder over IMAP
+ * (Settings › Integrations › Email orders). Follow-up: a second Gmail
+ * mailbox costs a license, so the folder can also be a label in Jeff's
+ * own mailbox: he tags a customer's email with it (or a Gmail filter
+ * does, for mail sent to his free +orders address).
+ * Each new email
  * forwarded from an allowed address is kept as a yp_email_order record
  * and read by Claude (class-email-order-reader.php) into the customer,
  * address and label lines. A phone push says it's ready; the admin app's
@@ -14,8 +18,10 @@
  * customer a payment link). Nothing is ever charged or sent to the
  * customer from here.
  *
- * Mail from anyone not on the allowed list is marked read and ignored,
- * so a stranger who learns the address can't fill the inbox.
+ * When the folder is the inbox, mail from anyone not on the allowed list
+ * is marked read and ignored, so a stranger who learns the address can't
+ * fill it. A label only holds what Jeff (or his own filter) put there,
+ * so every email in it is read, including a customer's original email.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -30,7 +36,10 @@ class YeffoPrint_Email_Orders {
 	public const USER_OPTION     = 'yeffoprint_email_orders_username';
 	public const PASSWORD_OPTION = 'yeffoprint_email_orders_password';
 	public const SENDERS_OPTION  = 'yeffoprint_email_orders_senders';
+	public const FOLDER_OPTION   = 'yeffoprint_email_orders_folder';
 	private const STATUS_OPTION  = 'yeffoprint_email_orders_status';
+	/** Label mode: { folder, validity, uid } of the newest message already looked at. */
+	private const CURSOR_OPTION  = 'yeffoprint_email_orders_cursor';
 
 	private const HOOK     = 'yeffoprint_email_orders_check';
 	private const SCHEDULE = 'yeffoprint_five_minutes';
@@ -42,6 +51,7 @@ class YeffoPrint_Email_Orders {
 
 	private const META_STATE      = '_yp_eo_state';
 	private const META_FROM       = '_yp_eo_forwarded_by';
+	private const META_FROM_NAME  = '_yp_eo_from_name';
 	private const META_MESSAGE_ID = '_yp_eo_message_id';
 	private const META_RESULT     = '_yp_eo_result';
 	private const META_ERROR      = '_yp_eo_error';
@@ -110,6 +120,7 @@ class YeffoPrint_Email_Orders {
 			'email_orders_host'          => (string) get_option( self::HOST_OPTION, '' ),
 			'email_orders_port'          => (int) get_option( self::PORT_OPTION, 993 ),
 			'email_orders_username'      => (string) get_option( self::USER_OPTION, '' ),
+			'email_orders_folder'        => self::folder(),
 			// Secrets are never sent back to the browser, only whether one is saved.
 			'email_orders_password_set'  => '' !== (string) get_option( self::PASSWORD_OPTION, '' ),
 			'email_orders_senders'       => (string) get_option( self::SENDERS_OPTION, '' ),
@@ -133,6 +144,9 @@ class YeffoPrint_Email_Orders {
 			$port = (int) $params['email_orders_port'];
 			update_option( self::PORT_OPTION, $port > 0 && $port < 65536 ? $port : 993 );
 		}
+		if ( array_key_exists( 'email_orders_folder', $params ) ) {
+			update_option( self::FOLDER_OPTION, trim( str_replace( [ '"', '\\', "\r", "\n" ], '', sanitize_text_field( (string) $params['email_orders_folder'] ) ) ) );
+		}
 		if ( array_key_exists( 'email_orders_username', $params ) ) {
 			update_option( self::USER_OPTION, sanitize_text_field( (string) $params['email_orders_username'] ) );
 		}
@@ -145,6 +159,16 @@ class YeffoPrint_Email_Orders {
 		if ( ! empty( $params['claude_api_key'] ) ) {
 			update_option( YeffoPrint_Email_Order_Reader::KEY_OPTION, YeffoPrint_Secret_Box::encrypt( sanitize_text_field( (string) $params['claude_api_key'] ) ), false );
 		}
+	}
+
+	/** The IMAP folder to read: INBOX, or a Gmail label. */
+	public static function folder(): string {
+		$folder = trim( (string) get_option( self::FOLDER_OPTION, '' ) );
+		return '' !== $folder ? $folder : 'INBOX';
+	}
+
+	private static function reads_inbox(): bool {
+		return 'INBOX' === strtoupper( self::folder() );
 	}
 
 	private static function set_status( string $message ): void {
@@ -207,19 +231,35 @@ class YeffoPrint_Email_Orders {
 		$imap    = new YeffoPrint_Imap_Client();
 
 		try {
-			$imap->connect( $host, (int) get_option( self::PORT_OPTION, 993 ), $username, $password );
+			$imap->connect( $host, (int) get_option( self::PORT_OPTION, 993 ), $username, $password, self::folder() );
 
-			foreach ( array_slice( $imap->unread_uids(), 0, self::FETCH_PER_RUN ) as $uid ) {
+			$inbox = self::reads_inbox();
+
+			if ( $inbox ) {
+				$uids = $imap->unread_uids();
+			} else {
+				// A label's emails are usually already read (Jeff opened them to tag them),
+				// so go by position instead, and never change his mail.
+				$cursor = get_option( self::CURSOR_OPTION, [] );
+				$same   = is_array( $cursor ) && ( $cursor['folder'] ?? '' ) === self::folder() && (int) ( $cursor['validity'] ?? -1 ) === $imap->uid_validity();
+				$uids   = $imap->uids_after( $same ? (int) $cursor['uid'] : 0 );
+			}
+
+			foreach ( array_slice( $uids, 0, self::FETCH_PER_RUN ) as $uid ) {
 				$email = YeffoPrint_Mime_Message::parse( $imap->fetch( $uid ) );
 
-				if ( ! in_array( $email['from_email'], $allowed, true ) ) {
+				if ( $inbox && ! in_array( $email['from_email'], $allowed, true ) ) {
 					$skipped++;
 				} elseif ( self::store( $email ) ) {
 					$added++;
 				}
 
-				// Read either way: it's in the dashboard now (or ignored), and must not be picked up again.
-				$imap->mark_read( $uid );
+				if ( $inbox ) {
+					// Read either way: it's in the dashboard now (or ignored), and must not be picked up again.
+					$imap->mark_read( $uid );
+				} else {
+					update_option( self::CURSOR_OPTION, [ 'folder' => self::folder(), 'validity' => $imap->uid_validity(), 'uid' => $uid ], false );
+				}
 			}
 		} finally {
 			$imap->close();
@@ -247,6 +287,7 @@ class YeffoPrint_Email_Orders {
 
 		update_post_meta( $id, self::META_STATE, 'queued' );
 		update_post_meta( $id, self::META_FROM, $email['from_email'] );
+		update_post_meta( $id, self::META_FROM_NAME, $email['from_name'] );
 		update_post_meta( $id, self::META_MESSAGE_ID, $email['message_id'] );
 		update_post_meta( $id, self::META_EMAIL_DATE, $email['date'] );
 		return (int) $id;
@@ -293,7 +334,7 @@ class YeffoPrint_Email_Orders {
 		try {
 			$result = YeffoPrint_Email_Order_Reader::read( [
 				'from_email' => (string) get_post_meta( $id, self::META_FROM, true ),
-				'from_name'  => '',
+				'from_name'  => (string) get_post_meta( $id, self::META_FROM_NAME, true ),
 				'subject'    => $post->post_title,
 				'date'       => (string) get_post_meta( $id, self::META_EMAIL_DATE, true ),
 				'text'       => $post->post_content,

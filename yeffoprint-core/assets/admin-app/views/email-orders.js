@@ -42,7 +42,7 @@
 		var names = { sizes: {}, materials: {} };
 
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Customer order emails you forwarded to the order mailbox. Claude reads each one into a filled-in order. Check it, fix anything flagged, then create it as usual. The mailbox is set up in Settings › Integrations › Email orders.</p>' +
+			'<p class="yp-app__intro">Customer order emails you forwarded or labelled for the site. Claude reads each one into a filled-in order. Check it, fix anything flagged, then create it as usual. The mailbox is set up in Settings › Integrations › Email orders.</p>' +
 			'<div class="yp-form__actions"><button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-check>Check mailbox now</button><span class="yp-field__hint" data-yp-eo-check-status></span></div>' +
 			'<div class="yp-settings-tabs" role="tablist">' +
 				TABS.map( function ( tab ) {
@@ -144,7 +144,7 @@
 				listEl.innerHTML = '<div class="yp-record-card"><p class="yp-review-admin__empty">' +
 					( ! data.enabled
 						? 'Email orders are off. Turn them on and add the mailbox in <a href="#/settings/integrations">Settings › Integrations</a>.'
-						: 'open' === filter ? 'Nothing to check. Forward a customer’s order email to the order mailbox and it shows up here within a few minutes.' : 'Nothing here yet.' ) +
+						: 'open' === filter ? 'Nothing to check. Label or forward a customer’s order email as set up in Settings › Integrations › Email orders and it shows up here within a few minutes.' : 'Nothing here yet.' ) +
 					'</p></div>';
 				return;
 			}
@@ -179,7 +179,7 @@
 					'<article class="yp-record-card yp-review-admin">' +
 						'<header class="yp-review-admin__head">' +
 							'<strong>' + YP.escapeHtml( record.subject ) + '</strong>' +
-							'<span class="yp-field__hint">' + ( record.date ? YP.escapeHtml( new Date( record.date ).toLocaleString() ) + ' · ' : '' ) + 'forwarded by ' + YP.escapeHtml( record.forwarded_by ) + '</span>' +
+							'<span class="yp-field__hint">' + ( record.date ? YP.escapeHtml( new Date( record.date ).toLocaleString() ) + ' · ' : '' ) + 'from ' + YP.escapeHtml( record.forwarded_by ) + '</span>' +
 							'<span class="yp-pill ' + pill[ 0 ] + '">' + pill[ 1 ] + '</span>' +
 						'</header>' +
 						( result ? '<p>' + who + '</p>' : '' ) +
