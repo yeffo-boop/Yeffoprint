@@ -190,6 +190,9 @@
 
 	YP.views[ 'manual-order' ] = function ( viewEl, subId ) {
 		var addToOrderId = parseInt( subId, 10 ) || 0;
+		// #/manual-order/email-{id}: filled in from a forwarded order email (views/email-orders.js).
+		var emailMatch   = /^email-(\d+)$/.exec( subId || '' );
+		var emailOrderId = emailMatch ? parseInt( emailMatch[ 1 ], 10 ) : 0;
 
 		var emptyAddress = function () {
 			return { first_name: '', last_name: '', address_1: '', address_2: '', city: '', state: '', postcode: '', country: 'US', phone: '' };
@@ -201,6 +204,9 @@
 			stickerOptions: null, // custom-stickers/options — Custom Stickers' own sizes/materials/types/shapes.
 			webDesignPackages: null, // /wp/v2/yp_web_design_pkg — every published package, priced or not (see webDesignFieldsHtml()).
 			addToOrder: null, // GET /admin/order/{id} — only in "add to an existing order" mode (addToOrderId).
+			emailOrder: null, // GET /admin/email-orders/{id} — only when filled in from an email (emailOrderId).
+			emailChecks: [], // Lines from that email to point out above the form (flags, lines not added).
+			emailTemplate: null, // { id, title } to load once the form is drawn.
 			stickers: null, // Custom Sticker cards — see newSticker(); filled in once the options load.
 			// Direct report: switching item types "makes me start all the way
 			// over" — render() rebuilds every panel. saveDraft() copies what's
@@ -235,7 +241,8 @@
 			YP.request( coreEndpoint( 'custom-orders/options' ) ),
 			YP.request( coreEndpoint( 'custom-stickers/options' ) ),
 			YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_web_design_pkg?context=edit&status=publish&per_page=100&orderby=menu_order&order=asc' ),
-			addToOrderId ? YP.request( coreEndpoint( 'admin/order/' + addToOrderId ) ) : Promise.resolve( null )
+			addToOrderId ? YP.request( coreEndpoint( 'admin/order/' + addToOrderId ) ) : Promise.resolve( null ),
+			emailOrderId ? YP.request( coreEndpoint( 'admin/email-orders/' + emailOrderId ) ) : Promise.resolve( null )
 		] )
 			.then( function ( results ) {
 				state.options = results[ 0 ];
@@ -247,7 +254,16 @@
 					viewEl.innerHTML = '<p class="yp-form__error">Order #' + YP.escapeHtml( String( state.addToOrder.number ) ) + ' has already shipped or closed, so items can’t be added to it.</p>';
 					return;
 				}
+				if ( results[ 4 ] ) {
+					applyEmailOrder( results[ 4 ] );
+				}
 				render();
+				if ( state.emailTemplate ) {
+					pickTemplate( state.emailTemplate.id, state.emailTemplate.title );
+				}
+				if ( state.emailOrder && state.selectedCustomer && ! state.emailHasAddress ) {
+					prefillAddressFromCustomer( state.selectedCustomer.id );
+				}
 			} )
 			.catch( function ( error ) {
 				viewEl.innerHTML = '<p class="yp-form__error">Couldn’t load this screen: ' + YP.escapeHtml( error.message ) + '</p>';
@@ -274,6 +290,7 @@
 							: '. It’s already paid, so these items go on a linked add-on order with its own payment link and no shipping charge. Both orders ship together in one box.' ) +
 						' <a href="#/manual-order">Start a new order instead</a></p>'
 					: '<p class="yp-app__intro">Key in an order for a customer over the phone or by email — same pricing and options as the storefront. Toggle on more than one item type below to combine them on the same order.</p>' ) +
+				emailOrderPanelHtml() +
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Item types</h2></div>' +
@@ -442,6 +459,136 @@
 					field.value = saved.value;
 				}
 			} );
+		}
+
+		/* ---------- Filled in from an emailed order ----------
+		 * Direct request: forward a customer's order email and have the
+		 * site make the order from its list. Claude's reading of the email
+		 * (includes/email-orders/class-email-order-reader.php) goes into the
+		 * same draft state the item-type toggles already keep, so render()
+		 * draws it like anything typed by hand. Create Order handles one
+		 * design per order, so lines for a second design are listed above
+		 * the form to add afterwards with Add items. */
+
+		function applyEmailOrder( record ) {
+			state.emailOrder = record;
+			var result = record.result;
+			if ( ! result ) {
+				return;
+			}
+
+			var checks = state.emailChecks;
+			if ( result.notes_for_owner ) {
+				checks.push( result.notes_for_owner );
+			}
+
+			var custom    = result.items.filter( function ( item ) { return 'custom_design' === item.kind; } );
+			var templated = result.items.filter( function ( item ) { return 'template' === item.kind; } );
+			var first     = templated[ 0 ];
+			var sameDesign = first ? templated.filter( function ( item ) { return item.template_id === first.template_id; } ) : [];
+
+			result.items.forEach( function ( item ) {
+				var label = 'template' === item.kind
+					? item.template_title + ( Object.keys( item.fields ).length ? ' (' + Object.keys( item.fields ).map( function ( key ) { return item.fields[ key ]; } ).join( ', ' ) + ')' : '' )
+					: item.compound_strength || item.source_text;
+				if ( 'unclear' === item.kind ) {
+					checks.push( 'Not added: “' + item.source_text + '”' + ( item.note ? '. ' + item.note : '' ) );
+				} else if ( 'template' === item.kind && item.template_id !== first.template_id ) {
+					checks.push( 'Not added (a second design, so add it with Add items once this order is created): ' + label + ', ' + ( item.quantity || '?' ) + ' labels' );
+				} else if ( item.flags.length || item.note ) {
+					checks.push( label + ': ' + item.flags.concat( item.note ? [ item.note ] : [] ).join( '. ' ) );
+				}
+			} );
+
+			if ( custom.length || sameDesign.length ) {
+				state.activeTypes.custom_design = custom.length > 0;
+				state.activeTypes.template      = sameDesign.length > 0;
+			}
+
+			if ( custom.length ) {
+				state.draft.fields[ 'yp-mo-brand' ] = { value: result.brand_name || '' };
+				state.draft.batch = custom.map( function ( item ) {
+					return {
+						size_id: item.size_id || '',
+						material_id: item.material_id || '',
+						quantity: item.quantity || '',
+						compound_strength: item.compound_strength,
+						brand_name: item.brand_name && item.brand_name !== result.brand_name ? item.brand_name : ''
+					};
+				} );
+			}
+
+			if ( sameDesign.length ) {
+				state.emailTemplate = { id: first.template_id, title: first.template_title };
+				state.selectedTemplate = state.emailTemplate;
+				state.draft.templateVariants = sameDesign.map( function ( item ) {
+					return { quantity: item.quantity || '', values: item.fields };
+				} );
+				var sized = sameDesign.filter( function ( item ) { return item.size_id; } )[ 0 ];
+				var made  = sameDesign.filter( function ( item ) { return item.material_id; } )[ 0 ];
+				if ( sized ) {
+					state.draft.fields[ 'yp-mo-template-size' ] = { value: String( sized.size_id ) };
+				}
+				if ( made ) {
+					state.draft.fields[ 'yp-mo-template-material' ] = { value: String( made.material_id ) };
+				}
+				var mixed = sameDesign.some( function ( item ) {
+					return ( item.size_id && sized && item.size_id !== sized.size_id ) || ( item.material_id && made && item.material_id !== made.material_id );
+				} );
+				if ( mixed ) {
+					checks.push( first.template_title + ': the email asks for more than one size or material. This form uses one per design, so split the rest into another order.' );
+				}
+			}
+
+			var customer = result.customer || {};
+			if ( record.customer_user ) {
+				state.selectedCustomer = record.customer_user;
+			} else if ( customer.name || customer.email ) {
+				state.newCustomerMode = true;
+				state.draft.fields[ 'yp-mo-new-name' ] = { value: customer.name || '' };
+				state.draft.fields[ 'yp-mo-new-email' ] = { value: customer.email || '' };
+			}
+			if ( ! customer.email ) {
+				checks.push( 'No customer email found. Add one so the payment link can be sent.' );
+			}
+
+			var address = result.shipping_address || {};
+			state.emailHasAddress = !! address.address_1;
+			if ( state.emailHasAddress ) {
+				var nameParts = ( customer.name || '' ).split( ' ' );
+				var filled    = emptyAddress();
+				Object.keys( filled ).forEach( function ( key ) {
+					if ( address[ key ] ) {
+						filled[ key ] = address[ key ];
+					}
+				} );
+				filled.first_name = filled.first_name || nameParts[ 0 ] || '';
+				filled.last_name  = filled.last_name || nameParts.slice( 1 ).join( ' ' );
+				filled.phone      = customer.phone || '';
+				filled.country    = filled.country || 'US';
+				state.shipping.address = filled;
+			}
+		}
+
+		function emailOrderPanelHtml() {
+			var record = state.emailOrder;
+			if ( ! record ) {
+				return '';
+			}
+			if ( ! record.result ) {
+				return '<div class="yp-panel"><p class="yp-form__error">This email hasn’t been read yet, so nothing was filled in. <a href="#/email-orders">Back to Email Orders</a></p></div>';
+			}
+			return (
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Filled in from an email</h2></div>' +
+					'<p class="yp-panel__hint">“' + YP.escapeHtml( record.subject ) + '”, forwarded by ' + YP.escapeHtml( record.forwarded_by ) + '. Check every field against the email before you create the order. <a href="#/email-orders">Back to Email Orders</a></p>' +
+					( 'created' === record.state ? '<p class="yp-form__error">An order was already created from this email' + ( record.order_number ? ' (' + YP.escapeHtml( String( record.order_number ) ) + ')' : '' ) + '. Creating another makes a second order.</p>' : '' ) +
+					( state.emailChecks.length
+						? '<p class="yp-panel__hint"><strong>To check:</strong></p><ul>' + state.emailChecks.map( function ( line ) { return '<li>' + YP.escapeHtml( line ) + '</li>'; } ).join( '' ) + '</ul>'
+						: '' ) +
+					'<details><summary class="yp-field__hint">Show the email</summary><p style="white-space:pre-line">' + YP.escapeHtml( record.text ) + '</p></details>' +
+				'</div>'
+			);
 		}
 
 		/* ---------- Custom Design (Phase A) ---------- */
@@ -920,6 +1067,14 @@
 				.then( function ( data ) {
 					state.templateData = data;
 					renderTemplatePanel();
+					// A size/material filled in ahead of time (from an email) only has options to match now.
+					[ 'yp-mo-template-size', 'yp-mo-template-material' ].forEach( function ( fieldId ) {
+						var field = document.getElementById( fieldId );
+						var saved = state.draft.fields[ fieldId ];
+						if ( field && saved && field.querySelector( 'option[value="' + CSS.escape( saved.value ) + '"]:not([disabled])' ) ) {
+							field.value = saved.value;
+						}
+					} );
 					bindTemplateVariantListeners();
 					refreshTemplatePricePreview();
 				} )
@@ -1640,6 +1795,14 @@
 					// offer a clean form instead.
 					submitButton.disabled = true;
 					submitButton.textContent = 'Order created';
+
+					if ( state.emailOrder ) {
+						YP.request( coreEndpoint( 'admin/email-orders/' + state.emailOrder.id + '/created' ), {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify( { order_id: result.order_id } )
+						} ).catch( function () {} );
+					}
 
 					var links = '<a href="#" data-yp-view-order="' + result.order_id + '">View order</a>';
 					// One "Add a proof" link per shell — an order can now

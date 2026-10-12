@@ -72,6 +72,11 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-payments-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/messages/class-messages.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-messages-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/email-orders/class-imap-client.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/email-orders/class-mime-message.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/email-orders/class-email-order-reader.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/email-orders/class-email-orders.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-email-orders-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-print-queue-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-settings-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-surcharge-controller.php';
@@ -279,6 +284,8 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Payments_Controller();
 		new YeffoPrint_Messages();
 		new YeffoPrint_Admin_Messages_Controller();
+		new YeffoPrint_Email_Orders();
+		new YeffoPrint_Admin_Email_Orders_Controller();
 		new YeffoPrint_Admin_Print_Queue_Controller();
 		new YeffoPrint_Admin_Push();
 		new YeffoPrint_Admin_Settings_Controller();
