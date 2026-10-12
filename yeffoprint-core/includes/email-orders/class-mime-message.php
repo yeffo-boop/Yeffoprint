@@ -17,15 +17,26 @@ class YeffoPrint_Mime_Message {
 	/** Longest text kept; real order emails are a small fraction of this. */
 	private const MAX_TEXT = 40000;
 
-	/** @return array{from_email:string, from_name:string, subject:string, message_id:string, date:string, text:string} */
+	/** Longest quoted history kept, for references like "same as before". */
+	private const MAX_EARLIER = 8000;
+
+	/**
+	 * text: the newest message only (with a forward's header block kept).
+	 * earlier: the replies quoted below it, if any.
+	 *
+	 * @return array{from_email:string, from_name:string, subject:string, message_id:string, date:string, text:string, earlier:string}
+	 */
 	public static function parse( string $raw ): array {
 		[ $headers, $body ] = self::split( $raw );
 
 		[ $from_name, $from_email ] = self::address( $headers['from'] ?? '' );
 
-		$text = trim( self::body_text( $headers, $body, 0 ) );
+		[ $text, $earlier ] = self::split_history( trim( self::body_text( $headers, $body, 0 ) ) );
 		if ( mb_strlen( $text ) > self::MAX_TEXT ) {
 			$text = mb_substr( $text, 0, self::MAX_TEXT ) . "\n[…cut]";
+		}
+		if ( mb_strlen( $earlier ) > self::MAX_EARLIER ) {
+			$earlier = mb_substr( $earlier, 0, self::MAX_EARLIER ) . "\n[…cut]";
 		}
 
 		return [
@@ -35,7 +46,51 @@ class YeffoPrint_Mime_Message {
 			'message_id' => trim( $headers['message-id'] ?? '', " \t<>" ),
 			'date'       => trim( $headers['date'] ?? '' ),
 			'text'       => $text,
+			'earlier'    => $earlier,
 		];
+	}
+
+	/**
+	 * Cuts a reply thread at the first quoted earlier message ("On … wrote:",
+	 * Outlook's From/Sent block, "Original Message", or "> " lines), so an
+	 * email that carries months of back-and-forth reads as its newest
+	 * message. In a forward, the cut is made after the forwarded headers, so
+	 * the customer's message being forwarded stays in.
+	 *
+	 * @return array{0:string, 1:string} [ newest, earlier ]
+	 */
+	public static function split_history( string $text ): array {
+		$text  = str_replace( "\r\n", "\n", $text );
+		$start = 0;
+
+		if ( preg_match( '/^[ \t]*(?:-{3,}\s*Forwarded message\s*-{3,}|Begin forwarded message:)[ \t]*$/mi', $text, $m, PREG_OFFSET_CAPTURE ) ) {
+			// Skip the forwarded header block (From:/Date:/Subject:/To: lines up to the first blank line).
+			$after = $m[0][1] + strlen( $m[0][0] );
+			$after += strspn( $text, " \t\n", $after ); // Apple Mail leaves a blank line first.
+			$blank = strpos( $text, "\n\n", $after );
+			$start = false === $blank ? strlen( $text ) : $blank;
+		}
+
+		$patterns = [
+			'/^[ \t]*On\b[^\n]{4,250}(?:\n[^\n]{0,150})?\bwrote:[ \t]*$/m',
+			'/^[ \t]*-{2,}\s*Original Message\s*-{2,}/mi',
+			'/^[ \t]*\*?From:\*?[^\n]+\n(?:[^\n]*\n)?[ \t]*\*?(?:Sent|Date):\*?[^\n]+/mi',
+			'/^[ \t]*>/m',
+		];
+
+		$cut = strlen( $text );
+		foreach ( $patterns as $pattern ) {
+			if ( preg_match( $pattern, $text, $m, PREG_OFFSET_CAPTURE, $start ) && $m[0][1] < $cut ) {
+				$cut = $m[0][1];
+			}
+		}
+
+		$newest = trim( substr( $text, 0, $cut ) );
+		if ( '' === $newest || $cut >= strlen( $text ) ) {
+			// Nothing above the quote (or no quote): keep it all.
+			return [ trim( $text ), '' ];
+		}
+		return [ $newest, trim( substr( $text, $cut ) ) ];
 	}
 
 	/** @return array{0:string, 1:string} [ name, lowercase email ] */

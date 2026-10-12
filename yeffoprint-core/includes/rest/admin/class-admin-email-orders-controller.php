@@ -31,6 +31,12 @@ class YeffoPrint_Admin_Email_Orders_Controller {
 			'permission_callback' => $admin,
 		] );
 
+		register_rest_route( self::NAMESPACE, '/admin/email-orders/dismiss-open', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'dismiss_open' ],
+			'permission_callback' => $admin,
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/email-orders/(?P<id>\d+)', [
 			[
 				'methods'             => \WP_REST_Server::READABLE,
@@ -61,6 +67,10 @@ class YeffoPrint_Admin_Email_Orders_Controller {
 
 	public function check(): \WP_REST_Response {
 		return rest_ensure_response( YeffoPrint_Email_Orders::check() );
+	}
+
+	public function dismiss_open(): \WP_REST_Response {
+		return rest_ensure_response( [ 'dismissed' => YeffoPrint_Email_Orders::dismiss_open() ] );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */

@@ -43,7 +43,7 @@
 
 		viewEl.innerHTML =
 			'<p class="yp-app__intro">Customer order emails you forwarded or labelled for the site. Claude reads each one into a filled-in order. Check it, fix anything flagged, then create it as usual. The mailbox is set up in Settings › Integrations › Email orders.</p>' +
-			'<div class="yp-form__actions"><button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-check>Check mailbox now</button><span class="yp-field__hint" data-yp-eo-check-status></span></div>' +
+			'<div class="yp-form__actions"><button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-check>Check mailbox now</button><button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-dismiss-all hidden>Dismiss all to check</button><span class="yp-field__hint" data-yp-eo-check-status></span></div>' +
 			'<div class="yp-settings-tabs" role="tablist">' +
 				TABS.map( function ( tab ) {
 					return '<button type="button" class="yp-settings-tabs__tab' + ( tab.filter === filter ? ' is-active' : '' ) + '" data-yp-eo-tab="' + tab.filter + '" role="tab" aria-selected="' + ( tab.filter === filter ? 'true' : 'false' ) + '">' + tab.label + '<span data-yp-eo-count="' + tab.filter + '"></span></button>';
@@ -88,6 +88,26 @@
 				} );
 		} );
 
+		var dismissAllButton = viewEl.querySelector( '[data-yp-eo-dismiss-all]' );
+		dismissAllButton.addEventListener( 'click', function () {
+			YP.confirmModal( {
+				title: 'Dismiss every emailed order to check?',
+				message: 'They move to Done. You can reopen any of them from there.',
+				confirmLabel: 'Dismiss all',
+				onConfirm: function () {
+					dismissAllButton.disabled = true;
+					YP.request( endpoint( 'dismiss-open' ), { method: 'POST' } )
+						.then( load )
+						.catch( function ( error ) {
+							window.alert( 'Couldn’t do that: ' + error.message );
+						} )
+						.then( function () {
+							dismissAllButton.disabled = false;
+						} );
+				}
+			} );
+		} );
+
 		function load() {
 			YP.request( endpoint() + '?filter=' + encodeURIComponent( filter ) + '&page=' + page )
 				.then( render )
@@ -127,6 +147,7 @@
 				return;
 			}
 			viewEl.querySelector( '[data-yp-eo-count="open"]' ).textContent = data.open_count ? ' (' + data.open_count + ')' : '';
+			dismissAllButton.hidden = 'open' !== filter || data.open_count < 2;
 
 			pagesEl.innerHTML = data.max_num_pages > 1
 				? '<button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-page="-1"' + ( page <= 1 ? ' disabled' : '' ) + '>&larr; Newer</button>' +
@@ -190,6 +211,7 @@
 						( result && result.notes_for_owner ? '<p class="yp-panel__hint"><strong>To check:</strong> ' + YP.escapeHtml( result.notes_for_owner ) + '</p>' : '' ) +
 						( result ? itemsHtml( result ) : '' ) +
 						'<details><summary class="yp-field__hint">Show the email</summary><p class="yp-review-admin__text" style="white-space:pre-line">' + YP.escapeHtml( record.text ) + '</p></details>' +
+						( record.earlier ? '<details><summary class="yp-field__hint">Show earlier in the thread</summary><p class="yp-review-admin__text" style="white-space:pre-line">' + YP.escapeHtml( record.earlier ) + '</p></details>' : '' ) +
 						'<div class="yp-review-admin__actions">' + actions.join( ' ' ) + '</div>' +
 					'</article>'
 				);

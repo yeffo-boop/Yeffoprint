@@ -97,6 +97,31 @@ class YeffoPrint_Imap_Client {
 		return $uids;
 	}
 
+	/**
+	 * Gmail's conversation id for each UID (X-GM-THRID), so a labelled thread
+	 * can be read as one email. Empty on servers without Gmail's extension.
+	 *
+	 * @param int[] $uids
+	 * @return array<int, string> uid => thread id
+	 */
+	public function thread_ids( array $uids ): array {
+		if ( ! $uids ) {
+			return [];
+		}
+		try {
+			$lines = $this->command( 'UID FETCH ' . implode( ',', array_map( 'intval', $uids ) ) . ' (X-GM-THRID)' );
+		} catch ( \RuntimeException $e ) {
+			return [];
+		}
+		$threads = [];
+		foreach ( $lines as $line ) {
+			if ( preg_match( '/X-GM-THRID (\d+)/i', $line, $t ) && preg_match( '/\bUID (\d+)/i', $line, $u ) ) {
+				$threads[ (int) $u[1] ] = $t[1];
+			}
+		}
+		return $threads;
+	}
+
 	/** The whole raw message (headers and body), without marking it read. */
 	public function fetch( int $uid ): string {
 		$tag = $this->send( 'UID FETCH ' . $uid . ' (BODY.PEEK[])' );
