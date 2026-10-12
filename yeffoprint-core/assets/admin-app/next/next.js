@@ -243,11 +243,13 @@
 		ready: { rank: 2, color: '#7c3aed' },
 		approval: { rank: 3, color: 'var(--ypn-yel)' },
 		unpaid: { rank: 4, color: '#9a9aa0' },
+		emailorder: { rank: 1, color: 'var(--ypn-cy, #00AEEF)' },
 		message: { rank: 5, color: 'var(--ypn-cy, #00AEEF)' }
 	};
 
 	var todayDisputes = [];
 	var todayMessages = 0;
+	var todayEmailOrders = 0; // Forwarded order emails waiting to be checked (views/email-orders.js).
 	var todayDueDays  = 0; // Settings › General "Order due date (days)": older open orders float up as late.
 
 	// Disputes waiting on an answer and unread website messages join the
@@ -259,6 +261,10 @@
 		} ).catch( function () {} );
 		YP.request( api( 'admin/messages?filter=new' ) ).then( function ( data ) {
 			todayMessages = data.new_count || 0;
+			drawToday();
+		} ).catch( function () {} );
+		YP.request( api( 'admin/email-orders?filter=open' ) ).then( function ( data ) {
+			todayEmailOrders = data.open_count || 0;
 			drawToday();
 		} ).catch( function () {} );
 	}
@@ -315,6 +321,16 @@
 				date: d.due_by
 			} );
 		} );
+
+		if ( todayEmailOrders ) {
+			items.push( {
+				kind: 'emailorder',
+				href: '#/email-orders',
+				title: todayEmailOrders + ( 1 === todayEmailOrders ? ' emailed order' : ' emailed orders' ) + ' to check',
+				meta: 'Forwarded order emails, filled in and waiting on you',
+				action: 'Check'
+			} );
+		}
 
 		if ( todayMessages ) {
 			items.push( {

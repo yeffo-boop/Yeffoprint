@@ -244,6 +244,30 @@
 				'</div>';
 
 			var integrationsHtml =
+				// Direct request: forward a customer's order email and have the site fill in the order.
+				'<div class="yp-panel" id="email-orders">' +
+					'<div class="yp-panel__head"><h2>Email orders</h2></div>' +
+					'<p class="yp-panel__hint">Forward a customer\'s order email to a mailbox you set up for this, such as orders@yeffodesign.com. Every 5 minutes the site checks it, Claude reads the list, and a filled-in order waits for you under Orders › Email Orders with a phone alert. Nothing is sent to the customer until you check it and press Create Order.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-eo-enabled"' + ( settings.email_orders_enabled ? ' checked' : '' ) + ' /><label for="yp-set-eo-enabled">Check the mailbox for forwarded orders</label></div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-eo-host">IMAP server</label><input type="text" id="yp-set-eo-host" value="' + YP.escapeAttr( settings.email_orders_host || '' ) + '" placeholder="imap.gmail.com" autocomplete="off" /></div>' +
+						'<div class="yp-field"><label for="yp-set-eo-port">Port</label><input type="number" id="yp-set-eo-port" value="' + YP.escapeAttr( settings.email_orders_port || 993 ) + '" min="1" max="65535" /></div>' +
+					'</div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-eo-user">Mailbox username</label><input type="text" id="yp-set-eo-user" value="' + YP.escapeAttr( settings.email_orders_username || '' ) + '" placeholder="orders@yeffodesign.com" autocomplete="off" /></div>' +
+						'<div class="yp-field"><label for="yp-set-eo-password">Mailbox password</label><input type="password" id="yp-set-eo-password" value="" autocomplete="new-password" placeholder="' + ( settings.email_orders_password_set ? 'Saved. Type a new one to replace it' : 'Password or app password' ) + '" /></div>' +
+					'</div>' +
+					'<p class="yp-panel__hint">Your email host lists its IMAP server (port 993) in its mail settings. Gmail and Outlook need an app password, not your normal one.</p>' +
+					'<div class="yp-field"><label for="yp-set-eo-senders">Only accept emails forwarded from</label><input type="text" id="yp-set-eo-senders" value="' + YP.escapeAttr( settings.email_orders_senders || '' ) + '" placeholder="' + YP.escapeAttr( settings.email_orders_default_senders || '' ) + '" /></div>' +
+					'<p class="yp-panel__hint">Your own addresses, separated by commas. Blank uses the ones shown. Anything else sent to the mailbox is ignored.</p>' +
+					( settings.claude_api_key_in_config
+						? '<p class="yp-panel__hint">A Claude API key is set in wp-config.php (YEFFOPRINT_CLAUDE_API_KEY), so that one is used.</p>'
+						: '<div class="yp-field"><label for="yp-set-claude-key">Claude API key</label><input type="password" id="yp-set-claude-key" value="" autocomplete="new-password" placeholder="' + ( settings.claude_api_key_set ? 'Saved. Paste a new one to replace it' : 'sk-ant-...' ) + '" /></div>' +
+							'<p class="yp-panel__hint">Create one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and add a few dollars of credit. Each email costs a few cents to read.</p>' ) +
+					'<div class="yp-form__actions"><button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-check>Check now</button></div>' +
+					'<p class="yp-panel__hint" data-yp-eo-status>' + ( settings.email_orders_status ? 'Last check' + ( settings.email_orders_checked_at ? ' (' + YP.escapeHtml( new Date( settings.email_orders_checked_at ).toLocaleString() ) + ')' : '' ) + ': ' + YP.escapeHtml( settings.email_orders_status ) : 'Not checked yet. Save first, then press Check now.' ) + '</p>' +
+				'</div>' +
+
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>YeffoHealth food search</h2></div>' +
 					'<p class="yp-panel__hint">Lets tracker users search foods by name (USDA FoodData Central) and scan barcodes (Open Food Facts) to add calories and macros. Get a free key at <a href="https://api.data.gov/signup/" target="_blank" rel="noopener">api.data.gov/signup</a>; it allows 1,000 searches an hour, and common searches are saved so they don\'t count again. Without a key, search uses USDA\'s shared demo key, which runs out after a few searches. Barcode scanning works either way.</p>' +
@@ -359,6 +383,24 @@
 			} );
 
 			viewEl.querySelector( '[data-yp-save]' ).addEventListener( 'click', save );
+
+			var eoCheck = viewEl.querySelector( '[data-yp-eo-check]' );
+			eoCheck.addEventListener( 'click', function () {
+				var statusLine = viewEl.querySelector( '[data-yp-eo-status]' );
+				eoCheck.disabled = true;
+				eoCheck.textContent = 'Checking…';
+				YP.request( yeffoprintAdminApp.restUrl + 'admin/email-orders/check', { method: 'POST' } )
+					.then( function ( result ) {
+						statusLine.textContent = result.message;
+					} )
+					.catch( function ( error ) {
+						statusLine.textContent = 'Couldn’t check: ' + error.message;
+					} )
+					.then( function () {
+						eoCheck.disabled = false;
+						eoCheck.textContent = 'Check now';
+					} );
+			} );
 		}
 
 		function save() {
@@ -407,6 +449,13 @@
 				dashboard_due_date_days: parseInt( viewEl.querySelector( '#yp-set-due-date' ).value, 10 ) || 7,
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
 				usda_api_key: viewEl.querySelector( '#yp-set-usda-key' ).value,
+				email_orders_enabled: viewEl.querySelector( '#yp-set-eo-enabled' ).checked,
+				email_orders_host: viewEl.querySelector( '#yp-set-eo-host' ).value.trim(),
+				email_orders_port: parseInt( viewEl.querySelector( '#yp-set-eo-port' ).value, 10 ) || 993,
+				email_orders_username: viewEl.querySelector( '#yp-set-eo-user' ).value.trim(),
+				email_orders_password: viewEl.querySelector( '#yp-set-eo-password' ).value,
+				email_orders_senders: viewEl.querySelector( '#yp-set-eo-senders' ).value,
+				claude_api_key: viewEl.querySelector( '#yp-set-claude-key' ) ? viewEl.querySelector( '#yp-set-claude-key' ).value.trim() : '',
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
 				telegram_bot_username: viewEl.querySelector( '#yp-set-telegram-username' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,

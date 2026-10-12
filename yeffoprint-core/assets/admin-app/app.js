@@ -351,6 +351,7 @@
 		] },
 		{ group: 'Sales', items: [
 			{ id: 'manual-order', label: 'Create Order' },
+			{ id: 'email-orders', label: 'Email Orders' },
 			{ id: 'order-history', label: 'Order History' },
 			{ id: 'abandoned-carts', label: 'Abandoned Carts' },
 			{ id: 'web-design-orders', label: 'Web Design Orders' },
@@ -399,7 +400,7 @@
 	var NEXT = 'next' === yeffoprintAdminApp.shell;
 	var NEXT_TABS = [
 		{ id: 'dashboard', label: 'Today', icon: 'sun', sections: [ 'dashboard', 'sales' ] },
-		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders', 'disputes' ] },
+		{ id: 'production', label: 'Orders', icon: 'board', sections: [ 'production', 'order-history', 'manual-order', 'email-orders', 'orders', 'proofs', 'abandoned-carts', 'web-design-orders', 'disputes' ] },
 		{ id: 'catalog', label: 'Catalog', icon: 'box', sections: [ 'catalog', 'templates', 'template-categories', 'sizes', 'sticker-sizes', 'materials', 'label-fields', 'label-colors', 'compound-list', 'prints', 'filament-colors', 'pricing' ] },
 		{ id: 'people', label: 'Customers', icon: 'people', sections: [ 'people', 'customers', 'messages', 'reviews', 'tracker-feedback', 'rewards', 'coupons', 'maintenance' ] },
 		{ id: 'store', label: 'Settings', icon: 'gear', sections: [ 'store', 'settings', 'payments', 'shipping-zones', 'print-station', 'surcharge', 'web-design-packages', 'web-design-addons' ] }
