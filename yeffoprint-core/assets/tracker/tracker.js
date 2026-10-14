@@ -9302,10 +9302,12 @@
 	 * ======================================================= */
 
 	var NATIVE = !! ( window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform() && typeof window.Capacitor.nativePromise === 'function' );
+	var NATIVE_IOS = NATIVE && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'ios';
 	var NATIVE_KEY = 'ypt-native-reminders:' + ( CFG.userKey || 'anon' );
 	var NATIVE_DAYS = 14;
-	// Android limits how many alarms one app can have waiting (about 500).
-	var NATIVE_MAX = 150;
+	// Android limits how many alarms one app can have waiting (about 500);
+	// iPhone keeps only the 64 soonest and silently drops the rest.
+	var NATIVE_MAX = NATIVE_IOS ? 64 : 150;
 	var NATIVE_CHANNEL = 'yp-reminders';
 	// Snoozed reminders waiting on this phone ({slots, at, n}, at in seconds like the server's).
 	var NATIVE_SNOOZE_KEY = 'ypt-native-snooze:' + ( CFG.userKey || 'anon' );
@@ -9316,6 +9318,14 @@
 	var nativeTimer = null;
 
 	function nativeCall( method, options ) {
+		// Channels and "Alarms & reminders" are Android only: iPhone has neither
+		// and always delivers on time, so answer for it instead of failing.
+		if ( NATIVE_IOS && method === 'createChannel' ) {
+			return Promise.resolve( null );
+		}
+		if ( NATIVE_IOS && ( method === 'checkExactNotificationSetting' || method === 'changeExactNotificationSetting' ) ) {
+			return Promise.resolve( { exact_alarm: 'granted' } );
+		}
 		return window.Capacitor.nativePromise( 'LocalNotifications', method, options || {} );
 	}
 
