@@ -5240,7 +5240,7 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-lo-promo' },
 				h( 'div', { class: 'ypt-eyebrow' }, 'Labels' ),
 				h( 'h2', null, list.length > 1 ? 'Label all ' + list.length + ' vials in one order' : 'Order a label for this vial' ),
-				h( 'p', null, 'Pick a design and we fill in each peptide and strength for you.' ),
+				h( 'p', null, 'Pick a design and we fill in each name and strength for you.' ),
 				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent', onclick: openLabelOrder }, 'Order labels' )
 			) );
 		}
@@ -6971,7 +6971,7 @@
 				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { reminderNames: ! names } ) );
 			} );
 			card.appendChild( h( 'div', { class: 'ypt-toggle', style: { marginTop: '12px' } },
-				h( 'div', null, h( 'b', null, 'Show names in reminders' ), h( 'div', { class: 'ypt-muted ypt-small' }, names ? 'Reminders say what’s due, like “Time for BPC-157”. Anyone who sees your lock screen can read them.' : 'Reminders just say a dose is due, without naming it.' ) ),
+				h( 'div', null, h( 'b', null, 'Show names in reminders' ), h( 'div', { class: 'ypt-muted ypt-small' }, names ? 'Reminders say what’s due, like “Time for Vitamin D”. Anyone who sees your lock screen can read them.' : 'Reminders just say a dose is due, without naming it.' ) ),
 				namesSw
 			) );
 		}
@@ -9655,7 +9655,7 @@
 	 * as onChange's second argument.
 	 */
 	function compoundInput( id, value, onChange, placeholder ) {
-		var input = h( 'input', { class: 'ypt-input', id: id, type: 'text', value: value || '', autocomplete: 'off', autocapitalize: 'words', spellcheck: 'false', placeholder: placeholder || 'e.g. BPC-157 or Metformin', maxlength: '80' } );
+		var input = h( 'input', { class: 'ypt-input', id: id, type: 'text', value: value || '', autocomplete: 'off', autocapitalize: 'words', spellcheck: 'false', placeholder: placeholder || 'e.g. Vitamin D or Metformin', maxlength: '80' } );
 		var box = h( 'div', { class: 'ypt-suggest', hidden: true } );
 		var names = ( CFG.compounds || [] ).slice();
 		var routes = {};
