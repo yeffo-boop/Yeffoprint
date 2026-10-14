@@ -53,6 +53,8 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>YeffoHealth uses the camera to scan food barcodes and take progress photos. Nothing is saved unless you save a photo.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>YeffoHealth reads your weight, body fat, protein, calories and water from Apple Health to show them with your progress and daily food totals. It never writes to Apple Health.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>YeffoHealth lets you pick progress photos and a profile picture from your library.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

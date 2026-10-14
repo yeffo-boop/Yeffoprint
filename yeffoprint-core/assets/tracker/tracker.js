@@ -5240,7 +5240,7 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-lo-promo' },
 				h( 'div', { class: 'ypt-eyebrow' }, 'Labels' ),
 				h( 'h2', null, list.length > 1 ? 'Label all ' + list.length + ' vials in one order' : 'Order a label for this vial' ),
-				h( 'p', null, 'Pick a design and we fill in each peptide and strength for you.' ),
+				h( 'p', null, 'Pick a design and we fill in each name and strength for you.' ),
 				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent', onclick: openLabelOrder }, 'Order labels' )
 			) );
 		}
@@ -6582,7 +6582,10 @@
 			wantsPlayApp() ? h( 'a', { class: 'ypt-list-row', href: CFG.playUrl, target: '_blank', rel: 'noopener' }, h( 'span', null, 'Get the Android app' ), h( 'span', null, 'Google Play ›' ) ) : null,
 			! wantsPlayApp() && ! isStandalone() && installPrompt ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: promptInstall }, h( 'span', null, 'Install the app' ), h( 'span', null, '›' ) ) : null,
 			! isStandalone() && isIOS() ? h( 'div', { class: 'ypt-list-row' }, h( 'span', null, 'Add to Home Screen' ), h( 'span', null, 'Share → Add to Home Screen' ) ) : null,
-			h( 'a', { class: 'ypt-list-row', href: CFG.calculatorUrl }, h( 'span', null, 'Peptide & Hormone Calculator' ), h( 'span', null, '›' ) ),
+			// In the apps the calculator is already a tab, so this opens it there instead of the website's page.
+			NATIVE ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+				go( 'calc' );
+			} }, h( 'span', null, 'Dose Calculator' ), h( 'span', null, '›' ) ) : h( 'a', { class: 'ypt-list-row', href: CFG.calculatorUrl }, h( 'span', null, 'Dose Calculator' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openLibrarySheet }, h( 'span', null, 'Compound library' ), h( 'span', null, 'Half-lives & storage ›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openReportSheet }, h( 'span', null, 'Printable report (PDF)' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: exportCsv }, h( 'span', null, 'Export dose history (CSV)' ), h( 'span', null, '›' ) ),
@@ -6721,6 +6724,8 @@
 		var br = /EdgA?\//.test( ua ) ? 'Edge' : /SamsungBrowser/.test( ua ) ? 'Samsung Internet' : /FxiOS|Firefox/.test( ua ) ? 'Firefox' : /CriOS|Chrome/.test( ua ) ? 'Chrome' : /Safari/.test( ua ) ? 'Safari' : 'Browser';
 		if ( /; wv\)/.test( ua ) ) {
 			br = 'Android app';
+		} else if ( NATIVE_IOS ) {
+			br = 'iPhone app';
 		}
 		return [ os, br + ( isStandalone() ? ' (Home Screen)' : '' ), 'tracker ' + ( CFG.version || '' ), 'reminders ' + ( state.pushOnHere ? 'on' : 'off' ) ].join( ' · ' );
 	}
@@ -6969,7 +6974,7 @@
 				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { reminderNames: ! names } ) );
 			} );
 			card.appendChild( h( 'div', { class: 'ypt-toggle', style: { marginTop: '12px' } },
-				h( 'div', null, h( 'b', null, 'Show names in reminders' ), h( 'div', { class: 'ypt-muted ypt-small' }, names ? 'Reminders say what’s due, like “Time for BPC-157”. Anyone who sees your lock screen can read them.' : 'Reminders just say a dose is due, without naming it.' ) ),
+				h( 'div', null, h( 'b', null, 'Show names in reminders' ), h( 'div', { class: 'ypt-muted ypt-small' }, names ? 'Reminders say what’s due, like “Time for Vitamin D”. Anyone who sees your lock screen can read them.' : 'Reminders just say a dose is due, without naming it.' ) ),
 				namesSw
 			) );
 		}
@@ -7602,7 +7607,7 @@
 			var fromItems = foodItems( r ).reduce( function ( sum, it ) {
 				return sum + ( k === 'water' ? 0 : itemAmount( it, k ) );
 			}, 0 );
-			var hcNote = [ +hc[ k ] > 0 ? fmtFood( k, +hc[ k ] ) + ' from Health Connect' : '', fromItems > 0 ? fmtFood( k, fromItems ) + ' from the foods you added' : '' ].filter( Boolean ).join( ' and ' );
+			var hcNote = [ +hc[ k ] > 0 ? fmtFood( k, +hc[ k ] ) + ' from ' + HC_NAME : '', fromItems > 0 ? fmtFood( k, fromItems ) + ' from the foods you added' : '' ].filter( Boolean ).join( ' and ' );
 			hcNote = hcNote ? 'Plus ' + hcNote + '.' : null;
 			return h( 'div', { class: 'ypt-field' },
 				h( 'label', { for: id }, foodName( k ) + ( date === todayStr() ? ' today' : ' on ' + fmtDay( date ).replace( /^\w+, /, '' ) ) ),
@@ -8960,7 +8965,7 @@
 					appCall( 'healthInstall' ).catch( function () {} );
 					throw new Error( 'Health Connect needs an update first. We opened Google Play for it.' );
 				}
-				throw new Error( 'Health Connect isn’t on this phone. It comes with Android 14 and later, or from Google Play on older phones.' );
+				throw new Error( NATIVE_IOS ? 'Apple Health isn’t available on this device.' : 'Health Connect isn’t on this phone. It comes with Android 14 and later, or from Google Play on older phones.' );
 			}
 			return appCall( 'healthRequest' );
 		} ).then( function ( r ) {
@@ -8975,7 +8980,7 @@
 	function hcDisconnect() {
 		saveJSON( HC_KEY, { on: false, last: 0 } );
 		render();
-		toast( 'Health Connect is off. What it brought in stays in your tracker.' );
+		toast( HC_NAME + ' is off. What it brought in stays in your tracker.' );
 	}
 
 	/** Brings in what's new from Health Connect. `manual` says so with a toast. */
@@ -8992,11 +8997,11 @@
 			var n = applyHealth( r || {}, dateStr( since ) );
 			saveJSON( HC_KEY, { on: true, last: Date.now() } );
 			if ( manual ) {
-				toast( n ? 'Health Connect: ' + n + ' day' + ( n === 1 ? '' : 's' ) + ' updated' : 'Health Connect: you’re up to date' );
+				toast( n ? HC_NAME + ': ' + n + ' day' + ( n === 1 ? '' : 's' ) + ' updated' : HC_NAME + ': you’re up to date' );
 			}
 		} ).catch( function ( err ) {
 			if ( manual ) {
-				toast( err && err.message ? err.message : 'Health Connect couldn’t be read.' );
+				toast( err && err.message ? err.message : HC_NAME + ' couldn’t be read.' );
 			}
 		} ).then( function () {
 			hcBusy = false;
@@ -9115,26 +9120,26 @@
 		queue.push( { op: 'put', kind: kind, id: id, data: data } );
 	}
 
-	/** Me › Health Connect (Android app only). */
+	/** Me › Health Connect (Android app) or Apple Health (iPhone app). */
 	function healthCard() {
 		if ( ! appPlugin() ) {
 			return null;
 		}
 		var st = hcState();
-		var wrap = h( 'div', null, h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Health Connect' ) );
+		var wrap = h( 'div', null, h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, HC_NAME ) );
 		var card = h( 'div', { class: 'ypt-card' } );
 		wrap.appendChild( card );
 		if ( ! st.on ) {
-			card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, 'Bring in your weight, body fat, protein, calories and water from Health Connect. Samsung Health, Fitbit, smart scales and food apps like MyFitnessPal can all write there.' ) );
+			card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, NATIVE_IOS ? 'Bring in your weight, body fat, protein, calories and water from Apple Health. Smart scales and food apps like MyFitnessPal can all write there.' : 'Bring in your weight, body fat, protein, calories and water from Health Connect. Samsung Health, Fitbit, smart scales and food apps like MyFitnessPal can all write there.' ) );
 			card.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function ( ev ) {
 				var btn = ev.currentTarget;
 				btn.disabled = true;
 				hcConnect().catch( function ( err ) {
-					toast( err.message || 'Health Connect couldn’t be connected.' );
+					toast( err.message || HC_NAME + ' couldn’t be connected.' );
 				} ).then( function () {
 					btn.disabled = false;
 				} );
-			} }, icon( 'heart' ), ' Connect Health Connect' ) );
+			} }, icon( 'heart' ), NATIVE_IOS ? ' Connect Apple Health' : ' Connect Health Connect' ) );
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '10px 0 0' } }, 'Read only: nothing from your tracker is written there. Imported numbers are encrypted here like everything else.' ) );
 			return wrap;
 		}
@@ -9303,6 +9308,8 @@
 
 	var NATIVE = !! ( window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform() && typeof window.Capacitor.nativePromise === 'function' );
 	var NATIVE_IOS = NATIVE && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'ios';
+	// What the phone's health store is called, for Me and the food notes.
+	var HC_NAME = NATIVE_IOS ? 'Apple Health' : 'Health Connect';
 	var NATIVE_KEY = 'ypt-native-reminders:' + ( CFG.userKey || 'anon' );
 	var NATIVE_DAYS = 14;
 	// Android limits how many alarms one app can have waiting (about 500);
@@ -9651,7 +9658,7 @@
 	 * as onChange's second argument.
 	 */
 	function compoundInput( id, value, onChange, placeholder ) {
-		var input = h( 'input', { class: 'ypt-input', id: id, type: 'text', value: value || '', autocomplete: 'off', autocapitalize: 'words', spellcheck: 'false', placeholder: placeholder || 'e.g. BPC-157 or Metformin', maxlength: '80' } );
+		var input = h( 'input', { class: 'ypt-input', id: id, type: 'text', value: value || '', autocomplete: 'off', autocapitalize: 'words', spellcheck: 'false', placeholder: placeholder || 'e.g. Vitamin D or Metformin', maxlength: '80' } );
 		var box = h( 'div', { class: 'ypt-suggest', hidden: true } );
 		var names = ( CFG.compounds || [] ).slice();
 		var routes = {};
@@ -10737,7 +10744,7 @@
 			inputs,
 			result,
 			stockBox,
-			h( 'p', { class: 'ypt-hint' }, 'Same math as the ', h( 'a', { href: CFG.calculatorUrl }, 'Peptide & Hormone Calculator' ), '. Always double-check against your vial’s label.' ),
+			h( 'p', { class: 'ypt-hint' }, 'Same math as the ', NATIVE ? 'Calculator tab' : h( 'a', { href: CFG.calculatorUrl }, 'Dose Calculator' ), '. Always double-check against your vial’s label.' ),
 			existing ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px' }, onclick: function () {
 				if ( window.confirm( 'Delete this ' + ( isPen( v ) ? 'pen' : 'vial' ) + '?' ) ) {
 					closeSheet();

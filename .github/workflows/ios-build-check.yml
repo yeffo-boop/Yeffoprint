@@ -1,0 +1,48 @@
+# Compiles the iPhone app (and its widget) without signing on every pull
+# request that touches it, so Swift or project mistakes show up before
+# anything goes to TestFlight. Needs no secrets.
+
+name: iPhone app builds
+
+on:
+  pull_request:
+    paths:
+      - 'tracker-android/ios/**'
+      - 'tracker-android/package*.json'
+      - 'tracker-android/capacitor.config.json'
+      - '.github/workflows/ios-*.yml'
+
+concurrency:
+  group: ios-build-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: tracker-android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tracker-android/package-lock.json
+
+      - name: Install and sync
+        run: |
+          npm ci
+          npx cap sync ios
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild build \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
