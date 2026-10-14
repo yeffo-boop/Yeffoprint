@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-14a',
+		'date'  => '2026-10-14',
+		'title' => 'YeffoHealth is on Google Play',
+		'text'  => 'Android users can now install the YeffoHealth app from the Google Play Store. Sign in with the same account and everything is already there, with reminders that arrive right on your phone and a Home Screen widget.',
+	],
+	[
 		'id'    => '2026-10-11a',
 		'date'  => '2026-10-11',
 		'title' => 'Search foods and scan barcodes',

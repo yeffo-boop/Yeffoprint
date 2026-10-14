@@ -405,6 +405,15 @@
 		return NATIVE || window.matchMedia( '(display-mode: standalone)' ).matches || window.navigator.standalone === true;
 	}
 
+	function isAndroid() {
+		return /android/i.test( navigator.userAgent );
+	}
+
+	// Android browsers (not the app itself) are pointed at the Play Store app instead of Add to Home Screen.
+	function wantsPlayApp() {
+		return ! NATIVE && !! CFG.playUrl && isAndroid();
+	}
+
 	function isIOS() {
 		return /iphone|ipad|ipod/i.test( navigator.userAgent ) || ( navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 );
 	}
@@ -2696,7 +2705,24 @@
 		openSheet( 'What’s new', 'YeffoHealth', [ h( 'div', { class: 'ypt-card ypt-list' }, newsList().map( newsItem ) ) ] );
 	}
 
+	function playBanner() {
+		if ( loadJSON( 'ypt-play-dismissed', 0 ) ) {
+			return null;
+		}
+		return h( 'div', { class: 'ypt-banner ypt-banner--info ypt-banner--play' },
+			h( 'div', null, h( 'b', null, 'Get the YeffoHealth app' ), ' for Android. Reminders arrive right on your phone, plus a Home Screen widget.',
+				h( 'a', { class: 'ypt-play-badge', href: CFG.playUrl, target: '_blank', rel: 'noopener' },
+					h( 'img', { src: CFG.playBadge, alt: 'Get it on Google Play', width: 161, height: 62 } ) ) ),
+			h( 'button', { type: 'button', class: 'ypt-banner__close', 'aria-label': 'Dismiss', onclick: function () {
+				saveJSON( 'ypt-play-dismissed', Date.now() );
+				render();
+			} }, '×' ) );
+	}
+
 	function installBanner() {
+		if ( wantsPlayApp() ) {
+			return playBanner();
+		}
 		var dismissed = loadJSON( 'ypt-install-dismissed', 0 );
 		if ( isStandalone() || ( dismissed && Date.now() - dismissed < 14 * 86400000 ) ) {
 			return null;
@@ -6553,7 +6579,8 @@
 
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Tools' ) );
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
-			! isStandalone() && installPrompt ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: promptInstall }, h( 'span', null, 'Install the app' ), h( 'span', null, '›' ) ) : null,
+			wantsPlayApp() ? h( 'a', { class: 'ypt-list-row', href: CFG.playUrl, target: '_blank', rel: 'noopener' }, h( 'span', null, 'Get the Android app' ), h( 'span', null, 'Google Play ›' ) ) : null,
+			! wantsPlayApp() && ! isStandalone() && installPrompt ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: promptInstall }, h( 'span', null, 'Install the app' ), h( 'span', null, '›' ) ) : null,
 			! isStandalone() && isIOS() ? h( 'div', { class: 'ypt-list-row' }, h( 'span', null, 'Add to Home Screen' ), h( 'span', null, 'Share → Add to Home Screen' ) ) : null,
 			h( 'a', { class: 'ypt-list-row', href: CFG.calculatorUrl }, h( 'span', null, 'Peptide & Hormone Calculator' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openLibrarySheet }, h( 'span', null, 'Compound library' ), h( 'span', null, 'Half-lives & storage ›' ) ),
@@ -9275,10 +9302,12 @@
 	 * ======================================================= */
 
 	var NATIVE = !! ( window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform() && typeof window.Capacitor.nativePromise === 'function' );
+	var NATIVE_IOS = NATIVE && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'ios';
 	var NATIVE_KEY = 'ypt-native-reminders:' + ( CFG.userKey || 'anon' );
 	var NATIVE_DAYS = 14;
-	// Android limits how many alarms one app can have waiting (about 500).
-	var NATIVE_MAX = 150;
+	// Android limits how many alarms one app can have waiting (about 500);
+	// iPhone keeps only the 64 soonest and silently drops the rest.
+	var NATIVE_MAX = NATIVE_IOS ? 64 : 150;
 	var NATIVE_CHANNEL = 'yp-reminders';
 	// Snoozed reminders waiting on this phone ({slots, at, n}, at in seconds like the server's).
 	var NATIVE_SNOOZE_KEY = 'ypt-native-snooze:' + ( CFG.userKey || 'anon' );
@@ -9289,6 +9318,14 @@
 	var nativeTimer = null;
 
 	function nativeCall( method, options ) {
+		// Channels and "Alarms & reminders" are Android only: iPhone has neither
+		// and always delivers on time, so answer for it instead of failing.
+		if ( NATIVE_IOS && method === 'createChannel' ) {
+			return Promise.resolve( null );
+		}
+		if ( NATIVE_IOS && ( method === 'checkExactNotificationSetting' || method === 'changeExactNotificationSetting' ) ) {
+			return Promise.resolve( { exact_alarm: 'granted' } );
+		}
 		return window.Capacitor.nativePromise( 'LocalNotifications', method, options || {} );
 	}
 
@@ -11240,6 +11277,12 @@
 		wrap.appendChild( h( 'header', { class: 'ypt-top' },
 			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, guest ? 'Free · no account needed' : 'Vials, pens & doses' ), h( 'h1', null, 'Calculator' ) )
 		) );
+		if ( guest && wantsPlayApp() ) {
+			var play = playBanner();
+			if ( play ) {
+				wrap.appendChild( play );
+			}
+		}
 
 		wrap.appendChild( h( 'div', { class: 'ypt-calc-modes', role: 'group', 'aria-label': 'What you’re measuring' }, CALC_MODES.map( function ( m ) {
 			return h( 'button', { type: 'button', class: 'ypt-calc-mode', 'aria-pressed': c.mode === m[ 0 ] ? 'true' : 'false', onclick: function () {

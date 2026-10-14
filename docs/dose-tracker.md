@@ -182,6 +182,15 @@ web app shows up in the Android app on the next open, with no app update.
   Apple work.
 - The app is called **YeffoHealth** (`com.yeffohealth.app`), with the
   same striped vial icon as the web app.
+- It's live on Google Play (`playUrl` in the tracker config). Android
+  browsers, signed in or not, see a "Get the YeffoHealth app" banner with
+  the Play badge in place of the Add to Home Screen one (tracker.js
+  `playBanner()`), and Me › Tools links to Play. Dismissing it hides it
+  for good on that browser (`ypt-play-dismissed`). It never shows inside
+  the app (`NATIVE`). The /health/ page has the same banner
+  (theme `assets/js/yeffohealth.js`, which spots the app by the
+  `YeffoHealth/` user agent the app appends) and a Play badge card for
+  everyone.
 - Me › Privacy links to "Delete my account" (`deleteAccountUrl`), which
   Google Play requires to be reachable from inside the app.
 - **Health Connect** (app 1.1+, Me › Health Connect): read only. The

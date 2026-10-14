@@ -32,5 +32,8 @@
       "initialViewportFitValueHint": "cover",
       "style": "LIGHT"
     }
+  },
+  "ios": {
+    "appendUserAgent": "YeffoHealth/1.0"
   }
 }

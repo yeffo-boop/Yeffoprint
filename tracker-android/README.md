@@ -1,6 +1,7 @@
-# YeffoHealth for Android
+# YeffoHealth for Android and iPhone
 
-A [Capacitor](https://capacitorjs.com) app that opens the live YeffoHealth
+A [Capacitor](https://capacitorjs.com) app (Android in `android/`, iPhone
+in `ios/`; the folder name predates the iPhone app) that opens the live YeffoHealth
 tracker (`https://yeffodesign.com/tracker/`) full screen, with native reminders
 scheduled on the phone. How it fits the web tracker is in
 [`docs/dose-tracker.md`](../docs/dose-tracker.md#android-app).
@@ -78,3 +79,33 @@ Install that APK on a phone to try it: copy it over and open it (allow
 - Policy risk: Google restricts apps that promote or facilitate
   unapproved substances. Describe the app as a medication and supplement
   tracker, and keep peptide shopping out of the listing and screenshots.
+
+## iPhone (ios/)
+
+Same app, same id (`com.yeffohealth.app`), iPhone only (no iPad layout),
+portrait. It has reminders (local notifications, at most the 64 soonest,
+iPhone's limit), the camera for barcode scanning and photos, and Me ›
+Privacy › Delete my account. Health Connect and the widget are Android
+only for now (tracker.js hides them when the native plugin isn't there).
+
+Building needs a Mac with Xcode 26, or no Mac at all with the GitHub
+workflow `.github/workflows/ios-testflight.yml`: it archives on a GitHub
+Mac runner and uploads to App Store Connect (TestFlight). Run it from
+Actions › "iPhone app to TestFlight" › Run workflow. It needs four repo
+secrets, `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_P8`
+(an App Store Connect API key with the Admin role, so Xcode can create
+the signing certificate itself). The build number is the run number; the
+version shown in the App Store is `MARKETING_VERSION` in
+`ios/App/App.xcodeproj/project.pbxproj`.
+
+On a Mac instead: `npm install && npx cap sync ios`, open
+`ios/App/App.xcodeproj`, pick your team under Signing & Capabilities, then
+Product › Archive › Distribute App › App Store Connect.
+
+Icons and splash: the same `npx capacitor-assets generate` command as
+above with `--ios` instead of `--android`. The App Store icon must have no
+transparency (the generated one doesn't).
+
+App Review notes: give a test login, say reminders are scheduled on the
+phone, and that accounts can be deleted at Me › Privacy. Sign in with
+Apple is on the sign-in page (needed because Discord sign-in is offered).
