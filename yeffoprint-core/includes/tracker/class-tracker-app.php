@@ -228,6 +228,9 @@ class YeffoPrint_Tracker_App {
 			'cartUrl'       => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/cart/' ),
 			'qtyPresets'    => function_exists( 'yeffoprint_core_quantity_presets' ) ? array_values( array_map( 'intval', yeffoprint_core_quantity_presets() ) ) : [ 10, 20, 30, 50, 100 ],
 			'calculatorUrl' => home_url( '/peptide-calculator/' ),
+			// The Android app on Google Play. Android browsers get a banner pointing here (tracker.js playBanner()).
+			'playUrl'       => 'https://play.google.com/store/apps/details?id=com.yeffohealth.app',
+			'playBadge'     => YEFFOPRINT_CORE_URL . 'assets/tracker/icons/google-play-badge.png',
 			'compounds'     => self::compound_names(),
 			'medications'   => YeffoPrint_Tracker_Medications::all(),
 			'library'       => YeffoPrint_Tracker_Compounds::all(),

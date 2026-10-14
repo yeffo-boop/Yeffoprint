@@ -115,7 +115,106 @@
 	color: var(--wp--preset--color--charcoal);
 }
 
+/* Google Play: a card for everyone, plus a dismissible banner for Android browsers (assets/js/yeffohealth.js). */
+.yp-health__android {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem 1.5rem;
+	margin-top: 1.25rem;
+	padding: 1.25rem 1.75rem;
+	background: #fff;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 1.25rem;
+}
+
+.yp-health__android div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.yp-health__android b {
+	font-size: 1.1rem;
+}
+
+.yp-health__android span {
+	color: var(--wp--preset--color--charcoal);
+	font-size: 0.95rem;
+}
+
+.yp-health__play {
+	flex: none;
+	width: 181px;
+	height: 70px;
+	margin: -10px -12px;
+	background: url(../images/google-play-badge.png) center / contain no-repeat;
+}
+
+.yp-health__play-banner {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: 1.5rem;
+	padding: 0.75rem 0.9rem;
+	background: #fff;
+	border: 1px solid var(--wp--preset--color--light-gray);
+	border-radius: 1rem;
+	box-shadow: 0 4px 16px rgba(20, 20, 20, 0.06);
+}
+
+.yp-health__play-banner[hidden] {
+	display: none;
+}
+
+.yp-health__play-banner-icon {
+	flex: none;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 0.65rem;
+	background: url(../images/health-tracker.png) center / contain no-repeat;
+}
+
+.yp-health__play-banner-text {
+	flex: 1;
+	font-size: 0.9rem;
+	line-height: 1.35;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-health__play-banner-text b {
+	display: block;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-health__play-banner-get {
+	flex: none;
+	padding: 0.45rem 1rem;
+	border-radius: 999px;
+	background: var(--wp--preset--color--near-black);
+	color: #fff;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.yp-health__play-banner-close {
+	flex: none;
+	padding: 0.25rem 0.4rem;
+	border: 0;
+	background: none;
+	font-size: 1.3rem;
+	line-height: 1;
+	color: var(--wp--preset--color--charcoal);
+	cursor: pointer;
+}
+
 @media (max-width: 720px) {
+	.yp-health__android {
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 1.4rem;
+	}
+
 	.yp-health {
 		padding-block: 2rem 3rem;
 	}

@@ -617,6 +617,8 @@ a { color: var(--ypt-cyan-deep); }
 
 .ypt-banner--info { background: var(--ypt-info-soft); border-color: var(--ypt-info-line); }
 .ypt-banner--warn { background: var(--ypt-warn-soft); border-color: var(--ypt-warn-line); }
+.ypt-play-badge { display: block; width: max-content; margin: 6px 0 -4px -8px; line-height: 0; }
+.ypt-play-badge img { height: 62px; width: auto; }
 .ypt-banner > div { flex: 1; }
 .ypt-banner b { color: var(--ypt-magenta-deep); }
 .ypt-banner--info b { color: var(--ypt-cyan-deep); }
