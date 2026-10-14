@@ -6582,7 +6582,10 @@
 			wantsPlayApp() ? h( 'a', { class: 'ypt-list-row', href: CFG.playUrl, target: '_blank', rel: 'noopener' }, h( 'span', null, 'Get the Android app' ), h( 'span', null, 'Google Play ›' ) ) : null,
 			! wantsPlayApp() && ! isStandalone() && installPrompt ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: promptInstall }, h( 'span', null, 'Install the app' ), h( 'span', null, '›' ) ) : null,
 			! isStandalone() && isIOS() ? h( 'div', { class: 'ypt-list-row' }, h( 'span', null, 'Add to Home Screen' ), h( 'span', null, 'Share → Add to Home Screen' ) ) : null,
-			h( 'a', { class: 'ypt-list-row', href: CFG.calculatorUrl }, h( 'span', null, 'Peptide & Hormone Calculator' ), h( 'span', null, '›' ) ),
+			// In the apps the calculator is already a tab, so this opens it there instead of the website's page.
+			NATIVE ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+				go( 'calc' );
+			} }, h( 'span', null, 'Dose Calculator' ), h( 'span', null, '›' ) ) : h( 'a', { class: 'ypt-list-row', href: CFG.calculatorUrl }, h( 'span', null, 'Dose Calculator' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openLibrarySheet }, h( 'span', null, 'Compound library' ), h( 'span', null, 'Half-lives & storage ›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openReportSheet }, h( 'span', null, 'Printable report (PDF)' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: exportCsv }, h( 'span', null, 'Export dose history (CSV)' ), h( 'span', null, '›' ) ),
@@ -10741,7 +10744,7 @@
 			inputs,
 			result,
 			stockBox,
-			h( 'p', { class: 'ypt-hint' }, 'Same math as the ', h( 'a', { href: CFG.calculatorUrl }, 'Peptide & Hormone Calculator' ), '. Always double-check against your vial’s label.' ),
+			h( 'p', { class: 'ypt-hint' }, 'Same math as the ', NATIVE ? 'Calculator tab' : h( 'a', { href: CFG.calculatorUrl }, 'Dose Calculator' ), '. Always double-check against your vial’s label.' ),
 			existing ? h( 'button', { type: 'button', class: 'ypt-link', style: { color: 'var(--ypt-danger)', marginTop: '12px' }, onclick: function () {
 				if ( window.confirm( 'Delete this ' + ( isPen( v ) ? 'pen' : 'vial' ) + '?' ) ) {
 					closeSheet();
