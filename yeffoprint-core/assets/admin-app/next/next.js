@@ -981,13 +981,15 @@
 	function proofCardHtml( c ) {
 		var latest = c.proofs && c.proofs.length ? c.proofs[ 0 ] : null;
 		var needs = 'design_in_progress' === c.status || 'proof_ready' === c.status;
+		// Own print-ready file or a reorder: the customer's design is final, no proof round.
+		var noProof = ! latest && !! c.design_choice && ( 'own_design' === c.design_choice.key || 'reorder' === c.design_choice.key );
 		var note = c.change_request_notes && 'design_in_progress' === c.status
 			? '<div class="ypn-proof__changes"><b>Customer asked for changes</b>' + esc( c.change_request_notes ) + '</div>'
 			: '';
 
 		return (
 			'<section class="ypn-card ypn-proof" data-ypn-proof="' + c.id + '">' +
-				'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--' + ( needs ? 'mag' : ( 'awaiting_approval' === c.status ? 'yel' : 'grn' ) ) + '">' + esc( c.status_label || 'Not paid yet' ) + '</span></span></h3>' +
+				'<h3 class="ypn-card__title">' + ( noProof ? 'Design' : 'Proof' ) + ' <span><span class="ypn-pill ypn-pill--' + ( needs ? 'mag' : ( 'awaiting_approval' === c.status ? 'yel' : 'grn' ) ) + '">' + esc( c.status_label || 'Not paid yet' ) + '</span></span></h3>' +
 				'<p class="ypn-proof__title">' + esc( c.title ) + ( c.order_type_label ? ' · ' + esc( c.order_type_label ) : '' ) + '</p>' +
 				designChoiceHtml( c.design_choice ) +
 				customerFilesHtml( c ) +
@@ -1001,8 +1003,8 @@
 				( c.paid
 					? '<label class="ypn-drop' + ( needs ? ' is-wanted' : '' ) + '" data-ypn-drop-proof="' + c.id + '">' +
 						'<input type="file" accept="image/*,application/pdf" hidden data-ypn-proof-file="' + c.id + '">' +
-						'<b>' + ( latest ? 'Drop a new proof here' : 'Drop the proof PDF or PNG here' ) + '</b>' +
-						'<span>or tap to choose a file. The customer gets an approval link right away.</span>' +
+						'<b>' + ( noProof ? 'No proof needed' : ( latest ? 'Drop a new proof here' : 'Drop the proof PDF or PNG here' ) ) + '</b>' +
+						'<span>' + ( noProof ? 'The customer supplied the final design. Drop a file here only if you want them to approve something.' : 'or tap to choose a file. The customer gets an approval link right away.' ) + '</span>' +
 					'</label>'
 					: '<p class="yp-field__hint">The proof can be sent once this order is paid.</p>' ) +
 				'<p class="ypn-proof__foot"><a href="#/orders/' + c.id + '">Open in Custom Orders &rsaquo;</a></p>' +

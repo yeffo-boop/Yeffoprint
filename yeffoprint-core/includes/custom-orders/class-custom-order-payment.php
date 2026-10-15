@@ -46,6 +46,37 @@ class YeffoPrint_Custom_Order_Payment {
 		add_action( 'woocommerce_order_status_cancelled', [ $this, 'trash_unpaid_custom_orders' ] );
 		add_action( 'woocommerce_trash_order', [ $this, 'trash_unpaid_custom_orders' ] );
 		add_action( 'woocommerce_before_delete_order', [ $this, 'trash_unpaid_custom_orders' ] );
+
+		add_action( 'init', [ $this, 'backfill_skipped_proofs' ], 20 );
+	}
+
+	private const SKIPPED_PROOFS_BACKFILLED_OPTION = 'yeffoprint_skipped_proofs_backfilled';
+
+	/**
+	 * One time: paid print-ready uploads and reorders that were already
+	 * waiting on a proof (they all started in "Design in progress"
+	 * before skips_proof() existed) move to Approved, unless a proof was
+	 * already sent for them.
+	 */
+	public function backfill_skipped_proofs(): void {
+		if ( get_option( self::SKIPPED_PROOFS_BACKFILLED_OPTION ) ) {
+			return;
+		}
+		update_option( self::SKIPPED_PROOFS_BACKFILLED_OPTION, 1 );
+
+		$ids = get_posts( [
+			'post_type'      => 'yp_custom_order',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'meta_query'     => [ [ 'key' => YeffoPrint_Custom_Order_Meta::STATUS, 'value' => [ 'design_in_progress', 'proof_ready' ], 'compare' => 'IN' ] ],
+		] );
+
+		foreach ( $ids as $custom_order_id ) {
+			if ( YeffoPrint_Custom_Order_Meta::skips_proof( (int) $custom_order_id ) && ! YeffoPrint_Proof_Meta::get_for_custom_order( (int) $custom_order_id ) ) {
+				update_post_meta( (int) $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'approved' );
+			}
+		}
 	}
 
 	/**
@@ -105,7 +136,7 @@ class YeffoPrint_Custom_Order_Payment {
 				'post_status' => 'publish',
 			] );
 
-			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'design_in_progress' );
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, YeffoPrint_Custom_Order_Meta::skips_proof( $custom_order_id ) ? 'approved' : 'design_in_progress' );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::WC_ORDER_ID, $order_id );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::DESIGN_FEE, $this->find_design_fee( $order, $custom_order_id ) );
 			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOMER_EMAIL, $order->get_billing_email() );

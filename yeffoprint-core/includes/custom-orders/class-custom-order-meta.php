@@ -378,6 +378,19 @@ class YeffoPrint_Custom_Order_Meta {
 	];
 
 	/**
+	 * Whether a custom label request goes straight to Approved once paid,
+	 * with no proof round — direct request: a customer who uploads their
+	 * own print-ready file already supplied the final design. A reorder
+	 * prints an already-approved design with no changes, so it skips the
+	 * proof too.
+	 */
+	public static function skips_proof( int $custom_order_id ): bool {
+		return 'label' === self::get_order_type( $custom_order_id )
+			&& ( (bool) get_post_meta( $custom_order_id, self::CUSTOMER_PROVIDED_DESIGN, true )
+				|| (bool) get_post_meta( $custom_order_id, self::SOURCE_CUSTOM_ORDER_ID, true ) );
+	}
+
+	/**
 	 * Whether this order's $25 fee was intentionally never charged (a
 	 * customer-provided design, a fee-free reorder, or staff waiving it on
 	 * a manually-created order) — so "no fee line item on the WooCommerce
