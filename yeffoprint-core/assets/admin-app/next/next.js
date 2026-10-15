@@ -937,6 +937,23 @@
 			( choice.detail ? '<span class="ypn-choice__detail">' + esc( choice.detail ) + '</span>' : '' ) + '</div>';
 	}
 
+	/* The customer's own files on a custom label request: the print-ready
+	   file for "Own print-ready design", inspiration files otherwise. */
+	function customerFilesHtml( c ) {
+		var files = c.label && c.label.uploads ? c.label.uploads : [];
+		if ( ! files.length ) {
+			return '';
+		}
+		return '<div class="ypn-files"><b>' + esc( c.label.uploads_label ) + '</b><div class="ypn-files__list">' +
+			files.map( function ( f ) {
+				var isImage = /\.(png|jpe?g|gif|webp)$/i.test( f.name );
+				return '<a class="ypn-files__item" href="' + escAttr( f.url ) + '" target="_blank" rel="noopener noreferrer">' +
+					( isImage ? '<img src="' + escAttr( f.url ) + '" alt="" loading="lazy">' : '' ) +
+					'<span>' + esc( f.name ) + '</span></a>';
+			} ).join( '' ) +
+		'</div></div>';
+	}
+
 	function labelCardHtml( item ) {
 		var preview = item.image_url
 			? '<img src="' + escAttr( item.image_url ) + '" alt="" loading="lazy">'
@@ -973,6 +990,7 @@
 				'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--' + ( needs ? 'mag' : ( 'awaiting_approval' === c.status ? 'yel' : 'grn' ) ) + '">' + esc( c.status_label || 'Not paid yet' ) + '</span></span></h3>' +
 				'<p class="ypn-proof__title">' + esc( c.title ) + ( c.order_type_label ? ' · ' + esc( c.order_type_label ) : '' ) + '</p>' +
 				designChoiceHtml( c.design_choice ) +
+				customerFilesHtml( c ) +
 				note +
 				( latest
 					? '<p class="ypn-proof__latest">Last proof sent ' + esc( new Date( latest.date ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } ) ) +

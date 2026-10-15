@@ -1701,6 +1701,36 @@ body.yp-next [data-yp-dashboard] > .yp-attn {
 	font-size: 12.5px;
 }
 
+/* Customer files on the Proof card (print-ready or inspiration). */
+.ypn-files {
+	margin: 4px 0 10px;
+	font-size: 13px;
+}
+
+.ypn-files__list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 6px;
+}
+
+.ypn-files__item {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	max-width: 180px;
+	color: inherit;
+	overflow-wrap: anywhere;
+}
+
+.ypn-files__item img {
+	width: 180px;
+	max-height: 120px;
+	object-fit: contain;
+	background: #f4f4f4;
+	border-radius: 6px;
+}
+
 .ypn-lab__meta {
 	color: var(--ypn-mute);
 	font-size: 12.5px;
