@@ -748,6 +748,10 @@ class YeffoPrint_Admin_Order_Controller {
 			// Shown on the label card itself so an order with several
 			// brands can be told apart without opening Details.
 			'brands'    => self::item_brands( $item ),
+			// Which Create a Custom Label option the customer picked
+			// (new design / own file / reorder) — on the labels lines
+			// only, not the $25 fee line that rides along with them.
+			'design_choice' => self::item_design_choice( $item, $product ),
 			// display_value is already wp_kses_post()-safe HTML by the
 			// time get_formatted_meta_data() returns it (WC_Order_Item's
 			// own method) — the same batch tables/variant summaries/QR
@@ -768,6 +772,15 @@ class YeffoPrint_Admin_Order_Controller {
 				return [ 'label' => (string) $entry->display_key, 'value' => (string) $entry->display_value ];
 			}, self::formatted_meta_data( $item ) ) ),
 		];
+	}
+
+	private static function item_design_choice( \WC_Order_Item_Product $item, $product ): ?array {
+		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
+		if ( ! $custom_order_id || ( $product && $product->get_id() === YeffoPrint_Custom_Design_Fee_Product::get_product_id() ) ) {
+			return null;
+		}
+		$order = $item->get_order();
+		return YeffoPrint_Custom_Order_Meta::get_design_choice( $custom_order_id, $order instanceof \WC_Order ? $order : null );
 	}
 
 	/**

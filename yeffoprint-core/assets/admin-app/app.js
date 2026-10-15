@@ -1377,12 +1377,17 @@
 						} ).join( '' ) +
 					'</dl>'
 					: '';
+				// The Create a Custom Label option the customer picked.
+				var choiceHtml = item.design_choice
+					? '<div class="yp-field__hint" style="margin:0.15rem 0 0;"><strong>Customer chose: ' + YP.escapeHtml( item.design_choice.label ) + '</strong>' +
+						( item.design_choice.detail ? ' · ' + YP.escapeHtml( item.design_choice.detail ) : '' ) + '</div>'
+					: '';
 				var thumbHtml = item.image_url
 					? '<img class="yp-swatch" src="' + YP.escapeAttr( item.image_url ) + '" alt="">'
 					: '<span class="yp-swatch" aria-hidden="true"></span>';
 				return (
 					'<tr>' +
-						'<td><div class="yp-record-name">' + thumbHtml + '<div>' + YP.escapeHtml( item.name ) + metaHtml + '</div></div></td>' +
+						'<td><div class="yp-record-name">' + thumbHtml + '<div>' + YP.escapeHtml( item.name ) + choiceHtml + metaHtml + '</div></div></td>' +
 						'<td>' + item.quantity + '</td>' +
 						'<td>$' + item.total.toFixed( 2 ) + '</td>' +
 					'</tr>'

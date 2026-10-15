@@ -318,6 +318,66 @@ class YeffoPrint_Custom_Order_Meta {
 	}
 
 	/**
+	 * Which option the customer picked on the Create a Custom Label form,
+	 * worded the way the admin app shows it. Nothing new is stored for
+	 * this: the form's choice already leaves its own mark on every
+	 * request (SOURCE_CUSTOM_ORDER_ID for a reorder, CUSTOMER_PROVIDED_
+	 * DESIGN for their own file, the canvas size for a Label Designer
+	 * submission), so older orders show it too.
+	 *
+	 * A Create Order (staff-made) request never went through the form,
+	 * which only the WooCommerce order can tell — pass it when known.
+	 *
+	 * @return array{key:string, label:string, detail:string}|null Null for stickers/templates.
+	 */
+	public static function get_design_choice( int $custom_order_id, ?\WC_Order $order = null ): ?array {
+		if ( 'label' !== self::get_order_type( $custom_order_id ) ) {
+			return null;
+		}
+
+		$meta = static function ( string $key ) use ( $custom_order_id ) {
+			return get_post_meta( $custom_order_id, $key, true );
+		};
+
+		$detail    = '';
+		$source_id = (int) $meta( self::SOURCE_CUSTOM_ORDER_ID );
+
+		if ( $source_id ) {
+			$key         = 'reorder';
+			$source_wc   = (int) get_post_meta( $source_id, self::WC_ORDER_ID, true );
+			$source_wc_o = $source_wc && function_exists( 'wc_get_order' ) ? wc_get_order( $source_wc ) : null;
+			$detail      = $source_wc_o ? sprintf( 'Same design as order #%s', $source_wc_o->get_order_number() ) : '';
+		} elseif ( $meta( self::CUSTOMER_PROVIDED_DESIGN ) ) {
+			$key    = 'own_design';
+			$detail = 'Print their uploaded file as-is';
+		} elseif ( (float) $meta( self::CANVAS_WIDTH_MM ) > 0 ) {
+			$key    = 'designer';
+			$detail = 'Build the print file from their canvas';
+		} elseif ( $order && $order->get_meta( '_yp_manually_created' ) ) {
+			$key    = 'staff';
+			$detail = $meta( self::FEE_WAIVED ) ? 'Design fee waived' : '';
+		} else {
+			$key    = 'new_design';
+			$detail = 'Design it from their notes';
+		}
+
+		return [
+			'key'    => $key,
+			'label'  => self::DESIGN_CHOICES[ $key ],
+			'detail' => $detail,
+		];
+	}
+
+	/** Labels for get_design_choice(), matching the form's own choice cards. */
+	public const DESIGN_CHOICES = [
+		'new_design' => 'Design something new',
+		'own_design' => 'Own print-ready design',
+		'reorder'    => 'Reorder a past design',
+		'designer'   => 'Made in the Label Designer',
+		'staff'      => 'Created in Create Order',
+	];
+
+	/**
 	 * Whether this order's $25 fee was intentionally never charged (a
 	 * customer-provided design, a fee-free reorder, or staff waiving it on
 	 * a manually-created order) — so "no fee line item on the WooCommerce

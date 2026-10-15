@@ -221,6 +221,9 @@
 				fieldsHtml += field( 'Instructions', t.instructions ? YP.escapeHtml( t.instructions ).replace( /\n/g, '<br>' ) : '—' );
 			} else {
 				var l = order.label;
+				if ( order.design_choice ) {
+					fieldsHtml += field( 'Customer Chose', '<strong>' + YP.escapeHtml( order.design_choice.label ) + '</strong>' + ( order.design_choice.detail ? ' · ' + YP.escapeHtml( order.design_choice.detail ) : '' ) );
+				}
 				fieldsHtml += field( 'Brand Name', YP.escapeHtml( l.brand_name || '—' ) );
 				fieldsHtml += field( 'Style / Colors', l.style_notes ? YP.escapeHtml( l.style_notes ).replace( /\n/g, '<br>' ) : '—' );
 				fieldsHtml += field( 'Instructions', l.instructions ? YP.escapeHtml( l.instructions ).replace( /\n/g, '<br>' ) : '—' );
