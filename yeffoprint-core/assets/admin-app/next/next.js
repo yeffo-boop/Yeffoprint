@@ -944,7 +944,7 @@
 		if ( ! files.length ) {
 			return '';
 		}
-		return '<div class="ypn-files"><b>' + esc( c.label.uploads_label ) + '</b><div class="ypn-files__list">' +
+		return '<div class="ypn-files"><div class="ypn-files__list">' +
 			files.map( function ( f ) {
 				var isImage = /\.(png|jpe?g|gif|webp)$/i.test( f.name );
 				return '<a class="ypn-files__item" href="' + escAttr( f.url ) + '" target="_blank" rel="noopener noreferrer">' +
@@ -981,16 +981,48 @@
 	function proofCardHtml( c ) {
 		var latest = c.proofs && c.proofs.length ? c.proofs[ 0 ] : null;
 		var needs = 'design_in_progress' === c.status || 'proof_ready' === c.status;
+		// Own print-ready file or a reorder: the customer's design is final, no proof round.
+		var noProof = ! latest && !! c.design_choice && ( 'own_design' === c.design_choice.key || 'reorder' === c.design_choice.key );
 		var note = c.change_request_notes && 'design_in_progress' === c.status
 			? '<div class="ypn-proof__changes"><b>Customer asked for changes</b>' + esc( c.change_request_notes ) + '</div>'
 			: '';
 
-		return (
+		// The customer's own files get their own card, above and apart
+		// from the proof upload box (direct request).
+		var filesCard = customerFilesHtml( c );
+		var dropZone = c.paid
+			? '<label class="ypn-drop' + ( needs && ! noProof ? ' is-wanted' : '' ) + '" data-ypn-drop-proof="' + c.id + '">' +
+				'<input type="file" accept="image/*,application/pdf" hidden data-ypn-proof-file="' + c.id + '">' +
+				'<b>' + ( latest ? 'Drop a new proof here' : 'Drop the proof PDF or PNG here' ) + '</b>' +
+				'<span>or tap to choose a file. The customer gets an approval link right away.</span>' +
+			'</label>'
+			: '<p class="yp-field__hint">The proof can be sent once this order is paid.</p>';
+
+		if ( filesCard ) {
+			filesCard =
+				'<section class="ypn-card">' +
+					'<h3 class="ypn-card__title">' + esc( c.label.uploads_label ) + ' <span>' + c.label.uploads.length + ( 1 === c.label.uploads.length ? ' file' : ' files' ) + '</span></h3>' +
+					designChoiceHtml( c.design_choice ) +
+					filesCard +
+				'</section>';
+		}
+
+		if ( noProof ) {
+			// Final design from the customer: no proof box, just a way to send one anyway.
+			return filesCard +
+				'<section class="ypn-card ypn-proof" data-ypn-proof="' + c.id + '">' +
+					'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--grn">No proof needed</span></span></h3>' +
+					( filesCard ? '' : designChoiceHtml( c.design_choice ) ) +
+					'<details class="ypn-proof__anyway"><summary>Send a proof anyway</summary>' + dropZone + '</details>' +
+					'<p class="ypn-proof__foot"><a href="#/orders/' + c.id + '">Open in Custom Orders &rsaquo;</a></p>' +
+				'</section>';
+		}
+
+		return filesCard + (
 			'<section class="ypn-card ypn-proof" data-ypn-proof="' + c.id + '">' +
 				'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--' + ( needs ? 'mag' : ( 'awaiting_approval' === c.status ? 'yel' : 'grn' ) ) + '">' + esc( c.status_label || 'Not paid yet' ) + '</span></span></h3>' +
 				'<p class="ypn-proof__title">' + esc( c.title ) + ( c.order_type_label ? ' · ' + esc( c.order_type_label ) : '' ) + '</p>' +
-				designChoiceHtml( c.design_choice ) +
-				customerFilesHtml( c ) +
+				( filesCard ? '' : designChoiceHtml( c.design_choice ) ) +
 				note +
 				( latest
 					? '<p class="ypn-proof__latest">Last proof sent ' + esc( new Date( latest.date ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } ) ) +
@@ -998,13 +1030,7 @@
 						( c.approval_url ? ' · <button type="button" class="ypn-link" data-ypn-copy="' + escAttr( c.approval_url ) + '">Copy approval link</button>' : '' ) +
 					'</p>'
 					: '' ) +
-				( c.paid
-					? '<label class="ypn-drop' + ( needs ? ' is-wanted' : '' ) + '" data-ypn-drop-proof="' + c.id + '">' +
-						'<input type="file" accept="image/*,application/pdf" hidden data-ypn-proof-file="' + c.id + '">' +
-						'<b>' + ( latest ? 'Drop a new proof here' : 'Drop the proof PDF or PNG here' ) + '</b>' +
-						'<span>or tap to choose a file. The customer gets an approval link right away.</span>' +
-					'</label>'
-					: '<p class="yp-field__hint">The proof can be sent once this order is paid.</p>' ) +
+				dropZone +
 				'<p class="ypn-proof__foot"><a href="#/orders/' + c.id + '">Open in Custom Orders &rsaquo;</a></p>' +
 			'</section>'
 		);
