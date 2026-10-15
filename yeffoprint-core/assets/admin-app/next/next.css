@@ -1687,6 +1687,20 @@ body.yp-next [data-yp-dashboard] > .yp-attn {
 	overflow-wrap: anywhere;
 }
 
+/* The Create a Custom Label option the customer picked (label card + proof card). */
+.ypn-choice {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	margin: 2px 0 6px;
+}
+
+.ypn-choice__detail {
+	color: var(--ypn-mute);
+	font-size: 12.5px;
+}
+
 .ypn-lab__meta {
 	color: var(--ypn-mute);
 	font-size: 12.5px;

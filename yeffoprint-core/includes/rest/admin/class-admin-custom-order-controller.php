@@ -246,6 +246,10 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			'change_request_notes' => (string) $m( YeffoPrint_Custom_Order_Meta::CHANGE_REQUEST_NOTES ),
 			'customer_provided_design' => $customer_provided_design,
 			'source_custom_order_id'  => $source_custom_order_id,
+			'design_choice'       => YeffoPrint_Custom_Order_Meta::get_design_choice(
+				$post->ID,
+				$wc_order_id && function_exists( 'wc_get_order' ) ? ( wc_get_order( $wc_order_id ) ?: null ) : ( 'draft' === $post->post_status ? $this->open_order_for( $post->ID ) : null )
+			),
 			'design_fee'          => (float) $m( YeffoPrint_Custom_Order_Meta::DESIGN_FEE ),
 			'fee_skipped'         => YeffoPrint_Custom_Order_Meta::is_fee_skipped( $post->ID ),
 			'date'                => get_post_datetime( $post ) ? get_post_datetime( $post )->format( 'c' ) : null,

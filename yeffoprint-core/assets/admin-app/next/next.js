@@ -927,6 +927,16 @@
 		return String( name || '?' ).replace( /[^A-Za-z0-9 ]/g, ' ' ).trim().split( /\s+/ ).slice( 0, 2 ).map( function ( w ) { return w.charAt( 0 ); } ).join( '' ).toUpperCase() || '?';
 	}
 
+	/* The Create a Custom Label option the customer picked, as a pill. */
+	var CHOICE_PILL = { new_design: 'mag', own_design: 'grn', reorder: 'cy', designer: 'yel', staff: 'ink' };
+	function designChoiceHtml( choice ) {
+		if ( ! choice ) {
+			return '';
+		}
+		return '<div class="ypn-choice"><span class="ypn-pill ypn-pill--' + ( CHOICE_PILL[ choice.key ] || 'ink' ) + '">' + esc( choice.label ) + '</span>' +
+			( choice.detail ? '<span class="ypn-choice__detail">' + esc( choice.detail ) + '</span>' : '' ) + '</div>';
+	}
+
 	function labelCardHtml( item ) {
 		var preview = item.image_url
 			? '<img src="' + escAttr( item.image_url ) + '" alt="" loading="lazy">'
@@ -935,6 +945,7 @@
 			'<div class="ypn-lab">' +
 				'<div class="ypn-lab__pv' + ( item.image_url ? ' has-img' : '' ) + '">' + preview + '</div>' +
 				'<div class="ypn-lab__name">' + esc( item.name ) + '</div>' +
+				designChoiceHtml( item.design_choice ) +
 				( item.brands && item.brands.length ? '<div class="ypn-lab__brand">Brand: ' + esc( item.brands.join( ', ' ) ) + '</div>' : '' ) +
 				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
 				( item.meta.length
@@ -961,6 +972,7 @@
 			'<section class="ypn-card ypn-proof" data-ypn-proof="' + c.id + '">' +
 				'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--' + ( needs ? 'mag' : ( 'awaiting_approval' === c.status ? 'yel' : 'grn' ) ) + '">' + esc( c.status_label || 'Not paid yet' ) + '</span></span></h3>' +
 				'<p class="ypn-proof__title">' + esc( c.title ) + ( c.order_type_label ? ' · ' + esc( c.order_type_label ) : '' ) + '</p>' +
+				designChoiceHtml( c.design_choice ) +
 				note +
 				( latest
 					? '<p class="ypn-proof__latest">Last proof sent ' + esc( new Date( latest.date ).toLocaleDateString( undefined, { month: 'short', day: 'numeric' } ) ) +
