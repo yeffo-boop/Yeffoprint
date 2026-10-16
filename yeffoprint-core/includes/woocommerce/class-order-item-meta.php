@@ -326,6 +326,7 @@ class YeffoPrint_Order_Item_Meta {
 			'base_price'  => YeffoPrint_Print_Meta::price_for_size( $print_id, $size ),
 			'unit_price'  => YeffoPrint_Print_Meta::unit_price( $print_id, $picks, $size, $text, $image_id ),
 			'size'        => $size,
+			'shipping'    => YeffoPrint_Print_Meta::get_shipping( $print_id ),
 			'colors'      => array_values( $picks ),
 			'text'        => $text,
 			'text_price'  => '' !== $text ? $addons['text_price'] : 0,

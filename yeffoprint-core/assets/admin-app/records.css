@@ -2465,6 +2465,14 @@ body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
 	}
 }
 
+/* Shipping prices: one box per paid shipping option. */
+.yp-print-shipping-editor {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	gap: 0.5rem 1rem;
+	align-items: end;
+}
+
 /* Personalization: area, then text and image switches with their charges. */
 .yp-print-addons-editor {
 	display: grid;

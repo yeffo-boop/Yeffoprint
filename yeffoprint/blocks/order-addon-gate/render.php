@@ -54,7 +54,7 @@ if ( $verified ) {
 				<strong><?php esc_html_e( "This order hasn't shipped yet", 'yeffoprint' ); ?></strong>
 				<p><?php echo esc_html( sprintf(
 					/* translators: %s: the order number this add-on will ship with */
-					__( "Add anything below and we'll combine it with %s — one box, one shipping charge, already paid.", 'yeffoprint' ),
+					__( "Add anything below and we'll combine it with %s — one box, one shipping charge, already paid. If you add a 3D print that costs more to ship, you only pay the difference.", 'yeffoprint' ),
 					$root->get_order_number()
 				) ); ?></p>
 			</div>

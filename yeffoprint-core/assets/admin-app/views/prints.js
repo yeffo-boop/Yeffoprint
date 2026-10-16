@@ -28,6 +28,7 @@
 		sizes: '_yp_print_sizes',
 		sizePrices: '_yp_print_size_prices',
 		sizeImages: '_yp_print_size_images',
+		shipping: '_yp_print_shipping',
 		addons: '_yp_print_addons'
 	};
 
@@ -65,7 +66,38 @@
 		var rowsEl = viewEl.querySelector( '[data-yp-rows]' );
 		var searchEl = viewEl.querySelector( '[data-yp-search]' );
 
+		// Paid shipping options from the live zones (Settings > Shipping
+		// Zones), for each item's shipping prices. Free shipping and local
+		// pickup always stay free, so they get no box.
+		var shippingOptions = [];
+
+		function loadShippingOptions() {
+			var wc = yeffoprintAdminApp.wcApiUrl || '';
+			if ( ! wc ) {
+				return;
+			}
+			YP.request( wc + 'shipping/zones' )
+				.then( function ( zones ) {
+					return Promise.all( ( zones || [] ).map( function ( zone ) {
+						return YP.request( wc + 'shipping/zones/' + zone.id + '/methods' ).then( function ( methods ) {
+							return ( methods || [] ).filter( function ( m ) {
+								return m.enabled && 'free_shipping' !== m.method_id && 'local_pickup' !== m.method_id && 'pickup_location' !== m.method_id;
+							} ).map( function ( m ) {
+								return { id: String( m.instance_id ), label: m.title || m.method_title, zone: zone.name };
+							} );
+						} );
+					} ) );
+				} )
+				.then( function ( lists ) {
+					shippingOptions = [].concat.apply( [], lists );
+				} )
+				.catch( function () {} );
+		}
+
 		function load() {
+			if ( ! shippingOptions.length ) {
+				loadShippingOptions();
+			}
 			Promise.all( [
 				YP.request( endpoint( '?context=edit&status=publish,draft&per_page=100&orderby=menu_order&order=asc&_embed=wp:featuredmedia' ) ),
 				YP.request( yeffoprintAdminApp.wpApiUrl + 'yp_filament?context=edit&status=publish&per_page=100&orderby=menu_order&order=asc' )
@@ -185,6 +217,16 @@
 								'<div class="yp-field"><label for="yp-pr-name">Name</label><input type="text" id="yp-pr-name" name="name" required value="' + ( isEdit ? YP.escapeAttr( print.title.raw ) : '' ) + '" /></div>' +
 								'<div class="yp-field"><label for="yp-pr-price">Base price ($)</label><input type="number" step="0.01" min="0" id="yp-pr-price" name="price" value="' + ( parseFloat( meta[ META.price ] ) || '' ) + '" /></div>' +
 								'<div class="yp-field"><label for="yp-pr-ships">Ships in</label><input type="text" id="yp-pr-ships" name="ships_in" placeholder="3 to 5 days" value="' + YP.escapeAttr( meta[ META.shipsIn ] || '' ) + '" /></div>' +
+							'</div>' +
+							'<div class="yp-field"><label>Shipping prices</label>' +
+								'<p class="yp-field__hint">For items that cost more to ship. When this item is in the cart, each shipping option costs at least the price set here. An order only ever pays its highest shipping price, never two added together, and an add-on order pays just the difference. Free shipping and local pickup stay free. Leave a box empty to use that option\u2019s normal rate.</p>' +
+								'<div class="yp-print-shipping-editor">' +
+									( shippingOptions.length ? shippingOptions.map( function ( option ) {
+										var value = parseFloat( ( meta[ META.shipping ] || {} )[ option.id ] ) || '';
+										return '<div class="yp-field"><label for="yp-pr-ship-' + YP.escapeAttr( option.id ) + '">' + YP.escapeHtml( option.label ) + ' <small>(' + YP.escapeHtml( option.zone ) + ')</small></label>' +
+											'<input type="number" step="0.01" min="0" id="yp-pr-ship-' + YP.escapeAttr( option.id ) + '" data-yp-ship="' + YP.escapeAttr( option.id ) + '" placeholder="Normal rate" value="' + value + '" /></div>';
+									} ).join( '' ) : '<p class="yp-field__hint">Couldn\u2019t load shipping options. Close and reopen to try again.</p>' ) +
+								'</div>' +
 							'</div>' +
 							'<div class="yp-field"><label for="yp-pr-desc">Description</label><textarea id="yp-pr-desc" name="description" rows="3">' + YP.escapeHtml( isEdit ? ( print.content.raw || '' ).replace( /<[^>]+>/g, '' ).trim() : '' ) + '</textarea></div>' +
 							'<div class="yp-field"><label>Sizes</label>' +
@@ -604,6 +646,20 @@
 				};
 				body.meta[ META.price ] = Math.max( 0, parseFloat( form.price.value ) || 0 );
 				body.meta[ META.shipsIn ] = form.ships_in.value.trim();
+				if ( shippingOptions.length ) {
+					// Keep prices for options this list didn't show (a zone
+					// method switched off for now) rather than wiping them.
+					body.meta[ META.shipping ] = Object.assign( {}, meta[ META.shipping ] || {} );
+					drawer.querySelectorAll( '[data-yp-ship]' ).forEach( function ( input ) {
+						var id = input.getAttribute( 'data-yp-ship' );
+						var price = parseFloat( input.value );
+						if ( price > 0 ) {
+							body.meta[ META.shipping ][ id ] = Math.round( price * 100 ) / 100;
+						} else {
+							delete body.meta[ META.shipping ][ id ];
+						}
+					} );
+				}
 				var seen = {};
 				body.meta[ META.sizes ] = [];
 				body.meta[ META.sizePrices ] = {};

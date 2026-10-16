@@ -11,6 +11,10 @@
  * cart is offered exactly one rate, "Ships with Order N", at $0. The
  * root id is folded into each shipping package so WooCommerce's
  * per-package rate cache can't hand back the normal paid rates.
+ *
+ * 3D prints can cost more to ship (class-print-shipping.php). When an
+ * add-on brings in one that needs a higher rate than the group has
+ * already paid, the same single rate charges just the difference.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -71,14 +75,18 @@ class YeffoPrint_Order_Addon_Checkout {
 			return $rates;
 		}
 
+		$due = YeffoPrint_Print_Shipping::addon_shipping_due( $root, YeffoPrint_Print_Shipping::prices_for_package( (array) $package ) );
+
+		$label = $due > 0
+			/* translators: %s: the order this add-on ships together with */
+			? __( 'Ships with Order %s (shipping difference)', 'yeffoprint-core' )
+			/* translators: %s: the order this add-on ships together with */
+			: __( 'Ships with Order %s (already paid)', 'yeffoprint-core' );
+
 		$rate = new \WC_Shipping_Rate(
 			self::METHOD_ID,
-			sprintf(
-				/* translators: %s: the order this add-on ships together with */
-				__( 'Ships with Order %s (already paid)', 'yeffoprint-core' ),
-				$root->get_order_number()
-			),
-			0,
+			sprintf( $label, $root->get_order_number() ),
+			(string) $due,
 			[],
 			self::METHOD_ID
 		);
@@ -117,11 +125,19 @@ class YeffoPrint_Order_Addon_Checkout {
 		$order->update_meta_data( YeffoPrint_Order_Addon::SHIP_WITH_ORDER_ID_META, $root_id );
 		$order->save();
 
-		$order->add_order_note( sprintf(
-			/* translators: %s: the original order this one ships together with */
-			__( 'Placed as an add-on to Order %s — ships together, no separate shipping charge.', 'yeffoprint-core' ),
-			$root->get_order_number()
-		) );
+		$shipping = (float) $order->get_shipping_total();
+		$order->add_order_note( $shipping > 0
+			? sprintf(
+				/* translators: 1: the original order this one ships together with, 2: shipping difference charged */
+				__( 'Placed as an add-on to Order %1$s — ships together. Charged %2$s shipping difference for 3D prints that ship for more.', 'yeffoprint-core' ),
+				$root->get_order_number(),
+				wp_strip_all_tags( wc_price( $shipping, [ 'currency' => $order->get_currency() ] ) )
+			)
+			: sprintf(
+				/* translators: %s: the original order this one ships together with */
+				__( 'Placed as an add-on to Order %s — ships together, no separate shipping charge.', 'yeffoprint-core' ),
+				$root->get_order_number()
+			) );
 
 		$root->add_order_note( sprintf(
 			/* translators: %s: the new add-on order that ships together with this one */
