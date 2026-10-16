@@ -2808,3 +2808,42 @@ body.yp-next .ypn-note-add textarea {
 /* Order page: quieter destructive action, and the resend-email choices. */
 .ypn-act--quiet { color: #9f2a17; }
 .ypn-email-pick { display: grid; gap: 8px; margin: 4px 0 16px; }
+
+/* ---------- Label change requests (order page) ---------- */
+
+.ypn-change {
+	margin-bottom: 14px;
+	border-left: 6px solid var(--ypn-mag);
+}
+
+.ypn-change ul {
+	margin: 8px 0;
+	padding-left: 20px;
+}
+
+.ypn-change textarea,
+.ypn-lfe textarea {
+	width: 100%;
+}
+
+.ypn-lfe {
+	margin-bottom: 14px;
+}
+
+.ypn-lfe__lab {
+	margin: 10px 0 6px;
+	font-weight: 600;
+	font-size: 13px;
+	color: var(--ypn-mute);
+}
+
+.ypn-lfe__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 10px;
+}
+
+.ypn-lfe__grid input,
+.ypn-lfe__grid select {
+	width: 100%;
+}

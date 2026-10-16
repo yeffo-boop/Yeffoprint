@@ -586,6 +586,11 @@ class YeffoPrint_Admin_Order_Controller {
 			// Paid but not shipped yet: Add items still works, onto a
 			// linked add-on order (YeffoPrint_Manual_Order_Creator::add_items()).
 			'can_add_items'        => YeffoPrint_Manual_Order_Creator::can_add_items( $order ),
+			// Label change requests (class-order-label-changes.php): the
+			// Labels card's Edit form, and a customer's request waiting on
+			// Approve / Decline.
+			'label_lines'          => YeffoPrint_Order_Label_Changes::admin_can_edit( $order ) ? YeffoPrint_Order_Label_Changes::editable_lines( $order ) : [],
+			'change_request'       => YeffoPrint_Order_Label_Changes::get_request( $order ),
 			'payment_url'          => $order->needs_payment() ? $order->get_checkout_payment_url() : null,
 			'customer_picks_shipping' => YeffoPrint_Order_Pay_Address::customer_picks_shipping( $order ),
 			// Record payment panel (class-partial-payments.php): what has

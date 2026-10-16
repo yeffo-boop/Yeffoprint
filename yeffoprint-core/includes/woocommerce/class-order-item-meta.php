@@ -395,6 +395,25 @@ class YeffoPrint_Order_Item_Meta {
 	 * on the order screen and in customer emails even though it's the
 	 * one thing staff actually need to know what to print.
 	 */
+	/**
+	 * Rewrites the readable "Customization"/"Label N (qty M)" rows after
+	 * a batch's _yp_variants changed on a placed order (label change
+	 * requests, class-order-label-changes.php). Quantities never change
+	 * there, so the row names stay the same and are simply replaced.
+	 */
+	public static function rewrite_variant_rows( \WC_Order_Item_Product $item, array $variants, array $field_schema ): void {
+		$item->delete_meta_data( __( 'Customization', 'yeffoprint-core' ) );
+		foreach ( $variants as $index => $variant ) {
+			$item->delete_meta_data( sprintf(
+				/* translators: 1: label number within the batch, 2: that label's own quantity */
+				__( 'Label %1$d (qty %2$d)', 'yeffoprint-core' ),
+				$index + 1,
+				(int) ( $variant['quantity'] ?? 0 )
+			) );
+		}
+		self::add_variant_rows( $item, $variants, $field_schema );
+	}
+
 	private static function add_variant_rows( \WC_Order_Item_Product $item, array $variants, array $field_schema ): void {
 		$multiple = count( $variants ) > 1;
 

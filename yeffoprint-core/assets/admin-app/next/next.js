@@ -244,6 +244,7 @@
 		approval: { rank: 3, color: 'var(--ypn-yel)' },
 		unpaid: { rank: 4, color: '#9a9aa0' },
 		emailorder: { rank: 1, color: 'var(--ypn-cy, #00AEEF)' },
+		change: { rank: 1, color: 'var(--ypn-mag)' },
 		message: { rank: 5, color: 'var(--ypn-cy, #00AEEF)' }
 	};
 
@@ -352,6 +353,9 @@
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
+			}
+			if ( o.change_requested ) {
+				items.push( Object.assign( {}, base, { kind: 'change', title: 'Review the label change on ' + orderLabel( o ), action: 'Review' } ) );
 			}
 			if ( 'proof' === o.column ) {
 				items.push( Object.assign( base, { kind: 'proof', title: 'Make the proof for ' + orderLabel( o ), action: 'Open' } ) );
@@ -520,7 +524,7 @@
 					'<div class="ypn-order__row"><span class="ypn-order__num">' + ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + esc( String( o.number ) ) + '</span>' +
 						( o.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '<span class="ypn-order__age">' + esc( ago( o.date ) ) + '</span>' ) +
 					'</div>' +
-					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + '</div>' +
+					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
 					'<div class="ypn-order__row"><span class="ypn-order__meta">' + esc( o.payment_method || o.status_label ) + '</span><b>' + esc( money( o.total ) ) + '</b></div>' +
 					( 'ready' === o.column ? '<button type="button" class="ypn-order__action" data-ypn-print="' + o.id + '">Send to printer</button>' : '' ) +
@@ -954,6 +958,54 @@
 		'</div></div>';
 	}
 
+	function labelFieldHtml( itemId, index, field ) {
+		var key = escAttr( itemId + '|' + index + '|' + field.id );
+		var value = String( field.value || '' );
+		var max = field.max_chars ? ' maxlength="' + field.max_chars + '"' : '';
+		var control;
+		if ( field.options && field.options.length ) {
+			var found = false;
+			control = '<select data-ypn-lf="' + key + '">' + ( field.required ? '' : '<option value="">—</option>' ) +
+				field.options.map( function ( option ) {
+					var on = String( option.value ).toLowerCase() === value.toLowerCase();
+					found = found || on;
+					return '<option value="' + escAttr( option.value ) + '"' + ( on ? ' selected' : '' ) + '>' + esc( option.label ) + '</option>';
+				} ).join( '' ) +
+				( ! found && value ? '<option value="' + escAttr( value ) + '" selected>' + esc( field.display || value ) + '</option>' : '' ) +
+				'</select>';
+		} else if ( 'color' === field.type ) {
+			control = '<input type="color" data-ypn-lf="' + key + '" value="' + escAttr( value || '#000000' ) + '">';
+		} else if ( 'textarea' === field.type ) {
+			control = '<textarea rows="2" data-ypn-lf="' + key + '"' + max + '>' + esc( value ) + '</textarea>';
+		} else {
+			control = '<input type="' + ( 'qr_code' === field.type ? 'url' : 'text' ) + '" data-ypn-lf="' + key + '" value="' + escAttr( value ) + '"' + max + '>';
+		}
+		return '<label class="yp-field"><span class="yp-field__label">' + esc( field.label ) + '</span>' + control + '</label>';
+	}
+
+	function changeRequestHtml( request ) {
+		if ( ! request ) {
+			return '';
+		}
+		var lines = request.lines || [];
+		return '<div class="ypn-card ypn-change" data-ypn-change>' +
+			'<b>Customer asked for a label change</b>' +
+			( request.at ? '<span class="ypn-muted"> · ' + esc( ago( request.at ) ) + ' ago</span>' : '' ) +
+			( lines.length ? '<ul>' + lines.map( function ( line ) { return '<li>' + esc( line ) + '</li>'; } ).join( '' ) + '</ul>' : '' ) +
+			( request.note ? '<p class="ypn-op__note">“' + esc( request.note ) + '”</p>' : '' ) +
+			'<div class="ypn-form__acts">' +
+				'<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-change-approve>Approve and apply</button>' +
+				'<button type="button" class="ypn-btn" data-ypn-change-decline>Decline</button>' +
+			'</div>' +
+			'<div data-ypn-change-why hidden>' +
+				'<textarea rows="2" placeholder="Why? This goes in the email to the customer (optional)"></textarea>' +
+				'<div class="ypn-form__acts"><button type="button" class="ypn-btn" data-ypn-change-send>Send</button></div>' +
+			'</div>' +
+			'<div data-ypn-change-error></div>' +
+			'<p class="ypn-muted">Approving updates the labels on this order and emails the customer that it’s done.</p>' +
+		'</div>';
+	}
+
 	function labelCardHtml( item ) {
 		var preview = item.image_url
 			? '<img src="' + escAttr( item.image_url ) + '" alt="" loading="lazy">'
@@ -1153,6 +1205,7 @@
 
 			viewEl.innerHTML =
 				'<div class="ypn-op">' +
+					changeRequestHtml( order.change_request ) +
 					( order.express_waiting
 						? '<div class="ypn-banner ypn-ack">' +
 							'<div><b>Express order waiting on you</b><span>Reminders go out every 30 minutes until you acknowledge it or move it to In Production.</span></div>' +
@@ -1171,7 +1224,10 @@
 							( website ? '<div class="ypn-wd" data-ypn-wd></div>' : '' ) +
 							customOrders.map( proofCardHtml ).join( '' ) +
 							'<section class="ypn-card">' +
-								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ' · ' + units + ' total</span></h3>' +
+								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ' · ' + units + ' total</span>' +
+									( ( order.label_lines || [] ).length ? '<button type="button" class="ypn-more" data-ypn-edit-labels>Edit labels</button>' : '' ) +
+								'</h3>' +
+								'<div data-ypn-label-form hidden></div>' +
 								( order.items.length ? '<div class="ypn-labs">' + order.items.map( labelCardHtml ).join( '' ) + '</div>' : '<p class="yp-field__hint">No items on this order.</p>' ) +
 							'</section>' +
 							( order.customer_note
@@ -1240,6 +1296,11 @@
 				YP.loadWebDesignPanel( order, wd );
 			}
 			viewEl.querySelector( '[data-ypn-edit-details]' ).addEventListener( 'click', function () { editDetails( order ); } );
+			var editLabelsButton = viewEl.querySelector( '[data-ypn-edit-labels]' );
+			if ( editLabelsButton ) {
+				editLabelsButton.addEventListener( 'click', function () { editLabels( order ); } );
+			}
+			bindChangeRequest( order );
 
 			var ack = viewEl.querySelector( '[data-ypn-express-ack]' );
 			if ( ack ) {
@@ -1403,6 +1464,87 @@
 
 		/* Edit the customer's contact details and shipping address on any
 		   order, paid or not, in place of the Ship to card. */
+		// Customer's label change request: Approve applies it, Decline
+		// emails them (with an optional reason) and leaves the order as is.
+		function bindChangeRequest( order ) {
+			var box = viewEl.querySelector( '[data-ypn-change]' );
+			if ( ! box ) {
+				return;
+			}
+			var error = box.querySelector( '[data-ypn-change-error]' );
+			function answer( action, button, message ) {
+				button.disabled = true;
+				button.textContent = 'approve' === action ? 'Applying…' : 'Sending…';
+				YP.request( api( 'admin/order/' + order.id + '/change-request' ), {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( { action: action, message: message || '' } )
+				} ).then( load ).catch( function ( e ) {
+					button.disabled = false;
+					button.textContent = 'approve' === action ? 'Approve and apply' : 'Send';
+					error.innerHTML = '<p class="yp-form__error">' + esc( e.message ) + '</p>';
+				} );
+			}
+			box.querySelector( '[data-ypn-change-approve]' ).addEventListener( 'click', function ( event ) {
+				answer( 'approve', event.currentTarget );
+			} );
+			box.querySelector( '[data-ypn-change-decline]' ).addEventListener( 'click', function () {
+				box.querySelector( '[data-ypn-change-why]' ).hidden = false;
+			} );
+			box.querySelector( '[data-ypn-change-send]' ).addEventListener( 'click', function ( event ) {
+				answer( 'decline', event.currentTarget, box.querySelector( '[data-ypn-change-why] textarea' ).value );
+			} );
+		}
+
+		// Labels card › Edit label details: each label's own fields
+		// (compound, strength, colors…), until the order ships.
+		function editLabels( order ) {
+			var form = viewEl.querySelector( '[data-ypn-label-form]' );
+			var list = form.nextElementSibling;
+			form.hidden = false;
+			if ( list ) {
+				list.style.display = 'none'; // .ypn-labs sets its own display, which beats [hidden].
+			}
+			form.innerHTML =
+				order.label_lines.map( function ( line ) {
+					return '<div class="ypn-lfe">' +
+						'<h4 class="ypn-form__h">' + esc( line.name ) + '</h4>' +
+						line.labels.map( function ( label ) {
+							return ( line.labels.length > 1 ? '<div class="ypn-lfe__lab">Label ' + ( label.index + 1 ) + ' · qty ' + label.quantity + '</div>' : '' ) +
+								'<div class="ypn-lfe__grid">' + label.fields.map( function ( field ) {
+									return labelFieldHtml( line.item_id, label.index, field );
+								} ).join( '' ) + '</div>';
+						} ).join( '' ) +
+					'</div>';
+				} ).join( '' ) +
+				'<div data-ypn-labels-error></div>' +
+				'<div class="ypn-form__acts"><button type="button" class="ypn-btn ypn-btn--primary" data-ypn-labels-save>Save changes</button><button type="button" class="ypn-btn" data-ypn-labels-cancel>Cancel</button></div>' +
+				'<p class="ypn-muted">Saved as an order note. The customer isn’t emailed. Size, material and quantity change the price, so use Add items or a new order for those.</p>';
+
+			form.querySelector( '[data-ypn-labels-cancel]' ).addEventListener( 'click', load );
+			form.querySelector( '[data-ypn-labels-save]' ).addEventListener( 'click', function ( event ) {
+				var button = event.currentTarget;
+				var changes = {};
+				form.querySelectorAll( '[data-ypn-lf]' ).forEach( function ( input ) {
+					var parts = input.getAttribute( 'data-ypn-lf' ).split( '|' );
+					changes[ parts[ 0 ] ] = changes[ parts[ 0 ] ] || {};
+					changes[ parts[ 0 ] ][ parts[ 1 ] ] = changes[ parts[ 0 ] ][ parts[ 1 ] ] || {};
+					changes[ parts[ 0 ] ][ parts[ 1 ] ][ parts.slice( 2 ).join( '|' ) ] = input.value;
+				} );
+				button.disabled = true;
+				button.textContent = 'Saving…';
+				YP.request( api( 'admin/order/' + order.id + '/label-details' ), {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( { changes: changes } )
+				} ).then( load ).catch( function ( error ) {
+					button.disabled = false;
+					button.textContent = 'Save changes';
+					form.querySelector( '[data-ypn-labels-error]' ).innerHTML = '<p class="yp-form__error">' + esc( error.message ) + '</p>';
+				} );
+			} );
+		}
+
 		function editDetails( order ) {
 			var card = viewEl.querySelector( '[data-ypn-shipto]' );
 			var hasShipping = !! ( order.shipping && order.shipping.address_1 );

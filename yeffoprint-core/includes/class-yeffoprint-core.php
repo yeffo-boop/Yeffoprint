@@ -59,6 +59,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-custom-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-proof-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-order-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-label-changes-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-order-actions-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/customers/class-customer-notes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-customer-controller.php';
@@ -171,6 +172,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-checkout.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-account.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-label-changes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-email-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-addon-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-order-tracking-controller.php';
@@ -269,6 +271,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Custom_Order_Controller();
 		new YeffoPrint_Admin_Proof_Controller();
 		new YeffoPrint_Admin_Order_Controller();
+		new YeffoPrint_Admin_Label_Changes_Controller();
 		new YeffoPrint_Admin_Order_Actions_Controller();
 		new YeffoPrint_Customer_Notes();
 		new YeffoPrint_Admin_Customer_Controller();
@@ -329,6 +332,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Addon_Checkout();
 		new YeffoPrint_Order_Addon_Account();
+		new YeffoPrint_Order_Label_Changes();
 		new YeffoPrint_Order_Addon_Email_Notice();
 		new YeffoPrint_Order_Addon_Controller();
 		new YeffoPrint_Order_Tracking_Controller();
