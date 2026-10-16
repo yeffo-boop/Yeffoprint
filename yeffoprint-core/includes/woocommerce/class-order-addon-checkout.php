@@ -75,12 +75,7 @@ class YeffoPrint_Order_Addon_Checkout {
 			return $rates;
 		}
 
-		$due = YeffoPrint_Print_Shipping::addon_shipping_due(
-			$root,
-			isset( $package[ YeffoPrint_Print_Shipping::PACKAGE_KEY ] )
-				? (float) $package[ YeffoPrint_Print_Shipping::PACKAGE_KEY ]
-				: YeffoPrint_Print_Shipping::package_shipping( (array) $package )
-		);
+		$due = YeffoPrint_Print_Shipping::addon_shipping_due( $root, YeffoPrint_Print_Shipping::prices_for_package( (array) $package ) );
 
 		$label = $due > 0
 			/* translators: %s: the order this add-on ships together with */

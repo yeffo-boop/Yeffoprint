@@ -2439,7 +2439,7 @@ body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
 
 .yp-print-size-row {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 8rem 8rem auto auto auto;
+	grid-template-columns: minmax(0, 1fr) 8rem auto auto auto;
 	gap: 0.5rem;
 	align-items: center;
 }
@@ -2448,7 +2448,7 @@ body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
    the price, photo and buttons. */
 @media (max-width: 640px) {
 	.yp-print-size-row {
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+		grid-template-columns: minmax(0, 1fr) auto auto;
 		padding: 0.6rem;
 		border: 1.5px solid var(--wp--preset--color--light-gray);
 		border-radius: var(--wp--custom--radius--input);
@@ -2465,8 +2465,12 @@ body.yeffoprint-app input[type="date"]::-webkit-date-and-time-value {
 	}
 }
 
-.yp-print-shipping-field input {
-	max-width: 10rem;
+/* Shipping prices: one box per paid shipping option. */
+.yp-print-shipping-editor {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	gap: 0.5rem 1rem;
+	align-items: end;
 }
 
 /* Personalization: area, then text and image switches with their charges. */

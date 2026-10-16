@@ -34,7 +34,6 @@ class YeffoPrint_Print_Meta {
 	public const SIZE_IMAGES   = '_yp_print_size_images';
 	public const ADDONS        = '_yp_print_addons';
 	public const SHIPPING      = '_yp_print_shipping';
-	public const SIZE_SHIPPING = '_yp_print_size_shipping';
 
 	/** Longest lid text a customer can type, when the item doesn't set its own. */
 	public const DEFAULT_TEXT_MAX = 30;
@@ -200,20 +199,12 @@ class YeffoPrint_Print_Meta {
 		] );
 
 		// Direct request: "I need to set shipping prices for the 3d prints
-		// I have. It costs a little more to ship those." The item's
-		// shipping price (0 = the store's normal rates), with an optional
-		// override per size since a 125-vial box ships bigger than a
-		// 2-vial one. class-print-shipping.php raises checkout's rates to
+		// I have. It costs a little more to ship those." One price per
+		// shipping option, keyed by the zone method's instance id ("3" =>
+		// 12 for USPS Ground Advantage). An option left out keeps its
+		// normal rate. class-print-shipping.php raises checkout's rates to
 		// the highest of these in the cart; it never adds them up.
 		register_post_meta( 'yp_print', self::SHIPPING, [
-			'type'          => 'number',
-			'single'        => true,
-			'default'       => 0,
-			'show_in_rest'  => true,
-			'auth_callback' => [ $this, 'can_edit' ],
-		] );
-
-		register_post_meta( 'yp_print', self::SIZE_SHIPPING, [
 			'type'              => 'object',
 			'single'            => true,
 			'default'           => [],
@@ -388,7 +379,7 @@ class YeffoPrint_Print_Meta {
 		return self::sanitize_sizes( get_post_meta( $print_id, self::SIZES, true ) );
 	}
 
-	/** Size name => price, positive prices only. */
+	/** Size name (or shipping option id) => price, positive prices only. */
 	public static function sanitize_size_prices( $value ): array {
 		if ( ! is_array( $value ) ) {
 			return [];
@@ -481,14 +472,9 @@ class YeffoPrint_Print_Meta {
 		return (float) get_post_meta( $print_id, self::PRICE, true );
 	}
 
-	/** The picked size's shipping price, else the item's; 0 means the store's normal rates apply. */
-	public static function shipping_for_size( int $print_id, string $size ): float {
-		$by_size = self::sanitize_size_prices( get_post_meta( $print_id, self::SIZE_SHIPPING, true ) );
-		if ( '' !== $size && isset( $by_size[ $size ] ) ) {
-			return (float) $by_size[ $size ];
-		}
-
-		return max( 0.0, round( (float) get_post_meta( $print_id, self::SHIPPING, true ), 2 ) );
+	/** @return array<string, float> Shipping option instance id => this item's price for it. */
+	public static function get_shipping( int $print_id ): array {
+		return self::sanitize_size_prices( get_post_meta( $print_id, self::SHIPPING, true ) );
 	}
 
 	/** The lowest price a customer can pay: the cheapest size, or the base price for an item without sizes. */
