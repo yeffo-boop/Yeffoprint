@@ -28,6 +28,8 @@
 		sizes: '_yp_print_sizes',
 		sizePrices: '_yp_print_size_prices',
 		sizeImages: '_yp_print_size_images',
+		shipping: '_yp_print_shipping',
+		sizeShipping: '_yp_print_size_shipping',
 		addons: '_yp_print_addons'
 	};
 
@@ -162,8 +164,9 @@
 			} );
 			var sizePrices = meta[ META.sizePrices ] || {};
 			var sizeImages = meta[ META.sizeImages ] || {};
+			var sizeShipping = meta[ META.sizeShipping ] || {};
 			var sizes = ( meta[ META.sizes ] || [] ).map( function ( name ) {
-				return { name: name, price: sizePrices[ name ] ? String( sizePrices[ name ] ) : '', imageId: parseInt( sizeImages[ name ], 10 ) || 0, imageUrl: '' };
+				return { name: name, price: sizePrices[ name ] ? String( sizePrices[ name ] ) : '', shipping: sizeShipping[ name ] ? String( sizeShipping[ name ] ) : '', imageId: parseInt( sizeImages[ name ], 10 ) || 0, imageUrl: '' };
 			} );
 			var addons = meta[ META.addons ] || {};
 			var activeSlot = slots.length ? 0 : -1;
@@ -186,9 +189,12 @@
 								'<div class="yp-field"><label for="yp-pr-price">Base price ($)</label><input type="number" step="0.01" min="0" id="yp-pr-price" name="price" value="' + ( parseFloat( meta[ META.price ] ) || '' ) + '" /></div>' +
 								'<div class="yp-field"><label for="yp-pr-ships">Ships in</label><input type="text" id="yp-pr-ships" name="ships_in" placeholder="3 to 5 days" value="' + YP.escapeAttr( meta[ META.shipsIn ] || '' ) + '" /></div>' +
 							'</div>' +
+							'<div class="yp-field yp-print-shipping-field"><label for="yp-pr-shipping">Shipping price ($)</label><input type="number" step="0.01" min="0" id="yp-pr-shipping" name="shipping" placeholder="Normal rates" value="' + ( parseFloat( meta[ META.shipping ] ) || '' ) + '" />' +
+								'<p class="yp-field__hint">For items that cost more to ship. Checkout shipping goes up to at least this when the item is in the cart. An order only ever pays its highest shipping price, never two added together, and an add-on order pays just the difference. Free shipping and local pickup stay free. Leave empty to use the normal rates.</p>' +
+							'</div>' +
 							'<div class="yp-field"><label for="yp-pr-desc">Description</label><textarea id="yp-pr-desc" name="description" rows="3">' + YP.escapeHtml( isEdit ? ( print.content.raw || '' ).replace( /<[^>]+>/g, '' ).trim() : '' ) + '</textarea></div>' +
 							'<div class="yp-field"><label>Sizes</label>' +
-								'<p class="yp-field__hint">The customer picks one. Give a size its own price, or leave the price empty to use the base price. A size\u2019s photo replaces the main photo while it\u2019s picked. No sizes means the item comes in one size.</p>' +
+								'<p class="yp-field__hint">The customer picks one. Give a size its own price and shipping price, or leave them empty to use the item\u2019s. A size\u2019s photo replaces the main photo while it\u2019s picked. No sizes means the item comes in one size.</p>' +
 								'<div class="yp-print-sizes-editor" data-yp-sizes></div>' +
 								'<button type="button" class="yp-row-action" data-yp-size-add>+ Add size</button>' +
 							'</div>' +
@@ -256,6 +262,7 @@
 					return '<div class="yp-print-size-row" data-yp-size="' + i + '">' +
 						'<input type="text" data-yp-size-field="name" placeholder="Size, e.g. 10 vials" value="' + YP.escapeAttr( size.name ) + '" aria-label="Size name" />' +
 						'<input type="number" step="0.01" min="0" data-yp-size-field="price" placeholder="Base price" value="' + YP.escapeAttr( size.price ) + '" aria-label="Price for this size" />' +
+						'<input type="number" step="0.01" min="0" data-yp-size-field="shipping" placeholder="Item shipping" value="' + YP.escapeAttr( size.shipping ) + '" aria-label="Shipping price for this size" title="Shipping price for this size" />' +
 						'<span class="yp-print-size-row__photo">' +
 							( size.imageUrl ? '<img src="' + YP.escapeAttr( size.imageUrl ) + '" alt="" />' : '' ) +
 							'<button type="button" class="yp-row-action" data-yp-size-photo>' + ( size.imageId ? 'Change photo' : 'Add photo' ) + '</button>' +
@@ -301,7 +308,7 @@
 			} );
 
 			drawer.querySelector( '[data-yp-size-add]' ).addEventListener( 'click', function () {
-				sizes.push( { name: '', price: '', imageId: 0, imageUrl: '' } );
+				sizes.push( { name: '', price: '', shipping: '', imageId: 0, imageUrl: '' } );
 				renderSizes();
 				var inputs = sizesEl.querySelectorAll( '[data-yp-size-field="name"]' );
 				inputs[ inputs.length - 1 ].focus();
@@ -604,10 +611,12 @@
 				};
 				body.meta[ META.price ] = Math.max( 0, parseFloat( form.price.value ) || 0 );
 				body.meta[ META.shipsIn ] = form.ships_in.value.trim();
+				body.meta[ META.shipping ] = Math.round( Math.max( 0, parseFloat( form.shipping.value ) || 0 ) * 100 ) / 100;
 				var seen = {};
 				body.meta[ META.sizes ] = [];
 				body.meta[ META.sizePrices ] = {};
 				body.meta[ META.sizeImages ] = {};
+				body.meta[ META.sizeShipping ] = {};
 				sizes.forEach( function ( size ) {
 					var name = size.name.trim();
 					var price = parseFloat( size.price );
@@ -621,6 +630,9 @@
 					}
 					if ( size.imageId ) {
 						body.meta[ META.sizeImages ][ name ] = size.imageId;
+					}
+					if ( parseFloat( size.shipping ) > 0 ) {
+						body.meta[ META.sizeShipping ][ name ] = Math.round( parseFloat( size.shipping ) * 100 ) / 100;
 					}
 				} );
 				body.meta[ META.addons ] = {

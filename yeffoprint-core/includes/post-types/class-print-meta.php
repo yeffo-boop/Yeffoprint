@@ -26,13 +26,15 @@ defined( 'ABSPATH' ) || exit;
 class YeffoPrint_Print_Meta {
 
 	/* yp_print */
-	public const PRICE       = '_yp_print_price';
-	public const SHIPS_IN    = '_yp_print_ships_in';
-	public const COLOR_SLOTS = '_yp_print_color_slots';
-	public const SIZES       = '_yp_print_sizes';
-	public const SIZE_PRICES = '_yp_print_size_prices';
-	public const SIZE_IMAGES = '_yp_print_size_images';
-	public const ADDONS      = '_yp_print_addons';
+	public const PRICE         = '_yp_print_price';
+	public const SHIPS_IN      = '_yp_print_ships_in';
+	public const COLOR_SLOTS   = '_yp_print_color_slots';
+	public const SIZES         = '_yp_print_sizes';
+	public const SIZE_PRICES   = '_yp_print_size_prices';
+	public const SIZE_IMAGES   = '_yp_print_size_images';
+	public const ADDONS        = '_yp_print_addons';
+	public const SHIPPING      = '_yp_print_shipping';
+	public const SIZE_SHIPPING = '_yp_print_size_shipping';
 
 	/** Longest lid text a customer can type, when the item doesn't set its own. */
 	public const DEFAULT_TEXT_MAX = 30;
@@ -193,6 +195,34 @@ class YeffoPrint_Print_Meta {
 						'image'       => [ 'type' => 'boolean' ],
 						'image_price' => [ 'type' => 'number' ],
 					],
+				],
+			],
+		] );
+
+		// Direct request: "I need to set shipping prices for the 3d prints
+		// I have. It costs a little more to ship those." The item's
+		// shipping price (0 = the store's normal rates), with an optional
+		// override per size since a 125-vial box ships bigger than a
+		// 2-vial one. class-print-shipping.php raises checkout's rates to
+		// the highest of these in the cart; it never adds them up.
+		register_post_meta( 'yp_print', self::SHIPPING, [
+			'type'          => 'number',
+			'single'        => true,
+			'default'       => 0,
+			'show_in_rest'  => true,
+			'auth_callback' => [ $this, 'can_edit' ],
+		] );
+
+		register_post_meta( 'yp_print', self::SIZE_SHIPPING, [
+			'type'              => 'object',
+			'single'            => true,
+			'default'           => [],
+			'sanitize_callback' => [ __CLASS__, 'sanitize_size_prices' ],
+			'auth_callback'     => [ $this, 'can_edit' ],
+			'show_in_rest'      => [
+				'schema' => [
+					'type'                 => 'object',
+					'additionalProperties' => [ 'type' => 'number' ],
 				],
 			],
 		] );
@@ -449,6 +479,16 @@ class YeffoPrint_Print_Meta {
 		}
 
 		return (float) get_post_meta( $print_id, self::PRICE, true );
+	}
+
+	/** The picked size's shipping price, else the item's; 0 means the store's normal rates apply. */
+	public static function shipping_for_size( int $print_id, string $size ): float {
+		$by_size = self::sanitize_size_prices( get_post_meta( $print_id, self::SIZE_SHIPPING, true ) );
+		if ( '' !== $size && isset( $by_size[ $size ] ) ) {
+			return (float) $by_size[ $size ];
+		}
+
+		return max( 0.0, round( (float) get_post_meta( $print_id, self::SHIPPING, true ), 2 ) );
 	}
 
 	/** The lowest price a customer can pay: the cheapest size, or the base price for an item without sizes. */

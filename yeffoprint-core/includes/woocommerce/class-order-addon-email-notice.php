@@ -48,7 +48,7 @@ class YeffoPrint_Order_Addon_Email_Notice {
 		);
 
 		if ( $plain_text ) {
-			echo esc_html__( "Forgot something? Add it to this order and we'll ship it together — no extra shipping charge, as long as this order hasn't shipped yet:", 'yeffoprint-core' ) . ' ' . esc_url( $url ) . "\n\n";
+			echo esc_html__( "Forgot something? Add it to this order and we'll ship it together — no extra shipping charge (3D prints that cost more to ship just pay the difference), as long as this order hasn't shipped yet:", 'yeffoprint-core' ) . ' ' . esc_url( $url ) . "\n\n";
 			return;
 		}
 
@@ -59,7 +59,7 @@ class YeffoPrint_Order_Addon_Email_Notice {
 				'<p style="text-align:center;margin:16px 0 6px;"><a href="%3$s" class="yp-email-button">%4$s</a></p>' .
 			'</td></tr></table>',
 			esc_html__( 'Forgot something?', 'yeffoprint-core' ),
-			esc_html__( "Add it to this order and we'll ship it together — no extra shipping charge, as long as this order hasn't shipped yet.", 'yeffoprint-core' ),
+			esc_html__( "Add it to this order and we'll ship it together — no extra shipping charge (3D prints that cost more to ship just pay the difference), as long as this order hasn't shipped yet.", 'yeffoprint-core' ),
 			esc_url( $url ),
 			esc_html__( 'Add to this order', 'yeffoprint-core' )
 		);
