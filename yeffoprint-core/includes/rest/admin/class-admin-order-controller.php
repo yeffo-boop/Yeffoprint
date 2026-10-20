@@ -591,6 +591,7 @@ class YeffoPrint_Admin_Order_Controller {
 			'express_waiting'      => YeffoPrint_Telegram_Express_Alerts::is_waiting( $order ),
 			// Holographic, not Express: let it cure 24 hours before shipping.
 			'holo_cure'            => YeffoPrint_Holographic_Vinyl::needs_cure_day( $order ),
+			'curing_ready_at'      => YeffoPrint_Order_Curing_Status::ready_at( $order ),
 			// Falls back to billing when there's no separate shipping
 			// address — same behavior WooCommerce's own order screen and
 			// order emails already use, not a new convention introduced

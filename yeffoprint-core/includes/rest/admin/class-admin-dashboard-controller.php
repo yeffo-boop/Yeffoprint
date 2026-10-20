@@ -127,7 +127,7 @@ class YeffoPrint_Admin_Dashboard_Controller {
 
 		$orders = wc_get_orders( [
 			'type' => 'shop_order',
-			'status'  => [ 'processing', YeffoPrint_Order_Production_Status::STATUS ],
+			'status'  => [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ],
 			'limit'   => self::ROW_LIMIT,
 			'orderby' => 'date',
 			'order'   => 'ASC',

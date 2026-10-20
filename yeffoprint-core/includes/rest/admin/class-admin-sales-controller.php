@@ -18,7 +18,7 @@ class YeffoPrint_Admin_Sales_Controller {
 	private const NAMESPACE = 'yeffoprint-core/v1';
 
 	/** Statuses that mean the customer has paid (same as Today and Payouts). */
-	private const PAID_STATUSES = [ 'processing', 'in-design', 'in-production', 'shipped', 'completed', 'refunded' ];
+	private const PAID_STATUSES = [ 'processing', 'in-design', 'in-production', 'curing', 'shipped', 'completed', 'refunded' ];
 
 	public const RANGES = [
 		'7d'         => 'Last 7 days',

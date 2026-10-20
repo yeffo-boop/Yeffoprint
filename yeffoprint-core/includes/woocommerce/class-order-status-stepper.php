@@ -113,9 +113,11 @@ class YeffoPrint_Order_Status_Stepper {
 		$sublabels = [
 			'placed'     => in_array( $status, [ 'pending', 'on-hold' ], true ) ? __( 'Awaiting payment', 'yeffoprint-core' ) : '',
 			'proof'      => self::proof_sublabel( $custom_order_status ),
-			'production' => 'in-production' === $status
-				? __( 'Your labels are being printed', 'yeffoprint-core' )
-				: __( 'We’re getting your order ready to print', 'yeffoprint-core' ),
+			'production' => 'curing' === $status
+				? __( 'Printed! Your holographic labels are curing for 24 hours before they ship', 'yeffoprint-core' )
+				: ( 'in-production' === $status
+					? __( 'Your labels are being printed', 'yeffoprint-core' )
+					: __( 'We’re getting your order ready to print', 'yeffoprint-core' ) ),
 			'shipped'    => self::shipped_sublabel( $order ),
 			'delivered'  => '',
 		];

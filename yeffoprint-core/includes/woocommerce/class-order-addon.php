@@ -38,7 +38,7 @@ class YeffoPrint_Order_Addon {
 	public const SESSION_KEY = 'yp_addon_to_order_id';
 
 	private static function active_statuses(): array {
-		return [ 'processing', YeffoPrint_Order_Production_Status::STATUS ];
+		return [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ];
 	}
 
 	/** The order a group actually ships under — itself, unless it's already tagged as someone else's add-on. */

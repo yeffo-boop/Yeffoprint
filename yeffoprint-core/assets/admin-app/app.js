@@ -1441,6 +1441,7 @@
 		processing:     'neutral',
 		'in-design':    'neutral',
 		'in-production': 'neutral',
+		curing: 'neutral',
 		'on-hold':      'warn',
 		pending:        'warn',
 		cancelled:      'crit',

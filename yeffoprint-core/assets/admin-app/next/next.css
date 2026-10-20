@@ -509,7 +509,7 @@ body.yp-next .ypn-search {
 
 .ypn-board {
 	display: grid;
-	grid-template-columns: repeat(7, minmax(190px, 1fr));
+	grid-template-columns: repeat(8, minmax(180px, 1fr));
 	gap: 12px;
 	overflow-x: auto;
 	align-items: start;
@@ -552,6 +552,7 @@ body.yp-next .ypn-search {
 .ypn-col--approval .ypn-col__head i { background: var(--ypn-cy); }
 .ypn-col--ready .ypn-col__head i { background: #7c3aed; }
 .ypn-col--printing .ypn-col__head i { background: var(--ypn-mag); }
+.ypn-col--curing .ypn-col__head i { background: linear-gradient(115deg, #d3ecd9, #bfe2f2, #ddd5f6, #f3d0e6); }
 .ypn-col--shipped .ypn-col__head i { background: var(--ypn-grn); }
 
 .ypn-col__hint {
@@ -620,6 +621,17 @@ body.yp-next .ypn-search {
 .ypn-order__name {
 	font-weight: 600;
 	margin: 5px 0 1px;
+}
+
+.ypn-order__cure {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #5b3fb8;
+}
+
+.ypn-order__cure.is-done {
+	font-weight: 700;
+	color: #11702f;
 }
 
 .ypn-order__items {

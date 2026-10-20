@@ -40,7 +40,7 @@ class YeffoPrint_Admin_Payouts_Controller {
 	private const OTHER_DAYS = 7;
 
 	/** Statuses that mean the customer has paid (same as the Today revenue tiles). */
-	private const PAID_STATUSES = [ 'processing', 'in-design', 'in-production', 'shipped', 'completed' ];
+	private const PAID_STATUSES = [ 'processing', 'in-design', 'in-production', 'curing', 'shipped', 'completed' ];
 
 	/** Gateways that pay Jeff directly (no WooPayments payout). */
 	private const DIRECT_GATEWAYS = [

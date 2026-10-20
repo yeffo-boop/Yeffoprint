@@ -35,7 +35,7 @@ class YeffoPrint_Admin_Next_Controller {
 	private const BEST_SELLER_DAYS = 30;
 
 	/** Statuses that mean the customer has paid. Revenue on Today only counts these. */
-	private const PAID_STATUSES = [ 'processing', 'in-design', 'in-production', 'shipped', 'completed' ];
+	private const PAID_STATUSES = [ 'processing', 'in-design', 'in-production', 'curing', 'shipped', 'completed' ];
 
 	public function __construct() {
 		add_action( 'rest_api_init', [ $this, 'register_routes' ] );
@@ -100,7 +100,7 @@ class YeffoPrint_Admin_Next_Controller {
 
 		$open = wc_get_orders( [
 			'type' => 'shop_order',
-			'status'  => [ 'pending', 'on-hold', 'processing', YeffoPrint_Order_Design_Status::STATUS, YeffoPrint_Order_Production_Status::STATUS ],
+			'status'  => [ 'pending', 'on-hold', 'processing', YeffoPrint_Order_Design_Status::STATUS, YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ],
 			'limit'   => 200,
 			'orderby' => 'date',
 			'order'   => 'ASC',
@@ -149,6 +149,8 @@ class YeffoPrint_Admin_Next_Controller {
 			$column = 'needs_proof' === $proof ? 'proof' : ( 'proof_sent' === $proof ? 'approval' : 'ready' );
 		} elseif ( YeffoPrint_Order_Production_Status::STATUS === $status ) {
 			$column = 'printing';
+		} elseif ( YeffoPrint_Order_Curing_Status::STATUS === $status ) {
+			$column = 'curing';
 		} else {
 			$column = 'shipped';
 		}
@@ -167,6 +169,7 @@ class YeffoPrint_Admin_Next_Controller {
 			'express'        => YeffoPrint_Express_Order::is_express( $order ),
 			// Holographic, not Express: ships a day later (24h cure), so it's due a day later too.
 			'holo_cure'      => YeffoPrint_Holographic_Vinyl::needs_cure_day( $order ),
+			'curing_ready_at' => YeffoPrint_Order_Curing_Status::ready_at( $order ),
 			'express_waiting' => YeffoPrint_Telegram_Express_Alerts::is_waiting( $order ),
 			'change_requested' => null !== YeffoPrint_Order_Label_Changes::get_request( $order ),
 			'payment_method' => $order->get_payment_method_title(),

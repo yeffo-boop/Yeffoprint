@@ -102,7 +102,7 @@ class YeffoPrint_Telegram_Admin_Alerts {
 	 * screen, where it can be answered before the deadline.
 	 */
 	public function on_possible_dispute( int $order_id, string $from, string $to, $order = null ): void {
-		if ( 'on-hold' !== $to || ! in_array( $from, [ 'processing', 'in-design', 'in-production', 'shipped', 'completed' ], true ) ) {
+		if ( 'on-hold' !== $to || ! in_array( $from, [ 'processing', 'in-design', 'in-production', 'curing', 'shipped', 'completed' ], true ) ) {
 			return;
 		}
 		$order = $order instanceof \WC_Order ? $order : wc_get_order( $order_id );
