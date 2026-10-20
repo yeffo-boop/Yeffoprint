@@ -1610,3 +1610,68 @@ fieldset {
 	text-align: center;
 	font-weight: 700;
 }
+
+/*
+ * Holographic vinyl's "Worth the extra day" note (label-pickers.js on the
+ * Template page and custom label form, class-holographic-vinyl.php above
+ * Place Order). Here rather than label-pickers.css so checkout has it too.
+ */
+.yp-holo-note {
+	display: flex;
+	gap: 0.75rem;
+	align-items: flex-start;
+	margin: 0.9rem 0 0;
+	padding: 0.85rem 1rem;
+	border: 1px solid #d8d0ee;
+	border-radius: 12px;
+	background: linear-gradient(120deg, #f4f0fd 0%, #ecf6fb 50%, #fcf1f6 100%);
+	color: var(--wp--preset--color--near-black);
+	text-align: left;
+}
+
+.yp-holo-note__icon {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	color: #5b3fb8;
+	background: linear-gradient(135deg, #e4dbfb, #d7eef8, #f9dceb);
+}
+
+.yp-holo-note p {
+	margin: 0;
+}
+
+.yp-holo-note__title {
+	font-weight: 700;
+	font-size: 0.95rem;
+	margin: 0.1rem 0 0.2rem !important;
+}
+
+.yp-holo-note__body {
+	font-size: 0.875rem;
+	line-height: 1.45;
+	color: #444;
+}
+
+.yp-holo-note__small {
+	font-size: 0.78rem;
+	color: #666;
+	margin-top: 0.35rem !important;
+}
+
+.yp-holo-note.is-compact {
+	padding: 0.6rem 0.75rem;
+	align-items: center;
+}
+
+.yp-holo-note.is-compact .yp-holo-note__icon {
+	width: 26px;
+	height: 26px;
+}
+
+.yp-holo-note--checkout {
+	margin: 1rem 0;
+}

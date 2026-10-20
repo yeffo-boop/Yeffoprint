@@ -392,6 +392,96 @@
 		} );
 	}
 
+	/* ---------- Holographic: cure notice + border choice ---------- */
+
+	/*
+	 * Direct request: holographic vinyl needs an extra 24 hours after
+	 * printing to cure before it ships, and prints better with a thin
+	 * unprinted holographic border, so ask about the border right there.
+	 * Only the 'holographic' finish (not Prism). Express orders skip the
+	 * wait. The same copy is in class-holographic-vinyl.php (checkout).
+	 */
+	var CLOCK_HTML =
+		'<span class="yp-holo-note__icon" aria-hidden="true">' +
+			'<svg viewBox="0 0 24 24" width="18" height="18" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+		'</span>';
+
+	function isHolographic( material ) {
+		return !! material && 'holographic' === finishFor( material );
+	}
+
+	/** The "Worth the extra day" card. compact = one paragraph (custom label form rows). */
+	function holoNoticeHtml( compact ) {
+		if ( compact ) {
+			return '<div class="yp-holo-note is-compact">' + CLOCK_HTML + '<div><p class="yp-holo-note__body"><strong>Worth the extra day ✨</strong> We let holographic labels rest 24 hours after printing so they arrive crisp, flat and scratch-free. Adds 1 business day (Express orders aren’t delayed).</p></div></div>';
+		}
+		return (
+			'<div class="yp-holo-note">' + CLOCK_HTML +
+				'<div>' +
+					'<p class="yp-holo-note__title">Worth the extra day ✨</p>' +
+					'<p class="yp-holo-note__body">We let holographic labels rest for 24 hours after printing before we pack them. That gives the vinyl time to settle, so your labels arrive crisp, flat and scratch-free.</p>' +
+					'<p class="yp-holo-note__small">Adds 1 business day before your order ships. Express orders aren’t delayed.</p>' +
+				'</div>' +
+			'</div>'
+		);
+	}
+
+	function holoExampleHtml( withBorder ) {
+		return (
+			'<span class="yp-holo-example' + ( withBorder ? ' has-border' : '' ) + '" aria-hidden="true">' +
+				'<span class="yp-holo-example__art"><b>Your design</b><i></i><i></i></span>' +
+			'</span>'
+		);
+	}
+
+	/**
+	 * "Add a holographic border?" — two picture choices (product page) or
+	 * two small pills (compact, custom label form). Buttons carry
+	 * data-holo-border="yes|no"; callers wire the clicks. attrs is added to
+	 * every button (the custom form's row id).
+	 */
+	function holoBorderHtml( withBorder, options ) {
+		options = options || {};
+		var attrs = options.attrs || '';
+		var choices = [
+			{ value: 'yes', name: options.compact ? 'Add border (recommended)' : 'Yes, add the border', meta: 'Recommended · No add-on', on: withBorder },
+			{ value: 'no', name: 'No border', meta: 'Design prints edge to edge', on: ! withBorder }
+		];
+
+		if ( options.compact ) {
+			return (
+				'<div class="yp-holo-border is-compact">' +
+					'<span class="yp-field__label" id="' + escapeHtml( options.labelId || '' ) + '">Holographic border</span>' +
+					'<p class="yp-holo-border__sub">Prints best with a thin shiny edge framing your design.</p>' +
+					'<div class="yp-holo-border__pills" role="radiogroup" aria-labelledby="' + escapeHtml( options.labelId || '' ) + '">' +
+						choices.map( function ( c ) {
+							return '<button type="button" role="radio" aria-checked="' + ( c.on ? 'true' : 'false' ) + '" class="yp-holo-border__pill' + ( c.on ? ' is-selected' : '' ) + '" data-holo-border="' + c.value + '"' + attrs + '>' +
+								'<span class="yp-holo-mini' + ( 'yes' === c.value ? ' has-border' : '' ) + '" aria-hidden="true"><i></i></span>' + c.name +
+							'</button>';
+						} ).join( '' ) +
+					'</div>' +
+				'</div>'
+			);
+		}
+
+		return (
+			'<div class="yp-holo-border">' +
+				'<h3 class="yp-holo-border__title" id="yp-holo-border-heading">Add a holographic border?</h3>' +
+				'<p class="yp-holo-border__sub">Holographic labels print best with a thin shiny border around the edge. We leave the outer edge unprinted so the holographic vinyl frames your design.</p>' +
+				'<div class="yp-holo-border__opts" role="radiogroup" aria-labelledby="yp-holo-border-heading">' +
+					choices.map( function ( c ) {
+						return '<button type="button" role="radio" aria-checked="' + ( c.on ? 'true' : 'false' ) + '" class="yp-holo-border__opt' + ( c.on ? ' is-selected' : '' ) + '" data-holo-border="' + c.value + '"' + attrs + '>' +
+							CHECK_HTML +
+							holoExampleHtml( 'yes' === c.value ) +
+							'<span class="yp-holo-border__name">' + c.name + '</span>' +
+							'<span class="yp-holo-border__meta' + ( 'yes' === c.value ? ' is-rec' : '' ) + '">' + c.meta + '</span>' +
+						'</button>';
+					} ).join( '' ) +
+				'</div>' +
+			'</div>'
+		);
+	}
+
 	window.YPLabelPickers = {
 		inches: inches,
 		hasDimensions: hasDimensions,
@@ -405,6 +495,9 @@
 		materialCardHtml: materialCardHtml,
 		materialDotHtml: materialDotHtml,
 		quantityHtml: quantityHtml,
-		bindQuantity: bindQuantity
+		bindQuantity: bindQuantity,
+		isHolographic: isHolographic,
+		holoNoticeHtml: holoNoticeHtml,
+		holoBorderHtml: holoBorderHtml
 	};
 } )();

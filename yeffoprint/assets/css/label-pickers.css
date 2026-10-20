@@ -742,3 +742,173 @@
 	color: #66645e;
 	text-align: right;
 }
+
+/* ---------- Holographic border choice (label-pickers.js holoBorderHtml) ---------- */
+
+.yp-holo[hidden] {
+	display: none;
+}
+
+.yp-holo-border {
+	margin-top: 1.1rem;
+}
+
+.yp-holo-border__title {
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 1.05rem;
+	margin: 0 0 0.25rem;
+}
+
+.yp-holo-border__sub {
+	font-size: 0.875rem;
+	line-height: 1.45;
+	color: #555;
+	margin: 0 0 0.75rem;
+}
+
+.yp-holo-border__opts {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.65rem;
+}
+
+.yp-holo-border__opt {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.15rem;
+	padding: 0.6rem 0.6rem 0.75rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: 14px;
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.yp-holo-border__opt:hover {
+	border-color: #9a978f;
+}
+
+.yp-holo-border__opt.is-selected {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-holo-border__name {
+	font-weight: 600;
+	font-size: 0.9rem;
+	margin-top: 0.5rem;
+}
+
+.yp-holo-border__meta {
+	font: 500 0.72rem var(--wp--preset--font-family--mono, monospace);
+	color: #777;
+}
+
+.yp-holo-border__meta.is-rec {
+	color: #5b3fb8;
+}
+
+/* The example label: holographic vinyl showing around a printed design. */
+.yp-holo-example,
+.yp-holo-mini {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	background: linear-gradient(115deg, #efe6d2 0%, #d3ecd9 22%, #bfe2f2 45%, #ddd5f6 65%, #f3d0e6 82%, #eee3d0 100%);
+}
+
+.yp-holo-example {
+	width: 100%;
+	aspect-ratio: 2.1 / 1;
+	border-radius: 10px;
+}
+
+.yp-holo-example__art {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 6px;
+	padding: 0 12%;
+	border-radius: 6px;
+	background: linear-gradient(100deg, #121827 0 68%, #c43a52 68% 75%, #b48a3a 75% 82%, #2c8fbf 82% 89%, #7a5fc4 89%);
+	color: #fff;
+}
+
+.yp-holo-example.has-border .yp-holo-example__art {
+	inset: 7px;
+}
+
+.yp-holo-example__art b {
+	font: 800 clamp(0.8rem, 3.2vw, 1.05rem)/1 var(--wp--preset--font-family--heading);
+	white-space: nowrap;
+}
+
+.yp-holo-example__art i {
+	display: block;
+	width: 55%;
+	height: 4px;
+	border-radius: 2px;
+	background: rgba(255, 255, 255, 0.55);
+}
+
+.yp-holo-example__art i + i {
+	width: 38%;
+}
+
+.yp-holo-border.is-compact {
+	margin-top: 0.75rem;
+}
+
+.yp-holo-border.is-compact .yp-holo-border__sub {
+	font-size: 0.8rem;
+	margin: 0.1rem 0 0.5rem;
+}
+
+.yp-holo-border__pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.yp-holo-border__pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.3rem 0.85rem 0.3rem 0.35rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: 999px;
+	background: var(--wp--preset--color--white);
+	color: var(--wp--preset--color--near-black);
+	font: 500 0.85rem/1.2 inherit;
+	font-family: inherit;
+	cursor: pointer;
+}
+
+.yp-holo-border__pill.is-selected {
+	border-color: var(--wp--preset--color--near-black);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--near-black);
+}
+
+.yp-holo-mini {
+	width: 40px;
+	height: 20px;
+	border-radius: 5px;
+}
+
+.yp-holo-mini i {
+	position: absolute;
+	inset: 0;
+	border-radius: 3px;
+	background: #121827;
+}
+
+.yp-holo-mini.has-border i {
+	inset: 3px;
+}

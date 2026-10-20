@@ -64,7 +64,7 @@ class YeffoPrint_Order_Shipment_Status {
 	 * pipeline is Processing → In Production → Shipped → Completed.
 	 */
 	public function add_to_status_list( array $order_statuses ): array {
-		$anchor_key = isset( $order_statuses['wc-in-production'] ) ? 'wc-in-production' : 'wc-processing';
+		$anchor_key = isset( $order_statuses['wc-curing'] ) ? 'wc-curing' : ( isset( $order_statuses['wc-in-production'] ) ? 'wc-in-production' : 'wc-processing' );
 
 		$new_statuses = [];
 		foreach ( $order_statuses as $key => $label ) {
@@ -111,7 +111,7 @@ class YeffoPrint_Order_Shipment_Status {
 	 *    fingerprint is unchanged).
 	 */
 	public function maybe_advance_to_shipped( \WC_Order $order ): void {
-		if ( ! in_array( $order->get_status(), [ 'processing', YeffoPrint_Order_Production_Status::STATUS, 'completed' ], true ) ) {
+		if ( ! in_array( $order->get_status(), [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS, 'completed' ], true ) ) {
 			return;
 		}
 

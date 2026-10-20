@@ -124,7 +124,8 @@
 			compound_strength: '',
 			qr_url: '',
 			custom_width_in: '',
-			custom_height_in: ''
+			custom_height_in: '',
+			holo_border: 'yes'
 		}, overrides || {} );
 	}
 
@@ -146,8 +147,34 @@
 				compound_strength: row.compound_strength,
 				qr_url: String( row.qr_url || '' ).trim(),
 				custom_width_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_width_in ) || 0 : 0,
-				custom_height_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_height_in ) || 0 : 0
+				custom_height_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_height_in ) || 0 : 0,
+				holo_border: rowIsHolographic( row ) ? row.holo_border : ''
 			};
+		} );
+	}
+
+	function rowIsHolographic( row ) {
+		return window.YPLabelPickers.isHolographic( materialsData.filter( function ( m ) { return m.id === row.material_id; } )[ 0 ] );
+	}
+
+	/** The short "Worth the extra day" note and border pills under a row's materials, only while Holographic is picked. */
+	function renderRowHolo( row, rowEl ) {
+		var holoEl = rowEl.querySelector( '[data-row-holo]' );
+		var pickers = window.YPLabelPickers;
+		if ( ! rowIsHolographic( row ) ) {
+			holoEl.hidden = true;
+			holoEl.innerHTML = '';
+			return;
+		}
+		holoEl.hidden = false;
+		holoEl.innerHTML = pickers.holoNoticeHtml( true ) +
+			pickers.holoBorderHtml( 'no' !== row.holo_border, { compact: true, labelId: 'yp-co-row-' + row.id + '-holo-label' } );
+		holoEl.querySelectorAll( '[data-holo-border]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				row.holo_border = button.getAttribute( 'data-holo-border' );
+				renderRowHolo( row, rowEl );
+				renderSummary();
+			} );
 		} );
 	}
 
@@ -224,6 +251,7 @@
 							return pickers.materialDotHtml( material, { selected: material.id === row.material_id, attrs: ' data-row-material="' + material.id + '"' } );
 						} ).join( '' ) +
 					'</div>' +
+					'<div class="yp-holo" data-row-holo hidden></div>' +
 				'</div>' +
 				'<div class="yp-field">' +
 					'<span class="yp-field__label">Quantity</span>' +
@@ -300,9 +328,11 @@
 				button.addEventListener( 'click', function () {
 					row.material_id = parseInt( button.getAttribute( 'data-row-material' ), 10 );
 					syncRowChoice( rowEl, '[data-row-material]', 'data-row-material', row.material_id );
+					renderRowHolo( row, rowEl );
 					updatePricePreview();
 				} );
 			} );
+			renderRowHolo( row, rowEl );
 
 			// Property assignment, not an HTML `value="…"` attribute — this
 			// is customer-authored free text (round-tripped from a reorder
@@ -355,7 +385,8 @@
 			compound_strength: source.compound_strength,
 			qr_url: source.qr_url,
 			custom_width_in: source.custom_width_in,
-			custom_height_in: source.custom_height_in
+			custom_height_in: source.custom_height_in,
+			holo_border: source.holo_border
 		} ) );
 		renderBatch();
 		updatePricePreview();
@@ -631,7 +662,7 @@
 			var details = String( row.compound_strength || '' ).trim();
 			return '<li>' +
 				'<span>Label ' + ( index + 1 ) + ( details ? ' · ' + escapeHtml( details ) : '' ) +
-					'<small>' + escapeHtml( [ sizeText, material ? material.name : '' ].filter( Boolean ).join( ' · ' ) ) + '</small></span>' +
+					'<small>' + escapeHtml( [ sizeText, material ? material.name : '', rowIsHolographic( row ) ? ( 'no' === row.holo_border ? 'No border' : 'Holo border' ) : '' ].filter( Boolean ).join( ' · ' ) ) + '</small></span>' +
 				'<span class="yp-custom-order__summary-qty">× ' + escapeHtml( row.quantity ) + '</span>' +
 			'</li>';
 		} ).join( '' );

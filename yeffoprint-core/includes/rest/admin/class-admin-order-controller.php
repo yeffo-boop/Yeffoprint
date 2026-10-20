@@ -589,6 +589,9 @@ class YeffoPrint_Admin_Order_Controller {
 			'express'              => YeffoPrint_Express_Order::is_express( $order ),
 			// Reminders still going out: shows the Acknowledge button.
 			'express_waiting'      => YeffoPrint_Telegram_Express_Alerts::is_waiting( $order ),
+			// Holographic, not Express: let it cure 24 hours before shipping.
+			'holo_cure'            => YeffoPrint_Holographic_Vinyl::needs_cure_day( $order ),
+			'curing_ready_at'      => YeffoPrint_Order_Curing_Status::ready_at( $order ),
 			// Falls back to billing when there's no separate shipping
 			// address — same behavior WooCommerce's own order screen and
 			// order emails already use, not a new convention introduced
@@ -799,6 +802,8 @@ class YeffoPrint_Admin_Order_Controller {
 			// (new design / own file / reorder) — on the labels lines
 			// only, not the $25 fee line that rides along with them.
 			'design_choice' => self::item_design_choice( $item, $product ),
+			// Holographic lines only: true/false for the border question, null otherwise.
+			'holo_border'   => YeffoPrint_Holographic_Vinyl::item_border( $item ),
 			// display_value is already wp_kses_post()-safe HTML by the
 			// time get_formatted_meta_data() returns it (WC_Order_Item's
 			// own method) — the same batch tables/variant summaries/QR

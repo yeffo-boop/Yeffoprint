@@ -37,7 +37,7 @@ class YeffoPrint_Telegram_Admin_Commands {
 
 		$orders = wc_get_orders( [
 			'type' => 'shop_order',
-			'status'  => [ 'processing', YeffoPrint_Order_Production_Status::STATUS ],
+			'status'  => [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ],
 			'limit'   => self::ROW_LIMIT,
 			'orderby' => 'date',
 			'order'   => 'ASC',
@@ -104,7 +104,7 @@ class YeffoPrint_Telegram_Admin_Commands {
 
 		$pending = wc_get_orders( [
 			'type' => 'shop_order',
-			'status' => [ 'processing', YeffoPrint_Order_Production_Status::STATUS ],
+			'status' => [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ],
 			'limit'  => 1,
 			'return' => 'ids',
 			'paginate' => true,

@@ -241,6 +241,7 @@
 		express: { rank: 0, color: '#141414' },
 		proof: { rank: 1, color: 'var(--ypn-mag)' },
 		ready: { rank: 2, color: '#7c3aed' },
+		cured: { rank: 2, color: '#5b3fb8' },
 		approval: { rank: 3, color: 'var(--ypn-yel)' },
 		unpaid: { rank: 4, color: '#9a9aa0' },
 		emailorder: { rank: 1, color: 'var(--ypn-cy, #00AEEF)' },
@@ -347,7 +348,8 @@
 		( todayBoard || [] ).forEach( function ( o ) {
 			var age = o.date ? Date.now() - new Date( o.date ).getTime() : 0;
 			// Same rule as the old dashboard's "Needs attention": open longer than the due date setting.
-			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays : 0;
+			// Holographic orders get one more day: the vinyl cures 24 hours before shipping.
+			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays - ( o.holo_cure ? 1 : 0 ) : 0;
 			var late = lateBy > 0 ? lateBy : 0;
 			var base = { id: o.id, express: o.express, date: o.date, late: late, meta: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
@@ -357,7 +359,9 @@
 			if ( o.change_requested ) {
 				items.push( Object.assign( {}, base, { kind: 'change', title: 'Review the label change on ' + orderLabel( o ), action: 'Review' } ) );
 			}
-			if ( 'proof' === o.column ) {
+			if ( 'curing' === o.column && curingDone( o ) ) {
+				items.push( Object.assign( base, { kind: 'cured', title: orderLabel( o ) + ' is done curing. Ship it', action: 'Label', href: '#/ship/' + o.id } ) );
+			} else if ( 'proof' === o.column ) {
 				items.push( Object.assign( base, { kind: 'proof', title: 'Make the proof for ' + orderLabel( o ), action: 'Open' } ) );
 			} else if ( 'ready' === o.column ) {
 				items.push( Object.assign( base, { kind: 'ready', title: 'Print ' + orderLabel( o ), action: 'Send to printer', print: true } ) );
@@ -422,7 +426,8 @@
 			} ).join( '' ) + ( items.length > shown.length ? '<a class="ypn-more" href="#/production">' + ( items.length - shown.length ) + ' more on the board &rarr;</a>' : '' )
 			: '<div class="ypn-empty"><b>All caught up</b><span>No proofs to make, nothing waiting to print.</span></div>';
 
-		var ship = todayBoard.filter( function ( o ) { return 'printing' === o.column; } );
+		// Curing holographic orders join once their 24 hours are up.
+		var ship = todayBoard.filter( function ( o ) { return 'printing' === o.column || ( 'curing' === o.column && curingDone( o ) ); } );
 		todayEl.querySelector( '[data-ypn-ship-count]' ).textContent = ship.length ? String( ship.length ) : '';
 		todayEl.querySelector( '[data-ypn-ship]' ).innerHTML = ship.length
 			? ship.map( function ( o ) {
@@ -477,6 +482,7 @@
 		{ id: 'approval', label: 'Proof sent', hint: 'Waiting on the customer' },
 		{ id: 'ready', label: 'Ready to print', hint: 'Paid and approved' },
 		{ id: 'printing', label: 'In production', hint: 'On the printer' },
+		{ id: 'curing', label: 'Curing', hint: 'Holographic, resting 24 hours' },
 		{ id: 'shipped', label: 'Shipped', hint: 'Last 14 days' }
 	];
 	var PRINTABLE = [ 'proof', 'approval', 'ready' ];
@@ -524,8 +530,9 @@
 					'<div class="ypn-order__row"><span class="ypn-order__num">' + ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + esc( String( o.number ) ) + '</span>' +
 						( o.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '<span class="ypn-order__age">' + esc( ago( o.date ) ) + '</span>' ) +
 					'</div>' +
-					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
+					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.holo_cure ? ' ' + HOLO_TAG : '' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
+					( 'curing' === o.column && o.curing_ready_at ? '<div class="ypn-order__cure' + ( curingDone( o ) ? ' is-done' : '' ) + '">' + esc( curingText( o ) ) + '</div>' : '' ) +
 					'<div class="ypn-order__row"><span class="ypn-order__meta">' + esc( o.payment_method || o.status_label ) + '</span><b>' + esc( money( o.total ) ) + '</b></div>' +
 					( 'ready' === o.column ? '<button type="button" class="ypn-order__action" data-ypn-print="' + o.id + '">Send to printer</button>' : '' ) +
 				'</div>'
@@ -695,7 +702,7 @@
 	/* ---------- Progress tracker (order page + order window) ---------- */
 
 	var STEPS = [ 'Placed', 'Paid', 'Printing', 'Shipped', 'Delivered' ];
-	var STEP_FOR_STATUS = { 'checkout-draft': 0, pending: 1, 'on-hold': 1, processing: 2, 'in-production': 2, shipped: 3, completed: 5 };
+	var STEP_FOR_STATUS = { 'checkout-draft': 0, pending: 1, 'on-hold': 1, processing: 2, 'in-production': 2, curing: 2, shipped: 3, completed: 5 };
 
 	// Orders with a custom design go through the proof first.
 	var PROOF_STEPS = [ 'Paid', 'Proof', 'Approved', 'Printing', 'Shipped' ];
@@ -719,7 +726,7 @@
 			current = {
 				pending: 0, 'on-hold': 0, 'checkout-draft': 0,
 				processing: 'needs_proof' === proof ? 1 : ( 'proof_sent' === proof ? 2 : 3 ),
-				'in-production': 3, shipped: 4, completed: 5
+				'in-production': 3, curing: 3, shipped: 4, completed: 5
 			}[ order.status ];
 		} else {
 			current = STEP_FOR_STATUS[ order.status ];
@@ -734,6 +741,9 @@
 			var label = step;
 			if ( 'Printing' === step && 'processing' === order.status && i === current && ! order.web_design ) {
 				label = 'Ready to print';
+			}
+			if ( 'Printing' === step && 'curing' === order.status && i === current ) {
+				label = 'Curing';
 			}
 			return '<li class="' + state + '"><i>' + ( 'done' === state ? '✓' : i + 1 ) + '</i><span>' + esc( label ) + '</span></li>';
 		} ).join( '' ) + '</ol>';
@@ -762,6 +772,28 @@
 
 	function sendOrderToPrinter( id ) {
 		return YP.request( api( 'admin/order/' + id + '/send-to-printer' ), { method: 'POST' } );
+	}
+
+	// Holographic orders rest 24 hours after printing (class-order-curing-status.php).
+	function moveToCuring( id ) {
+		return YP.request( api( 'admin/order/' + parseInt( id, 10 ) ), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( { status: 'curing' } )
+		} );
+	}
+
+	function curingDone( o ) {
+		return !! o.curing_ready_at && new Date( o.curing_ready_at ).getTime() <= Date.now();
+	}
+
+	/** "Ready to ship" once the 24 hours are up, else "Ready in 5h". */
+	function curingText( o ) {
+		if ( curingDone( o ) ) {
+			return 'Done curing, ready to ship';
+		}
+		var hours = Math.max( 1, Math.ceil( ( new Date( o.curing_ready_at ).getTime() - Date.now() ) / 3600000 ) );
+		return 'Curing, ready to ship in ' + hours + 'h';
 	}
 
 	/**
@@ -1006,6 +1038,9 @@
 		'</div>';
 	}
 
+	// Holographic, not Express: ships a day later so the vinyl can cure (class-holographic-vinyl.php).
+	var HOLO_TAG = '<span class="ypn-tag-holo" title="Holographic vinyl cures 24 hours after printing">HOLO +1 DAY</span>';
+
 	function labelCardHtml( item ) {
 		var preview = item.image_url
 			? '<img src="' + escAttr( item.image_url ) + '" alt="" loading="lazy">'
@@ -1015,6 +1050,9 @@
 				'<div class="ypn-lab__pv' + ( item.image_url ? ' has-img' : '' ) + '">' + preview + '</div>' +
 				'<div class="ypn-lab__name">' + esc( item.name ) + '</div>' +
 				designChoiceHtml( item.design_choice ) +
+				( null !== item.holo_border && undefined !== item.holo_border
+					? '<div><span class="ypn-pill' + ( item.holo_border ? ' ypn-pill--holo">Holographic border' : '">No holographic border' ) + '</span></div>'
+					: '' ) +
 				( item.brands && item.brands.length ? '<div class="ypn-lab__brand">Brand: ' + esc( item.brands.join( ', ' ) ) + '</div>' : '' ) +
 				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
 				( item.meta.length
@@ -1145,7 +1183,9 @@
 			var unpaid    = [ 'pending', 'on-hold', 'checkout-draft', 'failed' ].indexOf( order.status ) !== -1;
 			var website   = !! order.web_design;
 			var printable = 'processing' === order.status && ! website;
-			var shipStage = ! website && [ 'processing', 'in-production', 'shipped', 'completed' ].indexOf( order.status ) !== -1;
+			var shipStage = ! website && [ 'processing', 'in-production', 'curing', 'shipped', 'completed' ].indexOf( order.status ) !== -1;
+			// Holographic, not Express: printed → Curing for 24 hours → ship.
+			var canCure   = order.holo_cure && 'in-production' === order.status;
 			var units     = order.items.reduce( function ( n, item ) { return n + Number( item.quantity || 0 ); }, 0 );
 			var discount  = Number( order.discount_total || 0 );
 			var tax       = Number( order.total_tax || 0 );
@@ -1166,9 +1206,11 @@
 				actions.push( '<button type="button" class="ypn-act ypn-act--primary" data-ypn-act="proof">Upload proof <span>↑</span></button>' );
 			} else if ( printable ) {
 				actions.push( '<button type="button" class="ypn-act ypn-act--primary" data-ypn-act="print">Send to printer <span>›</span></button>' );
+			} else if ( canCure ) {
+				actions.push( '<button type="button" class="ypn-act ypn-act--primary" data-ypn-act="cure">Printed, move to Curing <span>›</span></button>' );
 			}
 			if ( shipStage ) {
-				actions.push( '<button type="button" class="ypn-act' + ( 'in-production' === order.status ? ' ypn-act--primary' : '' ) + '" data-ypn-act="label">' + ( ( order.shippo_labels || [] ).length ? 'Shipping label' : 'Buy shipping label' ) + ' <span>' + esc( order.shipping_method || '›' ) + '</span></button>' );
+				actions.push( '<button type="button" class="ypn-act' + ( ( 'in-production' === order.status && ! canCure ) || 'curing' === order.status ? ' ypn-act--primary' : '' ) + '" data-ypn-act="label">' + ( ( order.shippo_labels || [] ).length ? 'Shipping label' : 'Buy shipping label' ) + ' <span>' + esc( order.shipping_method || '›' ) + '</span></button>' );
 			}
 			if ( order.payment_url ) {
 				actions.push( '<button type="button" class="ypn-act" data-ypn-act="pay">Copy pay link <span>⧉</span></button>' );
@@ -1214,6 +1256,8 @@
 						: '' ) +
 					'<div class="ypn-op__sub">' +
 						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
+						( order.holo_cure ? HOLO_TAG : '' ) +
+						( order.curing_ready_at ? '<span class="ypn-muted">' + esc( curingText( order ) ) + '</span>' : '' ) +
 						'<span class="ypn-pill ypn-pill--' + ( unpaid ? 'yel' : ( 'shipped' === order.status || 'completed' === order.status ? 'grn' : 'ink' ) ) + '">' + esc( order.status_label ) + '</span>' +
 						'<span>' + sub + '</span>' +
 					'</div>' +
@@ -1330,6 +1374,14 @@
 							button.disabled = false;
 							button.textContent = 'Send to printer';
 							window.alert( 'Couldn’t send to printer: ' + error.message );
+						} );
+					} else if ( 'cure' === act ) {
+						button.disabled = true;
+						button.textContent = 'Moving…';
+						moveToCuring( order.id ).then( load ).catch( function ( error ) {
+							button.disabled = false;
+							button.textContent = 'Printed, move to Curing';
+							window.alert( 'Couldn’t move it to Curing: ' + error.message );
 						} );
 					} else if ( 'pay' === act ) {
 						copyText( order.payment_url, button );
@@ -1712,6 +1764,7 @@
 				'<div class="ypn-ship">' +
 					'<div class="ypn-op__sub">' +
 						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
+						( order.holo_cure ? HOLO_TAG + '<span class="ypn-muted">' + ( order.curing_ready_at ? esc( curingText( order ) ) : 'Let it cure 24 hours after printing before you ship.' ) + '</span>' : '' ) +
 						'<span>' + esc( order.customer_name || 'Guest' ) + ( order.shipping_method ? ' picked ' + esc( order.shipping_method ) : '' ) + '</span>' +
 						'<a class="ypn-link" href="#/order/' + order.id + '">Open order</a>' +
 					'</div>' +
