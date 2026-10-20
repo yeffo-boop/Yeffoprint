@@ -653,11 +653,6 @@ body.yp-next .ypn-search {
 	white-space: nowrap;
 }
 
-.ypn-pill--holo {
-	background: #ece6fb;
-	color: #4a2fa8;
-}
-
 .ypn-tag-express {
 	background: #141414;
 	color: #FFF200;
@@ -1298,6 +1293,8 @@ body.yp-next .ypn-card__title {
 
 .ypn-pill--cy { background: #e0f4fd; color: #04679a; }
 .ypn-pill--red { background: #fde4e0; color: #9f2a17; }
+/* Holographic border wanted: shiny like the vinyl. "No border" stays a plain pill. */
+.ypn-pill--holo { background: linear-gradient(115deg, #efe6d2, #d3ecd9 25%, #bfe2f2 50%, #ddd5f6 75%, #f3d0e6); color: #3b2a7a; }
 
 .ypn-payouts {
 	margin-bottom: 14px;

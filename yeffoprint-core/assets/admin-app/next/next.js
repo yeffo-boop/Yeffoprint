@@ -1020,7 +1020,7 @@
 				'<div class="ypn-lab__name">' + esc( item.name ) + '</div>' +
 				designChoiceHtml( item.design_choice ) +
 				( null !== item.holo_border && undefined !== item.holo_border
-					? '<div><span class="ypn-pill ypn-pill--holo">' + ( item.holo_border ? 'Holographic border' : 'No holographic border' ) + '</span></div>'
+					? '<div><span class="ypn-pill' + ( item.holo_border ? ' ypn-pill--holo">Holographic border' : '">No holographic border' ) + '</span></div>'
 					: '' ) +
 				( item.brands && item.brands.length ? '<div class="ypn-lab__brand">Brand: ' + esc( item.brands.join( ', ' ) ) + '</div>' : '' ) +
 				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
