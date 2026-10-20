@@ -76,6 +76,7 @@ class YeffoPrint_Email_Verification {
 
 	public static function mark_verified( int $user_id ): void {
 		delete_user_meta( $user_id, self::META );
+		do_action( 'yeffoprint_email_verified', $user_id );
 	}
 
 	/**
