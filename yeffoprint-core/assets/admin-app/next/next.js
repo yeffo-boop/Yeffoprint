@@ -347,7 +347,8 @@
 		( todayBoard || [] ).forEach( function ( o ) {
 			var age = o.date ? Date.now() - new Date( o.date ).getTime() : 0;
 			// Same rule as the old dashboard's "Needs attention": open longer than the due date setting.
-			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays : 0;
+			// Holographic orders get one more day: the vinyl cures 24 hours before shipping.
+			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays - ( o.holo_cure ? 1 : 0 ) : 0;
 			var late = lateBy > 0 ? lateBy : 0;
 			var base = { id: o.id, express: o.express, date: o.date, late: late, meta: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
@@ -524,7 +525,7 @@
 					'<div class="ypn-order__row"><span class="ypn-order__num">' + ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + esc( String( o.number ) ) + '</span>' +
 						( o.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '<span class="ypn-order__age">' + esc( ago( o.date ) ) + '</span>' ) +
 					'</div>' +
-					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
+					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.holo_cure ? ' ' + HOLO_TAG : '' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
 					'<div class="ypn-order__row"><span class="ypn-order__meta">' + esc( o.payment_method || o.status_label ) + '</span><b>' + esc( money( o.total ) ) + '</b></div>' +
 					( 'ready' === o.column ? '<button type="button" class="ypn-order__action" data-ypn-print="' + o.id + '">Send to printer</button>' : '' ) +
@@ -1006,6 +1007,9 @@
 		'</div>';
 	}
 
+	// Holographic, not Express: ships a day later so the vinyl can cure (class-holographic-vinyl.php).
+	var HOLO_TAG = '<span class="ypn-tag-holo" title="Holographic vinyl cures 24 hours after printing">HOLO +1 DAY</span>';
+
 	function labelCardHtml( item ) {
 		var preview = item.image_url
 			? '<img src="' + escAttr( item.image_url ) + '" alt="" loading="lazy">'
@@ -1015,6 +1019,9 @@
 				'<div class="ypn-lab__pv' + ( item.image_url ? ' has-img' : '' ) + '">' + preview + '</div>' +
 				'<div class="ypn-lab__name">' + esc( item.name ) + '</div>' +
 				designChoiceHtml( item.design_choice ) +
+				( null !== item.holo_border && undefined !== item.holo_border
+					? '<div><span class="ypn-pill ypn-pill--holo">' + ( item.holo_border ? 'Holographic border' : 'No holographic border' ) + '</span></div>'
+					: '' ) +
 				( item.brands && item.brands.length ? '<div class="ypn-lab__brand">Brand: ' + esc( item.brands.join( ', ' ) ) + '</div>' : '' ) +
 				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
 				( item.meta.length
@@ -1214,6 +1221,7 @@
 						: '' ) +
 					'<div class="ypn-op__sub">' +
 						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
+						( order.holo_cure ? HOLO_TAG : '' ) +
 						'<span class="ypn-pill ypn-pill--' + ( unpaid ? 'yel' : ( 'shipped' === order.status || 'completed' === order.status ? 'grn' : 'ink' ) ) + '">' + esc( order.status_label ) + '</span>' +
 						'<span>' + sub + '</span>' +
 					'</div>' +
@@ -1712,6 +1720,7 @@
 				'<div class="ypn-ship">' +
 					'<div class="ypn-op__sub">' +
 						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
+						( order.holo_cure ? HOLO_TAG + '<span class="ypn-muted">Let it cure 24 hours after printing before you ship.</span>' : '' ) +
 						'<span>' + esc( order.customer_name || 'Guest' ) + ( order.shipping_method ? ' picked ' + esc( order.shipping_method ) : '' ) + '</span>' +
 						'<a class="ypn-link" href="#/order/' + order.id + '">Open order</a>' +
 					'</div>' +

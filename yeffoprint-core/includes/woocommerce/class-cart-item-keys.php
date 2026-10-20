@@ -62,6 +62,9 @@ class YeffoPrint_Cart_Item_Keys {
 	public const CUSTOM_WIDTH_IN  = 'yp_custom_width_in';
 	public const CUSTOM_HEIGHT_IN = 'yp_custom_height_in';
 
+	/** Holographic material only: 'yes' or 'no' to a thin unprinted holo border (class-holographic-vinyl.php). */
+	public const HOLO_BORDER = 'yp_holo_border';
+
 	/**
 	 * Custom Design batching only — this row's 0-based index within its
 	 * order's batch. Required on every one of a batch's add_to_cart()

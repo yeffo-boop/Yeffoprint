@@ -100,6 +100,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-checkout-phone-required.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-checkout-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-express-order.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-holographic-vinyl.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-local-pickup.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-print-shipping.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
@@ -259,6 +260,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Pay_Address();
 		new YeffoPrint_Checkout_Phone_Required();
 		new YeffoPrint_Away_Mode_Checkout_Notice();
+		new YeffoPrint_Holographic_Vinyl();
 		new YeffoPrint_Express_Order();
 		new YeffoPrint_Local_Pickup();
 		new YeffoPrint_Print_Shipping();

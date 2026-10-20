@@ -643,6 +643,21 @@ body.yp-next .ypn-search {
 	cursor: pointer;
 }
 
+.ypn-tag-holo {
+	background: linear-gradient(115deg, #efe6d2, #d3ecd9 25%, #bfe2f2 50%, #ddd5f6 75%, #f3d0e6);
+	color: #3b2a7a;
+	font: 700 10px var(--wp--preset--font-family--body, Inter, sans-serif);
+	letter-spacing: 0.05em;
+	border-radius: 5px;
+	padding: 2px 6px;
+	white-space: nowrap;
+}
+
+.ypn-pill--holo {
+	background: #ece6fb;
+	color: #4a2fa8;
+}
+
 .ypn-tag-express {
 	background: #141414;
 	color: #FFF200;

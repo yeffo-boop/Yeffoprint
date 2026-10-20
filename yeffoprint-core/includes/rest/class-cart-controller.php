@@ -166,6 +166,11 @@ class YeffoPrint_Cart_Controller {
 			'yp_unique_add'                        => uniqid( '', true ),
 		];
 
+		$holo_border = YeffoPrint_Holographic_Vinyl::border_choice( $request->get_param( 'holo_border' ), $material_id );
+		if ( '' !== $holo_border ) {
+			$cart_item_data[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] = $holo_border;
+		}
+
 		if ( $custom_width_in > 0 ) {
 			$cart_item_data[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ]  = $custom_width_in;
 			$cart_item_data[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] = $custom_height_in;
@@ -244,6 +249,7 @@ class YeffoPrint_Cart_Controller {
 			'variants'    => $item[ YeffoPrint_Cart_Item_Keys::VARIANTS ],
 			'custom_width_in'  => (float) ( $item[ YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN ] ?? 0 ),
 			'custom_height_in' => (float) ( $item[ YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN ] ?? 0 ),
+			'holo_border'      => (string) ( $item[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] ?? '' ),
 		] );
 	}
 
@@ -306,6 +312,7 @@ class YeffoPrint_Cart_Controller {
 					echo esc_html( implode( ' · ', array_filter( [
 						$size ? $size->post_title : '',
 						$material ? $material->post_title : '',
+						'no' === ( $cart_item[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] ?? '' ) ? __( 'No border', 'yeffoprint-core' ) : ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] ) ? __( 'Holo border', 'yeffoprint-core' ) : '' ),
 						sprintf(
 							/* translators: %d: quantity */
 							_n( '%d label', '%d labels', (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ], 'yeffoprint-core' ),

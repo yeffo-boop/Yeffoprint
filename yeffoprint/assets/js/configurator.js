@@ -70,6 +70,7 @@
 	var titleEl = root.querySelector( '[data-yp-title]' );
 	var sizeOptionsEl = root.querySelector( '[data-yp-size-options]' );
 	var materialOptionsEl = root.querySelector( '[data-yp-material-options]' );
+	var holoEl = root.querySelector( '[data-yp-holo]' );
 	var fieldInputsEl = root.querySelector( '[data-yp-field-inputs]' );
 	var colorSectionEl = root.querySelector( '[data-yp-section="colors"]' );
 	var colorChoicesEl = root.querySelector( '[data-yp-color-choices]' );
@@ -96,7 +97,9 @@
 		// Only used on a Size with no print dimensions ("Custom"): the
 		// label size the customer types in, in inches.
 		customWidthIn: '',
-		customHeightIn: ''
+		customHeightIn: '',
+		// Holographic only: print with a thin unprinted holo border.
+		holoBorder: true
 	};
 	var nextVariantId = 1;
 
@@ -240,6 +243,7 @@
 		state.customWidthIn = item.custom_width_in ? String( item.custom_width_in ) : '';
 		state.customHeightIn = item.custom_height_in ? String( item.custom_height_in ) : '';
 		state.materialId = item.material_id ? parseInt( item.material_id, 10 ) : null;
+		state.holoBorder = 'no' !== item.holo_border;
 		state.variants = item.variants.map( function ( variant ) {
 			var values = variant.values || {};
 			// A design saved before this template had color choices (or
@@ -554,7 +558,38 @@
 			button.addEventListener( 'click', function () {
 				state.materialId = parseInt( button.getAttribute( 'data-option-id' ), 10 );
 				updateSelectedPill( materialOptionsEl, state.materialId );
+				renderHolo();
 				renderSummary();
+			} );
+		} );
+		renderHolo();
+	}
+
+	function selectedMaterial() {
+		return ( schema.materials || [] ).filter( function ( m ) { return m.id === state.materialId; } )[ 0 ] || null;
+	}
+
+	function holoSelected() {
+		return window.YPLabelPickers.isHolographic( selectedMaterial() );
+	}
+
+	/** The "Worth the extra day" note and the border question, only while Holographic is picked. */
+	function renderHolo() {
+		if ( ! holoEl ) {
+			return;
+		}
+		var pickers = window.YPLabelPickers;
+		if ( ! holoSelected() ) {
+			holoEl.hidden = true;
+			holoEl.innerHTML = '';
+			return;
+		}
+		holoEl.hidden = false;
+		holoEl.innerHTML = pickers.holoNoticeHtml() + pickers.holoBorderHtml( state.holoBorder );
+		holoEl.querySelectorAll( '[data-holo-border]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				state.holoBorder = 'yes' === button.getAttribute( 'data-holo-border' );
+				renderHolo();
 			} );
 		} );
 	}
@@ -1826,6 +1861,10 @@
 				return { quantity: variant.quantity, values: variant.values };
 			} )
 		};
+
+		if ( holoSelected() ) {
+			payload.holo_border = state.holoBorder ? 'yes' : 'no';
+		}
 
 		if ( needsCustomSize() ) {
 			payload.custom_width_in = parseFloat( state.customWidthIn );

@@ -616,6 +616,10 @@ class YeffoPrint_Custom_Order_Controller {
 				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::QR_URL ] = $row['qr_url'];
 			}
 
+			if ( ! empty( $row['holo_border'] ) ) {
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] = $row['holo_border'];
+			}
+
 			// Label Designer row: no SIZE_ID (0, harmlessly ignored by
 			// class-cart-pricing.php's adjustment() lookup) — these two
 			// keys are what actually drive its dynamic base price instead.
@@ -727,6 +731,7 @@ class YeffoPrint_Custom_Order_Controller {
 				'qr_url'            => $qr_url,
 				'custom_width_in'   => $custom_width_in,
 				'custom_height_in'  => $custom_height_in,
+				'holo_border'       => YeffoPrint_Holographic_Vinyl::border_choice( $row['holo_border'] ?? null, $material_id ),
 			];
 		}
 

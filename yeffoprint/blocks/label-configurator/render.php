@@ -132,6 +132,7 @@ if ( $seo ) {
 					<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-material-info-modal" aria-haspopup="dialog" aria-label="<?php esc_attr_e( 'Learn about each material', 'yeffoprint' ); ?>">?</button>
 				</div>
 				<div class="yp-option-group" role="radiogroup" aria-labelledby="yp-material-heading" data-yp-material-options></div>
+				<div class="yp-holo" data-yp-holo hidden></div>
 			</div>
 			<div class="yp-configurator__section" data-yp-section="colors" hidden>
 				<h2><?php esc_html_e( 'Choose your colors', 'yeffoprint' ); ?></h2>
