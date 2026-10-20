@@ -166,6 +166,26 @@ class YeffoPrint_Rewards {
 	}
 
 	/**
+	 * Points for a paid guest order attached to an account afterwards
+	 * (class-guest-order-linking.php). finalize_order() already ran as a
+	 * guest, so it won't run again; a guest can't redeem, so this only
+	 * ever earns, and leaves the account's pending redemption alone.
+	 */
+	public static function credit_linked_order( \WC_Order $order ): void {
+		$user_id = $order->get_customer_id();
+		if ( ! $user_id || $order->has_status( [ 'cancelled', 'refunded', 'failed' ] ) ) {
+			return;
+		}
+
+		$points = self::calculate_points( $order );
+		update_user_meta( $user_id, self::BALANCE_META, self::get_balance( $user_id ) + $points['earned'] );
+
+		$order->update_meta_data( self::ORDER_POINTS_EARNED_META, $points['earned'] );
+		$order->update_meta_data( self::ORDER_POINTS_REDEEMED_META, 0 );
+		$order->save();
+	}
+
+	/**
 	 * The earned/redeemed points math finalize_order() actually applies
 	 * — pulled out so class-rewards-order-box.php's admin order-screen
 	 * meta box can show the same numbers as a live "will earn" estimate

@@ -88,6 +88,12 @@ class YeffoPrint_Admin_Order_Controller {
 			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/admin/order/(?P<id>\d+)/link-customer', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'link_customer' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/orders', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'list_orders' ],
@@ -393,6 +399,35 @@ class YeffoPrint_Admin_Order_Controller {
 	}
 
 	/**
+	 * Direct bug report: YP-656 was missing from the customer's My
+	 * Account page because it was placed signed out. Attaches a guest
+	 * order to the account that owns its billing email
+	 * (class-guest-order-linking.php does this on its own for confirmed
+	 * accounts; this covers the rest).
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function link_customer( \WP_REST_Request $request ) {
+		$order = $this->validate_order( (int) $request['id'] );
+		if ( is_wp_error( $order ) ) {
+			return $order;
+		}
+
+		if ( $order->get_customer_id() ) {
+			return new \WP_Error( 'yeffoprint_order_has_customer', __( 'This order is already on a customer account.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$user = YeffoPrint_Guest_Order_Linking::account_for_email( $order->get_billing_email() );
+		if ( ! $user ) {
+			return new \WP_Error( 'yeffoprint_no_account', __( 'No customer account uses this order’s email.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		YeffoPrint_Guest_Order_Linking::link( $order, $user->ID, __( 'Linked to the customer account from the dashboard.', 'yeffoprint-core' ) );
+
+		return rest_ensure_response( $this->detail_payload( wc_get_order( $order->get_id() ) ) );
+	}
+
+	/**
 	 * Adds a WooCommerce order note — the same notes the classic order
 	 * screen's Order notes box shows. A customer note is emailed to the
 	 * customer by WooCommerce's own Customer note email.
@@ -642,6 +677,8 @@ class YeffoPrint_Admin_Order_Controller {
 			// real stored amounts; before that, YeffoPrint_Rewards::calculate_points() is a safe,
 			// read-only live estimate of what finalize_order() would compute right now.
 			'rewards'                  => $this->rewards_payload( $order ),
+			// Guest order whose email has an account: offers "Link to account".
+			'account_match'            => $this->account_match_payload( $order ),
 			// Direct request: refund an order without leaving this app.
 			// `refund_gateway_supported` tells the frontend whether to
 			// even offer an "also refund via {gateway}" checkbox —
@@ -694,6 +731,11 @@ class YeffoPrint_Admin_Order_Controller {
 	private function refund_gateway_supported( \WC_Order $order ): bool {
 		$gateway = wc_get_payment_gateway_by_order( $order );
 		return $gateway instanceof \WC_Payment_Gateway && $gateway->supports( 'refunds' );
+	}
+
+	private function account_match_payload( \WC_Order $order ): ?array {
+		$user = $order->get_customer_id() ? null : YeffoPrint_Guest_Order_Linking::account_for_email( $order->get_billing_email() );
+		return $user ? [ 'id' => $user->ID, 'email' => $user->user_email ] : null;
 	}
 
 	private function rewards_payload( \WC_Order $order ): array {

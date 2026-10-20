@@ -1525,6 +1525,9 @@
 					wcOrderItemsHtml( order.items ) +
 					'<p class="yp-panel__hint" style="margin-top:0.75rem;">Subtotal: $' + order.subtotal.toFixed( 2 ) + ' &nbsp;·&nbsp; Shipping: $' + order.shipping_total.toFixed( 2 ) + ' &nbsp;·&nbsp; <strong>Total: $' + order.total.toFixed( 2 ) + '</strong></p>' +
 					'<p class="yp-panel__hint">' + wcOrderRewardsLine( order.rewards ) + '</p>' +
+					( order.account_match
+						? '<p class="yp-panel__hint">Placed signed out, so it isn’t on ' + YP.escapeHtml( order.account_match.email ) + '’s account page. <button type="button" class="yp-row-action" data-yp-link-customer>Link to account</button></p><div data-yp-link-customer-error></div>'
+						: '' ) +
 				'</div>' +
 			'</div>' +
 
@@ -1555,6 +1558,21 @@
 						saveWcOrderStatus( order, drawer, bodyEl );
 					}
 				} );
+			} );
+		}
+
+		var linkCustomerButton = bodyEl.querySelector( '[data-yp-link-customer]' );
+		if ( linkCustomerButton ) {
+			linkCustomerButton.addEventListener( 'click', function () {
+				linkCustomerButton.disabled = true;
+				linkCustomerButton.textContent = 'Linking…';
+				YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/link-customer', { method: 'POST' } )
+					.then( function ( updated ) { renderWcOrderDetail( updated, drawer, bodyEl ); } )
+					.catch( function ( error ) {
+						linkCustomerButton.disabled = false;
+						linkCustomerButton.textContent = 'Link to account';
+						bodyEl.querySelector( '[data-yp-link-customer-error]' ).innerHTML = '<p class="yp-form__error">Couldn’t link: ' + YP.escapeHtml( error.message ) + '</p>';
+					} );
 			} );
 		}
 
