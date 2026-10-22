@@ -154,6 +154,8 @@ class YeffoPrint_Proof_Approval_Controller {
 
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, 'approved' );
 		self::notify_admin_of_approval( $custom_order_id );
+		// Starts the promised ship date clock (class-production-time.php).
+		do_action( 'yeffoprint_proof_approved', $custom_order_id );
 
 		return true;
 	}

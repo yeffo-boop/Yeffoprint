@@ -97,4 +97,8 @@ register_deactivation_hook( __FILE__, function () {
 	// Same reasoning again — the review request email sweep.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-review-request.php';
 	YeffoPrint_Review_Request::unschedule();
+
+	// Same reasoning again — the promised ship date push alerts.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-production-time.php';
+	YeffoPrint_Production_Time::unschedule();
 } );

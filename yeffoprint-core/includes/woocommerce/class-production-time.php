@@ -55,6 +55,14 @@ class YeffoPrint_Production_Time {
 	public const META_SHIP_DATE = '_yp_promised_ship_date';
 	public const META_ARRIVAL   = '_yp_promised_arrival';
 
+	/** Custom label orders waiting on a proof: business days promised after approval, turned into a ship date on approval. */
+	public const META_AFTER_PROOF_DAYS = '_yp_promised_after_proof_days';
+
+	/** "risk|ship date" last pushed to the admin app, so each warning goes out once. */
+	public const META_ALERTED = '_yp_promise_alerted';
+
+	private const ALERT_HOOK = 'yeffoprint_production_time_alerts';
+
 	/** Package key carrying the ship date, so WooCommerce's per-package rate cache picks up a new day, Express or holographic. */
 	public const PACKAGE_KEY = 'yp_ship_date';
 
@@ -72,6 +80,15 @@ class YeffoPrint_Production_Time {
 		// dashboard and flag orders at risk of missing it.
 		add_action( 'woocommerce_checkout_create_order', [ __CLASS__, 'save_promise' ] );
 		add_action( 'woocommerce_store_api_checkout_update_order_from_request', [ __CLASS__, 'save_promise' ] );
+
+		// Custom labels: "productions times depend on proof creation/approval
+		// time", so their date is only set once the customer approves.
+		add_action( 'yeffoprint_proof_approved', [ __CLASS__, 'proof_approved' ] );
+
+		// Direct request: "a push notification in my web app if an order is
+		// at risk of missing the date".
+		add_action( self::ALERT_HOOK, [ __CLASS__, 'send_alerts' ] );
+		add_action( 'init', [ __CLASS__, 'ensure_scheduled' ] );
 
 		// A new paid order or a status change moves the queue.
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'forget_count' ] );
@@ -216,28 +233,79 @@ class YeffoPrint_Production_Time {
 		return wp_date( 'D, M j', $date->getTimestamp(), $date->getTimezone() );
 	}
 
-	/** Ship date for the current cart, or null when the estimate isn't shown. */
-	public static function cart_ship_date(): ?\DateTimeImmutable {
-		if ( ! self::is_enabled() ) {
-			return null;
-		}
-
+	/** Business days until the current cart ships (or ships after proof approval). */
+	public static function cart_days(): int {
 		$express     = class_exists( 'YeffoPrint_Express_Order' ) && YeffoPrint_Express_Order::is_enabled() && YeffoPrint_Express_Order::is_chosen();
 		$holographic = YeffoPrint_Holographic_Vinyl::cart_has_holographic();
+		return self::days_for( $express, $holographic );
+	}
 
-		return self::add_business_days( self::days_for( $express, $holographic ) );
+	/** Ship date for the current cart, or null when the estimate isn't shown or waits on a proof. */
+	public static function cart_ship_date(): ?\DateTimeImmutable {
+		if ( ! self::is_enabled() || self::cart_needs_proof() ) {
+			return null;
+		}
+		return self::add_business_days( self::cart_days() );
+	}
+
+	/** Whether the cart has a custom design that still needs a proof made and approved. */
+	public static function cart_needs_proof(): bool {
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return false;
+		}
+		foreach ( WC()->cart->get_cart() as $values ) {
+			$custom_order_id = (int) ( $values[ YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID ] ?? 0 );
+			if ( $custom_order_id && self::custom_order_needs_proof( $custom_order_id ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Print-ready uploads and reorders skip the proof (YeffoPrint_Custom_Order_Meta::skips_proof()). */
+	private static function custom_order_needs_proof( int $custom_order_id ): bool {
+		$status = (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STATUS, true );
+		return ! in_array( $status, [ 'approved', 'printing', 'shipped' ], true ) && ! YeffoPrint_Custom_Order_Meta::skips_proof( $custom_order_id );
+	}
+
+	/** Once every proof on the order is approved, the promised days start counting from today. */
+	public static function proof_approved( int $custom_order_id ): void {
+		$order = wc_get_order( (int) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::WC_ORDER_ID, true ) );
+		if ( ! $order ) {
+			return;
+		}
+
+		$days = (int) $order->get_meta( self::META_AFTER_PROOF_DAYS );
+		if ( $days < 1 || $order->get_meta( self::META_SHIP_DATE ) ) {
+			return;
+		}
+
+		foreach ( $order->get_items() as $item ) {
+			$linked = (int) $item->get_meta( '_yp_custom_order_id' );
+			if ( $linked && self::custom_order_needs_proof( $linked ) ) {
+				return;
+			}
+		}
+
+		$order->update_meta_data( self::META_SHIP_DATE, self::add_business_days( $days )->format( 'Y-m-d' ) );
+		$order->save();
 	}
 
 	/** Saves the ship date and the chosen option's arrival line shown at checkout. */
 	public static function save_promise( \WC_Order $order ): void {
-		$ship_date = self::cart_ship_date();
-		if ( ! $ship_date ) {
-			$order->delete_meta_data( self::META_SHIP_DATE );
-			$order->delete_meta_data( self::META_ARRIVAL );
+		$order->delete_meta_data( self::META_SHIP_DATE );
+		$order->delete_meta_data( self::META_ARRIVAL );
+		$order->delete_meta_data( self::META_AFTER_PROOF_DAYS );
+		if ( ! self::is_enabled() ) {
 			return;
 		}
 
-		$order->update_meta_data( self::META_SHIP_DATE, $ship_date->format( 'Y-m-d' ) );
+		if ( self::cart_needs_proof() ) {
+			$order->update_meta_data( self::META_AFTER_PROOF_DAYS, self::cart_days() );
+			return;
+		}
+
+		$order->update_meta_data( self::META_SHIP_DATE, self::add_business_days( self::cart_days() )->format( 'Y-m-d' ) );
 
 		$arrival = '';
 		$chosen  = WC()->session ? (array) WC()->session->get( 'chosen_shipping_methods', [] ) : [];
@@ -257,12 +325,18 @@ class YeffoPrint_Production_Time {
 	 * it ships today or next business day but hasn't been printed yet (or
 	 * is due today and still curing or printing), '' otherwise.
 	 *
-	 * @return array{ship_date: string, ship_label: string, arrival: string, risk: string, days_late: int}|null
+	 * A custom label order still waiting on its proof has no ship date yet,
+	 * only after_proof_days.
+	 *
+	 * @return array{ship_date: string, ship_label: string, arrival: string, risk: string, days_late: int, after_proof_days: int}|null
 	 */
 	public static function promise( \WC_Order $order ): ?array {
-		$saved = (string) $order->get_meta( self::META_SHIP_DATE );
+		$saved      = (string) $order->get_meta( self::META_SHIP_DATE );
+		$after_days = (int) $order->get_meta( self::META_AFTER_PROOF_DAYS );
 		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $saved ) ) {
-			return null;
+			return $after_days > 0
+				? [ 'ship_date' => '', 'ship_label' => '', 'arrival' => '', 'risk' => '', 'days_late' => 0, 'after_proof_days' => $after_days ]
+				: null;
 		}
 
 		$ship  = new \DateTimeImmutable( $saved, wp_timezone() );
@@ -288,7 +362,78 @@ class YeffoPrint_Production_Time {
 			'arrival'    => (string) $order->get_meta( self::META_ARRIVAL ),
 			'risk'       => $risk,
 			'days_late'  => $days_late,
+			'after_proof_days' => $after_days,
 		];
+	}
+
+	public static function ensure_scheduled(): void {
+		if ( ! wp_next_scheduled( self::ALERT_HOOK ) ) {
+			wp_schedule_event( time(), 'hourly', self::ALERT_HOOK );
+		}
+	}
+
+	public static function unschedule(): void {
+		$timestamp = wp_next_scheduled( self::ALERT_HOOK );
+		if ( $timestamp ) {
+			wp_unschedule_event( $timestamp, self::ALERT_HOOK );
+		}
+	}
+
+	/**
+	 * Hourly: one admin app push when an open order turns At risk, and
+	 * another if it goes Late. Quiet overnight (9pm–7am); anything that
+	 * turned overnight goes out at 7.
+	 */
+	public static function send_alerts(): void {
+		if ( ! get_option( self::ENABLED_OPTION ) || ! class_exists( 'YeffoPrint_Admin_Push' ) ) {
+			return;
+		}
+		$hour = (int) wp_date( 'G' );
+		if ( $hour < 7 || $hour >= 21 ) {
+			return;
+		}
+
+		$orders = wc_get_orders( [
+			'type'       => 'shop_order',
+			'status'     => [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ],
+			'limit'      => -1,
+			'meta_query' => [ [ 'key' => self::META_SHIP_DATE, 'compare' => 'EXISTS' ] ], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- open orders only.
+		] );
+
+		foreach ( $orders as $order ) {
+			$promise = self::promise( $order );
+			if ( ! $promise || '' === $promise['risk'] ) {
+				continue;
+			}
+			$key = $promise['risk'] . '|' . $promise['ship_date'];
+			if ( $order->get_meta( self::META_ALERTED ) === $key ) {
+				continue;
+			}
+
+			$number   = $order->get_order_number();
+			$customer = trim( $order->get_formatted_billing_full_name() ) ?: $order->get_billing_email();
+			if ( 'late' === $promise['risk'] ) {
+				/* translators: %s: order number */
+				$title = sprintf( __( 'Order #%s missed its promised ship date', 'yeffoprint-core' ), $number );
+				/* translators: 1: ship date, 2: customer, 3: order status */
+				$body = sprintf( __( 'Promised to ship %1$s · %2$s · %3$s', 'yeffoprint-core' ), $promise['ship_label'], $customer, wc_get_order_status_name( $order->get_status() ) );
+			} else {
+				/* translators: %s: order number */
+				$title = sprintf( __( 'Order #%s is at risk of missing its ship date', 'yeffoprint-core' ), $number );
+				/* translators: 1: ship date, 2: customer, 3: order status */
+				$body = sprintf( __( 'Promised to ship %1$s · %2$s · still %3$s', 'yeffoprint-core' ), $promise['ship_label'], $customer, wc_get_order_status_name( $order->get_status() ) );
+			}
+
+			YeffoPrint_Admin_Push::send_to_admins( [
+				'title' => $title,
+				'body'  => mb_strimwidth( $body, 0, 200, '…' ),
+				'url'   => admin_url( 'admin.php?page=' . YeffoPrint_Admin_Push::APP_SLUG ) . '#/order/' . $order->get_id(),
+				'tag'   => 'promise-' . $order->get_id(),
+			] );
+
+			$order->update_meta_data( self::META_ALERTED, $key );
+			$order->save();
+		}
 	}
 
 	public function tag_packages( array $packages ): array {
@@ -395,15 +540,28 @@ class YeffoPrint_Production_Time {
 		$ship     = self::add_business_days( $days );
 		$busy     = $days >= self::busy_days();
 		$express  = class_exists( 'YeffoPrint_Express_Order' ) && YeffoPrint_Express_Order::is_enabled();
+		$proof    = self::cart_needs_proof();
 
-		$title = 1 === $days
-			? __( 'Ships in about 1 business day', 'yeffoprint-core' )
-			/* translators: %d: number of business days */
-			: sprintf( __( 'Ships in about %d business days', 'yeffoprint-core' ), $days );
+		if ( $proof ) {
+			// No date: it depends on how long the proof takes to make and approve.
+			$title = 1 === $days
+				? __( 'Ships about 1 business day after you approve your proof', 'yeffoprint-core' )
+				/* translators: %d: number of business days */
+				: sprintf( __( 'Ships about %d business days after you approve your proof', 'yeffoprint-core' ), $days );
+			$body = esc_html__( "We'll email your proof first. Your ship date is set once you approve it, so a quick approval gets your labels to you sooner.", 'yeffoprint-core' );
+			if ( $express ) {
+				$body .= ' ' . esc_html__( 'Express ships the next business day after approval.', 'yeffoprint-core' );
+			}
+		} else {
+			$title = 1 === $days
+				? __( 'Ships in about 1 business day', 'yeffoprint-core' )
+				/* translators: %d: number of business days */
+				: sprintf( __( 'Ships in about %d business days', 'yeffoprint-core' ), $days );
 
-		/* translators: %s: ship date, e.g. Mon, Oct 26 */
-		$body = sprintf( __( 'Estimated ship date: %s.', 'yeffoprint-core' ), '<strong>' . esc_html( self::format_date( $ship ) ) . '</strong>' );
-		if ( $express ) {
+			/* translators: %s: ship date, e.g. Mon, Oct 26 */
+			$body = sprintf( __( 'Estimated ship date: %s.', 'yeffoprint-core' ), '<strong>' . esc_html( self::format_date( $ship ) ) . '</strong>' );
+		}
+		if ( $express && ! $proof ) {
 			/* translators: %s: Express ship date, e.g. Fri, Oct 23 */
 			$body .= ' ' . sprintf( esc_html__( 'Need it sooner? Express ships %s.', 'yeffoprint-core' ), '<strong>' . esc_html( self::format_date( self::add_business_days( 1 ) ) ) . '</strong>' );
 		}
@@ -424,7 +582,9 @@ class YeffoPrint_Production_Time {
 				esc_html( $title ),
 				esc_html( $busy ? __( 'Busy', 'yeffoprint-core' ) : __( 'Live', 'yeffoprint-core' ) ),
 				$body,
-				esc_html__( 'Arrival dates under each shipping option include production time. They are estimates, not guarantees.', 'yeffoprint-core' )
+				$proof
+					? esc_html__( 'Shipping times under each option count from the day your order ships. They are estimates, not guarantees.', 'yeffoprint-core' )
+					: esc_html__( 'Arrival dates under each shipping option include production time. They are estimates, not guarantees.', 'yeffoprint-core' )
 			),
 		] );
 
