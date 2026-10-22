@@ -44,13 +44,18 @@ class YeffoPrint_Live_Shipping_Rates {
 
 	private const DEFAULT_MARKUP = 1.0;
 
-	/** Shippo servicelevel token => name shown at checkout, plus the words that find the zone's matching flat rate by its title. */
+	/**
+	 * Shippo servicelevel token => name shown at checkout, the words that
+	 * find the zone's matching flat rate by its title, and the carrier's
+	 * usual transit time, shown when Shippo gives no estimate (or live
+	 * rates are off).
+	 */
 	public const SERVICES = [
-		'usps_ground_advantage' => [ 'label' => 'USPS Ground Advantage', 'match' => 'ground advantage' ],
-		'ups_second_day_air'    => [ 'label' => 'UPS 2nd Day Air', 'match' => '2nd day' ],
-		'usps_priority'         => [ 'label' => 'USPS Priority Mail', 'match' => 'priority' ],
-		'ups_ground'            => [ 'label' => 'UPS Ground', 'match' => 'ups ground' ],
-		self::INTERNATIONAL     => [ 'label' => 'Cheapest international option', 'match' => 'international' ],
+		'usps_ground_advantage' => [ 'label' => 'USPS Ground Advantage', 'match' => 'ground advantage', 'days' => '2–5' ],
+		'ups_second_day_air'    => [ 'label' => 'UPS 2nd Day Air', 'match' => '2nd day', 'days' => '2' ],
+		'usps_priority'         => [ 'label' => 'USPS Priority Mail', 'match' => 'priority', 'days' => '1–3' ],
+		'ups_ground'            => [ 'label' => 'UPS Ground', 'match' => 'ups ground', 'days' => '1–5' ],
+		self::INTERNATIONAL     => [ 'label' => 'Cheapest international option', 'match' => 'international', 'days' => '6–15' ],
 	];
 
 	private const DEFAULT_SERVICES = [ 'usps_ground_advantage', 'ups_second_day_air', 'usps_priority', self::INTERNATIONAL ];
@@ -66,6 +71,11 @@ class YeffoPrint_Live_Shipping_Rates {
 		// still wins when it's higher than the live rate, and before local
 		// pickup (100) and add-on orders (110).
 		add_filter( 'woocommerce_package_rates', [ $this, 'apply_live_rates' ], 80, 2 );
+
+		// Direct request: "Can checkout show delivery time estimates?" Last,
+		// so it also covers rates other filters add or reprice. The Checkout
+		// block shows a rate's delivery_time under its name.
+		add_filter( 'woocommerce_package_rates', [ $this, 'add_delivery_times' ], 120, 2 );
 
 		foreach ( [ self::ENABLED_OPTION, self::MARKUP_OPTION, self::KEEP_FREE_OPTION, self::SERVICES_OPTION ] as $option ) {
 			add_action( 'add_option_' . $option, [ YeffoPrint_Local_Pickup::class, 'bust_rate_cache' ] );
@@ -167,7 +177,7 @@ class YeffoPrint_Live_Shipping_Rates {
 
 			$repriced[] = $key;
 			if ( isset( $quotes[ $key ] ) ) {
-				self::reprice( $rate, $quotes[ $key ] + $markup, $quotes[ $key ] );
+				self::reprice( $rate, $quotes[ $key ], $markup );
 			}
 		}
 
@@ -180,7 +190,7 @@ class YeffoPrint_Live_Shipping_Rates {
 					continue;
 				}
 				$rate = new WC_Shipping_Rate( self::METHOD_ID . ':' . $key, self::SERVICES[ $key ]['label'], 0, [], self::METHOD_ID );
-				self::reprice( $rate, $quotes[ $key ] + $markup, $quotes[ $key ] );
+				self::reprice( $rate, $quotes[ $key ], $markup );
 				$rates[ $rate->get_id() ] = $rate;
 			}
 		}
@@ -190,10 +200,60 @@ class YeffoPrint_Live_Shipping_Rates {
 		return $rates;
 	}
 
-	private static function reprice( WC_Shipping_Rate $rate, float $cost, float $live ): void {
-		$rate->set_cost( (string) round( $cost, 2 ) );
+	/** @param array{amount:float, days:?int} $quote */
+	private static function reprice( WC_Shipping_Rate $rate, array $quote, float $markup ): void {
+		$rate->set_cost( (string) round( $quote['amount'] + $markup, 2 ) );
 		$rate->set_taxes( [] );
-		$rate->add_meta_data( '_yp_live_rate', (string) round( $live, 2 ) );
+		$rate->add_meta_data( '_yp_live_rate', (string) round( $quote['amount'], 2 ) );
+		if ( $quote['days'] ) {
+			$rate->set_delivery_time( self::delivery_text( (string) $quote['days'] ) );
+		}
+	}
+
+	/**
+	 * Direct request: "Make sure to somehow indicate that those dates are
+	 * after labels are produced, not from the date of order."
+	 */
+	private static function delivery_text( string $days ): string {
+		return '1' === $days
+			/* translators: shown under a shipping option at checkout */
+			? __( 'Arrives 1 business day after your order is made and shipped', 'yeffoprint-core' )
+			/* translators: %s: number or range of business days, e.g. 2–5 */
+			: sprintf( __( 'Arrives %s business days after your order is made and shipped', 'yeffoprint-core' ), $days );
+	}
+
+	/**
+	 * Fills in the usual transit time on every shipping option that has
+	 * none yet: live rates with a Shippo estimate already carry their own
+	 * (reprice()). Free shipping goes out by USPS Ground Advantage. Local
+	 * pickup and add-on orders' "ships with" rate get nothing.
+	 *
+	 * @param \WC_Shipping_Rate[] $rates
+	 * @return \WC_Shipping_Rate[]
+	 */
+	public function add_delivery_times( array $rates, array $package ): array {
+		foreach ( $rates as $rate ) {
+			if ( '' !== (string) $rate->get_delivery_time() ) {
+				continue;
+			}
+
+			$method = $rate->get_method_id();
+			if ( 'free_shipping' === $method ) {
+				$key = 'usps_ground_advantage';
+			} elseif ( self::METHOD_ID === $method ) {
+				$key = substr( $rate->get_id(), strlen( self::METHOD_ID ) + 1 );
+			} elseif ( 'flat_rate' === $method ) {
+				$key = false !== stripos( $rate->get_label(), 'international' ) ? self::INTERNATIONAL : self::service_for_label( $rate->get_label() );
+			} else {
+				continue;
+			}
+
+			if ( isset( self::SERVICES[ $key ] ) ) {
+				$rate->set_delivery_time( self::delivery_text( self::SERVICES[ $key ]['days'] ) );
+			}
+		}
+
+		return $rates;
 	}
 
 	/** The SERVICES key a zone flat rate stands for, from its title, or null for one live rates don't touch. */
@@ -212,7 +272,7 @@ class YeffoPrint_Live_Shipping_Rates {
 	 * there. Null when Shippo couldn't be reached (also cached briefly, so
 	 * a Shippo outage doesn't slow every checkout render down).
 	 *
-	 * @return array<string, float>|null
+	 * @return array<string, array{amount:float, days:?int}>|null
 	 */
 	private static function quotes( array $destination, bool $domestic, float $value ): ?array {
 		$address = [
@@ -233,7 +293,7 @@ class YeffoPrint_Live_Shipping_Rates {
 		// Domestic prices only depend on the ZIP, so the street isn't part of
 		// the key; international ones get the full address.
 		$cache_address = $domestic ? [ $address['country'], $address['zip'] ] : $address;
-		$cache_key     = 'yp_live_rates_' . md5( wp_json_encode( [ $cache_address, $parcel, $domestic ? null : round( $value ) ] ) );
+		$cache_key     = 'yp_live_rates_v2_' . md5( wp_json_encode( [ $cache_address, $parcel, $domestic ? null : round( $value ) ] ) );
 
 		$cached = get_transient( $cache_key );
 		if ( is_array( $cached ) ) {
@@ -254,8 +314,9 @@ class YeffoPrint_Live_Shipping_Rates {
 				continue;
 			}
 			$key = $domestic ? $rate['service_token'] : self::INTERNATIONAL;
-			if ( isset( self::SERVICES[ $key ] ) && ( ! isset( $quotes[ $key ] ) || $rate['amount'] < $quotes[ $key ] ) ) {
-				$quotes[ $key ] = $rate['amount'];
+			if ( isset( self::SERVICES[ $key ] ) && ( ! isset( $quotes[ $key ] ) || $rate['amount'] < $quotes[ $key ]['amount'] ) ) {
+				// Carriers' international estimates leave out customs, so those keep the usual range.
+				$quotes[ $key ] = [ 'amount' => $rate['amount'], 'days' => $domestic ? ( $rate['days'] ?: null ) : null ];
 			}
 		}
 
