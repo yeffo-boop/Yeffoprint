@@ -64,7 +64,7 @@ class YeffoPrint_Holographic_Vinyl {
 		return '' === $value ? null : 'yes' === $value;
 	}
 
-	private static function cart_has_holographic(): bool {
+	public static function cart_has_holographic(): bool {
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 			return false;
 		}

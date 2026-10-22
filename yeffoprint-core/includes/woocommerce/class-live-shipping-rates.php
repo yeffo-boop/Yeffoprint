@@ -177,7 +177,7 @@ class YeffoPrint_Live_Shipping_Rates {
 
 			$repriced[] = $key;
 			if ( isset( $quotes[ $key ] ) ) {
-				self::reprice( $rate, $quotes[ $key ], $markup );
+				self::reprice( $rate, $quotes[ $key ], $markup, $package );
 			}
 		}
 
@@ -190,7 +190,7 @@ class YeffoPrint_Live_Shipping_Rates {
 					continue;
 				}
 				$rate = new WC_Shipping_Rate( self::METHOD_ID . ':' . $key, self::SERVICES[ $key ]['label'], 0, [], self::METHOD_ID );
-				self::reprice( $rate, $quotes[ $key ], $markup );
+				self::reprice( $rate, $quotes[ $key ], $markup, $package );
 				$rates[ $rate->get_id() ] = $rate;
 			}
 		}
@@ -201,12 +201,12 @@ class YeffoPrint_Live_Shipping_Rates {
 	}
 
 	/** @param array{amount:float, days:?int} $quote */
-	private static function reprice( WC_Shipping_Rate $rate, array $quote, float $markup ): void {
+	private static function reprice( WC_Shipping_Rate $rate, array $quote, float $markup, array $package ): void {
 		$rate->set_cost( (string) round( $quote['amount'] + $markup, 2 ) );
 		$rate->set_taxes( [] );
 		$rate->add_meta_data( '_yp_live_rate', (string) round( $quote['amount'], 2 ) );
 		if ( $quote['days'] ) {
-			$rate->set_delivery_time( self::delivery_text( (string) $quote['days'] ) );
+			$rate->set_delivery_time( self::delivery_text( (string) $quote['days'], $package ) );
 		}
 	}
 
@@ -214,7 +214,13 @@ class YeffoPrint_Live_Shipping_Rates {
 	 * Direct request: "Make sure to somehow indicate that those dates are
 	 * after labels are produced, not from the date of order."
 	 */
-	private static function delivery_text( string $days ): string {
+	private static function delivery_text( string $days, array $package ): string {
+		// With live production time on, real dates that already include it.
+		$arrival = YeffoPrint_Production_Time::arrival_text( $package, $days );
+		if ( null !== $arrival ) {
+			return $arrival;
+		}
+
 		return '1' === $days
 			/* translators: shown under a shipping option at checkout */
 			? __( 'Arrives 1 business day after your order is made and shipped', 'yeffoprint-core' )
@@ -249,7 +255,7 @@ class YeffoPrint_Live_Shipping_Rates {
 			}
 
 			if ( isset( self::SERVICES[ $key ] ) ) {
-				$rate->set_delivery_time( self::delivery_text( self::SERVICES[ $key ]['days'] ) );
+				$rate->set_delivery_time( self::delivery_text( self::SERVICES[ $key ]['days'], $package ) );
 			}
 		}
 

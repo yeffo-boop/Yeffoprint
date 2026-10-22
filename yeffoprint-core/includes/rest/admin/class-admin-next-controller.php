@@ -264,6 +264,7 @@ class YeffoPrint_Admin_Next_Controller {
 			'express'      => [ YeffoPrint_Admin_Menu::EXPRESS_ENABLED_OPTION, true ],
 			'local_pickup' => [ YeffoPrint_Local_Pickup::ENABLED_OPTION, false ],
 			'live_rates'   => [ YeffoPrint_Live_Shipping_Rates::ENABLED_OPTION, false ],
+			'production_time' => [ YeffoPrint_Production_Time::ENABLED_OPTION, false ],
 			'promo'        => [ YeffoPrint_Admin_Menu::PROMO_ENABLED_OPTION, false ],
 		];
 	}
