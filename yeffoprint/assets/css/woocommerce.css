@@ -65,6 +65,19 @@
 	background: var(--wp--preset--color--charcoal) !important;
 }
 
+/* Place Order in the site's cyan, same as the header Search button,
+   so the last step of checkout reads as the site's main action. */
+.wc-block-components-checkout-place-order-button {
+	background: var(--wp--preset--color--cyan) !important;
+	color: var(--wp--preset--color--near-black) !important;
+	font-weight: 700 !important;
+}
+
+.wc-block-components-checkout-place-order-button:hover {
+	background: var(--wp--preset--color--cyan-deep) !important;
+	color: var(--wp--preset--color--white) !important;
+}
+
 /**
  * Cart page "how you can pay" icon strip — direct request, mockup
  * approved (Option C: plain icon strip, no labels, "for a tighter cart
@@ -641,6 +654,17 @@
 	/* No overflow: hidden here — WooCommerce pins the quantity badge
 	   half outside this box's top-right corner, and clipping it left
 	   a stray dark sliver beside the photo. The img rounds itself. */
+}
+
+/* Quantity badge in magenta like the header cart count. WooCommerce
+   paints it in currentColor with white text, so on the navy phone
+   summary (white text) it was a blank white dot. */
+.wc-block-components-order-summary-item__quantity {
+	background: var(--wp--preset--color--magenta-deep) !important;
+}
+
+.wc-block-components-order-summary-item__quantity span {
+	color: var(--wp--preset--color--white) !important;
 }
 
 /* WooCommerce's checkout.css caps this img at 48px, which left a
