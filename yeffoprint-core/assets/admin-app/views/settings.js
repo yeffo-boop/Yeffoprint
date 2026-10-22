@@ -185,7 +185,14 @@
 						'<div class="yp-field"><label for="yp-set-prod-min">Shortest time to show (business days)</label><input type="number" min="1" step="1" id="yp-set-prod-min" value="' + YP.escapeAttr( production.min_days ) + '" /></div>' +
 						'<div class="yp-field"><label for="yp-set-prod-busy">Show the busy color from (business days)</label><input type="number" min="1" step="1" id="yp-set-prod-busy" value="' + YP.escapeAttr( production.busy_days ) + '" /></div>' +
 					'</div>' +
-					'<div class="yp-field"><label for="yp-set-prod-closed">Closed days besides weekends (one date per line, e.g. 2026-11-26)</label><textarea id="yp-set-prod-closed" rows="3" placeholder="2026-11-26">' + YP.escapeHtml( ( production.closed_dates || [] ).join( '\n' ) ) + '</textarea></div>' +
+					'<p class="yp-panel__hint">Business days are Monday to Saturday. Sundays and the holidays ticked below never count.' + ( ( production.upcoming_holidays || [] ).length ? ' Next closed holidays: ' + YP.escapeHtml( production.upcoming_holidays.join( ', ' ) ) + '.' : '' ) + '</p>' +
+					'<div class="yp-form__row" style="flex-wrap:wrap">' +
+						( production.holidays || [] ).map( function ( holiday ) {
+							var id = 'yp-set-prod-holiday-' + holiday.key;
+							return '<div class="yp-field--checkbox yp-field"><input type="checkbox" id="' + id + '" data-yp-prod-holiday="' + YP.escapeAttr( holiday.key ) + '"' + ( ( production.closed_holidays || [] ).indexOf( holiday.key ) !== -1 ? ' checked' : '' ) + ' /><label for="' + id + '">' + YP.escapeHtml( holiday.label ) + '</label></div>';
+						} ).join( '' ) +
+					'</div>' +
+					'<div class="yp-field"><label for="yp-set-prod-closed">Other closed days (one date per line, e.g. 2026-08-14)</label><textarea id="yp-set-prod-closed" rows="3" placeholder="2026-08-14">' + YP.escapeHtml( ( production.closed_dates || [] ).join( '\n' ) ) + '</textarea></div>' +
 					( production.now ? '<p class="yp-panel__hint"><strong>Right now:</strong> ' + production.now.open + ' open orders (' + production.now.processing + ' Processing, ' + production.now.production + ' In Production, ' + production.now.curing + ' Curing) → about ' + production.now.days + ' business day' + ( production.now.days === 1 ? '' : 's' ) + '. A new order ships ' + YP.escapeHtml( production.now.ship_date ) + ', Express ' + YP.escapeHtml( production.now.express_date ) + '. Holographic adds 1 day.</p>' : '' ) +
 				'</div>' +
 
@@ -485,7 +492,9 @@
 					per_day: parseInt( viewEl.querySelector( '#yp-set-prod-per-day' ).value, 10 ) || 4,
 					min_days: parseInt( viewEl.querySelector( '#yp-set-prod-min' ).value, 10 ) || 1,
 					busy_days: parseInt( viewEl.querySelector( '#yp-set-prod-busy' ).value, 10 ) || 4,
-					closed_dates: viewEl.querySelector( '#yp-set-prod-closed' ).value.split( /[\s,]+/ ).filter( Boolean )
+					closed_dates: viewEl.querySelector( '#yp-set-prod-closed' ).value.split( /[\s,]+/ ).filter( Boolean ),
+					closed_holidays: Array.prototype.filter.call( viewEl.querySelectorAll( '[data-yp-prod-holiday]' ), function ( input ) { return input.checked; } )
+						.map( function ( input ) { return input.getAttribute( 'data-yp-prod-holiday' ); } )
 				},
 				live_rates: {
 					enabled: viewEl.querySelector( '#yp-set-live-enabled' ).checked,

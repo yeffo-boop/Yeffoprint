@@ -9,7 +9,10 @@
  * The wait is the paid orders still being made (Processing, In
  * Production, Curing) plus the customer's own, divided by how many orders
  * the shop finishes per business day, rounded up and never under the
- * minimum. Weekends and the closed dates in Settings don't count. Express
+ * minimum. Business days run Monday to Saturday. Sundays, the major
+ * holidays ticked in Settings and any extra closed dates don't count
+ * ("add all the major holidays as closed days. Include Saturday as a
+ * business day but not Sundays"). Express
  * ships the next business day, and a holographic cart adds its cure day
  * (class-holographic-vinyl.php). Customers only ever see the resulting
  * ship date, never the order count.
@@ -29,6 +32,24 @@ class YeffoPrint_Production_Time {
 	public const MIN_DAYS_OPTION      = 'yeffoprint_production_time_min_days';
 	public const BUSY_DAYS_OPTION     = 'yeffoprint_production_time_busy_days';
 	public const CLOSED_DATES_OPTION  = 'yeffoprint_production_time_closed_dates';
+	public const HOLIDAYS_OPTION      = 'yeffoprint_production_time_holidays';
+
+	/** Holidays that can close the shop, with whether each is closed until changed in Settings. */
+	public const HOLIDAYS = [
+		'new_years_day'   => [ 'label' => "New Year's Day (Jan 1)", 'default' => true ],
+		'mlk_day'         => [ 'label' => 'Martin Luther King Jr. Day (3rd Monday of Jan)', 'default' => false ],
+		'presidents_day'  => [ 'label' => "Presidents' Day (3rd Monday of Feb)", 'default' => false ],
+		'memorial_day'    => [ 'label' => 'Memorial Day (last Monday of May)', 'default' => true ],
+		'juneteenth'      => [ 'label' => 'Juneteenth (Jun 19)', 'default' => false ],
+		'independence'    => [ 'label' => 'Independence Day (Jul 4)', 'default' => true ],
+		'labor_day'       => [ 'label' => 'Labor Day (1st Monday of Sep)', 'default' => true ],
+		'veterans_day'    => [ 'label' => 'Veterans Day (Nov 11)', 'default' => false ],
+		'thanksgiving'    => [ 'label' => 'Thanksgiving (4th Thursday of Nov)', 'default' => true ],
+		'black_friday'    => [ 'label' => 'Day after Thanksgiving', 'default' => false ],
+		'christmas_eve'   => [ 'label' => 'Christmas Eve (Dec 24)', 'default' => true ],
+		'christmas'       => [ 'label' => 'Christmas Day (Dec 25)', 'default' => true ],
+		'new_years_eve'   => [ 'label' => "New Year's Eve (Dec 31)", 'default' => true ],
+	];
 
 	/** Package key carrying the ship date, so WooCommerce's per-package rate cache picks up a new day, Express or holographic. */
 	public const PACKAGE_KEY = 'yp_ship_date';
@@ -64,10 +85,74 @@ class YeffoPrint_Production_Time {
 		return max( 1, (int) get_option( self::BUSY_DAYS_OPTION, self::DEFAULT_BUSY_DAYS ) );
 	}
 
-	/** @return string[] Y-m-d dates with no production, besides weekends. */
+	/** @return string[] Extra Y-m-d dates with no production, besides Sundays and holidays. */
 	public static function closed_dates(): array {
 		$saved = get_option( self::CLOSED_DATES_OPTION, [] );
 		return is_array( $saved ) ? array_values( $saved ) : [];
+	}
+
+	/** @return string[] Keys of HOLIDAYS the shop is closed on. */
+	public static function closed_holidays(): array {
+		$saved = get_option( self::HOLIDAYS_OPTION, null );
+		if ( ! is_array( $saved ) ) {
+			return array_keys( array_filter( self::HOLIDAYS, static fn( array $holiday ): bool => $holiday['default'] ) );
+		}
+		return array_values( array_intersect( array_keys( self::HOLIDAYS ), $saved ) );
+	}
+
+	/** @return array<string, string> Y-m-d => holiday key for one year. */
+	public static function holiday_dates( int $year ): array {
+		$nth_weekday = static function ( string $nth, string $day, string $month ) use ( $year ): string {
+			return ( new \DateTimeImmutable( "$nth $day of $month $year" ) )->format( 'Y-m-d' );
+		};
+		$thanksgiving = new \DateTimeImmutable( "fourth thursday of november $year" );
+
+		$all = [
+			'new_years_day'  => "$year-01-01",
+			'mlk_day'        => $nth_weekday( 'third', 'monday', 'january' ),
+			'presidents_day' => $nth_weekday( 'third', 'monday', 'february' ),
+			'memorial_day'   => $nth_weekday( 'last', 'monday', 'may' ),
+			'juneteenth'     => "$year-06-19",
+			'independence'   => "$year-07-04",
+			'labor_day'      => $nth_weekday( 'first', 'monday', 'september' ),
+			'veterans_day'   => "$year-11-11",
+			'thanksgiving'   => $thanksgiving->format( 'Y-m-d' ),
+			'black_friday'   => $thanksgiving->modify( '+1 day' )->format( 'Y-m-d' ),
+			'christmas_eve'  => "$year-12-24",
+			'christmas'      => "$year-12-25",
+			'new_years_eve'  => "$year-12-31",
+		];
+
+		$dates = [];
+		foreach ( self::closed_holidays() as $key ) {
+			$dates[ $all[ $key ] ] = $key;
+		}
+		return $dates;
+	}
+
+	/** @return string[] The next few closed holidays, like "Thu, Nov 26", for the Settings hint. */
+	public static function upcoming_holidays( int $limit = 4 ): array {
+		$today = new \DateTimeImmutable( 'today', wp_timezone() );
+		$year  = (int) $today->format( 'Y' );
+		$dates = array_keys( self::holiday_dates( $year ) + self::holiday_dates( $year + 1 ) );
+		sort( $dates );
+
+		$upcoming = [];
+		foreach ( $dates as $ymd ) {
+			if ( $ymd >= $today->format( 'Y-m-d' ) && count( $upcoming ) < $limit ) {
+				$upcoming[] = self::format_date( new \DateTimeImmutable( $ymd, wp_timezone() ) );
+			}
+		}
+		return $upcoming;
+	}
+
+	/** Whether the shop makes orders on this day: Monday to Saturday, not a closed holiday or date. */
+	public static function is_business_day( \DateTimeImmutable $date ): bool {
+		if ( '7' === $date->format( 'N' ) ) {
+			return false;
+		}
+		$ymd = $date->format( 'Y-m-d' );
+		return ! isset( self::holiday_dates( (int) $date->format( 'Y' ) )[ $ymd ] ) && ! in_array( $ymd, self::closed_dates(), true );
 	}
 
 	/** @return array<string, int> Paid orders still being made, per status. */
@@ -104,14 +189,13 @@ class YeffoPrint_Production_Time {
 		return self::production_days() + ( $holographic ? 1 : 0 );
 	}
 
-	/** The date $days business days after $from (today when null), skipping weekends and closed dates. */
+	/** The date $days business days after $from (today when null), skipping Sundays, holidays and closed dates. */
 	public static function add_business_days( int $days, ?\DateTimeImmutable $from = null ): \DateTimeImmutable {
-		$date   = ( $from ?? new \DateTimeImmutable( 'today', wp_timezone() ) )->setTime( 0, 0 );
-		$closed = self::closed_dates();
+		$date = ( $from ?? new \DateTimeImmutable( 'today', wp_timezone() ) )->setTime( 0, 0 );
 
 		while ( $days > 0 ) {
 			$date = $date->modify( '+1 day' );
-			if ( (int) $date->format( 'N' ) < 6 && ! in_array( $date->format( 'Y-m-d' ), $closed, true ) ) {
+			if ( self::is_business_day( $date ) ) {
 				$days--;
 			}
 		}
@@ -185,6 +269,15 @@ class YeffoPrint_Production_Time {
 			'min_days'     => self::min_days(),
 			'busy_days'    => self::busy_days(),
 			'closed_dates' => self::closed_dates(),
+			'holidays'     => array_map(
+				static function ( string $key, array $holiday ): array {
+					return [ 'key' => $key, 'label' => $holiday['label'] ];
+				},
+				array_keys( self::HOLIDAYS ),
+				self::HOLIDAYS
+			),
+			'closed_holidays'   => self::closed_holidays(),
+			'upcoming_holidays' => self::upcoming_holidays(),
 			'now'          => [
 				'open'         => array_sum( $open ),
 				'processing'   => $open['processing'] ?? 0,
@@ -212,6 +305,10 @@ class YeffoPrint_Production_Time {
 		}
 		sort( $dates );
 		update_option( self::CLOSED_DATES_OPTION, $dates );
+
+		if ( isset( $params['closed_holidays'] ) && is_array( $params['closed_holidays'] ) ) {
+			update_option( self::HOLIDAYS_OPTION, array_values( array_intersect( array_keys( self::HOLIDAYS ), array_map( 'strval', $params['closed_holidays'] ) ) ) );
+		}
 
 		YeffoPrint_Local_Pickup::bust_rate_cache();
 	}
