@@ -634,14 +634,20 @@
 	   out almost the entire label. */
 	width: 3.5rem !important;
 	height: 3.5rem !important;
+	padding-bottom: 0 !important;
 	flex-shrink: 0;
 	background: var(--wp--custom--gradient-navy) !important;
 	border-radius: var(--wp--custom--radius--control) !important;
-	overflow: hidden;
+	/* No overflow: hidden here — WooCommerce pins the quantity badge
+	   half outside this box's top-right corner, and clipping it left
+	   a stray dark sliver beside the photo. The img rounds itself. */
 }
 
+/* WooCommerce's checkout.css caps this img at 48px, which left a
+   strip of the navy box showing beside it. */
 .wc-block-components-order-summary-item__image img {
 	width: 100% !important;
+	max-width: none !important;
 	height: 100% !important;
 	object-fit: cover !important;
 	border-radius: var(--wp--custom--radius--control) !important;
@@ -654,8 +660,8 @@
 .wc-block-components-totals-footer-item {
 	font-size: var(--wp--preset--font-size--large) !important;
 	font-weight: 700 !important;
-	padding-top: 0.75rem !important;
-	border-top: 1px solid var(--wp--preset--color--light-gray) !important;
+	/* No border of its own: its totals wrapper already draws the
+	   divider, so a second one here showed as a thin empty row. */
 }
 
 /* Every rendered price (line items, subtotal, shipping, total) —
@@ -672,6 +678,15 @@
 	padding-top: 1rem !important;
 	margin-top: 1rem !important;
 	font-size: var(--wp--preset--font-size--small) !important;
+}
+
+/* Inside the order summary the totals wrapper already draws the
+   divider and padding — the panel's own made an empty row above
+   "Add coupons". */
+.wc-block-components-totals-wrapper .wc-block-components-panel {
+	border-top: 0 !important;
+	padding-top: 0 !important;
+	margin-top: 0 !important;
 }
 
 /* Notices (errors, "your session expired," etc.) */
