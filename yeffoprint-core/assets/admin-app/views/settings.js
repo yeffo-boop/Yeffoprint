@@ -171,7 +171,28 @@
 					'<p class="yp-panel__hint">Every Contact form submission is emailed here. Replying goes straight to the customer — their address is set as Reply-To.</p>' +
 				'</div>';
 
+			var liveRates = settings.live_rates || { enabled: false, markup: 1, keep_free: true, services: [], all: [], configured: false };
 			var shippingHtml =
+				// Direct request: live rates at checkout plus $1 for packing
+				// materials, with "a toggle in my dashboard to turn live rates on/off".
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Live shipping rates</h2></div>' +
+					'<p class="yp-panel__hint">Customers see real Shippo prices for their address at checkout, plus the add-on below for packing materials. Turn this off to go back to your flat rates in Shipping Zones right away. If Shippo doesn’t answer within a few seconds, checkout shows the flat rates instead.</p>' +
+					( liveRates.configured ? '' : '<p class="yp-form__error">Add a Shippo API token in the Shippo section below first. Until then checkout keeps the flat rates.</p>' ) +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-live-enabled"' + ( liveRates.enabled ? ' checked' : '' ) + ' /><label for="yp-set-live-enabled">Use live shipping rates at checkout</label></div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-live-markup">Add to every rate ($)</label><input type="number" min="0" step="0.01" inputmode="decimal" id="yp-set-live-markup" value="' + YP.escapeAttr( liveRates.markup ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-live-keep-free"' + ( liveRates.keep_free ? ' checked' : '' ) + ' /><label for="yp-set-live-keep-free">Keep free shipping on orders over the free shipping minimum</label></div>' +
+					'<div class="yp-field"><label>Services customers can pick</label>' +
+						( liveRates.all || [] ).map( function ( service ) {
+							var id = 'yp-set-live-service-' + service.key;
+							return '<div class="yp-field--checkbox yp-field"><input type="checkbox" id="' + id + '" data-yp-live-service="' + YP.escapeAttr( service.key ) + '"' + ( liveRates.services.indexOf( service.key ) !== -1 ? ' checked' : '' ) + ' /><label for="' + id + '">' + YP.escapeHtml( service.label ) + '</label></div>';
+						} ).join( '' ) +
+					'</div>' +
+					'<p class="yp-panel__hint">Prices are quoted for the Shippo default package below, so set it to your usual mailer and weight. A 3D print with its own shipping price still charges that price when it’s higher.</p>' +
+				'</div>' +
+
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Shipment Tracking</h2></div>' +
 					'<p class="yp-panel__hint">Powers the live tracking timeline on /track-order/ and order emails. Optional — a direct carrier-site link is shown instead when these are blank.</p>' +
@@ -442,6 +463,13 @@
 				away_mode_enabled: viewEl.querySelector( '#yp-set-away-enabled' ).checked,
 				away_mode_return_date: viewEl.querySelector( '#yp-set-away-return' ).value,
 				express_enabled: viewEl.querySelector( '#yp-set-express-enabled' ).checked,
+				live_rates: {
+					enabled: viewEl.querySelector( '#yp-set-live-enabled' ).checked,
+					markup: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-live-markup' ).value ) || 0 ),
+					keep_free: viewEl.querySelector( '#yp-set-live-keep-free' ).checked,
+					services: Array.prototype.filter.call( viewEl.querySelectorAll( '[data-yp-live-service]' ), function ( input ) { return input.checked; } )
+						.map( function ( input ) { return input.getAttribute( 'data-yp-live-service' ); } )
+				},
 				local_pickup_enabled: viewEl.querySelector( '#yp-set-pickup-enabled' ).checked,
 				local_pickup_label: viewEl.querySelector( '#yp-set-pickup-label' ).value,
 				local_pickup_instructions: viewEl.querySelector( '#yp-set-pickup-instructions' ).value,

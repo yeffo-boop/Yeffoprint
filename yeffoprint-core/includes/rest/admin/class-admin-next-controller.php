@@ -263,6 +263,7 @@ class YeffoPrint_Admin_Next_Controller {
 			'away_mode'    => [ YeffoPrint_Admin_Menu::AWAY_MODE_ENABLED_OPTION, false ],
 			'express'      => [ YeffoPrint_Admin_Menu::EXPRESS_ENABLED_OPTION, true ],
 			'local_pickup' => [ YeffoPrint_Local_Pickup::ENABLED_OPTION, false ],
+			'live_rates'   => [ YeffoPrint_Live_Shipping_Rates::ENABLED_OPTION, false ],
 			'promo'        => [ YeffoPrint_Admin_Menu::PROMO_ENABLED_OPTION, false ],
 		];
 	}
