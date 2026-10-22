@@ -299,6 +299,10 @@
 		if ( ! promise ) {
 			return '';
 		}
+		// Custom labels: the date is set when the customer approves the proof.
+		if ( ! promise.ship_date ) {
+			return '<span class="ypn-muted">Ships ' + promise.after_proof_days + ' business day' + ( 1 === promise.after_proof_days ? '' : 's' ) + ' after proof approval</span>';
+		}
 		var pill = 'late' === promise.risk
 			? ' <span class="ypn-pill ypn-pill--red">Late</span>'
 			: ( 'at_risk' === promise.risk ? ' <span class="ypn-pill ypn-pill--yel">At risk</span>' : '' );
@@ -456,7 +460,7 @@
 			? ship.map( function ( o ) {
 				return (
 					'<div class="ypn-q">' +
-						'<a class="ypn-q__text" href="#/order/' + o.id + '"><b class="ypn-mono">' + esc( orderLabel( o ) ) + ( o.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( o.promise && 'late' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : ( o.promise && 'at_risk' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--yel">Ship today</span>' : '' ) ) + '</b><span>' + esc( ( o.customer || 'Guest' ) + ( o.shipping ? ' · ' + o.shipping : '' ) + ( o.promise ? ' · promised ' + o.promise.ship_label : '' ) ) + '</span></a>' +
+						'<a class="ypn-q__text" href="#/order/' + o.id + '"><b class="ypn-mono">' + esc( orderLabel( o ) ) + ( o.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( o.promise && 'late' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : ( o.promise && 'at_risk' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--yel">Ship today</span>' : '' ) ) + '</b><span>' + esc( ( o.customer || 'Guest' ) + ( o.shipping ? ' · ' + o.shipping : '' ) + ( o.promise && o.promise.ship_date ? ' · promised ' + o.promise.ship_label : '' ) ) + '</span></a>' +
 						'<button type="button" class="ypn-btn" data-ypn-q-label="' + o.id + '">Label</button>' +
 					'</div>'
 				);
