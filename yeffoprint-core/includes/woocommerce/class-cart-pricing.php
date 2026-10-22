@@ -31,6 +31,7 @@ class YeffoPrint_Cart_Pricing {
 	public function __construct() {
 		add_action( 'woocommerce_before_calculate_totals', [ $this, 'apply_price' ], 20, 1 );
 		add_filter( 'woocommerce_get_item_data', [ $this, 'display_item_data' ], 10, 2 );
+		add_filter( 'woocommerce_store_api_cart_item_images', [ $this, 'label_item_images' ], 10, 2 );
 		add_filter( 'woocommerce_add_to_cart_validation', [ $this, 'require_batch_data' ], 10, 3 );
 	}
 
@@ -259,6 +260,40 @@ class YeffoPrint_Cart_Pricing {
 		}
 
 		return (float) get_post_meta( $post_id, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true );
+	}
+
+	/**
+	 * The Cart and Checkout blocks' line-item photo for a label: the
+	 * template's vial mockup, else its artwork — the same picture the
+	 * cart drawer shows (class-cart-controller.php). The linked product
+	 * only copies the template's featured image when the template is
+	 * saved, so without this a template with just a vial mockup shows
+	 * WooCommerce's gray placeholder at checkout.
+	 */
+	public function label_item_images( $images, array $cart_item ) {
+		$template_id = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
+		if ( ! $template_id ) {
+			return $images;
+		}
+
+		$attachment_id = (int) get_post_meta( $template_id, YeffoPrint_Template_Meta::VIAL_MOCKUP, true )
+			?: (int) get_post_thumbnail_id( $template_id );
+		$src           = $attachment_id ? wp_get_attachment_image_url( $attachment_id, 'medium_large' ) : '';
+		if ( ! $src ) {
+			return $images;
+		}
+
+		return [
+			(object) [
+				'id'        => $attachment_id,
+				'src'       => $src,
+				'thumbnail' => wp_get_attachment_image_url( $attachment_id, 'woocommerce_thumbnail' ) ?: $src,
+				'srcset'    => (string) wp_get_attachment_image_srcset( $attachment_id, 'full' ),
+				'sizes'     => (string) wp_get_attachment_image_sizes( $attachment_id, 'full' ),
+				'name'      => get_the_title( $attachment_id ),
+				'alt'       => get_the_title( $template_id ),
+			],
+		];
 	}
 
 	/**
