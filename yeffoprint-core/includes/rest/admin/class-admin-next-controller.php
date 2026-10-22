@@ -170,6 +170,8 @@ class YeffoPrint_Admin_Next_Controller {
 			// Holographic, not Express: ships a day later (24h cure), so it's due a day later too.
 			'holo_cure'      => YeffoPrint_Holographic_Vinyl::needs_cure_day( $order ),
 			'curing_ready_at' => YeffoPrint_Order_Curing_Status::ready_at( $order ),
+			// Ship date shown at checkout (production time) and whether it's at risk.
+			'promise' => YeffoPrint_Production_Time::promise( $order ),
 			'express_waiting' => YeffoPrint_Telegram_Express_Alerts::is_waiting( $order ),
 			'change_requested' => null !== YeffoPrint_Order_Label_Changes::get_request( $order ),
 			'payment_method' => $order->get_payment_method_title(),

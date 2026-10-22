@@ -293,6 +293,18 @@
 		drawToday();
 	};
 
+	// The ship date the customer saw at checkout (production time), with an
+	// amber "At risk" or red "Late" pill while the order hasn't shipped.
+	function promiseHtml( promise, withArrival ) {
+		if ( ! promise ) {
+			return '';
+		}
+		var pill = 'late' === promise.risk
+			? ' <span class="ypn-pill ypn-pill--red">Late</span>'
+			: ( 'at_risk' === promise.risk ? ' <span class="ypn-pill ypn-pill--yel">At risk</span>' : '' );
+		return '<span class="ypn-muted">Promised to ship ' + esc( promise.ship_label ) + ( withArrival && promise.arrival ? ' · ' + esc( promise.arrival ) : '' ) + '</span>' + pill;
+	}
+
 	function orderLabel( o ) {
 		return ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + o.number;
 	}
@@ -351,7 +363,15 @@
 			// Holographic orders get one more day: the vinyl cures 24 hours before shipping.
 			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays - ( o.holo_cure ? 1 : 0 ) : 0;
 			var late = lateBy > 0 ? lateBy : 0;
-			var base = { id: o.id, express: o.express, date: o.date, late: late, meta: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
+			// Orders placed with production time on go by the ship date the customer was promised instead.
+			var risk = o.promise ? o.promise.risk : '';
+			if ( o.promise ) {
+				late = 'late' === risk ? Math.max( 1, o.promise.days_late ) : 0;
+			}
+			var promiseMeta = o.promise && risk
+				? ( 'late' === risk ? late + ( 1 === late ? ' day' : ' days' ) + ' past the promised ship date' : 'Promised to ship ' + o.promise.ship_label )
+				: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) : '' );
+			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
@@ -381,9 +401,12 @@
 			if ( !! a.express !== !! b.express ) {
 				return a.express ? -1 : 1;
 			}
-			// Late work next, most overdue first.
+			// Late work next, most overdue first, then work at risk of missing its promised ship date.
 			if ( ( a.late || 0 ) !== ( b.late || 0 ) ) {
 				return ( b.late || 0 ) - ( a.late || 0 );
+			}
+			if ( !! a.atRisk !== !! b.atRisk ) {
+				return a.atRisk ? -1 : 1;
 			}
 			if ( QUEUE_KINDS[ a.kind ].rank !== QUEUE_KINDS[ b.kind ].rank ) {
 				return QUEUE_KINDS[ a.kind ].rank - QUEUE_KINDS[ b.kind ].rank;
@@ -415,7 +438,7 @@
 				return (
 					'<div class="ypn-q' + ( item.express || 'problem' === item.kind || 'dispute' === item.kind ? ' is-hot' : '' ) + '">' +
 						'<i style="background:' + QUEUE_KINDS[ item.kind ].color + '"></i>' +
-						'<a class="ypn-q__text" href="' + escAttr( href ) + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( item.late ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : '' ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
+						'<a class="ypn-q__text" href="' + escAttr( href ) + '"><b>' + esc( item.title ) + ( item.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( item.late ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : ( item.atRisk ? ' <span class="ypn-pill ypn-pill--yel">At risk</span>' : '' ) ) + '</b><span>' + esc( item.meta ) + '</span></a>' +
 						( item.ack
 							? '<button type="button" class="ypn-btn ypn-btn--primary" data-ypn-q-ack="' + item.id + '">' + esc( item.action ) + '</button>'
 							: ( item.print
@@ -433,7 +456,7 @@
 			? ship.map( function ( o ) {
 				return (
 					'<div class="ypn-q">' +
-						'<a class="ypn-q__text" href="#/order/' + o.id + '"><b class="ypn-mono">' + esc( orderLabel( o ) ) + ( o.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + '</b><span>' + esc( ( o.customer || 'Guest' ) + ( o.shipping ? ' · ' + o.shipping : '' ) ) + '</span></a>' +
+						'<a class="ypn-q__text" href="#/order/' + o.id + '"><b class="ypn-mono">' + esc( orderLabel( o ) ) + ( o.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( o.promise && 'late' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : ( o.promise && 'at_risk' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--yel">Ship today</span>' : '' ) ) + '</b><span>' + esc( ( o.customer || 'Guest' ) + ( o.shipping ? ' · ' + o.shipping : '' ) + ( o.promise ? ' · promised ' + o.promise.ship_label : '' ) ) + '</span></a>' +
 						'<button type="button" class="ypn-btn" data-ypn-q-label="' + o.id + '">Label</button>' +
 					'</div>'
 				);
@@ -532,6 +555,7 @@
 					'</div>' +
 					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.holo_cure ? ' ' + HOLO_TAG : '' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
+					( o.promise && 'shipped' !== o.column ? '<div class="ypn-order__items">' + promiseHtml( o.promise, false ) + '</div>' : '' ) +
 					( 'curing' === o.column && o.curing_ready_at ? '<div class="ypn-order__cure' + ( curingDone( o ) ? ' is-done' : '' ) + '">' + esc( curingText( o ) ) + '</div>' : '' ) +
 					'<div class="ypn-order__row"><span class="ypn-order__meta">' + esc( o.payment_method || o.status_label ) + '</span><b>' + esc( money( o.total ) ) + '</b></div>' +
 					( 'ready' === o.column ? '<button type="button" class="ypn-order__action" data-ypn-print="' + o.id + '">Send to printer</button>' : '' ) +
@@ -1258,6 +1282,7 @@
 						( order.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '' ) +
 						( order.holo_cure ? HOLO_TAG : '' ) +
 						( order.curing_ready_at ? '<span class="ypn-muted">' + esc( curingText( order ) ) + '</span>' : '' ) +
+						promiseHtml( order.promise, true ) +
 						'<span class="ypn-pill ypn-pill--' + ( unpaid ? 'yel' : ( 'shipped' === order.status || 'completed' === order.status ? 'grn' : 'ink' ) ) + '">' + esc( order.status_label ) + '</span>' +
 						'<span>' + sub + '</span>' +
 					'</div>' +

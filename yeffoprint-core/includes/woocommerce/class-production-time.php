@@ -51,6 +51,10 @@ class YeffoPrint_Production_Time {
 		'new_years_eve'   => [ 'label' => "New Year's Eve (Dec 31)", 'default' => true ],
 	];
 
+	/** Ship date (Y-m-d) and arrival line the customer saw at checkout, saved on the order. */
+	public const META_SHIP_DATE = '_yp_promised_ship_date';
+	public const META_ARRIVAL   = '_yp_promised_arrival';
+
 	/** Package key carrying the ship date, so WooCommerce's per-package rate cache picks up a new day, Express or holographic. */
 	public const PACKAGE_KEY = 'yp_ship_date';
 
@@ -63,6 +67,11 @@ class YeffoPrint_Production_Time {
 	public function __construct() {
 		add_filter( 'woocommerce_cart_shipping_packages', [ $this, 'tag_packages' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_checkout_card' ] );
+
+		// Direct request: show the date "promised" to the customer on the
+		// dashboard and flag orders at risk of missing it.
+		add_action( 'woocommerce_checkout_create_order', [ __CLASS__, 'save_promise' ] );
+		add_action( 'woocommerce_store_api_checkout_update_order_from_request', [ __CLASS__, 'save_promise' ] );
 
 		// A new paid order or a status change moves the queue.
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'forget_count' ] );
@@ -217,6 +226,69 @@ class YeffoPrint_Production_Time {
 		$holographic = YeffoPrint_Holographic_Vinyl::cart_has_holographic();
 
 		return self::add_business_days( self::days_for( $express, $holographic ) );
+	}
+
+	/** Saves the ship date and the chosen option's arrival line shown at checkout. */
+	public static function save_promise( \WC_Order $order ): void {
+		$ship_date = self::cart_ship_date();
+		if ( ! $ship_date ) {
+			$order->delete_meta_data( self::META_SHIP_DATE );
+			$order->delete_meta_data( self::META_ARRIVAL );
+			return;
+		}
+
+		$order->update_meta_data( self::META_SHIP_DATE, $ship_date->format( 'Y-m-d' ) );
+
+		$arrival = '';
+		$chosen  = WC()->session ? (array) WC()->session->get( 'chosen_shipping_methods', [] ) : [];
+		foreach ( WC()->shipping()->get_packages() as $i => $package ) {
+			$rate = $package['rates'][ $chosen[ $i ] ?? '' ] ?? null;
+			if ( $rate instanceof \WC_Shipping_Rate && '' !== (string) $rate->get_delivery_time() ) {
+				$arrival = (string) $rate->get_delivery_time();
+				break;
+			}
+		}
+		$order->update_meta_data( self::META_ARRIVAL, $arrival );
+	}
+
+	/**
+	 * The promise saved at checkout, for the admin app. risk is 'late' once
+	 * the ship date has passed without the order shipping, 'at_risk' when
+	 * it ships today or next business day but hasn't been printed yet (or
+	 * is due today and still curing or printing), '' otherwise.
+	 *
+	 * @return array{ship_date: string, ship_label: string, arrival: string, risk: string, days_late: int}|null
+	 */
+	public static function promise( \WC_Order $order ): ?array {
+		$saved = (string) $order->get_meta( self::META_SHIP_DATE );
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $saved ) ) {
+			return null;
+		}
+
+		$ship  = new \DateTimeImmutable( $saved, wp_timezone() );
+		$today = new \DateTimeImmutable( 'today', wp_timezone() );
+		$open  = in_array( $order->get_status(), [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ], true );
+
+		$risk      = '';
+		$days_late = 0;
+		if ( $open ) {
+			if ( $today > $ship ) {
+				$risk      = 'late';
+				$days_late = (int) $today->diff( $ship )->days;
+			} elseif ( $today == $ship ) { // phpcs:ignore Universal.Operators.StrictComparisons -- DateTime values.
+				$risk = 'at_risk';
+			} elseif ( 'processing' === $order->get_status() && self::add_business_days( 1, $today ) >= $ship ) {
+				$risk = 'at_risk';
+			}
+		}
+
+		return [
+			'ship_date'  => $saved,
+			'ship_label' => self::format_date( $ship ),
+			'arrival'    => (string) $order->get_meta( self::META_ARRIVAL ),
+			'risk'       => $risk,
+			'days_late'  => $days_late,
+		];
 	}
 
 	public function tag_packages( array $packages ): array {
