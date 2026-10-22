@@ -172,7 +172,24 @@
 				'</div>';
 
 			var liveRates = settings.live_rates || { enabled: false, markup: 1, keep_free: true, services: [], all: [], configured: false };
+			var production = settings.production_time || { enabled: false, per_day: 4, min_days: 1, busy_days: 4, closed_dates: [], now: null };
 			var shippingHtml =
+				// Direct request: a live production time estimate from open
+				// orders, without showing customers how many are ahead of them.
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Production time</h2></div>' +
+					'<p class="yp-panel__hint">Checkout shows "Ships in about N business days" with the ship date, and arrival dates under each shipping option, worked out from your open orders. Customers never see how many orders there are. Hidden while Away mode is on.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-prod-enabled"' + ( production.enabled ? ' checked' : '' ) + ' /><label for="yp-set-prod-enabled">Show live production time at checkout</label></div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-prod-per-day">Orders you finish per business day</label><input type="number" min="1" step="1" id="yp-set-prod-per-day" value="' + YP.escapeAttr( production.per_day ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-prod-min">Shortest time to show (business days)</label><input type="number" min="1" step="1" id="yp-set-prod-min" value="' + YP.escapeAttr( production.min_days ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-prod-busy">Show the busy color from (business days)</label><input type="number" min="1" step="1" id="yp-set-prod-busy" value="' + YP.escapeAttr( production.busy_days ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-field"><label for="yp-set-prod-closed">Closed days besides weekends (one date per line, e.g. 2026-11-26)</label><textarea id="yp-set-prod-closed" rows="3" placeholder="2026-11-26">' + YP.escapeHtml( ( production.closed_dates || [] ).join( '\n' ) ) + '</textarea></div>' +
+					( production.now ? '<p class="yp-panel__hint"><strong>Right now:</strong> ' + production.now.open + ' open orders (' + production.now.processing + ' Processing, ' + production.now.production + ' In Production, ' + production.now.curing + ' Curing) → about ' + production.now.days + ' business day' + ( production.now.days === 1 ? '' : 's' ) + '. A new order ships ' + YP.escapeHtml( production.now.ship_date ) + ', Express ' + YP.escapeHtml( production.now.express_date ) + '. Holographic adds 1 day.</p>' : '' ) +
+				'</div>' +
+
+
 				// Direct request: live rates at checkout plus $1 for packing
 				// materials, with "a toggle in my dashboard to turn live rates on/off".
 				'<div class="yp-panel">' +
@@ -463,6 +480,13 @@
 				away_mode_enabled: viewEl.querySelector( '#yp-set-away-enabled' ).checked,
 				away_mode_return_date: viewEl.querySelector( '#yp-set-away-return' ).value,
 				express_enabled: viewEl.querySelector( '#yp-set-express-enabled' ).checked,
+				production_time: {
+					enabled: viewEl.querySelector( '#yp-set-prod-enabled' ).checked,
+					per_day: parseInt( viewEl.querySelector( '#yp-set-prod-per-day' ).value, 10 ) || 4,
+					min_days: parseInt( viewEl.querySelector( '#yp-set-prod-min' ).value, 10 ) || 1,
+					busy_days: parseInt( viewEl.querySelector( '#yp-set-prod-busy' ).value, 10 ) || 4,
+					closed_dates: viewEl.querySelector( '#yp-set-prod-closed' ).value.split( /[\s,]+/ ).filter( Boolean )
+				},
 				live_rates: {
 					enabled: viewEl.querySelector( '#yp-set-live-enabled' ).checked,
 					markup: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-live-markup' ).value ) || 0 ),

@@ -105,6 +105,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-local-pickup.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-print-shipping.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-live-shipping-rates.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-production-time.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-draft-order-retention.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-email-notice.php';
@@ -268,6 +269,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Local_Pickup();
 		new YeffoPrint_Print_Shipping();
 		new YeffoPrint_Live_Shipping_Rates();
+		new YeffoPrint_Production_Time();
 		new YeffoPrint_Draft_Order_Retention();
 		new YeffoPrint_Away_Mode_Email_Notice();
 		new YeffoPrint_Order_Item_Meta();

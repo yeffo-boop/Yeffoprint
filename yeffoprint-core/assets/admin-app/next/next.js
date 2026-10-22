@@ -2318,6 +2318,7 @@
 		[ 'express', 'Express orders', 'The rush checkbox at checkout.' ],
 		[ 'local_pickup', 'Local pickup', 'Pickup option for ticked items.' ],
 		[ 'live_rates', 'Live shipping rates', 'Real Shippo prices at checkout. Off shows your flat rates.' ],
+		[ 'production_time', 'Production time', 'Live ship date at checkout from your open orders.' ],
 		[ 'promo', 'Homepage promo', 'The rotating homepage banner.' ]
 	];
 
@@ -2333,7 +2334,7 @@
 			tilesHtml( [
 				[ 'settings/general', 'General', 'Away mode, express fee, dashboard and contact form.', INK ],
 				[ 'settings/storefront', 'Storefront', 'Announcement bar, homepage promo, splash and search.', MAG ],
-				[ 'settings/shipping', 'Shipping', 'Live rates, Shippo, shipping options and local pickup.', CY ],
+				[ 'settings/shipping', 'Shipping', 'Production time, live rates, Shippo, shipping options and local pickup.', CY ],
 				[ 'shipping-zones', 'Shipping Zones', 'Checkout shipping choices and prices by region.', CY ],
 				[ 'settings/integrations', 'Integrations', 'Telegram, social logins and payment keys.', VIO ],
 				[ 'payments', 'Payments', 'Turn Venmo, Zelle, crypto and cards on or off.', GRN ],
