@@ -26,8 +26,12 @@ class YeffoPrint_Shippo_Client {
 
 	private string $token;
 
-	public function __construct( string $token ) {
-		$this->token = $token;
+	/** Seconds per request. Checkout's live rates pass a short one (class-live-shipping-rates.php). */
+	private int $timeout;
+
+	public function __construct( string $token, int $timeout = 20 ) {
+		$this->token   = $token;
+		$this->timeout = $timeout;
 	}
 
 	/**
@@ -400,6 +404,7 @@ class YeffoPrint_Shippo_Client {
 			'carrier_id'    => $carrier_id,
 			'carrier_label' => (string) ( $rate['provider'] ?? '' ),
 			'service'       => (string) ( $rate['servicelevel']['name'] ?? '' ),
+			'service_token' => (string) ( $rate['servicelevel']['token'] ?? '' ),
 			'amount'        => (float) ( $rate['amount'] ?? 0 ),
 			'currency'      => (string) ( $rate['currency'] ?? 'USD' ),
 			'days'          => isset( $rate['estimated_days'] ) ? (int) $rate['estimated_days'] : null,
@@ -465,7 +470,7 @@ class YeffoPrint_Shippo_Client {
 
 		$args = [
 			'method'  => $method,
-			'timeout' => 20,
+			'timeout' => $this->timeout,
 			'headers' => [
 				'Authorization' => 'ShippoToken ' . $this->token,
 				'Content-Type'  => 'application/json',
