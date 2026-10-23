@@ -885,7 +885,9 @@
 	font-size: 0.8rem;
 }
 
-.yp-batch-row__fields .is-invalid {
+.yp-batch-row__fields .is-invalid,
+#yp-co-email.is-invalid,
+#yp-ld-email.is-invalid {
 	border-color: #c0392b !important;
 	box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
 }

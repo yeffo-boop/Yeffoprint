@@ -6,10 +6,14 @@
  * to the cart — the customer then pays it through the normal
  * WooCommerce checkout, same as any other cart item).
  *
- * No customer name/email field here — PROJECT_SPEC §13 doesn't list
- * one, and checkout already collects billing details; the CustomOrder
- * record picks those up from its linked order once payment completes
- * (class-custom-order-payment.php), rather than asking for them twice.
+ * No customer name field here — checkout already collects billing
+ * details; the CustomOrder record picks those up from its linked order
+ * once payment completes (class-custom-order-payment.php). A signed-out
+ * shopper does give an email (direct request: "add an email field to
+ * the custom label order form so we can capture it if they're not
+ * logged in ... that way the abandoned cart feature works") — it
+ * prefills the checkout email and starts abandoned cart tracking, since
+ * most shoppers who leave never type one at checkout.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -475,6 +479,16 @@ class YeffoPrint_Custom_Order_Controller {
 			return new \WP_Error( 'yeffoprint_missing_brand_name', __( 'Brand name is required.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
+		// Signed-in shoppers already have an email on file (and reach
+		// checkout signed in, which starts tracking on its own).
+		$guest_email = '';
+		if ( ! is_user_logged_in() ) {
+			$guest_email = strtolower( trim( sanitize_email( (string) $request->get_param( 'email' ) ) ) );
+			if ( '' === $guest_email || ! is_email( $guest_email ) ) {
+				return new \WP_Error( 'yeffoprint_missing_email', __( 'Please enter a valid email address.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+			}
+		}
+
 		$style_notes  = sanitize_textarea_field( (string) $request->get_param( 'style_notes' ) );
 		$instructions = sanitize_textarea_field( (string) $request->get_param( 'instructions' ) );
 		$uploads      = $this->sanitize_upload_ids( $request->get_param( 'uploads' ) );
@@ -663,6 +677,16 @@ class YeffoPrint_Custom_Order_Controller {
 			}
 
 			$added_cart_item_keys[] = $row_cart_item_key;
+		}
+
+		if ( '' !== $guest_email ) {
+			// Prefills the block Checkout's email field, which reads the
+			// session customer's billing email.
+			if ( WC()->customer ) {
+				WC()->customer->set_billing_email( $guest_email );
+				WC()->customer->save();
+			}
+			YeffoPrint_Abandoned_Carts::capture_email( $guest_email );
 		}
 
 		return rest_ensure_response( [

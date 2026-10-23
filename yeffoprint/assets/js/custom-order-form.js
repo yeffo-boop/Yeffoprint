@@ -1250,7 +1250,8 @@
 		window.yeffoprintLabelDesigner = {
 			restUrl: assets.restUrl,
 			nonce: assets.nonce,
-			designFee: assets.designFee
+			designFee: assets.designFee,
+			isLoggedIn: !! yeffoprintCustomOrder.isLoggedIn
 		};
 
 		loadStylesheet( assets.fontsCss, 'yeffoprint-label-designer-fonts' );
@@ -1399,6 +1400,25 @@
 	// attribute — `title` only ever surfaces on hover, which doesn't
 	// exist on a touch device, so a phone would show no explanation at
 	// all for why the option won't select.
+	// Signed-out shoppers give an email up front, so a cart left at
+	// checkout can still get the abandoned cart reminders, and checkout
+	// opens with it filled in. Remembered in this browser only — the page
+	// can be cached for guests, so it's never printed into the HTML.
+	var EMAIL_STORAGE_KEY = 'yp_guest_email';
+	var emailFieldEl = root.querySelector( '[data-yp-co-email-field]' );
+	var emailInputEl = document.getElementById( 'yp-co-email' );
+	var askForEmail = !! ( emailFieldEl && emailInputEl && ! yeffoprintCustomOrder.isLoggedIn );
+	if ( askForEmail ) {
+		emailFieldEl.hidden = false;
+		emailInputEl.required = true;
+		try {
+			emailInputEl.value = window.localStorage.getItem( EMAIL_STORAGE_KEY ) || '';
+		} catch ( e ) {}
+		emailInputEl.addEventListener( 'input', function () {
+			emailInputEl.classList.remove( 'is-invalid' );
+		} );
+	}
+
 	var reorderModeRadio = root.querySelector( 'input[name="mode"][value="reorder"]' );
 	if ( reorderModeRadio && ! yeffoprintCustomOrder.isLoggedIn ) {
 		reorderModeRadio.disabled = true;
@@ -1791,6 +1811,15 @@
 			return;
 		}
 
+		var guestEmail = askForEmail ? emailInputEl.value.trim() : '';
+		if ( askForEmail && ( ! guestEmail || ! emailInputEl.checkValidity() ) ) {
+			showFormError( 'Please enter a valid email address.' );
+			emailInputEl.classList.add( 'is-invalid' );
+			emailInputEl.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+			emailInputEl.focus( { preventScroll: true } );
+			return;
+		}
+
 		var sourceCustomOrderId = 0;
 		if ( 'reorder' === state.mode ) {
 			sourceCustomOrderId = parseInt( reorderSelectEl.value, 10 ) || 0;
@@ -1817,6 +1846,13 @@
 
 		if ( sourceCustomOrderId ) {
 			payload.source_custom_order_id = sourceCustomOrderId;
+		}
+
+		if ( guestEmail ) {
+			payload.email = guestEmail;
+			try {
+				window.localStorage.setItem( EMAIL_STORAGE_KEY, guestEmail );
+			} catch ( e ) {}
 		}
 
 		fetch( yeffoprintCustomOrder.restUrl + 'custom-orders', {

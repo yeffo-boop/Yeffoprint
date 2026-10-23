@@ -272,6 +272,12 @@ defined( 'ABSPATH' ) || exit;
 
 		</div>
 
+		<div class="yp-field" data-yp-ld-email-field hidden>
+			<label for="yp-ld-email">Your email</label>
+			<input type="email" id="yp-ld-email" maxlength="100" autocomplete="email" inputmode="email" class="widefat" />
+			<p class="description">We&rsquo;ll fill it in at checkout and send your proof here. If you don&rsquo;t finish checking out, we&rsquo;ll email you a link back to your cart.</p>
+		</div>
+
 		<div class="yp-field">
 			<label for="yp-ld-brand">Brand name</label>
 			<input type="text" id="yp-ld-brand" maxlength="80" required class="widefat" />

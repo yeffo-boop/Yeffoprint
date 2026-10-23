@@ -19,8 +19,10 @@
  * checkout.js also sends it through the cart-extensions endpoint the
  * moment the field changes, the same round trip class-express-order.php
  * uses — whichever lands first creates the row, the other just
- * refreshes it. Nobody who never typed an email at checkout is ever
- * contacted.
+ * refreshes it. The Create a Custom Label form also asks signed-out
+ * shoppers for an email and starts tracking the moment it adds their
+ * labels to the cart (capture_email()). Nobody who never typed an email
+ * is ever contacted.
  *
  * Sending: same 5-minute sweep-over-a-table shape as class-telegram-
  * express-alerts.php (WP-Cron, so a quiet night can make a reminder a
@@ -294,6 +296,11 @@ class YeffoPrint_Abandoned_Carts {
 		}
 		$user = wp_get_current_user();
 		self::capture( (string) $user->user_email, (string) $user->first_name, (string) $user->last_name );
+	}
+
+	/** For a form outside checkout that collected the shopper's email (class-custom-order-controller.php). */
+	public static function capture_email( string $email ): void {
+		self::capture( $email );
 	}
 
 	private static function capture( string $email, string $first_name = '', string $last_name = '' ): void {
