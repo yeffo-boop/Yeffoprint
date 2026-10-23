@@ -333,6 +333,8 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 					'material_label'    => ! empty( $row['material_id'] ) ? html_entity_decode( get_the_title( (int) $row['material_id'] ), ENT_QUOTES, 'UTF-8' ) : '',
 					'quantity'          => (int) ( $row['quantity'] ?? 0 ),
 					'compound_strength' => (string) ( $row['compound_strength'] ?? '' ),
+					// Every Label Fields answer (Compound Name, Strength, Batch Number, …) on one line.
+					'details'           => YeffoPrint_Custom_Order_Meta::row_summary( $row ),
 					'qr_url'            => (string) ( $row['qr_url'] ?? '' ),
 				];
 			}, YeffoPrint_Custom_Order_Meta::get_batch_rows( $post->ID ) );

@@ -874,3 +874,18 @@
 .yp-batch-row .yp-custom-order__pair > .yp-field {
 	min-width: 0;
 }
+
+/* A label row's Label Fields (same layout as the product page's). */
+.yp-batch-row__fields .yp-field-grid > .yp-field {
+	min-width: 0;
+}
+
+.yp-batch-row__fields .yp-field .description {
+	margin: 0 0 0.35rem;
+	font-size: 0.8rem;
+}
+
+.yp-batch-row__fields .is-invalid {
+	border-color: #c0392b !important;
+	box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+}

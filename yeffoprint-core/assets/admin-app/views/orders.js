@@ -241,9 +241,9 @@
 			} else if ( 'label' === order.order_type ) {
 				var hasQr = order.label.batch.some( function ( b ) { return !! b.qr_url; } );
 				batchHtml =
-					'<table class="yp-record-table"><thead><tr><th>Size</th><th>Material</th><th>Qty</th><th>Compound / Strength</th>' + ( hasQr ? '<th>QR code</th>' : '' ) + '</tr></thead><tbody>' +
+					'<table class="yp-record-table"><thead><tr><th>Size</th><th>Material</th><th>Qty</th><th>Label details</th>' + ( hasQr ? '<th>QR code</th>' : '' ) + '</tr></thead><tbody>' +
 						order.label.batch.map( function ( b ) {
-							return '<tr><td>' + YP.escapeHtml( b.size_label || '—' ) + '</td><td>' + YP.escapeHtml( b.material_label || '—' ) + '</td><td>' + b.quantity + '</td><td>' + YP.escapeHtml( b.compound_strength || '—' ) + '</td>' +
+							return '<tr><td>' + YP.escapeHtml( b.size_label || '—' ) + '</td><td>' + YP.escapeHtml( b.material_label || '—' ) + '</td><td>' + b.quantity + '</td><td>' + YP.escapeHtml( b.details || b.compound_strength || '—' ) + '</td>' +
 								( hasQr ? '<td>' + ( b.qr_url ? YP.escapeHtml( b.qr_url ) + ' <a href="' + YP.escapeHtml( qrDownloadUrl( b.qr_url, 'png' ) ) + '">PNG</a> / <a href="' + YP.escapeHtml( qrDownloadUrl( b.qr_url, 'pdf' ) ) + '">PDF</a>' : '—' ) + '</td>' : '' ) +
 								'</tr>';
 						} ).join( '' ) +

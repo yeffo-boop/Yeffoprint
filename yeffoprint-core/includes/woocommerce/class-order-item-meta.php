@@ -203,6 +203,10 @@ class YeffoPrint_Order_Item_Meta {
 			$canvas_width_mm   = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_WIDTH_MM ] ?? 0 );
 			$canvas_height_mm  = (float) ( $values[ YeffoPrint_Cart_Item_Keys::CANVAS_HEIGHT_MM ] ?? 0 );
 			self::snapshot_custom_order_labels( $item, $custom_order_id, $size_id, $material_id, $quantity, $pricing, $row_index, $compound_strength, $canvas_width_mm, $canvas_height_mm );
+			$row_values = (array) ( $values[ YeffoPrint_Cart_Item_Keys::ROW_VALUES ] ?? [] );
+			if ( $row_values ) {
+				self::write_custom_row_fields( $item, $row_values, YeffoPrint_Custom_Order_Meta::label_fields() );
+			}
 			$qr_url = (string) ( $values[ YeffoPrint_Cart_Item_Keys::QR_URL ] ?? '' );
 			if ( '' !== $qr_url ) {
 				$item->add_meta_data( '_yp_qr_url_snapshot', $qr_url, true );
@@ -295,6 +299,48 @@ class YeffoPrint_Order_Item_Meta {
 		$item->add_meta_data( __( 'Quantity', 'yeffoprint-core' ), $quantity, true );
 		if ( '' !== $compound_strength ) {
 			$item->add_meta_data( __( 'Compound/Strength', 'yeffoprint-core' ), $compound_strength, true );
+		}
+	}
+
+	/**
+	 * A Custom Labels row's Label Fields answers, as readable pairs —
+	 * every filled-in field except QR code, which keeps its own "QR code"
+	 * row (with download links on the order screen).
+	 *
+	 * @return array<int, array{label:string, value:string}>
+	 */
+	public static function custom_row_field_pairs( array $values, array $fields ): array {
+		$pairs = [];
+		foreach ( $fields as $field ) {
+			$value = trim( (string) ( $values[ $field['id'] ] ?? '' ) );
+			if ( '' === $value || 'qr_code' === ( $field['type'] ?? '' ) || 'color_choice' === ( $field['type'] ?? '' ) ) {
+				continue;
+			}
+			$pairs[] = [ 'label' => (string) $field['label'], 'value' => YeffoPrint_Field_Schema::display_value( $field, $value ) ];
+		}
+		return $pairs;
+	}
+
+	/**
+	 * Freezes a Custom Labels row's Label Fields answers onto its order
+	 * line: the answers and the fields as they were at checkout (hidden),
+	 * plus one readable row per answer (Compound Name, Strength, Batch
+	 * Number, Expiration Date, …) in place of the single Compound/
+	 * Strength row. Also used after a label change request, which may
+	 * have changed any of them.
+	 */
+	public static function write_custom_row_fields( \WC_Order_Item_Product $item, array $values, array $fields ): void {
+		$old_fields = json_decode( (string) $item->get_meta( '_yp_row_fields' ), true );
+		foreach ( is_array( $old_fields ) ? $old_fields : [] as $field ) {
+			$item->delete_meta_data( (string) ( $field['label'] ?? '' ) );
+		}
+		$item->delete_meta_data( __( 'Compound/Strength', 'yeffoprint-core' ) );
+
+		$item->update_meta_data( '_yp_row_values', wp_json_encode( $values ) );
+		$item->update_meta_data( '_yp_row_fields', wp_json_encode( $fields ) );
+
+		foreach ( self::custom_row_field_pairs( $values, $fields ) as $pair ) {
+			$item->add_meta_data( $pair['label'], $pair['value'], true );
 		}
 	}
 
@@ -868,6 +914,8 @@ class YeffoPrint_Order_Item_Meta {
 			'_yp_batch_row_index',
 			'_yp_compound_strength_snapshot',
 			'_yp_qr_url_snapshot',
+			'_yp_row_values',
+			'_yp_row_fields',
 			'_yp_print_snapshot',
 		] );
 	}
