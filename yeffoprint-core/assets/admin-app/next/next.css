@@ -1609,6 +1609,22 @@ body.yp-next [data-yp-dashboard] > .yp-attn {
 	display: block;
 }
 
+.ypn-notes-from__row + .ypn-notes-from__row {
+	margin-top: 10px;
+}
+
+.ypn-notes-from__row b {
+	display: block;
+	font-size: 12px;
+	color: var(--ypn-mute);
+}
+
+.ypn-notes-from__row p {
+	margin: 2px 0 0;
+	white-space: pre-line;
+	overflow-wrap: anywhere;
+}
+
 .ypn-proof__foot {
 	margin: 10px 0 0;
 	font-size: 13px;

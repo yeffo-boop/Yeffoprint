@@ -85,6 +85,9 @@ class YeffoPrint_Cart_Item_Keys {
 	/** Custom Design batching only — the web address this row's QR code points to (optional). Display-only, like COMPOUND_STRENGTH. */
 	public const QR_URL = 'yp_qr_url';
 
+	/** Custom Design batching only — this row's shared Label Fields answers, { field_id: value } (YeffoPrint_Custom_Order_Meta::label_fields()). Display-only, like COMPOUND_STRENGTH. */
+	public const ROW_VALUES = 'yp_row_values';
+
 	/**
 	 * Label Designer only (own_design-mode Custom Design submission, no
 	 * SIZE_ID — the customer picked their own dimensions instead of a

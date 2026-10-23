@@ -412,6 +412,17 @@ class YeffoPrint_Custom_Order_Controller {
 			'materials'        => array_map( $material_format, YeffoPrint_Commerce_Record_Meta::get_materials_for( 'label' ) ),
 			'design_fee'       => function_exists( 'yeffoprint_core_custom_design_fee_label' ) ? yeffoprint_core_custom_design_fee_label() : '',
 			'quantity_presets' => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
+			'label_fields'     => array_map( static function ( array $field ): array {
+				return [
+					'id'                => (string) $field['id'],
+					'label'             => (string) $field['label'],
+					'type'              => (string) $field['type'],
+					'required'          => ! empty( $field['required'] ),
+					'max_chars'         => (int) $field['max_chars'],
+					'default'           => (string) ( $field['default'] ?? '' ),
+					'admin_description' => (string) ( $field['admin_description'] ?? '' ),
+				];
+			}, YeffoPrint_Custom_Order_Meta::label_fields() ),
 		] );
 	}
 
@@ -449,7 +460,9 @@ class YeffoPrint_Custom_Order_Controller {
 
 		$batch = $is_canvas_submission
 			? $this->validate_canvas_row( $request_width_mm, $request_height_mm, $request )
-			: $this->validate_batch_rows( $request->get_param( 'batch' ) );
+			// Required Label Fields only for a new design: an own print-ready
+			// file or a reorder already has its text in the artwork.
+			: $this->validate_batch_rows( $request->get_param( 'batch' ), true, 'new_design' === $mode );
 
 		if ( is_wp_error( $batch ) ) {
 			return $batch;
@@ -616,6 +629,10 @@ class YeffoPrint_Custom_Order_Controller {
 				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::QR_URL ] = $row['qr_url'];
 			}
 
+			if ( ! empty( $row['values'] ) ) {
+				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::ROW_VALUES ] = $row['values'];
+			}
+
 			if ( ! empty( $row['holo_border'] ) ) {
 				$row_cart_item_data[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] = $row['holo_border'];
 			}
@@ -669,17 +686,20 @@ class YeffoPrint_Custom_Order_Controller {
 	 *
 	 * @return array<int, array{size_id:int, material_id:int, quantity:int, compound_strength:string}>|\WP_Error
 	 */
-	private function validate_batch_rows( $raw, bool $require_custom_size = true ) {
+	private function validate_batch_rows( $raw, bool $require_custom_size = true, bool $require_fields = false ) {
 		if ( ! is_array( $raw ) || ! $raw ) {
 			return new \WP_Error( 'yeffoprint_empty_batch', __( 'Please add at least one label to your order.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$rows = [];
+		$rows         = [];
+		$label_fields = YeffoPrint_Custom_Order_Meta::label_fields();
+		$row_number   = 0;
 
 		foreach ( $raw as $row ) {
 			if ( ! is_array( $row ) ) {
 				continue;
 			}
+			$row_number++;
 
 			$size_id = absint( $row['size_id'] ?? 0 );
 			if ( ! $size_id || ! $this->is_published( 'yp_size', $size_id ) ) {
@@ -723,7 +743,7 @@ class YeffoPrint_Custom_Order_Controller {
 				return new \WP_Error( 'yeffoprint_invalid_qr_url', __( 'The QR code needs a valid web address (starting with https://).', 'yeffoprint-core' ), [ 'status' => 400 ] );
 			}
 
-			$rows[] = [
+			$clean_row = [
 				'size_id'           => $size_id,
 				'material_id'       => $material_id,
 				'quantity'          => $quantity,
@@ -733,6 +753,26 @@ class YeffoPrint_Custom_Order_Controller {
 				'custom_height_in'  => $custom_height_in,
 				'holo_border'       => YeffoPrint_Holographic_Vinyl::border_choice( $row['holo_border'] ?? null, $material_id ),
 			];
+
+			// The shared Label Fields (Compound Name, Strength, Batch
+			// Number, Expiration Date, …), checked exactly like a Template
+			// label's. A form loaded before these existed sends only
+			// compound_strength/qr_url, which stay as they were.
+			if ( $label_fields && is_array( $row['values'] ?? null ) ) {
+				$clean = YeffoPrint_Field_Schema::sanitize_variants( [ [ 'quantity' => 1, 'values' => $row['values'] ] ], $label_fields, $require_fields );
+				if ( is_wp_error( $clean ) ) {
+					return new \WP_Error(
+						$clean->get_error_code(),
+						/* translators: 1: label number on the form, 2: what's wrong */
+						sprintf( __( 'Label %1$d: %2$s', 'yeffoprint-core' ), $row_number, $clean->get_error_message() ),
+						[ 'status' => 400 ]
+					);
+				}
+				$clean_row['values'] = $clean[0]['values'];
+				$clean_row           = array_merge( $clean_row, YeffoPrint_Custom_Order_Meta::legacy_row_text( $clean_row['values'], $label_fields ) );
+			}
+
+			$rows[] = $clean_row;
 		}
 
 		if ( ! $rows ) {

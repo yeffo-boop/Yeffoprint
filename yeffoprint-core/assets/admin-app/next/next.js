@@ -1018,6 +1018,27 @@
 		'</div></div>';
 	}
 
+	/* What the customer typed in the request's Style / colors and
+	   Instructions boxes (batch numbers, dates, wording). Loaded with the
+	   request but only shown in Custom Orders until a customer's batch
+	   numbers went unseen on the order page (direct report). */
+	function customerNotesHtml( c ) {
+		var source = c.label || c.sticker || c.template || {};
+		var notes = [
+			[ 'Style / colors', source.style_notes ],
+			[ 'Instructions', source.instructions ]
+		].filter( function ( n ) { return n[1] && String( n[1] ).trim(); } );
+		if ( ! notes.length ) {
+			return '';
+		}
+		return '<section class="ypn-card ypn-notes-from">' +
+			'<h3 class="ypn-card__title">Customer’s notes</h3>' +
+			notes.map( function ( n ) {
+				return '<div class="ypn-notes-from__row"><b>' + esc( n[0] ) + '</b><p>' + esc( n[1] ) + '</p></div>';
+			} ).join( '' ) +
+		'</section>';
+	}
+
 	function labelFieldHtml( itemId, index, field ) {
 		var key = escAttr( itemId + '|' + index + '|' + field.id );
 		var value = String( field.value || '' );
@@ -1108,6 +1129,7 @@
 		// The customer's own files get their own card, above and apart
 		// from the proof upload box (direct request).
 		var filesCard = customerFilesHtml( c );
+		var notesCard = customerNotesHtml( c );
 		var dropZone = c.paid
 			? '<label class="ypn-drop' + ( needs && ! noProof ? ' is-wanted' : '' ) + '" data-ypn-drop-proof="' + c.id + '">' +
 				'<input type="file" accept="image/*,application/pdf" hidden data-ypn-proof-file="' + c.id + '">' +
@@ -1127,7 +1149,7 @@
 
 		if ( noProof ) {
 			// Final design from the customer: no proof box, just a way to send one anyway.
-			return filesCard +
+			return notesCard + filesCard +
 				'<section class="ypn-card ypn-proof" data-ypn-proof="' + c.id + '">' +
 					'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--grn">No proof needed</span></span></h3>' +
 					( filesCard ? '' : designChoiceHtml( c.design_choice ) ) +
@@ -1136,7 +1158,7 @@
 				'</section>';
 		}
 
-		return filesCard + (
+		return notesCard + filesCard + (
 			'<section class="ypn-card ypn-proof" data-ypn-proof="' + c.id + '">' +
 				'<h3 class="ypn-card__title">Proof <span><span class="ypn-pill ypn-pill--' + ( needs ? 'mag' : ( 'awaiting_approval' === c.status ? 'yel' : 'grn' ) ) + '">' + esc( c.status_label || 'Not paid yet' ) + '</span></span></h3>' +
 				'<p class="ypn-proof__title">' + esc( c.title ) + ( c.order_type_label ? ' · ' + esc( c.order_type_label ) : '' ) + '</p>' +

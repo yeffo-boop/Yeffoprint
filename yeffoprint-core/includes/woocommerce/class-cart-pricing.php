@@ -378,6 +378,11 @@ class YeffoPrint_Cart_Pricing {
 				'key'   => __( 'Quantity', 'yeffoprint-core' ),
 				'value' => number_format_i18n( (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ),
 			];
+			// The row's Label Fields answers, one line each like a Template
+			// label's (QR code keeps its own line just below).
+			foreach ( YeffoPrint_Order_Item_Meta::custom_row_field_pairs( (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::ROW_VALUES ] ?? [] ), YeffoPrint_Custom_Order_Meta::label_fields() ) as $pair ) {
+				$item_data[] = [ 'key' => $pair['label'], 'value' => esc_html( $pair['value'] ) ];
+			}
 			if ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::QR_URL ] ) ) {
 				$item_data[] = [ 'key' => __( 'QR code', 'yeffoprint-core' ), 'value' => esc_html( (string) $cart_item[ YeffoPrint_Cart_Item_Keys::QR_URL ] ) ];
 			}

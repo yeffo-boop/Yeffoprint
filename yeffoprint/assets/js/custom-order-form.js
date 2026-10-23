@@ -83,6 +83,10 @@
 	var sizesData = [];
 	var materialsData = [];
 	var quantityPresets = [];
+	// The shared Label Fields every Template uses (Compound Name, Strength,
+	// Batch Number, Expiration Date, …) — /custom-orders/options. Empty
+	// only if none are set up, which brings back the older two boxes.
+	var labelFields = [];
 	var batchRows = [];
 	var nextRowId = 0;
 	var uploadedFiles = []; // { name, id, error }
@@ -115,8 +119,66 @@
 	// YeffoPrint_Field_Schema::QR_MAX_CHARS (the server trims to it too).
 	var QR_MAX_CHARS = 500;
 
+	function defaultValues() {
+		var values = {};
+		labelFields.forEach( function ( field ) {
+			values[ field.id ] = field.default || '';
+		} );
+		return values;
+	}
+
+	function compoundField() {
+		return labelFields.filter( function ( field ) {
+			return 'text' === field.type && /compound/i.test( field.label );
+		} )[ 0 ] || null;
+	}
+
+	/** "KLOW 80mg" — a row's Compound and Strength answers (or its older single text). */
+	function rowDetails( row ) {
+		if ( ! labelFields.length ) {
+			return String( row.compound_strength || '' ).trim();
+		}
+		return labelFields.filter( function ( field ) {
+			return 'text' === field.type && /compound|strength/i.test( field.label );
+		} ).map( function ( field ) {
+			return String( row.values[ field.id ] || '' ).trim();
+		} ).filter( Boolean ).join( ' ' );
+	}
+
+	/** Everything the row will print, for the "We'll print" recap (same as the product page's). */
+	function rowPrintedText( row ) {
+		if ( ! labelFields.length ) {
+			return String( row.compound_strength || '' ).trim();
+		}
+		return labelFields.filter( function ( field ) {
+			return 'text' === field.type || 'textarea' === field.type;
+		} ).map( function ( field ) {
+			return String( row.values[ field.id ] || '' ).trim();
+		} ).filter( Boolean ).join( ' · ' );
+	}
+
+	function rowQr( row ) {
+		var qrField = labelFields.filter( function ( field ) { return 'qr_code' === field.type; } )[ 0 ];
+		return String( ( qrField ? row.values[ qrField.id ] : row.qr_url ) || '' ).trim();
+	}
+
+	/** A row saved before Label Fields (one compound/strength text, a QR address) as field answers. */
+	function valuesFromLegacyText( compoundStrength, qrUrl ) {
+		var values = defaultValues();
+		var compound = compoundField();
+		var qrField = labelFields.filter( function ( field ) { return 'qr_code' === field.type; } )[ 0 ];
+		if ( compound && compoundStrength ) {
+			values[ compound.id ] = String( compoundStrength ).slice( 0, compound.max_chars );
+		}
+		if ( qrField && qrUrl ) {
+			values[ qrField.id ] = qrUrl;
+		}
+		return values;
+	}
+
 	function createRow( overrides ) {
 		return Object.assign( {
+			values: defaultValues(),
 			id: nextRowId++,
 			size_id: sizesData.length ? sizesData[ 0 ].id : 0,
 			material_id: firstAvailableMaterialId(),
@@ -146,6 +208,7 @@
 				quantity: row.quantity,
 				compound_strength: row.compound_strength,
 				qr_url: String( row.qr_url || '' ).trim(),
+				values: labelFields.length ? row.values : undefined,
 				custom_width_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_width_in ) || 0 : 0,
 				custom_height_in: rowNeedsCustomSize( row ) ? parseFloat( row.custom_height_in ) || 0 : 0,
 				holo_border: rowIsHolographic( row ) ? row.holo_border : ''
@@ -257,6 +320,7 @@
 					'<span class="yp-field__label">Quantity</span>' +
 					'<div class="yp-quantity-control" data-row-quantity></div>' +
 				'</div>' +
+				( labelFields.length ? rowFieldsHtml( row ) :
 				'<div class="yp-custom-order__pair">' +
 				'<div class="yp-field">' +
 					'<label for="yp-co-row-' + row.id + '-compound">Product details <span class="description">(e.g. compound &amp; strength) (optional)</span></label>' +
@@ -266,9 +330,126 @@
 					'<label for="yp-co-row-' + row.id + '-qr">QR code <span class="description">(a web address to link to) (optional)</span></label>' +
 					'<input type="url" id="yp-co-row-' + row.id + '-qr" data-row-field="qr_url" placeholder="https://" maxlength="' + QR_MAX_CHARS + '" class="widefat" />' +
 				'</div>' +
-				'</div>' +
+				'</div>' ) +
 			'</div>'
 		);
+	}
+
+	/* ---------- Label Fields (same as the product page's, configurator.js) ---------- */
+
+	var CORNER_STYLE_OPTIONS = { squared: 'Squared', rounded: 'Rounded' };
+	var CORNER_STYLE_HINTS = { squared: 'Sharp 90° corners', rounded: 'Soft, peel-friendly' };
+
+	function rowFieldHtml( row, field ) {
+		var id = 'yp-co-row-' + row.id + '-f-' + field.id;
+		var attrs = ' id="' + id + '" data-row-value="' + escapeHtml( field.id ) + '" maxlength="' + field.max_chars + '" class="widefat"';
+		var labelText = escapeHtml( field.label ) + ( field.required ? ' *' : '' );
+		var isWide = true;
+		var control;
+
+		if ( 'corner_style' === field.type ) {
+			var value = row.values[ field.id ] || '';
+			return (
+				'<div class="yp-field yp-field--wide">' +
+					'<div class="yp-field__label-row"><span class="yp-field__label" id="' + id + '-label">' + labelText + '</span></div>' +
+					'<div class="yp-corner-cards yp-corner-style-options" role="radiogroup" aria-labelledby="' + id + '-label">' +
+						Object.keys( CORNER_STYLE_OPTIONS ).map( function ( key ) {
+							var on = key === value;
+							return '<button type="button" role="radio" aria-checked="' + ( on ? 'true' : 'false' ) + '" class="yp-corner-card' + ( on ? ' is-selected' : '' ) + '" data-row-corner="' + escapeHtml( field.id ) + '" data-corner-value="' + key + '">' +
+								'<svg width="40" height="28" viewBox="0 0 40 28" aria-hidden="true" focusable="false"><rect x="1" y="1" width="38" height="26" rx="' + ( 'rounded' === key ? 6 : 0 ) + '"/></svg>' +
+								'<span><strong>' + CORNER_STYLE_OPTIONS[ key ] + '</strong><small>' + CORNER_STYLE_HINTS[ key ] + '</small></span>' +
+							'</button>';
+						} ).join( '' ) +
+					'</div>' +
+				'</div>'
+			);
+		}
+
+		if ( 'qr_code' === field.type ) {
+			control = '<input type="url" placeholder="https://"' + attrs + ' />';
+		} else if ( 'textarea' === field.type ) {
+			control = '<textarea rows="2"' + attrs + '></textarea>';
+		} else {
+			control = '<input type="text"' + attrs + ' />';
+			// Short single-line text sits two to a row, like the product page.
+			isWide = field.max_chars > 60;
+		}
+
+		return (
+			'<div class="yp-field' + ( isWide ? ' yp-field--wide' : '' ) + '">' +
+				'<div class="yp-field__label-row"><label for="' + id + '">' + labelText + '</label></div>' +
+				( field.admin_description ? '<p class="description">' + escapeHtml( field.admin_description ) + '</p>' : '' ) +
+				control +
+			'</div>'
+		);
+	}
+
+	/** Required fields under "On the label", the rest under "Optional details" — the product page's layout. */
+	function rowFieldsHtml( row ) {
+		// Only plain fields the form can take; a Template's own color picks aren't part of a custom design.
+		var fields = labelFields.filter( function ( field ) {
+			return [ 'text', 'textarea', 'qr_code', 'corner_style' ].indexOf( field.type ) !== -1;
+		} );
+		var required = fields.filter( function ( field ) { return field.required; } );
+		var optional = fields.filter( function ( field ) { return ! field.required; } );
+		var showTitles = required.length > 0 && optional.length > 0;
+
+		function groupHtml( title, group ) {
+			if ( ! group.length ) {
+				return '';
+			}
+			return ( showTitles ? '<p class="yp-field-group__title">' + title + '</p>' : '' ) +
+				'<div class="yp-field-grid">' + group.map( function ( field ) { return rowFieldHtml( row, field ); } ).join( '' ) + '</div>';
+		}
+
+		return '<div class="yp-batch-row__fields">' + groupHtml( 'On the label', required ) + groupHtml( 'Optional details', optional ) + '</div>';
+	}
+
+	function bindRowFields( row, rowEl ) {
+		rowEl.querySelectorAll( '[data-row-value]' ).forEach( function ( input ) {
+			var fieldId = input.getAttribute( 'data-row-value' );
+			// Property, not an HTML attribute — see the compound input's note below.
+			input.value = row.values[ fieldId ] || '';
+			input.addEventListener( 'input', function () {
+				row.values[ fieldId ] = input.value;
+				input.classList.remove( 'is-invalid' );
+				renderSummary();
+			} );
+		} );
+
+		rowEl.querySelectorAll( '[data-row-corner]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var fieldId = button.getAttribute( 'data-row-corner' );
+				row.values[ fieldId ] = button.getAttribute( 'data-corner-value' );
+				rowEl.querySelectorAll( '[data-row-corner="' + fieldId + '"]' ).forEach( function ( other ) {
+					var on = other === button;
+					other.classList.toggle( 'is-selected', on );
+					other.setAttribute( 'aria-checked', on ? 'true' : 'false' );
+				} );
+			} );
+		} );
+
+		var compound = compoundField();
+		var compoundInput = compound ? rowEl.querySelector( '[data-row-value="' + compound.id + '"]' ) : null;
+		if ( compoundInput && window.YPLabelProofing ) {
+			window.YPLabelProofing.attachSpellCheck( compoundInput, { anchor: compoundInput.closest( '.yp-field' ) } );
+		}
+	}
+
+	/** The first required Label Field left blank, as { row, field }, for a new design. */
+	function firstMissingField() {
+		if ( 'new_design' !== state.mode ) {
+			return null;
+		}
+		for ( var i = 0; i < batchRows.length; i++ ) {
+			for ( var j = 0; j < labelFields.length; j++ ) {
+				var field = labelFields[ j ];
+				if ( field.required && [ 'text', 'textarea', 'qr_code', 'corner_style' ].indexOf( field.type ) !== -1 && ! String( batchRows[ i ].values[ field.id ] || '' ).trim() ) {
+					return { index: i, row: batchRows[ i ], field: field };
+				}
+			}
+		}
+		return null;
 	}
 
 	function renderRowQuantity( row, container ) {
@@ -340,21 +521,25 @@
 			// what keeps a stray `"` in it from breaking out of the
 			// attribute the way string-concatenating it into rowMarkup's
 			// HTML would.
-			var compoundInput = rowEl.querySelector( '[data-row-field="compound_strength"]' );
-			compoundInput.value = row.compound_strength;
-			compoundInput.addEventListener( 'input', function () {
-				row.compound_strength = compoundInput.value;
-				renderSummary();
-			} );
-			if ( window.YPLabelProofing ) {
-				window.YPLabelProofing.attachSpellCheck( compoundInput, { anchor: compoundInput.closest( '.yp-field' ) } );
-			}
+			if ( labelFields.length ) {
+				bindRowFields( row, rowEl );
+			} else {
+				var compoundInput = rowEl.querySelector( '[data-row-field="compound_strength"]' );
+				compoundInput.value = row.compound_strength;
+				compoundInput.addEventListener( 'input', function () {
+					row.compound_strength = compoundInput.value;
+					renderSummary();
+				} );
+				if ( window.YPLabelProofing ) {
+					window.YPLabelProofing.attachSpellCheck( compoundInput, { anchor: compoundInput.closest( '.yp-field' ) } );
+				}
 
-			var qrInput = rowEl.querySelector( '[data-row-field="qr_url"]' );
-			qrInput.value = row.qr_url || '';
-			qrInput.addEventListener( 'input', function () {
-				row.qr_url = qrInput.value;
-			} );
+				var qrInput = rowEl.querySelector( '[data-row-field="qr_url"]' );
+				qrInput.value = row.qr_url || '';
+				qrInput.addEventListener( 'input', function () {
+					row.qr_url = qrInput.value;
+				} );
+			}
 
 			renderRowQuantity( row, rowEl.querySelector( '[data-row-quantity]' ) );
 		} );
@@ -384,6 +569,7 @@
 			quantity: source.quantity,
 			compound_strength: source.compound_strength,
 			qr_url: source.qr_url,
+			values: Object.assign( {}, source.values ),
 			custom_width_in: source.custom_width_in,
 			custom_height_in: source.custom_height_in,
 			holo_border: source.holo_border
@@ -555,7 +741,8 @@
 				size_id: size.id,
 				material_id: material.id,
 				quantity: quantity,
-				compound_strength: compoundStrength
+				compound_strength: compoundStrength,
+				values: valuesFromLegacyText( compoundStrength, '' )
 			} ) );
 		} );
 
@@ -659,7 +846,7 @@
 			if ( rowNeedsCustomSize( row ) && rowCustomSizeValid( row ) ) {
 				sizeText += ': ' + parseFloat( row.custom_width_in ) + '" × ' + parseFloat( row.custom_height_in ) + '"';
 			}
-			var details = String( row.compound_strength || '' ).trim();
+			var details = rowDetails( row );
 			return '<li>' +
 				'<span>Label ' + ( index + 1 ) + ( details ? ' · ' + escapeHtml( details ) : '' ) +
 					'<small>' + escapeHtml( [ sizeText, material ? material.name : '', rowIsHolographic( row ) ? ( 'no' === row.holo_border ? 'No border' : 'Holo border' ) : '' ].filter( Boolean ).join( ' · ' ) ) + '</small></span>' +
@@ -863,7 +1050,7 @@
 
 		var brand = document.getElementById( 'yp-co-brand' ).value;
 		var style = document.getElementById( 'yp-co-style' ).value;
-		var details = row ? row.compound_strength : '';
+		var details = row ? rowDetails( row ) : '';
 
 		set( '[data-yp-ai-prompt]',
 			'Design a flat, print-ready product label for ' + aiField( brand, '[your brand name]' ) + '. ' +
@@ -1326,7 +1513,11 @@
 				// every row it actually had comes back, not just one.
 				var rows = data.batch && data.batch.length ? data.batch : [ {} ];
 				batchRows = rows.map( function ( row ) {
-					var overrides = { compound_strength: row.compound_strength || '', qr_url: row.qr_url || '' };
+					var overrides = {
+						compound_strength: row.compound_strength || '',
+						qr_url: row.qr_url || '',
+						values: row.values ? Object.assign( defaultValues(), row.values ) : valuesFromLegacyText( row.compound_strength || '', row.qr_url || '' )
+					};
 					if ( row.size_id ) {
 						overrides.size_id = row.size_id;
 					}
@@ -1394,6 +1585,7 @@
 				feeEl.textContent = data.design_fee || '$25.00';
 
 				quantityPresets = data.quantity_presets && data.quantity_presets.length ? data.quantity_presets : [ 10 ];
+				labelFields = data.label_fields || [];
 
 				batchRows = [ createRow() ];
 				renderBatch();
@@ -1522,8 +1714,8 @@
 			getRecap: function () {
 				var brand = document.getElementById( 'yp-co-brand' ).value.trim();
 				var details = batchRows.map( function ( row ) {
-					var qr = String( row.qr_url || '' ).trim();
-					return [ String( row.compound_strength || '' ).trim(), qr ? 'QR: ' + qr : '' ].filter( Boolean ).join( ' · ' );
+					var qr = rowQr( row );
+					return [ rowPrintedText( row ), qr ? 'QR: ' + qr : '' ].filter( Boolean ).join( ' · ' );
 				} ).filter( Boolean );
 				return [ brand ].concat( details );
 			},
@@ -1583,6 +1775,18 @@
 			if ( missingEl ) {
 				missingEl.classList.add( 'is-invalid' );
 				missingEl.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+			}
+			return;
+		}
+
+		var missingField = firstMissingField();
+		if ( missingField ) {
+			var fieldEl = batchContainerEl.querySelector( '[data-row-id="' + missingField.row.id + '"] [data-row-value="' + missingField.field.id + '"]' );
+			showFormError( 'Label ' + ( missingField.index + 1 ) + ': ' + missingField.field.label + ' is required.' );
+			if ( fieldEl ) {
+				fieldEl.classList.add( 'is-invalid' );
+				fieldEl.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+				fieldEl.focus( { preventScroll: true } );
 			}
 			return;
 		}

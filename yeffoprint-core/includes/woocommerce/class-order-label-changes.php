@@ -132,7 +132,7 @@ class YeffoPrint_Order_Label_Changes {
 					'labels'  => [ [
 						'index'    => 0,
 						'quantity' => (int) $item->get_meta( '_yp_batch_quantity' ),
-						'fields'   => [ self::field_payload( self::compound_field(), (string) $item->get_meta( '_yp_compound_strength_snapshot' ) ) ],
+						'fields'   => self::custom_fields_payload( $item ),
 					] ],
 				];
 			}
@@ -163,6 +163,37 @@ class YeffoPrint_Order_Label_Changes {
 			&& '' !== (string) $item->get_meta( '_yp_batch_quantity' )
 			&& '' === (string) $item->get_meta( '_yp_sticker_type' )
 			&& '' === (string) $item->get_meta( '_yp_canvas_width_mm' );
+	}
+
+	/**
+	 * A Custom Labels row's Label Fields as checked out (Compound Name,
+	 * Strength, Batch Number, …), or [] for a row placed before the form
+	 * had them — that one still edits its single Compound/Strength text.
+	 */
+	private static function custom_row_fields( \WC_Order_Item_Product $item ): array {
+		$fields = json_decode( (string) $item->get_meta( '_yp_row_fields' ), true );
+		if ( ! is_array( $fields ) ) {
+			return [];
+		}
+		return array_values( array_filter( $fields, static function ( $field ) {
+			return is_array( $field ) && 'color_choice' !== ( $field['type'] ?? '' );
+		} ) );
+	}
+
+	private static function custom_row_values( \WC_Order_Item_Product $item ): array {
+		$values = json_decode( (string) $item->get_meta( '_yp_row_values' ), true );
+		return is_array( $values ) ? $values : [];
+	}
+
+	private static function custom_fields_payload( \WC_Order_Item_Product $item ): array {
+		$fields = self::custom_row_fields( $item );
+		if ( ! $fields ) {
+			return [ self::field_payload( self::compound_field(), (string) $item->get_meta( '_yp_compound_strength_snapshot' ) ) ];
+		}
+		$values = self::custom_row_values( $item );
+		return array_map( static function ( array $field ) use ( $values ) {
+			return self::field_payload( $field, (string) ( $values[ $field['id'] ] ?? '' ) );
+		}, $fields );
 	}
 
 	private static function compound_field(): array {
@@ -221,7 +252,8 @@ class YeffoPrint_Order_Label_Changes {
 				continue;
 			}
 			$item   = $order->get_item( $item_id );
-			$schema = 'template' === $line['kind'] ? self::template_schema( $item ) : [ self::compound_field() ];
+			$row_fields = 'custom' === $line['kind'] ? self::custom_row_fields( $item ) : [];
+			$schema     = 'template' === $line['kind'] ? self::template_schema( $item ) : ( $row_fields ?: [ self::compound_field() ] );
 
 			foreach ( $line['labels'] as $label ) {
 				$values = $submitted[ $label['index'] ] ?? $submitted[ (string) $label['index'] ] ?? null;
@@ -232,7 +264,8 @@ class YeffoPrint_Order_Label_Changes {
 					if ( ! array_key_exists( $field['id'], $values ) || ! is_scalar( $values[ $field['id'] ] ) ) {
 						continue;
 					}
-					$clean = self::clean_value( $field, (string) $values[ $field['id'] ], 'template' === $line['kind'] );
+					// A custom row's required fields may have been left blank on an own-design order, so blanks aren't refused there.
+					$clean = self::clean_value( $field, (string) $values[ $field['id'] ], 'template' === $line['kind'] || $row_fields, 'template' === $line['kind'] );
 					if ( is_wp_error( $clean ) ) {
 						return $clean;
 					}
@@ -265,7 +298,7 @@ class YeffoPrint_Order_Label_Changes {
 	}
 
 	/** @return string|\WP_Error One field's value, cleaned and checked exactly as at checkout. */
-	private static function clean_value( array $field, string $raw, bool $is_template ) {
+	private static function clean_value( array $field, string $raw, bool $is_template, bool $enforce_required = true ) {
 		if ( ! $is_template ) {
 			$value = sanitize_text_field( $raw );
 			if ( mb_strlen( $value ) > self::COMPOUND_MAX_CHARS ) {
@@ -275,7 +308,7 @@ class YeffoPrint_Order_Label_Changes {
 			return $value;
 		}
 
-		$clean = YeffoPrint_Field_Schema::sanitize_variants( [ [ 'quantity' => 1, 'values' => [ $field['id'] => $raw ] ] ], [ $field ] );
+		$clean = YeffoPrint_Field_Schema::sanitize_variants( [ [ 'quantity' => 1, 'values' => [ $field['id'] => $raw ] ] ], [ $field ], $enforce_required );
 		if ( is_wp_error( $clean ) ) {
 			return $clean;
 		}
@@ -310,6 +343,8 @@ class YeffoPrint_Order_Label_Changes {
 				}
 				$item->update_meta_data( '_yp_variants', wp_json_encode( $variants ) );
 				YeffoPrint_Order_Item_Meta::rewrite_variant_rows( $item, $variants, $schema );
+			} elseif ( self::custom_row_fields( $item ) ) {
+				self::apply_custom_row_fields( $item, (array) ( $labels[0] ?? [] ) );
 			} else {
 				$value = (string) ( $labels[0][ self::COMPOUND_FIELD ] ?? '' );
 				$item->update_meta_data( '_yp_compound_strength_snapshot', $value );
@@ -330,6 +365,37 @@ class YeffoPrint_Order_Label_Changes {
 		}
 
 		return $result['lines'];
+	}
+
+	/**
+	 * A Custom Labels row with Label Fields: the new answers, the
+	 * readable rows, the compound/QR text worked out from them, and the
+	 * design request's own copy of the row.
+	 */
+	private static function apply_custom_row_fields( \WC_Order_Item_Product $item, array $changed ): void {
+		$fields = self::custom_row_fields( $item );
+		$values = array_merge( self::custom_row_values( $item ), $changed );
+		$legacy = YeffoPrint_Custom_Order_Meta::legacy_row_text( $values, $fields );
+
+		YeffoPrint_Order_Item_Meta::write_custom_row_fields( $item, $values, $fields );
+		$item->update_meta_data( '_yp_compound_strength_snapshot', $legacy['compound_strength'] );
+
+		$item->delete_meta_data( __( 'QR code', 'yeffoprint-core' ) );
+		$item->delete_meta_data( '_yp_qr_url_snapshot' );
+		if ( '' !== $legacy['qr_url'] ) {
+			$item->add_meta_data( '_yp_qr_url_snapshot', $legacy['qr_url'], true );
+			$item->add_meta_data( __( 'QR code', 'yeffoprint-core' ), $legacy['qr_url'], true );
+		}
+
+		$custom_order_id = (int) $item->get_meta( '_yp_custom_order_id' );
+		$row_index       = (int) $item->get_meta( '_yp_batch_row_index' );
+		self::update_custom_order_row( $custom_order_id, $row_index, $legacy['compound_strength'] );
+		$batch = json_decode( (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BATCH, true ), true );
+		if ( $custom_order_id && is_array( $batch ) && isset( $batch[ $row_index ] ) && is_array( $batch[ $row_index ] ) ) {
+			$batch[ $row_index ]['values'] = $values;
+			$batch[ $row_index ]['qr_url'] = $legacy['qr_url'];
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BATCH, wp_slash( wp_json_encode( $batch ) ) );
+		}
 	}
 
 	/** Keeps the custom design request's own copy of the row in step, so the design work reads the new compound too. */

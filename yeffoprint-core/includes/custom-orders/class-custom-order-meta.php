@@ -179,6 +179,60 @@ class YeffoPrint_Custom_Order_Meta {
 	public const BATCH = '_yp_batch';
 
 	/**
+	 * The per-label fields on the Custom Labels form: the same shared
+	 * Label Fields set every Template uses (admin app Catalog > Label
+	 * Fields) — direct request: "The experience/fields for custom labels
+	 * should be very similar to template labels." A Template's own color
+	 * choices aren't part of that set, so they don't show here; a
+	 * custom design's colors go in Style / colors. Each BATCH row keeps
+	 * its answers under `values` { field_id: value }, the same shape as
+	 * a Template variant's.
+	 */
+	public static function label_fields(): array {
+		$preset_id = YeffoPrint_Field_Schema::get_default_preset_id();
+		return $preset_id && get_post( $preset_id ) ? YeffoPrint_Field_Schema::get( $preset_id ) : [];
+	}
+
+	/**
+	 * The older single-text compound_strength and qr_url a row still
+	 * carries, worked out from its Label Fields answers — so everything
+	 * that already reads those two (order lines, label changes, the
+	 * admin tables, abandoned carts) keeps working. The Compound and
+	 * Strength fields are found by label, like configurator.js's own
+	 * compoundField().
+	 *
+	 * @return array{compound_strength:string, qr_url:string}
+	 */
+	public static function legacy_row_text( array $values, array $fields ): array {
+		$compound = [];
+		$qr_url   = '';
+		foreach ( $fields as $field ) {
+			$value = trim( (string) ( $values[ $field['id'] ] ?? '' ) );
+			if ( '' === $value ) {
+				continue;
+			}
+			if ( 'text' === ( $field['type'] ?? '' ) && preg_match( '/compound|strength/i', (string) $field['label'] ) ) {
+				$compound[] = $value;
+			} elseif ( 'qr_code' === ( $field['type'] ?? '' ) && '' === $qr_url ) {
+				$qr_url = $value;
+			}
+		}
+
+		return [ 'compound_strength' => implode( ' ', $compound ), 'qr_url' => $qr_url ];
+	}
+
+	/** One BATCH row's details as one line: its Label Fields answers, or the older free-text compound_strength. */
+	public static function row_summary( array $row ): string {
+		$values = is_array( $row['values'] ?? null ) ? $row['values'] : [];
+		$fields = array_filter( self::label_fields(), static function ( $field ) {
+			return 'qr_code' !== ( $field['type'] ?? '' );
+		} );
+		$summary = $values ? YeffoPrint_Field_Schema::format_variant_summary( [ 'values' => $values ], $fields ) : '';
+
+		return '' !== $summary ? $summary : (string) ( $row['compound_strength'] ?? '' );
+	}
+
+	/**
 	 * Label Designer (direct request: "a full live product label
 	 * customizer... input a size, add text, easy graphics, shapes/lines,
 	 * change the font, colors, etc"). Unlike every other flow, this one
