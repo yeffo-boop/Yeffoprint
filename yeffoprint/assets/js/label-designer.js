@@ -54,6 +54,8 @@
 	var MAX_PX_PER_INCH      = 220;
 	var EXPORT_DPI           = 300;
 	var DRAFT_STORAGE_KEY    = 'yeffoprintLabelDesignerDraft';
+	// Shared with custom-order-form.js, which asks the same question.
+	var EMAIL_STORAGE_KEY    = 'yp_guest_email';
 	var SAFE_ZONE_MARGIN_MM  = 2;
 	var SNAP_THRESHOLD_PX    = 6;
 	var ZOOM_MIN  = 0.5;
@@ -80,10 +82,24 @@
 	var bgColorInput  = document.getElementById( 'yp-ld-bg-color' );
 	var brandInput    = document.getElementById( 'yp-ld-brand' );
 	var notesInput    = document.getElementById( 'yp-ld-notes' );
+	var emailFieldEl  = root.querySelector( '[data-yp-ld-email-field]' );
+	var emailInput    = document.getElementById( 'yp-ld-email' );
 	var feeEl         = root.querySelector( '[data-yp-ld-fee]' );
 	var unitPriceEl   = root.querySelector( '[data-yp-ld-unit-price]' );
 	var totalEl       = root.querySelector( '[data-yp-ld-total]' );
 	var submitButton  = document.getElementById( 'yp-ld-submit' ) || root.querySelector( '[data-yp-ld-submit]' );
+
+	// Signed-out shoppers give an email here too — see custom-order-form.js.
+	var askForEmail = !! ( emailFieldEl && emailInput && ! yeffoprintLabelDesigner.isLoggedIn );
+	if ( askForEmail ) {
+		emailFieldEl.hidden = false;
+		try {
+			emailInput.value = window.localStorage.getItem( EMAIL_STORAGE_KEY ) || '';
+		} catch ( e ) {}
+		emailInput.addEventListener( 'input', function () {
+			emailInput.classList.remove( 'is-invalid' );
+		} );
+	}
 
 	var toolbarEl   = root.querySelector( '.yp-ld__toolbar' );
 	var undoButton  = root.querySelector( '[data-yp-ld-undo]' );
@@ -1505,6 +1521,13 @@
 		var quantity   = parseInt( quantityInput.value, 10 ) || 0;
 		var brandName  = brandInput.value.trim();
 
+		var guestEmail = askForEmail ? emailInput.value.trim() : '';
+		if ( askForEmail && ( ! guestEmail || ! emailInput.checkValidity() ) ) {
+			showFormError( 'Please enter a valid email address.' );
+			emailInput.classList.add( 'is-invalid' );
+			emailInput.focus();
+			return;
+		}
 		if ( ! brandName ) {
 			showFormError( 'Brand name is required.' );
 			return;
@@ -1591,7 +1614,8 @@
 							quantity: quantity,
 							brand_name: brandName,
 							instructions: notesInput.value,
-							canvas_design: JSON.stringify( canvas.toJSON( EXTRA_OBJECT_PROPS ) )
+							canvas_design: JSON.stringify( canvas.toJSON( EXTRA_OBJECT_PROPS ) ),
+							email: guestEmail
 						} )
 					} );
 				} )
@@ -1605,6 +1629,11 @@
 						throw new Error( ( result.data && result.data.message ) || "Couldn't submit your design. Please try again." );
 					}
 					clearDraft();
+					if ( guestEmail ) {
+						try {
+							window.localStorage.setItem( EMAIL_STORAGE_KEY, guestEmail );
+						} catch ( e ) {}
+					}
 					window.location.href = result.data.checkout_url;
 				} )
 				.catch( function ( error ) {
