@@ -28,6 +28,7 @@ class YeffoPrint_Web_Design_Order_Controller {
 
 	public function create( \WP_REST_Request $request ) {
 		if ( '' !== (string) $request->get_param( 'website' ) ) {
+			YeffoPrint_Spam_Guard::record( 'web-design-order', 'Hidden field filled in', (string) $request->get_param( 'email' ) );
 			return rest_ensure_response( [ 'success' => true ] );
 		}
 

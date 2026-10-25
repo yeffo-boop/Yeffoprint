@@ -22,6 +22,8 @@
 	}
 
 	var form = document.getElementById( 'yp-web-design-quote-form' );
+	// How long the form was open; the server treats under 2 seconds as a bot.
+	var openedAt = Date.now();
 	var submitButton = root.querySelector( '[data-yp-wdq-submit]' );
 	var statusEl = null;
 
@@ -112,7 +114,8 @@
 			wants_hosting_addon: radioValue( 'wants_hosting_addon' ),
 			wants_maintenance: radioValue( 'wants_maintenance' ),
 			details: document.getElementById( 'yp-wdq-details' ).value,
-			website: document.getElementById( 'yp-wdq-website' ).value
+			website: document.getElementById( 'yp-wdq-website' ).value,
+			yp_t: Date.now() - openedAt
 		};
 
 		fetch( yeffoprintWebDesignQuote.restUrl + 'web-design-quote', {

@@ -60,6 +60,7 @@ class YeffoPrint_Admin_Settings_Controller {
 
 		update_option( YeffoPrint_Shippo_Settings::API_KEY_OPTION, sanitize_text_field( (string) ( $params['shippo_api_key'] ?? '' ) ) );
 		YeffoPrint_Email_Orders::save_settings( $params );
+		YeffoPrint_Spam_Guard::save_settings( $params );
 		// Only when sent, so an older copy of the app open on a phone can't blank it.
 		if ( array_key_exists( 'usda_api_key', $params ) ) {
 			update_option( YeffoPrint_Tracker_Food::KEY_OPTION, sanitize_text_field( (string) $params['usda_api_key'] ), false );
@@ -178,6 +179,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			'shippo_api_key'             => YeffoPrint_Shippo_Settings::get_api_key(),
 			'usda_api_key'               => (string) get_option( YeffoPrint_Tracker_Food::KEY_OPTION, '' ),
 			'usda_api_key_in_config'     => defined( 'YEFFOPRINT_USDA_API_KEY' ) && YEFFOPRINT_USDA_API_KEY,
+			'spam'                       => YeffoPrint_Spam_Guard::settings(),
 			'shippo_ship_from_phone'     => (string) get_option( YeffoPrint_Shippo_Settings::SHIP_FROM_PHONE_OPTION, '' ),
 			'shippo_default_package'     => YeffoPrint_Shippo_Settings::get_default_package(),
 			'shippo_customs'             => YeffoPrint_Shippo_Settings::get_customs_defaults() + [ 'signer_saved' => (string) get_option( YeffoPrint_Shippo_Settings::CUSTOMS_SIGNER_OPTION, '' ) ],

@@ -77,6 +77,44 @@
 		} ).filter( function ( option ) { return '' !== option.label.trim(); } );
 	}
 
+	var SPAM_FORM_LABELS = {
+		signup: 'Sign-up',
+		contact: 'Contact form',
+		'web-design-quote': 'Web design quote',
+		'web-design-order': 'Web design order',
+		'custom-labels': 'Custom labels',
+		'custom-stickers': 'Custom stickers',
+		'saved-design-email': 'Saved design emails'
+	};
+
+	function spamPanelHtml( spam ) {
+		var counts = spam.blocked_counts || {};
+		var total = Object.keys( counts ).reduce( function ( sum, key ) { return sum + ( counts[ key ] || 0 ); }, 0 );
+		var recent = spam.blocked_recent || [];
+
+		return '<div class="yp-panel" id="spam-protection">' +
+			'<div class="yp-panel__head"><h2>Spam protection</h2></div>' +
+			'<p class="yp-panel__hint">Always on, and invisible to customers: sign-up forms have a hidden bot trap, ignore forms sent back within seconds, refuse throwaway and made-up email addresses and junk usernames, and allow 5 new accounts per connection an hour. Contact, quote, custom label and saved-design forms have their own limits.</p>' +
+			'<p class="yp-panel__hint"><strong>Optional extra check:</strong> Cloudflare Turnstile on the sign-up forms. It\'s free and almost never asks anyone to click anything. Add the site at <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank" rel="noopener">Cloudflare › Turnstile</a> (widget mode: Managed), then paste both keys here. Clear the site key to turn it off.</p>' +
+			'<div class="yp-form__row">' +
+				'<div class="yp-field"><label for="yp-set-turnstile-site">Turnstile site key</label><input type="text" id="yp-set-turnstile-site" value="' + YP.escapeAttr( spam.turnstile_site_key || '' ) + '" placeholder="0x4AAAAAAA..." autocomplete="off" /></div>' +
+				'<div class="yp-field"><label for="yp-set-turnstile-secret">Turnstile secret key</label><input type="password" id="yp-set-turnstile-secret" value="" autocomplete="new-password" placeholder="' + ( spam.turnstile_secret_key_set ? 'Saved. Paste a new one to replace it' : '0x4AAAAAAA...' ) + '" /></div>' +
+			'</div>' +
+			'<p class="yp-panel__hint">Turnstile is <strong>' + ( spam.turnstile_on ? 'on' : 'off' ) + '</strong>.</p>' +
+			'<p class="yp-panel__hint">' + ( total
+				? 'Blocked ' + total + ' spam ' + ( 1 === total ? 'try' : 'tries' ) + ( spam.blocked_since ? ' since ' + YP.escapeHtml( new Date( spam.blocked_since * 1000 ).toLocaleDateString() ) : '' ) + ': ' +
+					Object.keys( counts ).map( function ( key ) { return YP.escapeHtml( SPAM_FORM_LABELS[ key ] || key ) + ' ' + counts[ key ]; } ).join( ', ' ) + '.'
+				: 'Nothing blocked yet.' ) + '</p>' +
+			( recent.length
+				? '<details><summary>Latest blocked</summary><ul class="yp-panel__hint">' +
+					recent.map( function ( row ) {
+						return '<li>' + YP.escapeHtml( new Date( row.time * 1000 ).toLocaleString() ) + ' · ' + YP.escapeHtml( SPAM_FORM_LABELS[ row.form ] || row.form ) + ' · ' + YP.escapeHtml( row.reason ) + ( row.email ? ' · ' + YP.escapeHtml( row.email ) : '' ) + '</li>';
+					} ).join( '' ) +
+				'</ul><p class="yp-panel__hint">If a real customer shows up here, tell Claude so the check can be loosened.</p></details>'
+				: '' ) +
+		'</div>';
+	}
+
 	// `subId` opens a tab directly (`#/settings/shipping`), used by the new app's Settings hub.
 	YP.views.settings = function ( viewEl, subId ) {
 		viewEl.innerHTML = '<p class="yp-app__intro">Loading settings&hellip;</p>';
@@ -322,6 +360,9 @@
 					'<div class="yp-field"><label for="yp-set-usda-key">USDA API key</label><input type="password" autocomplete="off" id="yp-set-usda-key" value="' + YP.escapeAttr( settings.usda_api_key || '' ) + '" placeholder="40-character key from the signup email" /></div>' +
 				'</div>' +
 
+				// Direct request: anti-spam on sign-up and the public forms (YeffoPrint_Spam_Guard).
+				spamPanelHtml( settings.spam || {} ) +
+
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Telegram Bot</h2></div>' +
 					'<p class="yp-panel__hint">Answers FAQs and order-status questions for customers on Telegram. Create a bot with <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>, paste its token below, and turn it on — the webhook connects automatically when you save.</p>' +
@@ -512,6 +553,8 @@
 				dashboard_due_date_days: parseInt( viewEl.querySelector( '#yp-set-due-date' ).value, 10 ) || 7,
 				maintenance_webhook_secret: viewEl.querySelector( '#yp-set-maint-secret' ).value,
 				usda_api_key: viewEl.querySelector( '#yp-set-usda-key' ).value,
+				turnstile_site_key: viewEl.querySelector( '#yp-set-turnstile-site' ).value.trim(),
+				turnstile_secret_key: viewEl.querySelector( '#yp-set-turnstile-secret' ).value.trim(),
 				email_orders_enabled: viewEl.querySelector( '#yp-set-eo-enabled' ).checked,
 				email_orders_host: viewEl.querySelector( '#yp-set-eo-host' ).value.trim(),
 				email_orders_port: parseInt( viewEl.querySelector( '#yp-set-eo-port' ).value, 10 ) || 993,
