@@ -43,6 +43,17 @@ class YeffoPrint_Contact_Controller {
 		// in every field it could see — fake success instead of an
 		// error, so it has no signal to adapt against.
 		if ( '' !== (string) $request->get_param( 'website' ) ) {
+			YeffoPrint_Spam_Guard::record( 'contact', 'Hidden field filled in', (string) $request->get_param( 'email' ) );
+			return rest_ensure_response( [ 'success' => true ] );
+		}
+		// Same fake success for a form sent within 2 seconds of opening,
+		// or a link where a name goes (YeffoPrint_Spam_Guard).
+		if ( YeffoPrint_Spam_Guard::sent_too_fast( $request ) ) {
+			YeffoPrint_Spam_Guard::record( 'contact', 'Sent within 2 seconds of opening', (string) $request->get_param( 'email' ) );
+			return rest_ensure_response( [ 'success' => true ] );
+		}
+		if ( YeffoPrint_Spam_Guard::looks_like_junk_name( (string) $request->get_param( 'name' ) ) ) {
+			YeffoPrint_Spam_Guard::record( 'contact', 'Link or gibberish in the name: ' . sanitize_text_field( (string) $request->get_param( 'name' ) ), (string) $request->get_param( 'email' ) );
 			return rest_ensure_response( [ 'success' => true ] );
 		}
 

@@ -18,6 +18,8 @@
 	}
 
 	var form = document.getElementById( 'yp-contact-form' );
+	// How long the form was open; the server treats under 2 seconds as a bot.
+	var openedAt = Date.now();
 	var methodSelect = document.getElementById( 'yp-contact-method' );
 	var handleField = root.querySelector( '[data-yp-contact-handle-field]' );
 	var handleLabel = root.querySelector( '[data-yp-contact-handle-label]' );
@@ -65,7 +67,8 @@
 			contact_method: methodSelect.value,
 			contact_handle: handleInput.value,
 			message: document.getElementById( 'yp-contact-message' ).value,
-			website: document.getElementById( 'yp-contact-website' ).value
+			website: document.getElementById( 'yp-contact-website' ).value,
+			yp_t: Date.now() - openedAt
 		};
 
 		fetch( yeffoprintContact.restUrl + 'contact', {

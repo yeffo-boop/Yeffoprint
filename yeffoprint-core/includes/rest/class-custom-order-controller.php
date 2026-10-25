@@ -435,6 +435,14 @@ class YeffoPrint_Custom_Order_Controller {
 			return new \WP_Error( 'yeffoprint_cart_unavailable', __( 'The cart is not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 
+		// Each request makes a design request post (and, for guests, starts
+		// abandoned-cart emails), so a bot looping this would flood Drafts.
+		// 30 an hour is far past any real shopper.
+		if ( YeffoPrint_Spam_Guard::over_limit( 'custom-labels', 30, HOUR_IN_SECONDS ) ) {
+			YeffoPrint_Spam_Guard::record( 'custom-labels', 'Too many requests from one connection', (string) $request->get_param( 'email' ) );
+			return new \WP_Error( 'yeffoprint_rate_limited', __( 'Too many requests sent recently. Please wait a few minutes and try again.', 'yeffoprint-core' ), [ 'status' => 429 ] );
+		}
+
 		if ( function_exists( 'wc_load_cart' ) ) {
 			wc_load_cart();
 		}

@@ -58,6 +58,11 @@ class YeffoPrint_Web_Design_Quote_Controller {
 		// left empty and CSS-hidden rather than type="hidden" for real
 		// visitors). Fake success, no signal for a bot to adapt against.
 		if ( '' !== (string) $request->get_param( 'website' ) ) {
+			YeffoPrint_Spam_Guard::record( 'web-design-quote', 'Hidden field filled in', (string) $request->get_param( 'email' ) );
+			return rest_ensure_response( [ 'success' => true ] );
+		}
+		if ( YeffoPrint_Spam_Guard::sent_too_fast( $request ) ) {
+			YeffoPrint_Spam_Guard::record( 'web-design-quote', 'Sent within 2 seconds of opening', (string) $request->get_param( 'email' ) );
 			return rest_ensure_response( [ 'success' => true ] );
 		}
 

@@ -89,7 +89,7 @@ class YeffoPrint_Guest_Saved_Design {
 
 		$email = sanitize_email( (string) $request->get_param( 'email' ) );
 		$emailed = false;
-		if ( is_email( $email ) ) {
+		if ( is_email( $email ) && ! self::too_many_emails( $email ) ) {
 			$emailed = $this->send_resume_email( $email, $resume_url, $payload['template_id'] );
 		}
 
@@ -146,6 +146,10 @@ class YeffoPrint_Guest_Saved_Design {
 			return new \WP_Error( 'yeffoprint_pending_expired', __( 'That saved design link has expired. Please customize again.', 'yeffoprint-core' ), [ 'status' => 404 ] );
 		}
 
+		if ( self::too_many_emails( $email ) ) {
+			return new \WP_Error( 'yeffoprint_rate_limited', __( 'Too many emails sent recently. Please wait a while, or log in to keep this design.', 'yeffoprint-core' ), [ 'status' => 429 ] );
+		}
+
 		$resume_url = $this->resume_url_for( $token, (int) $payload['template_id'] );
 		$sent       = $this->send_resume_email( $email, $resume_url, (int) $payload['template_id'] );
 
@@ -157,6 +161,18 @@ class YeffoPrint_Guest_Saved_Design {
 			'emailed' => true,
 			'message' => __( 'Check your email for a link to finish this design anytime.', 'yeffoprint-core' ),
 		] );
+	}
+
+	/**
+	 * Anyone can type any address here, so without a cap a bot could use
+	 * the site to email strangers: 5 resume links an hour per IP.
+	 */
+	private static function too_many_emails( string $email ): bool {
+		if ( YeffoPrint_Spam_Guard::over_limit( 'saved-design-email', 5, HOUR_IN_SECONDS ) ) {
+			YeffoPrint_Spam_Guard::record( 'saved-design-email', 'Too many resume emails from one connection', $email );
+			return true;
+		}
+		return false;
 	}
 
 	public function claim_pending(): \WP_REST_Response|\WP_Error {
