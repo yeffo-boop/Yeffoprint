@@ -214,7 +214,11 @@
 		align-items: flex-start;
 		padding: 1.4rem;
 	}
+}
 
+/* Two app cards side by side down to 600px, so the iPhone Duo's unfolded
+   screen shows both; its cover screen and other phones stack them. */
+@media (max-width: 599px) {
 	.yp-health {
 		padding-block: 2rem 3rem;
 	}

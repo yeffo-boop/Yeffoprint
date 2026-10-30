@@ -562,6 +562,16 @@ main.wp-block-group {
 	}
 }
 
+/* 600–781px (the iPhone Duo's unfolded screen held upright, small tablets):
+   core Navigation shows its full link row from 600px while the rule above
+   keeps the menu button, so both showed and the links ran off the screen.
+   Keep just the button until the desktop header takes over at 782px. */
+@media (min-width: 600px) and (max-width: 781px) {
+	.yp-header__nav .wp-block-navigation__responsive-container:not(.is-menu-open) {
+		display: none !important;
+	}
+}
+
 .yp-header__nav .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-close {
 	color: var(--wp--preset--color--warm-white) !important;
 	min-width: 44px;

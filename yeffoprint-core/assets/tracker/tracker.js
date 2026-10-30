@@ -1575,18 +1575,27 @@
 		var focusedId = document.activeElement && document.activeElement.id;
 		root.textContent = '';
 		root.appendChild( appBar() );
+		var screen;
 		if ( guest ) {
 			// Signed out: the calculator, with the rest of the app a sign-in away.
-			root.appendChild( renderCalc() );
+			screen = renderCalc();
+			root.appendChild( screen );
 			root.appendChild( guestAbout() );
 		} else {
 			if ( state.offline ) {
 				root.appendChild( h( 'div', { class: 'ypt-offline' }, queue.length ? 'Offline · ' + queue.length + ' change' + ( queue.length === 1 ? '' : 's' ) + ' will sync' : 'Offline · showing your saved copy' ) );
 			}
 			var screens = { today: renderToday, history: renderHistory, progress: renderProgressTab, vials: renderSupply, calc: renderCalc, me: renderMe };
-			root.appendChild( ( screens[ ui.tab ] || renderToday )() );
+			screen = ( screens[ ui.tab ] || renderToday )();
+			root.appendChild( screen );
 			root.appendChild( lockLine() );
 		}
+		// A two-pane screen with nothing for its second pane stays one column.
+		var aside = screen && screen.querySelector( ':scope > .ypt-split__side' );
+		if ( aside && ! aside.firstChild ) {
+			screen.classList.remove( 'ypt-split' );
+		}
+		root.classList.toggle( 'ypt--wide', !! screen && ( screen.classList.contains( 'ypt-split' ) || screen.classList.contains( 'ypt-wide' ) ) );
 		root.appendChild( renderTabs() );
 		if ( ui.sheet ) {
 			root.appendChild( ui.sheet.node );
@@ -1802,15 +1811,14 @@
 	/* ---------- Progress ---------- */
 
 	function renderProgressTab() {
-		var wrap = h( 'div', null );
-		wrap.appendChild( h( 'header', { class: 'ypt-top' },
-			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Weight, photos & lab results' ), h( 'h1', null, 'Progress' ) )
-		) );
-		wrap.appendChild( renderLevels() );
-		wrap.appendChild( renderProgress() );
-		wrap.appendChild( renderFood() );
-		wrap.appendChild( renderLabs() );
-		return wrap;
+		// Two panes on wide screens: levels and weight beside food and labs.
+		return h( 'div', { class: 'ypt-split' },
+			h( 'div', { class: 'ypt-split__head' }, h( 'header', { class: 'ypt-top' },
+				h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Weight, photos & lab results' ), h( 'h1', null, 'Progress' ) )
+			) ),
+			h( 'div', { class: 'ypt-split__main' }, renderLevels(), renderProgress() ),
+			h( 'div', { class: 'ypt-split__side' }, renderFood(), renderLabs() )
+		);
 	}
 
 	/** Today's week strip: the week of the day shown, each day with how it went (tap one to see it), then the full calendar. */
@@ -1856,8 +1864,13 @@
 		} ).length;
 		var pct = slots.length ? Math.round( ( done / slots.length ) * 100 ) : 0;
 
-		var wrap = h( 'div', null );
-		wrap.appendChild( h( 'header', { class: 'ypt-top' },
+		// Wide screens (the iPhone Duo's inner screen, tablets, computers) show
+		// two panes: the doses on one side, notices and food on the other.
+		var head = h( 'div', { class: 'ypt-split__head' } );
+		var side = h( 'div', { class: 'ypt-split__side' } );
+		var list = h( 'div', { class: 'ypt-split__main' } );
+		var wrap = h( 'div', { class: 'ypt-split ypt-split--today' }, head, side, list );
+		head.appendChild( h( 'header', { class: 'ypt-top' },
 			h( 'div', null,
 				h( 'div', { class: 'ypt-eyebrow' }, fmtDay( date ) ),
 				h( 'div', { class: 'ypt-daynav' },
@@ -1880,43 +1893,43 @@
 				h( 'span', null, done + '/' + slots.length ) ) : null
 		) );
 		if ( protocols().length ) {
-			wrap.appendChild( weekStrip( date ) );
+			head.appendChild( weekStrip( date ) );
 		}
 
 		if ( isToday ) {
 			var banner = installBanner();
 			if ( banner ) {
-				wrap.appendChild( banner );
+				side.appendChild( banner );
 			}
 			var news = whatsNewBanner();
 			if ( news ) {
-				wrap.appendChild( news );
+				side.appendChild( news );
 			}
 			var travel = travelCard();
 			if ( travel ) {
-				wrap.appendChild( travel );
+				side.appendChild( travel );
 			}
 			var low = lowBanner();
 			if ( low ) {
-				wrap.appendChild( low );
+				side.appendChild( low );
 			}
 			var expiring = expiryBanner();
 			if ( expiring ) {
-				wrap.appendChild( expiring );
+				side.appendChild( expiring );
 			}
 		}
 		var clockNote = travelNote();
 		if ( clockNote ) {
-			wrap.appendChild( clockNote );
+			side.appendChild( clockNote );
 		}
 		var food = foodCard( date );
 		if ( food ) {
-			wrap.appendChild( food );
+			side.appendChild( food );
 		}
 
 		if ( ! protocols().length ) {
 			var hasVial = vials( false ).length > 0;
-			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
+			list.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
 				h( 'h2', null, hasVial ? 'Let’s set up your first peptide' : 'Let’s add your first peptide or medication' ),
 				h( 'p', null, 'Once you’re set, each day shows what’s due and sends a reminder when it’s time. Peptides from a vial take two quick steps so you also see the units to draw.' ),
 				h( 'ol', { class: 'ypt-steps' },
@@ -1949,7 +1962,7 @@
 			} ).sort( function ( a, b ) {
 				return a.d.localeCompare( b.d );
 			} );
-			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
+			list.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
 				h( 'h2', null, 'Nothing scheduled' + ( isToday ? ' today' : '' ) ),
 				upcoming.length ? h( 'p', null, 'Next up: ' + upcoming[ 0 ].p.compound + ' on ' + fmtDay( upcoming[ 0 ].d ) + '.' ) : h( 'p', null, 'All your protocols are paused or finished.' )
 			) );
@@ -1961,7 +1974,7 @@
 			if ( ! ph || ph.on || ( parseInt( p.weeks, 10 ) && daysBetween( p.start, date ) >= p.weeks * 7 ) ) {
 				return;
 			}
-			wrap.appendChild( h( 'div', { class: 'ypt-offweek' }, h( 'span', { class: 'ypt-dot', style: { background: protocolColor( p ) } } ),
+			list.appendChild( h( 'div', { class: 'ypt-offweek' }, h( 'span', { class: 'ypt-dot', style: { background: protocolColor( p ) } } ),
 				h( 'span', null, h( 'b', null, p.compound + ': off week ' + ph.week + ' of ' + ph.of + '. ' ), 'Back on ' + fmtDay( ph.next ).replace( /^\w+, /, '' ) + ( stepsOf( p ).length ? ' at ' + amountLabel( doseOn( p, ph.next ), p.unit ) : '' ) + '.' ) ) );
 		} );
 
@@ -1971,16 +1984,16 @@
 			var here = localTimeOf( s.time );
 			var label = group + ' · ' + fmtTime( s.time ) + ( here !== s.time ? ' · ' + fmtTime( here ) + ' here' : '' );
 			if ( label !== lastGroup ) {
-				wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, label ) );
+				list.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, label ) );
 				lastGroup = label;
 			}
-			wrap.appendChild( doseCard( s ) );
+			list.appendChild( doseCard( s ) );
 		} );
 
 		if ( extras.length ) {
-			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Extra doses' ) );
+			list.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Extra doses' ) );
 			extras.forEach( function ( d ) {
-				wrap.appendChild( h( 'div', { class: 'ypt-card' },
+				list.appendChild( h( 'div', { class: 'ypt-card' },
 					h( 'div', { class: 'ypt-dose' },
 						h( 'div', { class: 'ypt-dot', style: { background: colorForCompound( d.compound ) } } ),
 						h( 'div', { class: 'ypt-dose__main' },
@@ -1995,7 +2008,7 @@
 			} );
 		}
 
-		wrap.appendChild( h( 'button', { type: 'button', class: 'ypt-card ypt-card--dashed', style: { marginTop: '8px' }, onclick: function () {
+		list.appendChild( h( 'button', { type: 'button', class: 'ypt-card ypt-card--dashed', style: { marginTop: '8px' }, onclick: function () {
 			openExtraSheet( date );
 		} }, '+ Log an extra dose' ) );
 
@@ -5153,8 +5166,9 @@
 	/* ---------- Supply tab ---------- */
 
 	function renderSupply() {
-		var wrap = h( 'div', null );
 		var view = ui.supplyView || 'mixed';
+		// Mixed vials sit two across on wide screens; On hand and Plan stay one column.
+		var wrap = h( 'div', { class: view === 'mixed' ? 'ypt-wide' : null } );
 		wrap.appendChild( h( 'header', { class: 'ypt-top' },
 			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Inventory' ), h( 'h1', null, 'Supply' ) ),
 			h( 'div', { class: 'ypt-top__actions' },
@@ -5224,7 +5238,7 @@
 	}
 
 	function renderMixed() {
-		var wrap = h( 'div', null );
+		var wrap = h( 'div', { class: 'ypt-vialgrid' } );
 		var list = vials( false );
 		if ( ! list.length ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
@@ -11442,6 +11456,15 @@
 			} ) ? 'Save as a new ' + ( pen ? 'pen' : 'vial' ) : 'Save as a ' + ( pen ? 'pen' : 'vial' ) ) );
 		}
 		wrap.appendChild( h( 'p', { class: 'ypt-hint', style: { marginTop: '12px', textAlign: 'center' } }, 'Math only, not medical advice. Always double-check against your vial’s label and your provider’s instructions.' ) );
+
+		// Wide screens: what's in the vial on the left, the answer (and saving it) on the right.
+		var side = h( 'div', { class: 'ypt-split__side ypt-calc__side' } );
+		while ( result.nextSibling ) {
+			side.appendChild( result.nextSibling );
+		}
+		side.insertBefore( result, side.firstChild );
+		wrap.appendChild( side );
+		wrap.classList.add( 'ypt-split' );
 		return wrap;
 	}
 
@@ -11547,7 +11570,7 @@
 		function feature( ic, title, text ) {
 			return h( 'li', null, icon( ic ), h( 'div', null, h( 'b', null, title ), text ) );
 		}
-		return h( 'div', null,
+		return h( 'div', { class: 'ypt-about' },
 			h( 'div', { class: 'ypt-eyebrow ypt-section-label', style: { marginTop: '28px' } }, 'Free with an account' ),
 			h( 'ul', { class: 'ypt-features' },
 				feature( 'check', 'Today’s doses at a glance', 'Tap Take or Skip. Daily, weekly, every few days, or on/off cycles.' ),
