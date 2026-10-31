@@ -339,6 +339,64 @@ a { color: var(--ypt-cyan-deep); }
 	.ypt-appbar { margin-bottom: 22px; }
 }
 
+/* Landscape on a notched or foldable phone: keep content clear of the side insets. */
+.ypt {
+	padding-left: max(16px, env(safe-area-inset-left, 0px));
+	padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/*
+ * Two panes on wide screens: the iPhone Duo's unfolded inner screen
+ * (about 950 × 670), tablets and computers. Two equal columns put the
+ * gap in the middle, where the fold is. The phone (and the Duo's cover
+ * screen) keeps one column in the same order.
+ */
+@media (min-width: 840px) {
+	.ypt.ypt--wide { max-width: 1120px; }
+	.ypt--wide .ypt-appbar__inner { max-width: 1120px; }
+
+	.ypt-split {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-areas: "head head" "main side";
+		column-gap: var(--ypt-fold-gap, 40px);
+		align-items: start;
+	}
+	.ypt-split > * { grid-column: 1 / -1; }
+	.ypt-split > .ypt-split__head { grid-area: head; }
+	.ypt-split > .ypt-split__main { grid-area: main; }
+	.ypt-split > .ypt-split__side { grid-area: side; }
+	/* Today: the week strip spans both panes; doses left, notices and food right. */
+	.ypt-split--today .ypt-split__side > :first-child,
+	.ypt-split__main > .ypt-section-label:first-child { margin-top: 0; }
+
+	/* Calculator: modes and "from a vial" stay full width above the panes. */
+	.ypt-calc.ypt-split { grid-template-areas: none; grid-template-rows: none; }
+	.ypt-calc.ypt-split > .ypt-calc-form { grid-area: auto / 1; margin: 0; }
+	.ypt-calc.ypt-split > .ypt-calc__side { grid-area: auto / 2; position: sticky; top: 88px; }
+	.ypt-calc__side > .ypt-calc-result { margin-top: 0; }
+
+	/* Signed out, below the calculator: features two across. */
+	.ypt--wide .ypt-about .ypt-features { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--ypt-fold-gap, 40px); }
+	.ypt--wide .ypt-about > .ypt-btn--block { display: flex; justify-content: center; }
+	.ypt--wide .ypt-about > .ypt-btn--block,
+	.ypt--wide .ypt-about > p { max-width: 560px; margin-left: auto; margin-right: auto; }
+
+	/* Supply: mixed vials two across. */
+	.ypt-vialgrid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		column-gap: var(--ypt-fold-gap, 40px);
+		align-items: start;
+	}
+	.ypt-vialgrid > :not(.ypt-vial) { grid-column: 1 / -1; }
+}
+
+/* Where the browser reports the fold (Viewport Segments API), make the gap at least as wide as the hinge. */
+@media (horizontal-viewport-segments: 2) {
+	.ypt { --ypt-fold-gap: max(40px, calc(env(viewport-segment-left 1 0, 0px) - env(viewport-segment-right 0 0, 0px) + 24px)); }
+}
+
 /* ---------- Top bar ---------- */
 
 .ypt-top {

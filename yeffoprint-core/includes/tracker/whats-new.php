@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-10-30a',
+		'date'  => '2026-10-30',
+		'title' => 'Made for bigger screens',
+		'text'  => 'On a foldable phone opened up, a tablet or a computer, Today, Progress, Supply and the Calculator now use two side-by-side panels, so you see more at once. On a regular phone nothing changes.',
+	],
+	[
 		'id'    => '2026-10-14a',
 		'date'  => '2026-10-14',
 		'title' => 'YeffoHealth is on Google Play',
