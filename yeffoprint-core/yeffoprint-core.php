@@ -98,6 +98,10 @@ register_deactivation_hook( __FILE__, function () {
 	require_once YEFFOPRINT_CORE_PATH . 'includes/reviews/class-review-request.php';
 	YeffoPrint_Review_Request::unschedule();
 
+	// Same reasoning again — the unpaid Venmo/Zelle payment reminder sweep.
+	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-payment-reminder.php';
+	YeffoPrint_Payment_Reminder::unschedule();
+
 	// Same reasoning again — the promised ship date push alerts.
 	require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-production-time.php';
 	YeffoPrint_Production_Time::unschedule();
