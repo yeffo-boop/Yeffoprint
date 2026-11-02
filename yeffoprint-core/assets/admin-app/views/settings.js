@@ -196,6 +196,13 @@
 					'<div class="yp-field"><label for="yp-set-express-fee">Express fee ($ per order)</label><input type="number" min="0" step="0.01" id="yp-set-express-fee" value="' + YP.escapeAttr( String( settings.express_fee ) ) + '" /></div>' +
 				'</div>' +
 
+				// Direct request: one reminder at 24 hours, no second one.
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Payment reminders</h2></div>' +
+					'<p class="yp-panel__hint">When a customer picks Venmo or Zelle and the payment still hasn’t come in 24 hours later, they get one reminder email with the amount due and where to send it. Only one is ever sent per order. Orders with part of a payment already recorded are skipped, since they already got the balance email.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-payment-reminder"' + ( settings.payment_reminder_enabled ? ' checked' : '' ) + ' /><label for="yp-set-payment-reminder">Email unpaid Venmo/Zelle orders a reminder after 24 hours</label></div>' +
+				'</div>' +
+
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Label Configurator</h2></div>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-live-preview"' + ( settings.live_preview_enabled ? ' checked' : '' ) + ' /><label for="yp-set-live-preview">Show customers the live, per-keystroke text preview on Label View</label></div>' +
@@ -528,6 +535,7 @@
 				away_mode_enabled: viewEl.querySelector( '#yp-set-away-enabled' ).checked,
 				away_mode_return_date: viewEl.querySelector( '#yp-set-away-return' ).value,
 				express_enabled: viewEl.querySelector( '#yp-set-express-enabled' ).checked,
+				payment_reminder_enabled: viewEl.querySelector( '#yp-set-payment-reminder' ).checked,
 				production_time: {
 					enabled: viewEl.querySelector( '#yp-set-prod-enabled' ).checked,
 					per_day: parseInt( viewEl.querySelector( '#yp-set-prod-per-day' ).value, 10 ) || 4,
