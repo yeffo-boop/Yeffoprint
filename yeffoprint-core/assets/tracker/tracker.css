@@ -792,6 +792,24 @@ a { color: var(--ypt-cyan-deep); }
 	min-height: 46px;
 }
 
+/*
+ * iPhone Safari draws date/time fields as native buttons with their own
+ * minimum width and extra height, so in a two-column row (Start next to
+ * Length) the date spilled over its neighbour and stood taller. Make them
+ * plain boxes that fit their column, the same height as the other inputs.
+ */
+.ypt-input[type="date"], .ypt-input[type="time"], .ypt-input[type="datetime-local"] {
+	-webkit-appearance: none;
+	appearance: none;
+	display: block;
+	min-width: 0;
+	max-width: 100%;
+	text-align: left;
+	color: inherit;
+}
+.ypt-input::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 1.4em; }
+.ypt-input::-webkit-datetime-edit, .ypt-input::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+
 .ypt-input:focus, .ypt-select:focus, .ypt-textarea:focus {
 	outline: 2px solid var(--ypt-cyan);
 	outline-offset: -1px;
