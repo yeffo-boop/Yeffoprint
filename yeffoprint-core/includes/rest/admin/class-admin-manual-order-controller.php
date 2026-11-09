@@ -64,9 +64,9 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		// cart's own combined_label_quantity() for its bulk-discount tier
 		// (class-custom-order-controller.php::pricing_preview()), which
 		// would silently pull in whatever's sitting in the *staff member's
-		// own* cart here — this order's own quantity is the whole tier
-		// pool instead, same as YeffoPrint_Manual_Order_Creator::add_template_row()
-		// itself prices it.
+		// own* cart here — the order's own labels are the tier pool
+		// instead, same as YeffoPrint_Manual_Order_Creator::add_groups()
+		// prices it.
 		register_rest_route( self::NAMESPACE, '/admin/manual-orders/template-pricing-preview', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'template_pricing_preview' ],
@@ -234,7 +234,8 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		// combined sticker quantity, same pool add_sticker_row() uses.
 		if ( isset( $params['stickers'] ) && is_array( $params['stickers'] ) ) {
 			$stickers      = array_values( array_filter( $params['stickers'], 'is_array' ) );
-			$tier_quantity = 0;
+			// Plus stickers already on the order when adding items to it.
+			$tier_quantity = YeffoPrint_Manual_Order_Creator::preview_existing_quantities( absint( $params['order_id'] ?? 0 ) )['stickers'];
 			foreach ( $stickers as $sticker ) {
 				$tier_quantity += max( 1, absint( $sticker['quantity'] ?? 1 ) );
 			}
@@ -287,11 +288,18 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		$material_id = absint( $params['material_id'] ?? 0 );
 		$quantity    = max( 1, absint( $params['quantity'] ?? 1 ) );
 
+		// Same pool the order itself uses: this template's labels, the
+		// order's Custom Design labels (other_labels, from the form) and
+		// labels already on the order when adding items to it.
+		$tier_quantity = $quantity
+			+ absint( $params['other_labels'] ?? 0 )
+			+ YeffoPrint_Manual_Order_Creator::preview_existing_quantities( absint( $params['order_id'] ?? 0 ) )['labels'];
+
 		$pricing = YeffoPrint_Pricing_Rule::calculate(
 			$this->record_adjustment( 'yp_material', $material_id ),
 			$this->record_adjustment( 'yp_size', $size_id ),
 			$quantity,
-			$quantity
+			$tier_quantity
 		);
 
 		return rest_ensure_response( $pricing );

@@ -185,6 +185,23 @@ class YeffoPrint_Custom_Order_Controller {
 		] );
 	}
 
+	/**
+	 * Labels outside this batch that share its bulk tier. A shopper:
+	 * whatever's in their cart. The admin app's Create Order
+	 * (manual_order set, staff only): never the staff member's own cart,
+	 * just the order's Template labels (other_labels) plus labels already
+	 * on the order when adding items to it (order_id), the same pool
+	 * YeffoPrint_Manual_Order_Creator::add_groups() prices against.
+	 */
+	private function preview_other_labels( \WP_REST_Request $request ): int {
+		if ( $request->get_param( 'manual_order' ) && current_user_can( 'manage_options' ) ) {
+			return absint( $request->get_param( 'other_labels' ) )
+				+ YeffoPrint_Manual_Order_Creator::preview_existing_quantities( absint( $request->get_param( 'order_id' ) ) )['labels'];
+		}
+
+		return YeffoPrint_Cart_Pricing::combined_label_quantity();
+	}
+
 	/** Every one of the current customer's past custom label orders eligible to reorder without the design fee — the "Reorder a past design" picker's own data source. */
 	public function eligible_reorders(): \WP_REST_Response {
 		$customer_id = get_current_user_id();
@@ -249,7 +266,7 @@ class YeffoPrint_Custom_Order_Controller {
 		// actually added to the cart as separate labels items (class-
 		// cart-pricing.php's apply_price()) — otherwise this preview
 		// would understate the real total.
-		$tier_quantity = array_sum( array_column( $batch, 'quantity' ) ) + YeffoPrint_Cart_Pricing::combined_label_quantity();
+		$tier_quantity = array_sum( array_column( $batch, 'quantity' ) ) + $this->preview_other_labels( $request );
 
 		$rows     = [];
 		$subtotal = 0.0;
