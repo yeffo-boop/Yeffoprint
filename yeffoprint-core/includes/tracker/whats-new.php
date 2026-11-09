@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-11-09a',
+		'date'  => '2026-11-09',
+		'title' => 'Clearer weeks on and off',
+		'text'  => 'When a cycle goes into its off weeks or reaches its set length, Today now says so, shows the start date the weeks count from, and has a Change link if that date is wrong. Pausing something with a cycle now stops the clock, so it picks up where it left off when you turn it back on.',
+	],
+	[
 		'id'    => '2026-10-30a',
 		'date'  => '2026-10-30',
 		'title' => 'Made for bigger screens',

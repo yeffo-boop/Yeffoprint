@@ -7,7 +7,7 @@
  * the app opens instantly and works offline, queueing changes until the
  * connection is back. Records:
  *
- *   protocol  { compound, dose, unit, route, device:'syringe'|'pen'|'single', schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused, doseOf, sites[], siteOff, cycle, steps[] }
+ *   protocol  { compound, dose, unit, route, device:'syringe'|'pen'|'single', schedule:{type,days,every,on,off}, times[], start, weeks, color, notes, paused, pausedAt, doseOf, sites[], siteOff, cycle, steps[] }
  *             cycle { on, off }: weeks on, then weeks off, repeating from the start (the cycle planner).
  *             steps [{ week, dose }]: titration. From `week` weeks after the start the dose is `dose`; before the first step it's `dose` above.
  *             sites / siteOff: the injection spots this protocol rotates through ([] = all) and whether to track them at all.
@@ -531,6 +531,52 @@
 			round: Math.floor( offset / len ) + 1,
 			next: addDays( date, ( on ? cyc.on * 7 : len ) - inRound ),
 		};
+	}
+
+	/**
+	 * Why a protocol isn't on Today for a planned reason: an off week of its
+	 * cycle, or a set length that ended in the last two weeks. Both count
+	 * from the start date, so the note names it. Null when it's due, paused,
+	 * not started yet, or simply not a dose day.
+	 */
+	function restingNote( p, date ) {
+		if ( ! p || p.paused || ! p.start ) {
+			return null;
+		}
+		var offset = daysBetween( p.start, date );
+		if ( offset < 0 ) {
+			return null;
+		}
+		var from = 'Weeks count from your start date, ' + shortDate( p.start ) + '.';
+		var weeks = parseInt( p.weeks, 10 ) || 0;
+		if ( weeks > 0 && offset >= weeks * 7 ) {
+			if ( offset >= weeks * 7 + 14 ) {
+				return null;
+			}
+			return { title: p.compound + ': finished.', text: 'Its ' + weeks + '-week length ended ' + shortDate( addDays( p.start, weeks * 7 - 1 ) ) + '. ' + from };
+		}
+		var ph = cyclePhase( p, date );
+		if ( ! ph || ph.on ) {
+			return null;
+		}
+		return { title: p.compound + ': off week ' + ph.week + ' of ' + ph.of + '.', text: 'Back on ' + fmtDay( ph.next ).replace( /^\w+, /, '' ) + ( stepsOf( p ).length ? ' at ' + amountLabel( doseOn( p, ph.next ), p.unit ) : '' ) + '. ' + from };
+	}
+
+	/**
+	 * Pausing stops the clock: when a paused protocol with a cycle, dose
+	 * steps or a set length is turned back on, its start date moves on by
+	 * the days it was paused, so the weeks left pick up where they stopped.
+	 * Returns the start date to save.
+	 */
+	function startAfterResume( before, start, paused, today ) {
+		if ( ! before || ! before.paused || paused || ! before.pausedAt || start !== before.start ) {
+			return start;
+		}
+		if ( ! cycleOf( before ) && ! stepsOf( before ).length && ! ( parseInt( before.weeks, 10 ) > 0 ) ) {
+			return start;
+		}
+		var days = daysBetween( before.pausedAt, today );
+		return days > 0 ? addDays( start, days ) : start;
 	}
 
 	/** Titration steps, earliest first: [{ week, dose }]. */
@@ -1968,14 +2014,19 @@
 			) );
 		}
 
-		// Cycle planner: protocols resting this week say when they're back.
+		// Protocols that drop off Today for a planned reason say why, and
+		// which start date the weeks are counted from, so a wrong start
+		// date (or a length set by mistake) is easy to spot and fix.
 		protocols().forEach( function ( p ) {
-			var ph = ! p.paused ? cyclePhase( p, date ) : null;
-			if ( ! ph || ph.on || ( parseInt( p.weeks, 10 ) && daysBetween( p.start, date ) >= p.weeks * 7 ) ) {
+			var note = restingNote( p, date );
+			if ( ! note ) {
 				return;
 			}
 			list.appendChild( h( 'div', { class: 'ypt-offweek' }, h( 'span', { class: 'ypt-dot', style: { background: protocolColor( p ) } } ),
-				h( 'span', null, h( 'b', null, p.compound + ': off week ' + ph.week + ' of ' + ph.of + '. ' ), 'Back on ' + fmtDay( ph.next ).replace( /^\w+, /, '' ) + ( stepsOf( p ).length ? ' at ' + amountLabel( doseOn( p, ph.next ), p.unit ) : '' ) + '.' ) ) );
+				h( 'span', null, h( 'b', null, note.title + ' ' ), note.text + ' ',
+					h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
+						openProtocolSheet( p );
+					} }, 'Change' ) ) ) );
 		} );
 
 		var lastGroup = null;
@@ -6748,7 +6799,8 @@
 	function setupLines() {
 		var s = state.records.settings.me || {};
 		var lines = protocols().map( function ( p ) {
-			return [ p.compound, amountLabel( doseOn( p, todayStr() ), p.unit, p ) + ( stepsOf( p ).length ? ' (titration: ' + stepsLine( p ) + ')' : '' ), scheduleLabel( p ) + ( cycleOf( p ) ? ', ' + cycleLine( p ) : '' ) + ' ' + timesOf( p ).map( fmtTime ).join( ', ' ), p.route || '' ].filter( Boolean ).join( ' · ' ) + ( p.paused ? ' (paused)' : '' );
+			var weeks = parseInt( p.weeks, 10 ) || 0;
+			return [ p.compound, amountLabel( doseOn( p, todayStr() ), p.unit, p ) + ( stepsOf( p ).length ? ' (titration: ' + stepsLine( p ) + ')' : '' ), scheduleLabel( p ) + ( cycleOf( p ) ? ', ' + cycleLine( p ) : '' ) + ' ' + timesOf( p ).map( fmtTime ).join( ', ' ), p.route || '', p.start ? 'started ' + shortDate( p.start, true ) + ( weeks ? ', length ' + weeks + ' week' + ( weeks === 1 ? '' : 's' ) : '' ) + ( weekLabel( p, todayStr() ) ? ' (today: ' + weekLabel( p, todayStr() ) + ')' : '' ) : '' ].filter( Boolean ).join( ' · ' ) + ( p.paused ? ' (paused' + ( p.pausedAt ? ' since ' + shortDate( p.pausedAt ) : '' ) + ')' : '' );
 		} );
 		lines.push( 'Reminders on this device: ' + ( state.pushOnHere ? 'on' : 'off' ) );
 		lines.push( 'Show names in reminders: ' + ( s.reminderNames === false ? 'off' : 'on' ) );
@@ -10078,7 +10130,7 @@
 		function renderPlan() {
 			planField.textContent = '';
 			planField.appendChild( h( 'span', { class: 'ypt-label' }, 'Cycle planner' ) );
-			planField.appendChild( planSwitch( 'Weeks on, weeks off', 'Like 8 weeks on, 4 off. Off weeks drop off Today and reminders, then it starts again.', useCycle, function () {
+			planField.appendChild( planSwitch( 'Weeks on, weeks off', 'Like 8 weeks on, 4 off, counted from the Start date above. Off weeks drop off Today and reminders, then it starts again.', useCycle, function () {
 				useCycle = ! useCycle;
 				renderPlan();
 			} ) );
@@ -10186,11 +10238,13 @@
 				times: p.times.filter( Boolean ).filter( function ( t, i, a ) {
 					return a.indexOf( t ) === i;
 				} ).sort(),
-				start: p.start,
+				start: startAfterResume( existing, p.start, !! p.paused, todayStr() ),
 				weeks: parseInt( p.weeks, 10 ) || 0,
 				color: p.color,
 				notes: p.notes || '',
 				paused: !! p.paused,
+				// The day it was paused, so turning it back on can carry on the cycle where it stopped.
+				pausedAt: p.paused ? ( existing && existing.paused && existing.pausedAt ) || todayStr() : '',
 				doseOf: usesVial( p ) && blendPart( currentVial( p ), p.doseOf ) ? p.doseOf : '',
 				strength: strengthOf( p ) ? +p.strength : 0,
 				strengthUnit: strengthOf( p ) ? p.strengthUnit : '',
@@ -10281,7 +10335,7 @@
 				openShareSheet( Object.assign( { id: existing.id }, state.records.protocol[ existing.id ] || existing ) );
 			} }, 'Share this protocol' ) : null,
 			existing ? h( 'div', { class: 'ypt-toggle' },
-				h( 'div', null, h( 'b', null, 'Pause' ), h( 'div', { class: 'ypt-muted ypt-small' }, 'Hide from Today and stop reminders. History is kept.' ) ),
+				h( 'div', null, h( 'b', null, 'Pause' ), h( 'div', { class: 'ypt-muted ypt-small' }, 'Hide from Today and stop reminders. History is kept. A cycle or set length picks up where it stopped when you turn this off.' ) ),
 				( function () {
 					var sw = h( 'button', { type: 'button', class: 'ypt-switch', role: 'switch', 'aria-checked': p.paused ? 'true' : 'false', 'aria-label': 'Pause' } );
 					sw.addEventListener( 'click', function () {
