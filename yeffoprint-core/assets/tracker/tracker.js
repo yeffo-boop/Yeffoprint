@@ -10204,9 +10204,34 @@
 			renderPlanPreview();
 		}
 
+		/** A set length with weeks on/off: it stops the cycle for good, so say so (and warn when it cuts the first on stretch short). */
+		function lengthWarning( pp ) {
+			var weeks = parseInt( pp.weeks, 10 ) || 0;
+			if ( ! pp.cycle || ! weeks ) {
+				return null;
+			}
+			var clear = h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
+				p.weeks = '';
+				var input = document.getElementById( 'ypt-p-weeks' );
+				if ( input ) {
+					input.value = '';
+				}
+				renderPlanPreview();
+			} }, 'Clear the length' );
+			if ( weeks < pp.cycle.on ) {
+				return h( 'div', { class: 'ypt-draw ypt-draw--warn', style: { marginBottom: '10px' } },
+					'Length is set to ' + weeks + ' week' + ( weeks === 1 ? '' : 's' ) + ', so this stops for good after ' + weeks + ', before your ' + pp.cycle.on + ' weeks on finish, and never repeats. ', clear, ' to keep the cycle repeating.' );
+			}
+			return h( 'p', { class: 'ypt-hint', style: { marginBottom: '10px' } }, 'Stops for good after ' + weeks + ' weeks (the Length above). ', clear, ' to keep repeating.' );
+		}
+
 		function renderPlanPreview() {
 			planPreview.textContent = '';
 			var pp = planned();
+			var warn = lengthWarning( pp );
+			if ( warn ) {
+				planPreview.appendChild( warn );
+			}
 			if ( ( ! pp.cycle && ! pp.steps.length ) || ! ( pp.dose > 0 ) || ! pp.start ) {
 				return;
 			}
@@ -10221,6 +10246,7 @@
 				: p.schedule.type === 'weekdays' && ! p.schedule.days.length ? 'Pick at least one day.'
 				: ! p.start ? 'Pick a start date.'
 				: useCycle && ! ( +p.cycle.on > 0 && +p.cycle.off > 0 ) ? 'Enter the weeks on and off, or turn that off.'
+				: useCycle && parseInt( p.weeks, 10 ) > 0 && parseInt( p.weeks, 10 ) < +p.cycle.on ? 'Length (' + parseInt( p.weeks, 10 ) + ' weeks) ends before your ' + +p.cycle.on + ' weeks on. Clear Length to keep the cycle repeating, or make it at least ' + +p.cycle.on + '.'
 				: useSteps && ! stepsOf( p ).length ? 'Add a dose step, or turn off “Change the dose over time”.'
 				: '';
 			if ( problem ) {
