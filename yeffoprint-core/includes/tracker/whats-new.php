@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-11-09b',
+		'date'  => '2026-11-09',
+		'title' => 'Length and weeks on/off work together',
+		'text'  => 'If you set a Length that ends before your weeks on are done, the edit screen now warns you and offers to clear it, so your on/off cycle keeps repeating instead of stopping early.',
+	],
+	[
 		'id'    => '2026-11-09a',
 		'date'  => '2026-11-09',
 		'title' => 'Clearer weeks on and off',
