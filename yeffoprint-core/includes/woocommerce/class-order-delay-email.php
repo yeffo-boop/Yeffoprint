@@ -140,7 +140,7 @@ class YeffoPrint_Order_Delay_Email {
 	/** Template variables for one order. */
 	private static function template_args( \WC_Order $order, array $args ): array {
 		$user   = wp_get_current_user();
-		$first  = $user && $user->exists() ? ( $user->first_name ?: $user->display_name ) : '';
+		$first  = $user && $user->exists() ? (string) $user->first_name : '';
 		$site   = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 		$change = class_exists( 'YeffoPrint_Order_Label_Changes' ) && YeffoPrint_Order_Label_Changes::customer_can_request( $order )
 			? YeffoPrint_Order_Label_Changes::url( $order )
@@ -263,7 +263,13 @@ class YeffoPrint_Order_Delay_Email {
 		header( 'Content-Type: text/html; charset=utf-8' );
 		$html = wc_get_template_html( 'emails/customer-order-delay.php', array_merge( self::template_args( $order, $args ), [ 'email' => $email ] ) );
 		// Same inlining the real send does, so the preview matches the inbox.
-		echo $email->style_inline( '<p style="font:14px sans-serif;padding:8px 16px;background:#141414;color:#fff;margin:0">' . esc_html( 'Subject: ' . self::subject( $order ) ) . '</p>' . $html ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// The subject bar goes in after inlining: anything ahead of the
+		// email's own <html> makes the inliner fail ("There is no HEAD
+		// element") and the preview showed up unstyled.
+		$html = $email->style_inline( $html );
+		$bar  = '<p style="font:14px sans-serif;padding:8px 16px;background:#141414;color:#fff;margin:0">' . esc_html( 'Subject: ' . self::subject( $order ) ) . '</p>';
+		$html = preg_replace( '/<body[^>]*>/i', '$0' . addcslashes( $bar, '\\$' ), $html, 1, $count );
+		echo $count ? $html : $bar . $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
 	}
 }
