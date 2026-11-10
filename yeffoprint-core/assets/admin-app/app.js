@@ -278,6 +278,68 @@
 	};
 
 	/**
+	 * "Send delay email" (class-order-delay-email.php) for one or more
+	 * orders, from All orders' bulk bar and an order's page. Pre-fills the
+	 * last used ship date, code and note.
+	 */
+	YP.delayEmailModal = function ( ids, onDone ) {
+		var url = yeffoprintAdminApp.restUrl + 'admin/orders/delay-email';
+		YP.request( url ).then( function ( saved ) {
+			var n = ids.length + ( 1 === ids.length ? ' customer' : ' customers' );
+			YP.confirmModal( {
+				title: 'Send a delay email',
+				message: 'Goes to ' + n + ': sorry for the delay, their items, the new ship date, keep / change labels / cancel options, and your thank-you code. Each order gets a note. Orders that already shipped, aren’t paid, or already got this email are skipped.',
+				bodyHtml: '<div class="ypn-form">' +
+					'<label class="ypn-form__field"><span>New ship date (optional)</span><input type="date" data-yp-delay="ship_date" value="' + YP.escapeAttr( saved.ship_date ) + '"></label>' +
+					'<label class="ypn-form__field"><span>Thank-you coupon code (optional)</span><input type="text" data-yp-delay="code" placeholder="THANKYOU10" value="' + YP.escapeAttr( saved.code ) + '"></label>' +
+					'<label class="ypn-form__field is-wide"><span>Personal note (optional)</span><textarea rows="2" data-yp-delay="note" placeholder="Shown in quotes, signed by you.">' + YP.escapeHtml( saved.note ) + '</textarea></label>' +
+				'</div>' +
+				'<p class="yp-panel__hint">The code must already exist under Customers › Coupons.</p>' +
+				'<label class="ypn-check"><input type="checkbox" data-yp-delay-skip-prints checked> Skip orders that are only 3D prints (they aren’t delayed)</label>' +
+				'<label class="ypn-check"><input type="checkbox" data-yp-delay-resend> Send again to orders that already got one</label>' +
+				'<p><button type="button" class="yp-link-button" data-yp-delay-preview>Preview the email ↗</button></p>',
+				confirmLabel: 'Send to ' + n,
+				onConfirm: function ( dialog ) {
+					YP.request( url, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( read( dialog ) )
+					} ).then( function ( result ) {
+						var msg = result.sent.length ? 'Sent to ' + result.sent.length + ( 1 === result.sent.length ? ' customer.' : ' customers.' ) : 'Nothing was sent.';
+						if ( result.skipped.length ) {
+							msg += '\n\nSkipped:\n' + result.skipped.map( function ( s ) { return '#' + s.number + ' (' + s.reason + ')'; } ).join( '\n' );
+						}
+						window.alert( msg );
+						if ( onDone ) {
+							onDone();
+						}
+					} ).catch( function ( error ) {
+						window.alert( 'Couldn’t send: ' + error.message );
+					} );
+				}
+			} );
+
+			var dialogs = document.querySelectorAll( '.yp-drawer--confirm' );
+			var dialog = dialogs[ dialogs.length - 1 ];
+			function read( el ) {
+				var body = { ids: ids };
+				el.querySelectorAll( '[data-yp-delay]' ).forEach( function ( input ) {
+					body[ input.getAttribute( 'data-yp-delay' ) ] = input.value.trim();
+				} );
+				body.skip_prints = el.querySelector( '[data-yp-delay-skip-prints]' ).checked;
+				body.resend = el.querySelector( '[data-yp-delay-resend]' ).checked;
+				return body;
+			}
+			dialog.querySelector( '[data-yp-delay-preview]' ).addEventListener( 'click', function () {
+				var body = read( dialog );
+				window.open( saved.preview_url + '&id=' + ids[ 0 ] + '&ship_date=' + encodeURIComponent( body.ship_date ) + '&code=' + encodeURIComponent( body.code ) + '&note=' + encodeURIComponent( body.note ), '_blank' );
+			} );
+		} ).catch( function ( error ) {
+			window.alert( 'Couldn’t open the delay email: ' + error.message );
+		} );
+	};
+
+	/**
 	 * Name, contact and address fields for one WooCommerce address
 	 * (`billing` or `shipping`), shared by the order page's Edit details
 	 * form (next/next.js) and the customer drawer (views/customers.js).
