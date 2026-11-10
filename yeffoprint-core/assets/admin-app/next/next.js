@@ -2365,7 +2365,7 @@
 	};
 
 	var SWITCHES = [
-		[ 'sales_paused', 'Pause all sales', 'Stops all new orders and shows a notice on the site. Set the message in Settings › Storefront.' ],
+		[ 'sales_paused', 'Pause all sales', 'Stops new label and sticker orders (3D prints stay open) and shows a notice on the site. Set the message in Settings › Storefront.' ],
 		[ 'away_mode', 'Away mode', 'Shows a banner and pauses express orders.' ],
 		[ 'express', 'Express orders', 'The rush checkbox at checkout.' ],
 		[ 'local_pickup', 'Local pickup', 'Pickup option for ticked items.' ],

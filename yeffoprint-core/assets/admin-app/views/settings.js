@@ -183,7 +183,7 @@
 
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Pause all sales</h2></div>' +
-					'<p class="yp-panel__hint">For when you can’t fill orders at all (printer down, etc.). Turning this on stops new orders: nothing can be added to the cart, checkout won’t place an order, and a bar at the top of every page shows the message below. Carts are kept, pay links for existing orders still work, and Create Order here still works.</p>' +
+					'<p class="yp-panel__hint">For when you can’t fill orders at all (printer down, etc.). Turning this on stops new label and sticker orders: they can’t be added to the cart, checkout won’t place an order with them in it, and a bar at the top of every page shows the message below. 3D prints stay open since they use a different printer. Carts are kept, pay links for existing orders still work, and Create Order here still works.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-sales-paused"' + ( settings.sales_paused ? ' checked' : '' ) + ' /><label for="yp-set-sales-paused">Pause all sales</label></div>' +
 					'<div class="yp-field"><label for="yp-set-sales-paused-message">Message customers see</label><textarea id="yp-set-sales-paused-message" rows="2" placeholder="' + YP.escapeAttr( settings.sales_paused_default_message ) + '">' + YP.escapeHtml( settings.sales_paused_message ) + '</textarea></div>' +
 					'<p class="yp-panel__hint">Leave blank to use the message shown in grey.</p>' +
