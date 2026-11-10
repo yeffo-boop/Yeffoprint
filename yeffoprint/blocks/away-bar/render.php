@@ -15,6 +15,16 @@
 
 defined( 'ABSPATH' ) || exit;
 
+// "Pause all sales" (printer down, etc.) wins over Away Mode: no orders
+// are taken at all, so a "we're away until" date would be misleading.
+$paused = function_exists( 'yeffoprint_core_sales_paused' ) ? yeffoprint_core_sales_paused() : null;
+if ( $paused ) {
+	?>
+	<div class="yp-paused-bar" role="status"><p><?php echo esc_html( $paused ); ?></p></div>
+	<?php
+	return;
+}
+
 $away = function_exists( 'yeffoprint_core_away_mode' ) ? yeffoprint_core_away_mode() : null;
 
 if ( ! $away ) {

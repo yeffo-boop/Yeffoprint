@@ -182,6 +182,14 @@
 				'</div>' +
 
 				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Pause all sales</h2></div>' +
+					'<p class="yp-panel__hint">For when you can’t fill orders at all (printer down, etc.). Turning this on stops new orders: nothing can be added to the cart, checkout won’t place an order, and a bar at the top of every page shows the message below. Carts are kept, pay links for existing orders still work, and Create Order here still works.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-sales-paused"' + ( settings.sales_paused ? ' checked' : '' ) + ' /><label for="yp-set-sales-paused">Pause all sales</label></div>' +
+					'<div class="yp-field"><label for="yp-set-sales-paused-message">Message customers see</label><textarea id="yp-set-sales-paused-message" rows="2" placeholder="' + YP.escapeAttr( settings.sales_paused_default_message ) + '">' + YP.escapeHtml( settings.sales_paused_message ) + '</textarea></div>' +
+					'<p class="yp-panel__hint">Leave blank to use the message shown in grey.</p>' +
+				'</div>' +
+
+				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Away Mode</h2></div>' +
 					'<p class="yp-panel__hint">For the rare stretch when production is paused (vacation, out of town). Turning this on shows a delay notice on the storefront, at checkout, and in the order confirmation email — off by default, since this only fires occasionally.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-away-enabled"' + ( settings.away_mode_enabled ? ' checked' : '' ) + ' /><label for="yp-set-away-enabled">Show a delay notice everywhere</label></div>' +
@@ -532,6 +540,8 @@
 				contact_recipient_email: viewEl.querySelector( '#yp-set-contact-email' ).value,
 				splash_enabled: viewEl.querySelector( '#yp-set-splash-enabled' ).checked,
 				splash_image_id: parseInt( viewEl.querySelector( '[data-yp-splash-id]' ).value, 10 ) || 0,
+				sales_paused: viewEl.querySelector( '#yp-set-sales-paused' ).checked,
+				sales_paused_message: viewEl.querySelector( '#yp-set-sales-paused-message' ).value,
 				away_mode_enabled: viewEl.querySelector( '#yp-set-away-enabled' ).checked,
 				away_mode_return_date: viewEl.querySelector( '#yp-set-away-return' ).value,
 				express_enabled: viewEl.querySelector( '#yp-set-express-enabled' ).checked,

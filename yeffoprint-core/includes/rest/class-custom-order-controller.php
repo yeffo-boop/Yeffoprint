@@ -435,6 +435,11 @@ class YeffoPrint_Custom_Order_Controller {
 			return new \WP_Error( 'yeffoprint_cart_unavailable', __( 'The cart is not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 
+		// Pause all sales: say why before a design request post is made.
+		if ( YeffoPrint_Sales_Pause::is_paused() ) {
+			return new \WP_Error( 'yeffoprint_sales_paused', YeffoPrint_Sales_Pause::message(), [ 'status' => 403 ] );
+		}
+
 		// Each request makes a design request post (and, for guests, starts
 		// abandoned-cart emails), so a bot looping this would flood Drafts.
 		// 30 an hour is far past any real shopper.
