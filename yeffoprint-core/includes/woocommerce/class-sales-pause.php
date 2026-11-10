@@ -41,6 +41,13 @@ class YeffoPrint_Sales_Pause {
 		add_action( 'woocommerce_store_api_cart_errors', [ $this, 'cart_errors' ], 1 );
 		add_action( 'woocommerce_checkout_process', [ $this, 'block_classic_checkout' ], 1 );
 
+		// Direct request (2026-11-10, printer down): "make sure that pause
+		// is turned on once the code is live". add_option() only writes
+		// when the row doesn't exist yet, so this switches the pause on
+		// once on the first load of this code and never again; turning it
+		// off in the app saves 0 and sticks.
+		add_option( self::ENABLED_OPTION, 1 );
+
 		add_action( 'wp_head', [ $this, 'hide_buy_buttons' ] );
 		add_filter( 'body_class', [ $this, 'body_class' ] );
 	}
