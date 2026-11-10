@@ -139,6 +139,7 @@
 								return '<option value="' + YP.escapeAttr( key ) + '">' + YP.escapeHtml( yeffoprintAdminApp.wcOrderStatuses[ key ] ) + '</option>';
 							} ).join( '' ) +
 						'</select><button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="status">Apply</button></span>' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-delay>Send delay email</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="slip">Print packing slips</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="invoice">Print invoices</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="trash">Move to trash</button>' ) +
@@ -193,6 +194,8 @@
 				runBulk( act.getAttribute( 'data-yp-bulk-act' ), act );
 			} else if ( print ) {
 				window.open( YP.printOrdersUrl( selectedIds(), print.getAttribute( 'data-yp-bulk-print' ) ), '_blank' );
+			} else if ( event.target.closest( '[data-yp-bulk-delay]' ) ) {
+				YP.delayEmailModal( selectedIds(), load );
 			} else if ( event.target.closest( '[data-yp-bulk-clear]' ) ) {
 				selected = {};
 				rowsEl.querySelectorAll( '[data-yp-check]' ).forEach( function ( box ) { box.checked = false; } );

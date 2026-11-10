@@ -1280,6 +1280,9 @@
 			actions.push( '<button type="button" class="ypn-act" data-ypn-act="status">Change status <span>' + esc( order.status_label ) + '</span></button>' );
 			if ( order.customer_email && 'trash' !== order.status ) {
 				actions.push( '<button type="button" class="ypn-act" data-ypn-act="email">Resend an email <span>✉</span></button>' );
+				if ( [ 'processing', 'on-hold', 'in-production', 'curing' ].indexOf( order.status ) !== -1 ) {
+					actions.push( '<button type="button" class="ypn-act" data-ypn-act="delay">Send delay email <span>⏳</span></button>' );
+				}
 			}
 			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'slip' ) ) + '" target="_blank" rel="noopener">Print packing slip <span>⎙</span></a>' );
 			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'invoice' ) ) + '" target="_blank" rel="noopener">Print invoice <span>⎙</span></a>' );
@@ -1446,6 +1449,8 @@
 						YP.next.openDetails( order.id, 'Status' );
 					} else if ( 'email' === act ) {
 						resendEmail( order, load );
+					} else if ( 'delay' === act ) {
+						YP.delayEmailModal( [ order.id ], load );
 					} else if ( 'trash' === act || 'restore' === act ) {
 						var run = function () {
 							button.disabled = true;
