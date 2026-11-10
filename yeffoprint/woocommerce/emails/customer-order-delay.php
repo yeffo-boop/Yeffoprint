@@ -30,7 +30,7 @@ printf( esc_html__( 'Hi %s,', 'yeffoprint-core' ), esc_html( $name ) );
 <p><?php
 printf(
 	/* translators: %s: order number */
-	esc_html__( 'We’re sorry to say your order #%s is running behind. Our label printer had a malfunction, and a technician is coming out to repair it. We don’t want to rush it on a backup machine and send you labels that aren’t up to our usual quality.', 'yeffoprint-core' ),
+	esc_html__( 'We’re sorry to say your order #%s is running behind. Our label printer had a malfunction, and a technician is coming out to repair it.', 'yeffoprint-core' ),
 	esc_html( $order->get_order_number() )
 );
 ?></p>
