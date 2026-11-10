@@ -262,6 +262,7 @@ class YeffoPrint_Admin_Next_Controller {
 	/** Option name for each quick switch, plus what an unset option means. */
 	private function switches(): array {
 		return [
+			'sales_paused' => [ YeffoPrint_Sales_Pause::ENABLED_OPTION, false ],
 			'away_mode'    => [ YeffoPrint_Admin_Menu::AWAY_MODE_ENABLED_OPTION, false ],
 			'express'      => [ YeffoPrint_Admin_Menu::EXPRESS_ENABLED_OPTION, true ],
 			'local_pickup' => [ YeffoPrint_Local_Pickup::ENABLED_OPTION, false ],

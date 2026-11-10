@@ -121,6 +121,9 @@ class YeffoPrint_Admin_Settings_Controller {
 		update_option( $M::SPLASH_ENABLED_OPTION, (bool) ( $params['splash_enabled'] ?? false ) );
 		update_option( $M::SPLASH_IMAGE_ID_OPTION, absint( $params['splash_image_id'] ?? 0 ) );
 
+		update_option( YeffoPrint_Sales_Pause::ENABLED_OPTION, (int) ! empty( $params['sales_paused'] ) );
+		update_option( YeffoPrint_Sales_Pause::MESSAGE_OPTION, sanitize_text_field( (string) ( $params['sales_paused_message'] ?? '' ) ) );
+
 		update_option( $M::AWAY_MODE_ENABLED_OPTION, (bool) ( $params['away_mode_enabled'] ?? false ) );
 		update_option( $M::AWAY_MODE_RETURN_DATE_OPTION, sanitize_text_field( (string) ( $params['away_mode_return_date'] ?? '' ) ) );
 
@@ -209,6 +212,9 @@ class YeffoPrint_Admin_Settings_Controller {
 			'splash_enabled'             => (bool) get_option( $M::SPLASH_ENABLED_OPTION, false ),
 			'splash_image_id'            => $splash_image_id,
 			'splash_image_url'           => $splash_image_id ? ( wp_get_attachment_image_url( $splash_image_id, 'medium' ) ?: '' ) : '',
+			'sales_paused'               => YeffoPrint_Sales_Pause::is_paused(),
+			'sales_paused_message'       => (string) get_option( YeffoPrint_Sales_Pause::MESSAGE_OPTION, '' ),
+			'sales_paused_default_message' => YeffoPrint_Sales_Pause::default_message(),
 			'away_mode_enabled'          => (bool) get_option( $M::AWAY_MODE_ENABLED_OPTION, false ),
 			'away_mode_return_date'      => (string) get_option( $M::AWAY_MODE_RETURN_DATE_OPTION, '' ),
 			'express_enabled'            => (bool) get_option( $M::EXPRESS_ENABLED_OPTION, true ),
