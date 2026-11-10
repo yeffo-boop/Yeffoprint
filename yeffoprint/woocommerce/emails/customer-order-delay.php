@@ -41,7 +41,7 @@ printf(
 	<?php endforeach; ?>
 </table>
 
-<table class="yp-away-email-notice" role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table class="yp-away-email-notice" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;"><tr><td style="background-color:#FBF0DB;border:1px solid #EFDCAE;border-radius:12px;padding:16px 18px;">
 	<span class="yp-away-email-notice-eyebrow"><?php esc_html_e( 'Where things stand', 'yeffoprint-core' ); ?></span>
 	<p class="yp-away-email-notice-body yp-delay-body"><?php
 	if ( '' !== $ship_label ) {
@@ -60,7 +60,7 @@ printf(
 <p class="yp-delay-note">“<?php echo esc_html( $note ); ?>” – <?php echo esc_html( $signer ); ?></p>
 <?php endif; ?>
 
-<table class="yp-bot-callout yp-delay-options" role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table class="yp-bot-callout yp-delay-options" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;"><tr><td style="background-color:#FDF1F8;border:1px solid #F3C7E1;border-radius:12px;padding:16px 18px;">
 	<span class="yp-delay-options-eyebrow"><?php esc_html_e( 'Your options', 'yeffoprint-core' ); ?></span>
 	<ul>
 		<li><strong><?php esc_html_e( 'Keep your order.', 'yeffoprint-core' ); ?></strong> <?php esc_html_e( 'Nothing to do. It keeps its place in line.', 'yeffoprint-core' ); ?></li>
@@ -79,7 +79,7 @@ printf(
 
 <?php if ( '' !== $code ) : ?>
 <p><?php esc_html_e( 'To say thank you for your patience, here’s something off your next order:', 'yeffoprint-core' ); ?></p>
-<table class="yp-addon-email-notice yp-delay-code" role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td>
+<table class="yp-addon-email-notice yp-delay-code" role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;"><tr><td style="background-color:#E5F7FD;border:1px solid #B8E9F7;border-radius:12px;padding:16px 18px;text-align:center;">
 	<span class="yp-addon-email-notice-eyebrow"><?php echo esc_html( $code_line ); ?></span>
 	<p class="yp-delay-code-value"><?php echo esc_html( $code ); ?></p>
 	<p class="yp-addon-email-notice-body"><?php esc_html_e( 'Enter it at checkout.', 'yeffoprint-core' ); ?></p>

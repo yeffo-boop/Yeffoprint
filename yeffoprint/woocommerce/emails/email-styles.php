@@ -405,7 +405,8 @@ table.yp-payment-cta {
 	margin: 2px 0 22px;
 }
 
-table.yp-payment-cta > tbody > tr > td {
+table.yp-payment-cta > tbody > tr > td,
+table.yp-payment-cta > tr > td {
 	background-color: #FDF1F8;
 	border: 1px solid #F3C7E1;
 	border-radius: 10px;
@@ -467,7 +468,8 @@ table.yp-proof-cta {
 	margin: 2px 0 22px;
 }
 
-table.yp-proof-cta > tbody > tr > td {
+table.yp-proof-cta > tbody > tr > td,
+table.yp-proof-cta > tr > td {
 	background-color: #FDF1F8;
 	border: 1px solid #F3C7E1;
 	border-radius: 10px;
@@ -532,7 +534,8 @@ table.yp-review-cta {
 	margin: 2px 0 22px;
 }
 
-table.yp-review-cta > tbody > tr > td {
+table.yp-review-cta > tbody > tr > td,
+table.yp-review-cta > tr > td {
 	background-color: #FFF8E6;
 	border: 1px solid #F6DF9E;
 	border-radius: 10px;
@@ -700,7 +703,8 @@ table.yp-away-email-notice {
 	margin: 0 0 22px;
 }
 
-table.yp-away-email-notice > tbody > tr > td {
+table.yp-away-email-notice > tbody > tr > td,
+table.yp-away-email-notice > tr > td {
 	background-color: #FBF0DB;
 	border: 1px solid #EFDCAE;
 	border-radius: 12px;
@@ -727,7 +731,8 @@ table.yp-away-email-notice > tbody > tr > td {
 
 /* Order delay email (customer-order-delay.php): bigger date and code than
    the notices they borrow their boxes from, plus the personal note. */
-table.yp-delay-code > tbody > tr > td {
+table.yp-delay-code > tbody > tr > td,
+table.yp-delay-code > tr > td {
 	text-align: center;
 }
 
@@ -795,7 +800,8 @@ table.yp-addon-email-notice {
 	margin: 0 0 22px;
 }
 
-table.yp-addon-email-notice > tbody > tr > td {
+table.yp-addon-email-notice > tbody > tr > td,
+table.yp-addon-email-notice > tr > td {
 	background-color: #E5F7FD;
 	border: 1px solid #B8E9F7;
 	border-radius: 12px;
@@ -830,7 +836,8 @@ table.yp-bot-callout {
 	margin: 0 0 22px;
 }
 
-table.yp-bot-callout > tbody > tr > td {
+table.yp-bot-callout > tbody > tr > td,
+table.yp-bot-callout > tr > td {
 	background-color: #FDF1F8;
 	border: 1px solid #F3C7E1;
 	border-radius: 12px;
