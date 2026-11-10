@@ -139,8 +139,6 @@ class YeffoPrint_Order_Delay_Email {
 
 	/** Template variables for one order. */
 	private static function template_args( \WC_Order $order, array $args ): array {
-		$user   = wp_get_current_user();
-		$first  = $user && $user->exists() ? (string) $user->first_name : '';
 		$site   = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 		$change = class_exists( 'YeffoPrint_Order_Label_Changes' ) && YeffoPrint_Order_Label_Changes::customer_can_request( $order )
 			? YeffoPrint_Order_Label_Changes::url( $order )
@@ -156,7 +154,8 @@ class YeffoPrint_Order_Delay_Email {
 			'code_line'     => self::code_line( $args['code'] ),
 			'change_url'    => $change,
 			/* translators: 1: first name, 2: site name */
-			'signer'        => $first ? sprintf( __( '%1$s at %2$s', 'yeffoprint-core' ), $first, $site ) : $site,
+			// Jeff: "sign the emails from Yeffo instead of from Jeff".
+			'signer'        => sprintf( __( '%1$s at %2$s', 'yeffoprint-core' ), 'Yeffo', $site ),
 		];
 	}
 
