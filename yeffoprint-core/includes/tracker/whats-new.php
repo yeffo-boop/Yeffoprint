@@ -15,10 +15,16 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-11-18e',
+		'date'  => '2026-11-18',
+		'title' => 'A tidier look',
+		'text'  => 'The + button now shows everything you can add on one screen, Progress starts with your weight, and Me is shorter with one Settings card (now with units). Turn on reminders right from Today, and the chart’s dose labels no longer overlap.',
+	],
+	[
 		'id'    => '2026-11-18d',
 		'date'  => '2026-11-18',
 		'title' => 'YeffoHealth en español',
-		'text'  => 'YeffoHealth now speaks Spanish. It switches on by itself when your phone is set to Spanish, or pick it under Me › Language.',
+		'text'  => 'YeffoHealth now speaks Spanish. It switches on by itself when your phone is set to Spanish, or pick it under Me › Settings.',
 	],
 	[
 		'id'    => '2026-11-18c',
