@@ -1756,6 +1756,46 @@
 		}
 	}
 
+	/* ---------- Side rail (iPhone Duo) ---------- */
+
+	/**
+	 * The iPhone Duo puts its clock and status icons in a strip down the
+	 * side of the screen while the phone is held upright. The browser
+	 * reports that strip as a left or right safe-area inset; a regular
+	 * phone held upright has none (its side insets only appear sideways).
+	 * When it's there, the tab bar moves into the empty part of the strip
+	 * as a vertical rail, under the status icons. Everywhere else nothing
+	 * changes.
+	 */
+	var railProbe = null;
+	function applySideRail() {
+		if ( ! document.body ) {
+			return;
+		}
+		if ( ! railProbe ) {
+			railProbe = document.createElement( 'div' );
+			railProbe.className = 'ypt-rail-probe';
+			railProbe.setAttribute( 'aria-hidden', 'true' );
+			document.body.appendChild( railProbe );
+		}
+		var cs = window.getComputedStyle( railProbe );
+		var left = parseFloat( cs.paddingLeft ) || 0;
+		var right = parseFloat( cs.paddingRight ) || 0;
+		var inset = Math.max( left, right );
+		var w = window.innerWidth;
+		var upright = window.innerHeight > w;
+		var on = upright && w < 900 && inset >= 44;
+		var el = document.documentElement;
+		el.classList.toggle( 'ypt-siderail', on );
+		if ( on ) {
+			el.setAttribute( 'data-ypt-rail', right >= left ? 'right' : 'left' );
+			el.style.setProperty( '--ypt-rail-w', Math.round( inset ) + 'px' );
+		} else {
+			el.removeAttribute( 'data-ypt-rail' );
+			el.style.removeProperty( '--ypt-rail-w' );
+		}
+	}
+
 	function lockLine() {
 		return h( 'p', { class: 'ypt-lock' }, icon( 'lock' ), 'Encrypted · only you can see this' );
 	}
@@ -11751,6 +11791,12 @@
 	 * ======================================================= */
 
 	applyTheme();
+	applySideRail();
+	window.addEventListener( 'resize', applySideRail );
+	window.addEventListener( 'orientationchange', function () {
+		// iOS settles the safe-area insets a moment after it rotates.
+		setTimeout( applySideRail, 250 );
+	} );
 	if ( darkQuery && darkQuery.addEventListener ) {
 		darkQuery.addEventListener( 'change', applyTheme );
 	}

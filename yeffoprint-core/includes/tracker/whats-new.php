@@ -15,6 +15,12 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-11-15a',
+		'date'  => '2026-11-15',
+		'title' => 'Tabs on the side on iPhone Duo',
+		'text'  => 'On an iPhone Duo, where the clock and status icons run down the side of the screen, the Today, Progress, Add, Supply and Calculator buttons now sit in that side strip under the clock, so more of the screen is left for your day. Other phones keep the bar along the bottom.',
+	],
+	[
 		'id'    => '2026-11-09b',
 		'date'  => '2026-11-09',
 		'title' => 'Length and weeks on/off work together',
