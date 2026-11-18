@@ -348,7 +348,22 @@
 		search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-3.5-3.5',
 		barcode: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M16 8v8',
 		flash: 'M13 2L3 14h9l-1 8 10-12h-9z',
+		goal: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
 	};
+
+	/** A sideways-scrolling row fades at the edge while more is hidden that way, so it's clear it scrolls. */
+	function scrollFade( el ) {
+		function check() {
+			var max = el.scrollWidth - el.clientWidth;
+			el.classList.toggle( 'is-more-right', max > 2 && el.scrollLeft < max - 2 );
+			el.classList.toggle( 'is-more-left', el.scrollLeft > 2 );
+		}
+		el.addEventListener( 'scroll', check, { passive: true } );
+		window.addEventListener( 'resize', check );
+		requestAnimationFrame( check );
+		setTimeout( check, 300 );
+		return el;
+	}
 
 	function icon( name ) {
 		var s = svg( 'svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' } );
@@ -1897,7 +1912,6 @@
 	function appBar() {
 		var guest = ! CFG.signedIn;
 		var current = guest ? 'calc' : ui.tab === 'history' ? 'today' : ui.tab;
-		var bellOn = state.pushOnHere === true;
 		var initial = String( CFG.firstName || '' ).trim().charAt( 0 ).toUpperCase();
 		function tab( id, label ) {
 			var locked = guest && id !== 'calc';
@@ -1945,13 +1959,6 @@
 					h( 'button', { type: 'button', class: 'ypt-appbar__tab ypt-appbar__add', 'aria-haspopup': 'dialog', onclick: openAddMenu }, '+ Add' )
 				),
 				h( 'div', { class: 'ypt-appbar__actions' },
-					h( 'button', { type: 'button', class: 'ypt-appbar__icon' + ( bellOn ? '' : ' is-off' ), 'aria-label': bellOn ? 'Reminders are on' : 'Reminders are off on this device', onclick: function () {
-						go( 'me' );
-						var card = document.getElementById( 'ypt-reminders' );
-						if ( card ) {
-							card.scrollIntoView( { block: 'start' } );
-						}
-					} }, icon( bellOn ? 'bell' : 'belloff' ) ),
 					h( 'button', { type: 'button', class: 'ypt-appbar__me', 'aria-label': 'Me', 'aria-current': current === 'me' ? 'page' : null, onclick: function () {
 						go( 'me' );
 					} }, avatarFace( initial ) )
@@ -2081,51 +2088,55 @@
 		} ).sort( function ( a, b ) {
 			return String( b.at || '' ).localeCompare( String( a.at || '' ) );
 		} )[ 0 ];
-		function row( ic, title, sub, onPick ) {
-			return h( 'button', { type: 'button', class: 'ypt-help__row', onclick: function () {
+		// A grid of tiles, so every option fits on one phone screen.
+		function tile( ic, title, sub, onPick ) {
+			return h( 'button', { type: 'button', class: 'ypt-addtile', onclick: function () {
 				closeSheet();
 				onPick();
 			} },
 				h( 'span', { class: 'ypt-help__ic ypt-help__ic--' + ic }, icon( ic ) ),
-				h( 'span', { class: 'ypt-help__text' }, h( 'b', null, title ), h( 'span', null, sub ) ),
-				h( 'span', { class: 'ypt-help__chev', 'aria-hidden': 'true' }, '›' )
+				h( 'b', null, title ),
+				h( 'span', null, sub )
 			);
 		}
-		openSheet( 'What do you want to add?', 'Add', [
-			h( 'div', { class: 'ypt-card ypt-list ypt-help' },
-				protocols().length ? row( 'syringe', 'Log a dose', 'Something you just took, on or off schedule', function () {
+		var grid = h( 'div', { class: 'ypt-addgrid' },
+				protocols().length ? tile( 'syringe', 'Log a dose', 'On or off schedule', function () {
 					openExtraSheet( today );
 				} ) : null,
-				row( 'pill', 'New peptide or medication', 'Dose, schedule and reminders', function () {
+				tile( 'pill', 'New peptide or medication', 'Dose, schedule, reminders', function () {
 					openProtocolSheet( null );
 				} ),
-				row( 'vials', 'Mix a vial or pen', 'Get the units to draw', function () {
+				tile( 'vials', 'Mix a vial or pen', 'Get the units to draw', function () {
 					openVialSheet( null, null );
 				} ),
-				row( 'scale', 'Weight & measurements', 'Adds to Progress', function () {
+				tile( 'scale', 'Weight & measurements', 'Adds to Progress', function () {
 					openProgressSheet( null );
 				} ),
-				row( 'scale', 'Goal weight', weightGoal() ? 'See or change your goal' : 'Set a goal, or switch to maintenance', function () {
+				tile( 'goal', 'Goal weight', weightGoal() ? 'See or change it' : 'Or maintenance', function () {
 					go( 'progress' );
 					openGoalSheet();
 				} ),
-				row( 'camera', 'Progress photo', 'Encrypted, only you can see it', function () {
+				tile( 'camera', 'Progress photo', 'Only you can see it', function () {
 					openProgressSheet( null, { photo: true } );
 				} ),
-				row( 'flask', 'Lab result', 'Bloodwork values, charted with your doses', function () {
+				tile( 'flask', 'Lab result', 'Charted with your doses', function () {
 					openLabSheet( null );
 				} ),
-				foodGoals().on ? row( 'food', 'Food', 'Search a food or scan its barcode', function () {
+				foodGoals().on ? tile( 'barcode', 'Food', 'Search or scan', function () {
 					openFoodSearch( today );
 				} ) : null,
-				row( 'food', 'Food & water', foodGoals().on ? 'Protein, water and calories for today' : 'Count protein, water and calories', function () {
+				tile( 'food', 'Food & water', foodGoals().on ? 'Today’s totals' : 'Protein, water, calories', function () {
 					openFoodSheet( today );
 				} ),
-				lastTaken ? row( 'feel', 'How I feel', 'Side effects, sleep, energy · on your ' + lastTaken.compound + ' dose', function () {
+				lastTaken ? tile( 'feel', 'How I feel', 'On your ' + lastTaken.compound + ' dose', function () {
 					openLogSheet( lastTaken );
 				} ) : null
-			),
-		] );
+		);
+		// With an odd number of tiles, the first runs the full width so the grid ends evenly.
+		if ( grid.children.length % 2 ) {
+			grid.firstChild.classList.add( 'ypt-addtile--wide' );
+		}
+		openSheet( 'What do you want to add?', 'Add', [ grid ] );
 	}
 
 	/* ---------- Progress ---------- */
@@ -2136,7 +2147,8 @@
 			h( 'div', { class: 'ypt-split__head' }, h( 'header', { class: 'ypt-top' },
 				h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Weight, photos & lab results' ), h( 'h1', null, 'Progress' ) )
 			) ),
-			h( 'div', { class: 'ypt-split__main' }, renderLevels(), renderProgress() ),
+			// Weight and the goal lead; estimated levels follow.
+			h( 'div', { class: 'ypt-split__main' }, renderProgress(), renderLevels() ),
 			h( 'div', { class: 'ypt-split__side' }, renderFood(), renderLabs() )
 		);
 	}
@@ -2220,6 +2232,10 @@
 			var banner = installBanner();
 			if ( banner ) {
 				side.appendChild( banner );
+			}
+			var remind = remindersBanner();
+			if ( remind ) {
+				side.appendChild( remind );
 			}
 			var news = whatsNewBanner();
 			if ( news ) {
@@ -3083,6 +3099,43 @@
 			close );
 	}
 
+	/**
+	 * Today's one-time nudge to turn on reminders on this device. Replaces
+	 * the crossed-out bell that used to sit in the top bar; the switch
+	 * itself lives in Me › Reminders. "Not now" hides it for 30 days.
+	 */
+	function remindersBanner() {
+		if ( state.pushOnHere !== false || ! protocols().length ) {
+			return null;
+		}
+		var supported = NATIVE || ( 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window );
+		if ( ! supported ) {
+			return null;
+		}
+		var dismissed = loadJSON( 'ypt-remind-dismissed', 0 );
+		if ( dismissed && Date.now() - dismissed < 30 * 86400000 ) {
+			return null;
+		}
+		var btn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+			btn.disabled = true;
+			( NATIVE ? enableNative() : enablePush() ).then( function () {
+				render();
+			} ).catch( function ( e ) {
+				btn.disabled = false;
+				toast( e.message || 'Couldn’t turn on reminders.' );
+			} );
+		} }, 'Turn on reminders' );
+		return h( 'div', { class: 'ypt-banner ypt-banner--info ypt-remind-banner' },
+			h( 'span', { class: 'ypt-remind-banner__ic', 'aria-hidden': 'true' }, icon( 'bell' ) ),
+			h( 'div', null, h( 'b', null, 'Get a nudge when a dose is due.' ), ' Reminders are off on this device.',
+				h( 'div', { style: { marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' } }, btn,
+					h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+						saveJSON( 'ypt-remind-dismissed', Date.now() );
+						render();
+					} }, 'Not now' ) ) )
+		);
+	}
+
 	function promptInstall() {
 		if ( ! installPrompt ) {
 			return;
@@ -3809,12 +3862,7 @@
 			} }, h( 'span', null, 'Show all ' + entries.length ), h( 'span', null, '›' ) ) : null
 		) );
 
-		wrap.appendChild( h( 'div', { class: 'ypt-row', style: { alignItems: 'center', marginTop: '14px' } },
-			h( 'span', { class: 'ypt-muted ypt-small ypt-shrink' }, 'Units' ),
-			seg( [ [ 'us', 'lb · in' ], [ 'metric', 'kg · cm' ] ], unitsPref(), function ( u ) {
-				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { units: u } ) );
-			} )
-		) );
+		// Units moved to Me › Settings.
 		return wrap;
 	}
 
@@ -3860,8 +3908,8 @@
 		} ).sort( function ( a, b ) {
 			return b.doses.length - a.doses.length;
 		} ).slice( 0, 4 );
-		var LANE = 22;
-		var lanesTop = TOP + CH + 26;
+		var LANE = 30;
+		var lanesTop = TOP + CH + 22;
 		var H = lanesTop + lanes.length * LANE + ( lanes.length ? 4 : 0 );
 
 		var s = svg( 'svg', { class: 'ypt-chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': ( opts.name || metricName( key ) ) + ' from ' + fmtDay( from ) + ' to ' + fmtDay( to ) + ( pts.length ? ', ' + ( opts.fmt || function ( v ) {
@@ -3941,7 +3989,16 @@
 			} );
 			var lp = pts[ pts.length - 1 ];
 			var lx = xOf( lp.date );
-			svg( 'text', { x: Math.min( lx, W - R ), y: yOf( lp.v ) - 9, class: 'g-last' + ( lx > W - 60 ? ' is-end' : '' ) }, s ).textContent = fmtNum( lp.v, opts.pts ? 2 : 1 );
+			// Put the latest value on the side the line isn't coming from, so they don't cross.
+			var prevPt = pts.length > 1 ? pts[ pts.length - 2 ] : null;
+			var below = prevPt ? prevPt.v > lp.v : false;
+			var ly = yOf( lp.v ) + ( below ? 17 : -9 );
+			if ( ly > TOP + CH + 2 ) {
+				ly = yOf( lp.v ) - 9;
+			} else if ( ly < TOP + 8 ) {
+				ly = yOf( lp.v ) + 17;
+			}
+			svg( 'text', { x: Math.min( lx, W - R ), y: ly, class: 'g-last' + ( lx > W - 60 ? ' is-end' : '' ) }, s ).textContent = fmtNum( lp.v, opts.pts ? 2 : 1 );
 		} else {
 			svg( 'text', { x: L + plotW / 2, y: TOP + CH / 2, class: 'g-empty' }, s ).textContent = 'Nothing logged in this range';
 		}
@@ -3949,22 +4006,27 @@
 		lanes.forEach( function ( ln, i ) {
 			var y = lanesTop + i * LANE;
 			var color = ln.p ? protocolColor( ln.p ) : colorForCompound( ln.name );
-			svg( 'line', { x1: L, x2: W - R, y1: y + 11, y2: y + 11, class: 'g-lane' }, s );
+			// The full name sits on its own line above the ticks; dose labels go beside it, never on the ticks.
+			svg( 'line', { x1: L, x2: W - R, y1: y + 20, y2: y + 20, class: 'g-lane' }, s );
+			var label = svg( 'text', { x: L, y: y + 9, class: 'g-lane-label', fill: color }, s );
+			label.textContent = ln.name;
+			var nameEnd = L + String( ln.name ).length * 5.6 + 8;
 			var prevDose = null;
-			var lastLabel = -99;
+			var lastEnd = -99;
 			ln.doses.sort( function ( a, b ) {
 				return a.date.localeCompare( b.date );
 			} ).forEach( function ( d ) {
 				var x = xOf( d.date );
-				svg( 'rect', { x: x - 1, y: y + 5, width: 2, height: 12, rx: 1, fill: color }, s );
-				if ( +d.dose !== prevDose && x - lastLabel > 30 ) {
-					svg( 'text', { x: x + 3, y: y + 4, class: 'g-dose' }, s ).textContent = fmtNum( +d.dose, 3 );
-					lastLabel = x;
+				svg( 'rect', { x: x - 1, y: y + 14, width: 2, height: 12, rx: 1, fill: color }, s );
+				var txt = fmtNum( +d.dose, 3 ) + ( d.unit ? ' ' + d.unit : '' );
+				var pos = Math.max( x, nameEnd );
+				var tw = txt.length * 5;
+				if ( +d.dose !== prevDose && pos >= lastEnd + 6 && ( prevDose === null || pos - x < 40 ) && pos + tw < W ) {
+					svg( 'text', { x: pos, y: y + 9, class: 'g-dose' }, s ).textContent = txt;
+					lastEnd = pos + tw;
 				}
 				prevDose = +d.dose;
 			} );
-			var label = svg( 'text', { x: 2, y: y + 15, class: 'g-lane-label', fill: color }, s );
-			label.textContent = String( ln.name ).length > 6 ? String( ln.name ).slice( 0, 5 ) + '…' : ln.name;
 		} );
 
 		return h( 'div', { class: 'ypt-chartwrap' }, s,
@@ -5724,9 +5786,13 @@
 		var view = ui.supplyView || 'mixed';
 		// Mixed vials sit two across on wide screens; On hand and Plan stay one column.
 		var wrap = h( 'div', { class: view === 'mixed' ? 'ypt-wide' : null } );
+		var mixedCount = vials( false ).length;
+		var onHand = stocks().length;
+		// With nothing added yet, the empty card's buttons are the only ones, so they aren't shown twice.
+		var empty = ! mixedCount && ! onHand;
 		wrap.appendChild( h( 'header', { class: 'ypt-top' },
 			h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Inventory' ), h( 'h1', null, 'Supply' ) ),
-			h( 'div', { class: 'ypt-top__actions' },
+			empty ? null : h( 'div', { class: 'ypt-top__actions' },
 				h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
 					openStockSheet( null, null );
 				} }, '+ Add stock' ),
@@ -5745,9 +5811,7 @@
 			) );
 		} );
 
-		var mixedCount = vials( false ).length;
-		var onHand = stocks().length;
-		wrap.appendChild( h( 'div', { class: 'ypt-views', role: 'tablist' }, [ [ 'mixed', 'Mixed · ' + mixedCount ], [ 'onhand', 'On hand · ' + onHand ], [ 'plan', 'Plan' ] ].map( function ( v ) {
+		wrap.appendChild( h( 'div', { class: 'ypt-views', role: 'tablist' }, [ [ 'mixed', mixedCount ? 'Mixed · ' + mixedCount : 'Mixed' ], [ 'onhand', onHand ? 'On hand · ' + onHand : 'On hand' ], [ 'plan', 'Plan' ] ].map( function ( v ) {
 			return h( 'button', { type: 'button', role: 'tab', 'aria-selected': view === v[ 0 ] ? 'true' : 'false', onclick: function () {
 				ui.supplyView = v[ 0 ];
 				saveJSON( UI_KEY, { tab: ui.tab, supplyView: v[ 0 ] } );
@@ -5799,9 +5863,14 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-empty' },
 				h( 'h2', null, 'Add the vial you’re using' ),
 				h( 'p', null, 'Enter what’s in the vial and how much water you added. We’ll work out how many units to draw for each dose and count how many doses are left.' ),
-				h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
-					openVialSheet( null, null );
-				} }, 'Mix a vial' )
+				h( 'div', { class: 'ypt-empty__actions' },
+					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary', onclick: function () {
+						openVialSheet( null, null );
+					} }, 'Mix a vial' ),
+					! stocks().length ? h( 'button', { type: 'button', class: 'ypt-btn', onclick: function () {
+						openStockSheet( null, null );
+					} }, 'Add unmixed stock' ) : null
+				)
 			) );
 		}
 
@@ -5943,7 +6012,7 @@
 		} );
 		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-note' }, icon( 'bell' ),
 			h( 'div', null, warnsOn
-				? 'We’ll warn you here and on Today before anything runs out' + ( state.pushOnHere ? ', with a notification too.' : '. Turn on reminders (tap the bell at the top) to get a notification too.' )
+				? 'We’ll warn you here and on Today before anything runs out' + ( state.pushOnHere ? ', with a notification too.' : '. Turn on reminders (Me › Reminders) to get a notification too.' )
 				: 'Running-low warnings are off for everything here.',
 			list.some( function ( s ) {
 				return s.form === 'count';
@@ -6081,7 +6150,7 @@
 				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { expiryReminders: ! expOn } ) );
 			} );
 			wrap.appendChild( h( 'div', { class: 'ypt-card', style: { padding: '2px 14px' } }, h( 'div', { class: 'ypt-toggle' },
-				h( 'div', null, h( 'b', null, 'Remind me on mix days' ), h( 'div', { class: 'ypt-muted ypt-small' }, state.pushOnHere ? 'A notification the evening before.' : 'A notification the evening before, once reminders are on (tap the bell at the top).' ) ),
+				h( 'div', null, h( 'b', null, 'Remind me on mix days' ), h( 'div', { class: 'ypt-muted ypt-small' }, state.pushOnHere ? 'A notification the evening before.' : 'A notification the evening before, once reminders are on (Me › Reminders).' ) ),
 				sw ), h( 'div', { class: 'ypt-toggle', style: { borderTop: '1px solid var(--ypt-soft)' } },
 				h( 'div', null, h( 'b', null, 'Remind me before a vial expires' ), h( 'div', { class: 'ypt-muted ypt-small' }, EXPIRY_NOTICE_DAYS + ' days before, counted from the day you mixed it.' ) ),
 				expSw ) ) );
@@ -7085,32 +7154,58 @@
 			h( 'div', { class: 'ypt-me-top__name' }, h( 'div', { class: 'ypt-eyebrow' }, 'Signed in' ), h( 'h1', null, CFG.firstName || 'Me' ) )
 		) );
 
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Your peptides & medications' ) );
+		var list = protocols();
+		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
+			list.length ? list.map( function ( p ) {
+				return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+					openProtocolSheet( p );
+				} },
+					h( 'span', null, h( 'span', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: protocolColor( p ), marginRight: '8px' } } ), p.compound ),
+					h( 'span', null, p.paused ? 'Paused' : amountLabel( doseOn( p, todayStr() ), p.unit, p ) + ' · ' + scheduleLabel( p ) )
+				);
+			} ) : h( 'p', { class: 'ypt-list-row ypt-muted' }, 'None yet.' )
+		) );
+
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label', id: 'ypt-reminders' }, 'Reminders' ) );
 		wrap.appendChild( remindersCard( s ) );
 
-		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Appearance' ) );
-		wrap.appendChild( h( 'div', { class: 'ypt-card' },
-			seg( [ [ 'auto', 'Automatic' ], [ 'light', 'Light' ], [ 'dark', 'Dark' ] ], themePref(), function ( v ) {
-				saveJSON( THEME_KEY, v );
-				applyTheme();
-				render();
-			} ),
-			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, themePref() === 'auto' ? 'Matches your phone’s light or dark setting.' : 'Just on this device.' )
-		) );
-
-		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Language' ) );
-		wrap.appendChild( h( 'div', { class: 'ypt-card' },
-			seg( LANGS, langPref(), function ( v ) {
-				saveJSON( LANG_KEY, v );
-				// Every label is swapped as it's drawn, so a fresh start is the clean way to switch.
-				window.location.reload();
-			} ),
-			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, langPref() === 'auto' ? 'Follows your phone’s language.' : 'Just on this device.' )
+		// One Settings card instead of a section per setting, so Me stays short.
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Settings' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-settings' },
+			h( 'div', { class: 'ypt-setrow' }, h( 'span', { class: 'ypt-setrow__label' }, 'Appearance' ),
+				seg( [ [ 'auto', 'Auto' ], [ 'light', 'Light' ], [ 'dark', 'Dark' ] ], themePref(), function ( v ) {
+					saveJSON( THEME_KEY, v );
+					applyTheme();
+					render();
+				} ) ),
+			h( 'div', { class: 'ypt-setrow' }, h( 'span', { class: 'ypt-setrow__label' }, 'Language' ),
+				seg( [ [ 'auto', 'Auto' ], [ 'en', 'English' ], [ 'es', 'Español' ] ], langPref(), function ( v ) {
+					saveJSON( LANG_KEY, v );
+					// Every label is swapped as it's drawn, so a fresh start is the clean way to switch.
+					window.location.reload();
+				} ) ),
+			h( 'div', { class: 'ypt-setrow' }, h( 'span', { class: 'ypt-setrow__label' }, 'Units' ),
+				seg( [ [ 'us', 'lb · in' ], [ 'metric', 'kg · cm' ] ], unitsPref(), function ( u ) {
+					put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { units: u } ) );
+				} ) ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '10px 0 0' } }, 'Auto follows your phone. Appearance and language are saved on this device.' )
 		) );
 
 		var health = healthCard();
 		if ( health ) {
 			wrap.appendChild( health );
+		}
+
+		if ( state.shares.length ) {
+			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Shared links' ) );
+			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
+				state.shares.map( function ( sh ) {
+					return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
+						openSharedLinkSheet( sh );
+					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, monDay( parseDate( sh.created ) ) + ' ›' ) );
+				} )
+			) );
 		}
 
 		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Help & feedback' ) );
@@ -7129,30 +7224,6 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
 				newsList().slice( 0, 2 ).map( newsItem ),
 				newsList().length > 2 ? h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openWhatsNew }, h( 'span', null, 'All updates' ), h( 'span', null, '›' ) ) : null
-			) );
-		}
-
-		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Your peptides & medications' ) );
-		var list = protocols();
-		wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
-			list.length ? list.map( function ( p ) {
-				return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
-					openProtocolSheet( p );
-				} },
-					h( 'span', null, h( 'span', { style: { display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: protocolColor( p ), marginRight: '8px' } } ), p.compound ),
-					h( 'span', null, p.paused ? 'Paused' : amountLabel( doseOn( p, todayStr() ), p.unit, p ) + ' · ' + scheduleLabel( p ) )
-				);
-			} ) : h( 'p', { class: 'ypt-list-row ypt-muted' }, 'None yet.' )
-		) );
-
-		if ( state.shares.length ) {
-			wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Shared links' ) );
-			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' },
-				state.shares.map( function ( sh ) {
-					return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
-						openSharedLinkSheet( sh );
-					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, monDay( parseDate( sh.created ) ) + ' ›' ) );
-				} )
 			) );
 		}
 
@@ -12559,7 +12630,7 @@
 			}
 		}
 
-		wrap.appendChild( h( 'div', { class: 'ypt-calc-modes', role: 'group', 'aria-label': 'What you’re measuring' }, CALC_MODES.map( function ( m ) {
+		wrap.appendChild( scrollFade( h( 'div', { class: 'ypt-calc-modes', role: 'group', 'aria-label': 'What you’re measuring' }, CALC_MODES.map( function ( m ) {
 			return h( 'button', { type: 'button', class: 'ypt-calc-mode', 'aria-pressed': c.mode === m[ 0 ] ? 'true' : 'false', onclick: function () {
 				if ( c.mode === m[ 0 ] ) {
 					return;
@@ -12570,7 +12641,7 @@
 				c.compound = '';
 				render();
 			} }, m[ 1 ] );
-		} ) ) );
+		} ) ) ) );
 
 		var mine = guest ? [] : vials( false );
 		if ( mine.length ) {

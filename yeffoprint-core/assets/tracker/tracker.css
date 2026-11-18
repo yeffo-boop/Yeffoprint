@@ -1782,6 +1782,19 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-help__ic--camera { background: var(--ypt-violet-soft); color: #6A3DE8; }
 .ypt-help__ic--food { background: var(--ypt-info-soft); color: var(--ypt-cyan-deep); }
 .ypt-help__ic--feel { background: var(--ypt-soft); color: var(--ypt-charcoal); }
+.ypt-help__ic--goal { background: var(--ypt-ok-soft); color: var(--ypt-ok); }
+.ypt-help__ic--barcode { background: var(--ypt-info-soft); color: var(--ypt-cyan-deep); }
+
+/* + menu: tiles, two across, so everything fits without scrolling. */
+.ypt-addgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ypt-addtile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 0; padding: 12px; border: 1px solid var(--ypt-line); border-radius: 16px; background: var(--ypt-card); color: var(--ypt-ink); font: inherit; text-align: left; cursor: pointer; }
+.ypt-addtile:active { transform: scale( .98 ); }
+.ypt-addtile .ypt-help__ic { margin-bottom: 4px; }
+.ypt-addtile--wide { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; }
+.ypt-addtile--wide .ypt-help__ic { grid-row: span 2; margin: 0; }
+.ypt-addtile b { font-size: 14px; line-height: 1.25; }
+.ypt-addtile > span:last-child { font-size: 12px; line-height: 1.3; color: var(--ypt-mute); }
+@media (hover: hover) { .ypt-addtile:hover { border-color: var(--ypt-ink); } }
 .ypt-help__text { flex: 1; min-width: 0; }
 .ypt-help__text b { display: block; font-size: 15px; }
 .ypt-help__text span { font-size: 13px; color: var(--ypt-mute); }
@@ -2018,13 +2031,13 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-chart .g-line { fill: none; stroke: var(--ypt-cyan); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .ypt-chart .g-dot { fill: var(--ypt-card); stroke: var(--ypt-cyan); stroke-width: 2; }
 .ypt-chart .g-dot.is-last { fill: var(--ypt-cyan); }
-.ypt-chart .g-last { font-size: 11px; font-weight: 700; fill: var(--ypt-ink); text-anchor: middle; }
+.ypt-chart .g-last { font-size: 11px; font-weight: 700; fill: var(--ypt-ink); text-anchor: middle; paint-order: stroke; stroke: var(--ypt-card); stroke-width: 3px; stroke-linejoin: round; }
 .ypt-chart .g-last.is-end { text-anchor: end; }
 .ypt-chart .g-empty { font-size: 12px; fill: var(--ypt-mute); text-anchor: middle; }
 .ypt-chart .g-step { stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
 .ypt-chart .g-step-label { font-size: 9px; font-weight: 700; }
 .ypt-chart .g-lane { stroke: var(--ypt-line); stroke-width: 1; }
-.ypt-chart .g-dose { font-size: 8px; fill: var(--ypt-mute); }
+.ypt-chart .g-dose { font-size: 9px; fill: var(--ypt-mute); }
 .ypt-chart .g-lane-label { font-size: 9px; font-weight: 600; }
 .ypt-chart .g-band { fill: var(--ypt-ok); opacity: 0.1; }
 
@@ -2126,6 +2139,9 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 	scrollbar-width: none;
 }
 .ypt-calc-modes::-webkit-scrollbar { display: none; }
+.ypt-calc-modes.is-more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
+.ypt-calc-modes.is-more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); }
+.ypt-calc-modes.is-more-left.is-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 
 .ypt-calc-mode {
 	flex: none;
@@ -2343,3 +2359,18 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-import__preview { margin: 6px 0 8px; padding: 10px 12px; border-radius: 12px; background: var(--ypt-soft, var(--ypt-line)); }
 .ypt-import__sum { margin: 0; font-weight: 600; }
 .ypt-import__sample { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ypt-mute); }
+
+/* Me › Settings: one card, a row per setting. */
+.ypt-settings { display: flex; flex-direction: column; gap: 10px; }
+.ypt-setrow { display: flex; align-items: center; gap: 12px; }
+.ypt-setrow__label { flex: 0 0 92px; font-weight: 600; font-size: 14px; }
+.ypt-setrow > :last-child { flex: 1; min-width: 0; }
+@media (max-width: 359px) { .ypt-setrow { flex-direction: column; align-items: stretch; gap: 6px; } .ypt-setrow__label { flex: none; } }
+
+/* Today: turn on reminders. */
+.ypt-remind-banner { align-items: flex-start; }
+.ypt-remind-banner__ic { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--ypt-card); color: var(--ypt-cyan-deep); }
+.ypt-remind-banner__ic svg { width: 18px; height: 18px; }
+
+/* Empty cards with two buttons. */
+.ypt-empty__actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
