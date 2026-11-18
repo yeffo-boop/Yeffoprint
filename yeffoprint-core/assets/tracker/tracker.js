@@ -2105,6 +2105,10 @@
 				row( 'scale', 'Weight & measurements', 'Adds to Progress', function () {
 					openProgressSheet( null );
 				} ),
+				row( 'scale', 'Goal weight', weightGoal() ? 'See or change your goal' : 'Set a goal, or switch to maintenance', function () {
+					go( 'progress' );
+					openGoalSheet();
+				} ),
 				row( 'camera', 'Progress photo', 'Encrypted, only you can see it', function () {
 					openProgressSheet( null, { photo: true } );
 				} ),
@@ -3691,6 +3695,8 @@
 				logBtn,
 				h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '12px', marginBottom: '0' } }, 'Photos are encrypted like everything else here. Only you can see them.' )
 			) );
+			// A goal can be set before the first weigh-in.
+			wrap.appendChild( goalCard() );
 			return wrap;
 		}
 
@@ -3724,9 +3730,8 @@
 		}
 		head.appendChild( logBtn );
 		wrap.appendChild( head );
-		if ( key === 'weight' ) {
-			wrap.appendChild( goalCard() );
-		}
+		// The goal card stays put whichever measurement is charted, so it's easy to find.
+		wrap.appendChild( goalCard() );
 
 		if ( metrics.length > 1 ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-chips', style: { margin: '2px 0 10px' } }, metrics.map( function ( k ) {
