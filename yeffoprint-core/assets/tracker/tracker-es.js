@@ -11,6 +11,8 @@
 	window.YPT_I18N = window.YPT_I18N || {};
 	window.YPT_I18N.es = {
 	dict: {
+	 "See or change your goal": "Ver o cambiar tu meta",
+	 "Set a goal, or switch to maintenance": "Fija una meta o cambia a mantenimiento",
 	 "% fat": "% grasa",
 	 "% there": "% logrado",
 	 "(Home Screen)": "(pantalla de inicio)",
