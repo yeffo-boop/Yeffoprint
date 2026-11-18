@@ -1155,16 +1155,82 @@
 		return last;
 	}
 
-	/** The spot in the rotation that has rested longest (never-used spots first, in map order). */
-	function nextSite( p, exceptId ) {
-		var last = siteLastUsed( exceptId );
-		var best = null;
-		rotationOf( p ).forEach( function ( s ) {
-			if ( ! best || ( last[ s.id ] || '' ) < ( last[ best.id ] || '' ) ) {
-				best = s;
+	var SORE_TAGS = [ 'Sore injection site', 'Redness or bump' ];
+	var SITE_REST_DAYS = 3;
+
+	/**
+	 * How each spot has reacted over the last 90 days:
+	 * { siteId: { uses, sore } }, where `sore` counts doses tagged with a
+	 * site reaction (sore, red or a bump).
+	 */
+	function siteReactions( exceptId ) {
+		var since = addDays( todayStr(), -90 );
+		var out = {};
+		values( state.records.dose ).forEach( function ( d ) {
+			if ( d.status !== 'taken' || ! d.site || d.id === exceptId || d.date < since ) {
+				return;
+			}
+			var r = out[ d.site ] = out[ d.site ] || { uses: 0, sore: 0 };
+			r.uses++;
+			if ( tagsOf( d ).some( function ( t ) {
+				return SORE_TAGS.some( function ( x ) {
+					return sameCompound( x, t );
+				} );
+			} ) ) {
+				r.sore++;
 			}
 		} );
+		return out;
+	}
+
+	/** A spot that keeps reacting: sore or red at least twice, and at least half the time. */
+	function isSoreSite( r ) {
+		return !! r && r.sore >= 2 && r.sore / r.uses >= 0.5;
+	}
+
+	/**
+	 * The spot in the rotation that has rested longest (never-used spots
+	 * first, in map order). Spots that keep getting sore come last, unless
+	 * every other spot was used in the last couple of days.
+	 */
+	function nextSite( p, exceptId ) {
+		var last = siteLastUsed( exceptId );
+		var react = siteReactions( exceptId );
+		function pick( list ) {
+			var best = null;
+			list.forEach( function ( s ) {
+				if ( ! best || ( last[ s.id ] || '' ) < ( last[ best.id ] || '' ) ) {
+					best = s;
+				}
+			} );
+			return best;
+		}
+		var all = rotationOf( p );
+		var calm = all.filter( function ( s ) {
+			return ! isSoreSite( react[ s.id ] );
+		} );
+		var best = pick( calm );
+		if ( ! best || siteHeat( last[ best.id ] ) === 'recent' ) {
+			best = pick( all );
+		}
 		return best ? best.id : '';
+	}
+
+	/**
+	 * Heads-ups for using a spot: used too recently, or it keeps getting
+	 * sore. Returns a list of sentences (empty when the spot is fine).
+	 */
+	function siteWarnings( id, last, react, suggested ) {
+		var out = [];
+		var n = last[ id ] ? daysBetween( last[ id ], todayStr() ) : null;
+		if ( n != null && n < SITE_REST_DAYS ) {
+			out.push( ( n <= 0 ? 'You already used this spot today.' : n === 1 ? 'You used this spot yesterday.' : 'You used this spot ' + n + ' days ago.' ) + ' Spots heal better with ' + SITE_REST_DAYS + '+ days of rest' + ( suggested && suggested !== id ? '. ' + siteLabel( suggested ) + ' has rested longest.' : '.' ) );
+		}
+		var r = react[ id ];
+		if ( isSoreSite( r ) ) {
+			out.push( 'Sore or red ' + r.sore + ' of the last ' + r.uses + ' times here. Try another spot for a while.' );
+		}
+		return out;
 	}
 
 	function restedLabel( date ) {
@@ -1255,6 +1321,7 @@
 	function sitePicker( p, current, exceptId, onChange, noDefault ) {
 		var wrap = h( 'div', { class: 'ypt-sitepick' } );
 		var last = siteLastUsed( exceptId );
+		var react = siteReactions( exceptId );
 		var suggested = nextSite( p, exceptId );
 		var sel = current || ( noDefault ? '' : suggested );
 		// A spot logged outside the rotation (or before it changed) still shows.
@@ -1274,6 +1341,11 @@
 			wrap.appendChild( sel ? h( 'p', { class: 'ypt-sitepick__line' },
 				h( 'b', null, siteLabel( sel ) ),
 				' · ' + restedLabel( last[ sel ] ) + ( sel === suggested ? ' · suggested' : '' ) ) : h( 'p', { class: 'ypt-sitepick__line ypt-muted' }, 'Tap the spot you used.' ) );
+			if ( sel && ! noDefault ) {
+				siteWarnings( sel, last, react, suggested ).forEach( function ( w ) {
+					wrap.appendChild( h( 'p', { class: 'ypt-sitepick__warn', role: 'status' }, w ) );
+				} );
+			}
 			wrap.appendChild( mapLegend() );
 		}
 		draw();
@@ -3280,6 +3352,172 @@
 		openSheet( 'Progress photos', 'Only you can see these', [ box ] );
 	}
 
+	/* ---------- Goal weight and maintenance ----------
+	 * settings.me.goal = { weight, unit:'lb'|'kg', set:'YYYY-MM-DD',
+	 *   start: weight when the goal was set (same unit),
+	 *   maintain: null | { since:'YYYY-MM-DD', band: ± in `unit` } }
+	 * Losing or gaining is read from start vs goal. Once the latest
+	 * weigh-in reaches the goal the customer can switch to maintenance,
+	 * which keeps a range around the goal instead of a finish line.
+	 */
+	function weightGoal() {
+		var g = ( state.records.settings.me || {} ).goal;
+		return g && +g.weight > 0 ? g : null;
+	}
+
+	function saveGoal( g ) {
+		put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { goal: g } ) );
+	}
+
+	/** The goal in the customer's units: { goal, start, band, losing, maintain }. */
+	function goalInUnits( g ) {
+		var u = g.unit === 'kg' ? 'kg' : 'lb';
+		var goal = convert( +g.weight, u, weightUnit() );
+		var start = +g.start > 0 ? convert( +g.start, u, weightUnit() ) : null;
+		return {
+			goal: goal,
+			start: start,
+			losing: start == null || start >= goal,
+			maintain: g.maintain || null,
+			band: g.maintain ? convert( +g.maintain.band > 0 ? +g.maintain.band : u === 'kg' ? 1.5 : 3, u, weightUnit() ) : 0,
+		};
+	}
+
+	function latestWeight() {
+		var w = progressEntries().filter( function ( e ) {
+			return metricValue( e, 'weight' ) != null;
+		} );
+		return w.length ? w[ w.length - 1 ] : null;
+	}
+
+	function goalCard() {
+		var g = weightGoal();
+		var last = latestWeight();
+		var card = h( 'div', { class: 'ypt-card ypt-goal' } );
+		if ( ! g ) {
+			card.appendChild( h( 'button', { type: 'button', class: 'ypt-list-row ypt-goal__set', onclick: function () {
+				openGoalSheet();
+			} }, h( 'span', null, h( 'b', null, 'Set a goal weight' ), h( 'span', { class: 'ypt-muted ypt-small ypt-prog-row__sub' }, 'See how far you’ve come and how far to go.' ) ), h( 'span', null, '›' ) ) );
+			return card;
+		}
+		var x = goalInUnits( g );
+		var now = last ? metricValue( last, 'weight' ) : null;
+		var editBtn = h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
+			openGoalSheet();
+		} }, 'Edit' );
+		if ( x.maintain ) {
+			var lo = x.goal - x.band;
+			var hi = x.goal + x.band;
+			var since = x.maintain.since || g.set;
+			var recent = progressEntries().filter( function ( e ) {
+				return e.date >= since && metricValue( e, 'weight' ) != null;
+			} );
+			var inRange = recent.filter( function ( e ) {
+				var v = metricValue( e, 'weight' );
+				return v >= lo - 0.05 && v <= hi + 0.05;
+			} ).length;
+			var status = now == null ? 'Log your weight to check your range.' : now > hi + 0.05 ? fmtMetric( now - hi, 'weight' ) + ' above your range' : now < lo - 0.05 ? fmtMetric( lo - now, 'weight' ) + ' below your range' : 'In your range';
+			card.appendChild( h( 'div', { class: 'ypt-goal__head' },
+				h( 'div', null,
+					h( 'div', { class: 'ypt-eyebrow' }, 'Maintenance · since ' + fmtDay( since ).replace( /^\w+, /, '' ) ),
+					h( 'b', null, 'Keep between ' + fmtNum( lo, 1 ) + ' and ' + fmtMetric( hi, 'weight' ) )
+				), editBtn ) );
+			card.appendChild( h( 'p', { class: 'ypt-goal__status' + ( status === 'In your range' ? ' is-good' : now == null ? '' : ' is-warn' ) }, status ) );
+			if ( recent.length ) {
+				card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '4px 0 0' } }, 'In range at ' + inRange + ' of ' + recent.length + ' weigh-in' + ( recent.length === 1 ? '' : 's' ) + ' since you started maintenance.' ) );
+			}
+			return card;
+		}
+		var reached = now != null && ( x.losing ? now <= x.goal + 0.05 : now >= x.goal - 0.05 );
+		var total = x.start != null ? Math.abs( x.start - x.goal ) : 0;
+		var done = x.start != null && now != null ? ( x.losing ? x.start - now : now - x.start ) : 0;
+		var pct = reached ? 100 : total > 0 ? Math.max( 0, Math.min( 100, ( done / total ) * 100 ) ) : 0;
+		card.appendChild( h( 'div', { class: 'ypt-goal__head' },
+			h( 'div', null,
+				h( 'div', { class: 'ypt-eyebrow' }, 'Goal' ),
+				h( 'b', null, fmtMetric( x.goal, 'weight' ) + ( reached ? ' · reached' : now != null ? ' · ' + fmtMetric( Math.abs( now - x.goal ), 'weight' ) + ' to go' : '' ) )
+			), editBtn ) );
+		card.appendChild( h( 'div', { class: 'ypt-bar ypt-goal__bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String( Math.round( pct ) ), 'aria-label': 'Progress to goal' }, h( 'i', { style: { width: pct + '%' } } ) ) );
+		if ( x.start != null && ! reached ) {
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } },
+				( done > 0.05 ? fmtMetric( done, 'weight' ) + ( x.losing ? ' down' : ' up' ) + ' since ' + fmtDay( g.set ).replace( /^\w+, /, '' ) : 'Started at ' + fmtMetric( x.start, 'weight' ) + ' on ' + fmtDay( g.set ).replace( /^\w+, /, '' ) ) + ' · ' + Math.round( pct ) + '% there' ) );
+		}
+		if ( reached ) {
+			card.appendChild( h( 'p', { class: 'ypt-goal__status is-good' }, 'You reached your goal. Nice work!' ) );
+			card.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', style: { marginTop: '8px' }, onclick: function () {
+				saveGoal( Object.assign( {}, g, { maintain: { since: todayStr(), band: g.unit === 'kg' ? 1.5 : 3 } } ) );
+				toast( 'Maintenance started' );
+			} }, 'Start maintenance' ) );
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } }, 'Maintenance keeps a range around your goal, so you can see when your weight drifts.' ) );
+		}
+		return card;
+	}
+
+	function openGoalSheet() {
+		var g = weightGoal();
+		var last = latestWeight();
+		var unit = g ? ( g.unit === 'kg' ? 'kg' : 'lb' ) : weightUnit();
+		var val = g ? String( g.weight ) : '';
+		var maintain = !! ( g && g.maintain );
+		var band = g && g.maintain && +g.maintain.band > 0 ? String( g.maintain.band ) : unit === 'kg' ? '1.5' : '3';
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var bandBox = h( 'div', { hidden: ! maintain } );
+		var unitLabel = h( 'span', null, unit );
+		append( bandBox, [ field( 'Stay within (±)', h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+			h( 'input', { class: 'ypt-input', id: 'ypt-goal-band', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: band, oninput: function ( ev ) {
+				band = ev.target.value;
+			} } ), h( 'span', { class: 'ypt-shrink ypt-muted' }, unitLabel ) ), 'How far your weight can move either way before we flag it.', 'ypt-goal-band' ) ] );
+		var body = [
+			field( 'Goal weight', h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+				h( 'input', { class: 'ypt-input', id: 'ypt-goal-w', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: val, placeholder: last ? fmtNum( metricValue( last, 'weight' ), 0 ) : '', oninput: function ( ev ) {
+					val = ev.target.value;
+				} } ),
+				h( 'div', { class: 'ypt-shrink' }, seg( [ 'lb', 'kg' ], unit, function ( u ) {
+					unit = u;
+					unitLabel.textContent = u;
+				} ) )
+			), last ? 'You’re at ' + fmtMetric( metricValue( last, 'weight' ), 'weight' ) + ' (' + fmtDay( last.date ).replace( /^\w+, /, '' ) + ').' : 'Log a weigh-in too, so we can show how far to go.', 'ypt-goal-w' ),
+			h( 'label', { class: 'ypt-goal__check' }, h( 'input', { type: 'checkbox', checked: maintain, onchange: function ( ev ) {
+				maintain = ev.target.checked;
+				bandBox.hidden = ! maintain;
+			} } ), h( 'span', null, 'I’m maintaining this weight' ) ),
+			bandBox,
+			err,
+		];
+		if ( g ) {
+			body.push( h( 'button', { type: 'button', class: 'ypt-link ypt-goal__remove', onclick: function () {
+				closeSheet();
+				saveGoal( null );
+				toast( 'Goal removed' );
+			} }, 'Remove goal' ) );
+		}
+		openSheet( g ? 'Edit goal' : 'Goal weight', 'Progress', body, h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			var w = parseFloat( val );
+			if ( ! ( w > 0 ) || w > 2000 ) {
+				err.textContent = 'Enter your goal weight.';
+				err.hidden = false;
+				return;
+			}
+			var b = parseFloat( band );
+			var startW = g && g.unit === unit && +g.start > 0 ? +g.start : last ? Math.round( convert( +last.weight, last.wUnit || 'lb', unit ) * 10 ) / 10 : 0;
+			var changed = ! g || Math.abs( convert( +g.weight, g.unit || 'lb', unit ) - w ) > 0.05;
+			var out = {
+				weight: Math.round( w * 10 ) / 10,
+				unit: unit,
+				// A new target restarts the "since" counting from today's weight.
+				set: g && ! changed ? g.set : todayStr(),
+				start: changed && last ? Math.round( convert( +last.weight, last.wUnit || 'lb', unit ) * 10 ) / 10 : startW,
+				maintain: maintain ? { since: g && g.maintain ? g.maintain.since : todayStr(), band: b > 0 ? Math.round( b * 10 ) / 10 : unit === 'kg' ? 1.5 : 3 } : null,
+			};
+			closeSheet();
+			saveGoal( out );
+			if ( ! ( state.records.settings.me || {} ).units ) {
+				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { units: unit === 'kg' ? 'metric' : 'us' } ) );
+			}
+			toast( g ? 'Goal updated' : 'Goal set' );
+		} }, 'Save' ) );
+	}
+
 	/* ---------- The Progress view ---------- */
 
 	function renderProgress() {
@@ -3328,6 +3566,9 @@
 		}
 		head.appendChild( logBtn );
 		wrap.appendChild( head );
+		if ( key === 'weight' ) {
+			wrap.appendChild( goalCard() );
+		}
 
 		if ( metrics.length > 1 ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-chips', style: { margin: '2px 0 10px' } }, metrics.map( function ( k ) {
@@ -3345,7 +3586,7 @@
 				render();
 			} }, r[ 1 ] );
 		} ) ) );
-		chartCard.appendChild( progressChart( entries, key, from, today ) );
+		chartCard.appendChild( progressChart( entries, key, from, today, key === 'weight' && weightGoal() ? { goal: goalInUnits( weightGoal() ) } : null ) );
 		wrap.appendChild( chartCard );
 
 		// Then & now: the first and latest photos side by side.
@@ -3476,6 +3717,11 @@
 				return v != null;
 			} ) );
 		}
+		// A goal weight (and its maintenance range) counts too, so the line to it shows.
+		var goal = opts.goal || null;
+		if ( goal && pts.length ) {
+			vals = vals.concat( [ goal.goal - goal.band, goal.goal + goal.band ] );
+		}
 		var lo = vals.length ? Math.min.apply( null, vals ) : 0;
 		var hi = vals.length ? Math.max.apply( null, vals ) : 1;
 		var pad = opts.pts ? Math.max( ( hi - lo ) * 0.15, Math.abs( hi ) * 0.05, 0.05 ) : Math.max( ( hi - lo ) * 0.15, key === 'weight' ? 1 : 0.5 );
@@ -3483,6 +3729,14 @@
 		hi += pad;
 		function yOf( v ) {
 			return TOP + CH - ( ( v - lo ) / ( hi - lo ) ) * CH;
+		}
+		if ( goal && pts.length ) {
+			if ( goal.band ) {
+				var gTop = yOf( goal.goal + goal.band );
+				svg( 'rect', { x: L, y: gTop, width: plotW, height: Math.max( 1, yOf( goal.goal - goal.band ) - gTop ), class: 'g-band' }, s );
+			}
+			svg( 'line', { x1: L, x2: W - R, y1: yOf( goal.goal ), y2: yOf( goal.goal ), class: 'g-goal' }, s );
+			svg( 'text', { x: W - R - 2, y: yOf( goal.goal ) - 4, class: 'g-goal-label' }, s ).textContent = 'Goal ' + fmtNum( goal.goal, 1 );
 		}
 		if ( band ) {
 			var bTop = yOf( band.high != null ? band.high : hi );
@@ -4054,9 +4308,63 @@
 			} } ) );
 			card.appendChild( line );
 			card.appendChild( mapLegend() );
+			var tips = siteInsights( last );
+			if ( tips.length ) {
+				card.appendChild( h( 'div', { class: 'ypt-siteinsights' },
+					h( 'div', { class: 'ypt-eyebrow' }, 'Site tips' ),
+					h( 'ul', null, tips.map( function ( t ) {
+						return h( 'li', { class: t.warn ? 'is-warn' : '' }, t.text );
+					} ) )
+				) );
+			}
 		}
 		draw( '' );
 		return card;
+	}
+
+	/**
+	 * A few plain lines about the customer's spots over the last 90 days:
+	 * spots that keep getting sore, a spot carrying most of the load, and
+	 * spots in the rotation that never get used.
+	 */
+	function siteInsights( last ) {
+		var react = siteReactions();
+		var tips = [];
+		var total = 0;
+		Object.keys( react ).forEach( function ( id ) {
+			total += react[ id ].uses;
+		} );
+		Object.keys( react ).sort( function ( a, b ) {
+			return react[ b ].sore - react[ a ].sore;
+		} ).forEach( function ( id ) {
+			if ( isSoreSite( react[ id ] ) ) {
+				tips.push( { warn: true, text: siteLabel( id ) + ': sore or red ' + react[ id ].sore + ' of ' + react[ id ].uses + ' times. We’ll suggest it last for now.' } );
+			}
+		} );
+		var top = Object.keys( react ).sort( function ( a, b ) {
+			return react[ b ].uses - react[ a ].uses;
+		} )[ 0 ];
+		var spots = Object.keys( react ).length;
+		if ( top && total >= 6 && spots > 1 && react[ top ].uses / total >= 0.4 ) {
+			tips.push( { warn: false, text: Math.round( ( react[ top ].uses / total ) * 100 ) + '% of your shots went in ' + siteLabel( top ).toLowerCase() + '. Spreading them out helps avoid lumps.' } );
+		}
+		var unused = [];
+		protocols().forEach( function ( p ) {
+			if ( ! tracksSites( p ) ) {
+				return;
+			}
+			rotationOf( p ).forEach( function ( x ) {
+				if ( ! last[ x.id ] && unused.indexOf( x.id ) === -1 ) {
+					unused.push( x.id );
+				}
+			} );
+		} );
+		if ( total >= 6 && unused.length && unused.length <= 4 ) {
+			tips.push( { warn: false, text: 'Not used yet: ' + unused.map( function ( id ) {
+				return siteLabel( id ).toLowerCase();
+			} ).join( ', ' ) + '.' } );
+		}
+		return tips;
 	}
 
 	function exportCsv() {

@@ -2292,3 +2292,26 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 @media (prefers-reduced-motion: reduce) {
 	.ypt-scan__frame i { animation: none; }
 }
+
+/* Goal weight and maintenance (Progress, weight chart) */
+.ypt-goal { padding-top: 12px; padding-bottom: 12px; }
+.ypt-goal__set { width: 100%; padding: 2px 0; border: 0; }
+.ypt-goal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ypt-goal__head b { display: block; font-size: 16px; margin-top: 2px; }
+.ypt-goal__bar { margin: 10px 0 0; }
+.ypt-goal__bar i { background: var(--ypt-ok); }
+.ypt-goal__status { margin: 8px 0 0; font-weight: 600; font-size: 14px; }
+.ypt-goal__status.is-good { color: var(--ypt-ok); }
+.ypt-goal__status.is-warn { color: var(--ypt-warn, #B26A00); }
+.ypt-goal__check { display: flex; gap: 10px; align-items: center; padding: 10px 0; font-size: 15px; }
+.ypt-goal__check input { width: 20px; height: 20px; flex: none; }
+.ypt-goal__remove { margin-top: 14px; color: var(--ypt-danger); }
+.ypt-chart .g-goal { stroke: var(--ypt-ok); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.ypt-chart .g-goal-label { font-size: 9px; font-weight: 700; fill: var(--ypt-ok); text-anchor: end; }
+
+/* Injection site heads-ups and tips */
+.ypt-sitepick__warn { margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--ypt-warn-soft, rgba(178, 107, 0, 0.1)); color: var(--ypt-ink); font-size: 13px; line-height: 1.4; }
+.ypt-siteinsights { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ypt-line); }
+.ypt-siteinsights ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+.ypt-siteinsights li + li { margin-top: 4px; }
+.ypt-siteinsights li.is-warn { color: var(--ypt-warn); }
