@@ -15,6 +15,30 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-11-18d',
+		'date'  => '2026-11-18',
+		'title' => 'YeffoHealth en español',
+		'text'  => 'YeffoHealth now speaks Spanish. It switches on by itself when your phone is set to Spanish, or pick it under Me › Language.',
+	],
+	[
+		'id'    => '2026-11-18c',
+		'date'  => '2026-11-18',
+		'title' => 'Back up, restore and import',
+		'text'  => 'Me › Backup, restore & import saves everything to one file and brings it back later. Coming from another tracker app? Pick its CSV export and your past doses and weigh-ins come in too.',
+	],
+	[
+		'id'    => '2026-11-18b',
+		'date'  => '2026-11-18',
+		'title' => 'Smarter injection sites',
+		'text'  => 'The spot picker now warns you when a spot was used in the last couple of days or keeps getting sore, and suggests those spots last. History shows tips like a spot that’s carrying most of your shots.',
+	],
+	[
+		'id'    => '2026-11-18a',
+		'date'  => '2026-11-18',
+		'title' => 'Goal weight and maintenance',
+		'text'  => 'Set a goal weight on Progress to see how far you’ve come and how far to go, with your goal on the chart. Once you reach it, switch to maintenance to keep a range around it and see when your weight drifts.',
+	],
+	[
 		'id'    => '2026-11-15a',
 		'date'  => '2026-11-15',
 		'title' => 'Tabs on the side on iPhone Duo',

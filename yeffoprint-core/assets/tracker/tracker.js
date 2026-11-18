@@ -171,6 +171,154 @@
 		return node;
 	}
 
+
+	/* =========================================================
+	 * Language (Me › Language): English or Spanish
+	 *
+	 * The app is written in English. In Spanish, tracker-es.js (loaded
+	 * just before this file) supplies window.YPT_I18N.es: `dict` (whole
+	 * English phrases → Spanish), `svg` (the same for chart and body map
+	 * labels, where a word can mean something else) and `patterns`
+	 * ([ RegExp, template ] for phrases with numbers or names in them;
+	 * $1 is a group as-is, {1} a group translated too). A
+	 * MutationObserver swaps every text node and label attribute the app
+	 * adds, so the rest of the code doesn't need to know. Customer text
+	 * (names, notes) isn't in the dictionary, so it stays as typed.
+	 * The choice is per device, like the theme.
+	 * ======================================================= */
+	var LANG_KEY = 'ypt-lang';
+	var LANGS = [ [ 'auto', 'Automatic' ], [ 'en', 'English' ], [ 'es', 'Español' ] ];
+
+	function langPref() {
+		var v = loadJSON( LANG_KEY, 'auto' );
+		return v === 'en' || v === 'es' ? v : 'auto';
+	}
+
+	function currentLang() {
+		var p = langPref();
+		if ( p === 'auto' ) {
+			p = /^es\b/i.test( navigator.language || '' ) ? 'es' : 'en';
+		}
+		return p === 'es' && window.YPT_I18N && window.YPT_I18N.es ? 'es' : 'en';
+	}
+
+	var LANG = currentLang();
+	var I18N = LANG === 'es' ? window.YPT_I18N.es : null;
+	var trCache = {};
+	var I18N_ATTRS = [ 'placeholder', 'aria-label', 'title', 'alt' ];
+
+	/** `s` in the app's language (unchanged in English, or when there's no translation). */
+	function tr( s ) {
+		if ( ! I18N || ! s || ! /[A-Za-z]/.test( s ) ) {
+			return s;
+		}
+		if ( Object.prototype.hasOwnProperty.call( trCache, s ) ) {
+			return trCache[ s ];
+		}
+		var m = /^(\s*)([\s\S]*?)(\s*)$/.exec( s );
+		var core = m[ 2 ];
+		var out = Object.prototype.hasOwnProperty.call( I18N.dict, core ) ? I18N.dict[ core ] : null;
+		if ( out == null ) {
+			for ( var i = 0; i < I18N.patterns.length && out == null; i++ ) {
+				var hit = I18N.patterns[ i ][ 0 ].exec( core );
+				if ( hit ) {
+					out = fillTemplate( I18N.patterns[ i ][ 1 ], hit );
+				}
+			}
+		}
+		// Labels built from parts ("250 mcg · subcutaneous · daily", "Belly, lower left, used 3 days ago"): each part on its own.
+		if ( out == null ) {
+			out = trParts( core, ' · ' ) || trParts( core, ', ' ) || trParts( core, ' / ' );
+		}
+		// "10 units", "3 doses taken": the number stays, the words get translated.
+		if ( out == null ) {
+			var num = /^([\d.,]+\+?) (.+)$/.exec( core );
+			if ( num && tr( num[ 2 ] ) !== num[ 2 ] ) {
+				out = num[ 1 ] + ' ' + tr( num[ 2 ] );
+			}
+		}
+		var res = out == null ? s : m[ 1 ] + out + m[ 3 ];
+		trCache[ s ] = res;
+		return res;
+	}
+
+	/** `core` split on `sep` with each part translated, or null when none of the parts has a translation. */
+	function trParts( core, sep ) {
+		if ( core.indexOf( sep ) === -1 ) {
+			return null;
+		}
+		var changed = false;
+		var parts = core.split( sep ).map( function ( x ) {
+			var t = tr( x );
+			changed = changed || t !== x;
+			return t;
+		} );
+		return changed ? parts.join( sep ) : null;
+	}
+
+	function fillTemplate( tpl, hit ) {
+		if ( typeof tpl === 'function' ) {
+			return tpl( hit, tr );
+		}
+		return tpl.replace( /\{(\d)\}/g, function ( x, n ) {
+			return tr( hit[ +n ] || '' );
+		} ).replace( /\$(\d)/g, function ( x, n ) {
+			return hit[ +n ] || '';
+		} );
+	}
+
+	function translateAttrs( el ) {
+		I18N_ATTRS.forEach( function ( a ) {
+			var v = el.getAttribute( a );
+			if ( v ) {
+				var t = tr( v );
+				if ( t !== v ) {
+					el.setAttribute( a, t );
+				}
+			}
+		} );
+	}
+
+	function translateNode( n ) {
+		if ( n.nodeType === 3 ) {
+			var v = n.nodeValue;
+			var parent = n.parentNode;
+			var t = parent && parent.namespaceURI === SVG_NS && Object.prototype.hasOwnProperty.call( I18N.svg, v.trim() ) ? I18N.svg[ v.trim() ] : tr( v );
+			if ( t !== v ) {
+				n.nodeValue = t;
+			}
+			return;
+		}
+		if ( n.nodeType !== 1 || n.hasAttribute( 'data-noi18n' ) || n.tagName === 'SCRIPT' || n.tagName === 'STYLE' ) {
+			return;
+		}
+		translateAttrs( n );
+		// A textarea's text is what the customer typed: only its placeholder.
+		if ( n.tagName === 'TEXTAREA' ) {
+			return;
+		}
+		for ( var c = n.firstChild; c; c = c.nextSibling ) {
+			translateNode( c );
+		}
+	}
+
+	if ( I18N ) {
+		document.documentElement.lang = 'es';
+		DOW = [ 'D', 'L', 'M', 'M', 'J', 'V', 'S' ];
+		DOW_LONG = [ 'dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb' ];
+		MONTHS = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre' ];
+		new MutationObserver( function ( muts ) {
+			muts.forEach( function ( mu ) {
+				if ( mu.type === 'attributes' ) {
+					translateAttrs( mu.target );
+				} else {
+					[].forEach.call( mu.addedNodes, translateNode );
+				}
+			} );
+		} ).observe( document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: I18N_ATTRS } );
+		translateNode( document.body );
+	}
+
 	var ICONS = {
 		today: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M8 13l2.5 2.5L16 12',
 		history: 'M4 19V9M10 19V5M16 19v-7M22 19H2',
@@ -333,7 +481,7 @@
 		}
 		var p = t.split( ':' );
 		var hr = +p[ 0 ];
-		return ( ( hr % 12 ) || 12 ) + ':' + p[ 1 ] + ' ' + ( hr < 12 ? 'AM' : 'PM' );
+		return ( ( hr % 12 ) || 12 ) + ':' + p[ 1 ] + ' ' + ( I18N ? ( hr < 12 ? 'a. m.' : 'p. m.' ) : hr < 12 ? 'AM' : 'PM' );
 	}
 
 	function fmtIsoTime( iso ) {
@@ -343,7 +491,17 @@
 
 	function fmtDay( s, withYear ) {
 		var d = parseDate( s );
-		return DOW_LONG[ d.getDay() ] + ', ' + MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate() + ( withYear ? ', ' + d.getFullYear() : '' );
+		if ( I18N ) {
+			// "lun, 3 nov" (and ", 2026"): Spanish puts the day first.
+			return DOW_LONG[ d.getDay() ] + ', ' + d.getDate() + ' ' + MONTHS[ d.getMonth() ].slice( 0, 3 ).toLowerCase() + ( withYear ? ', ' + d.getFullYear() : '' );
+		}
+		return DOW_LONG[ d.getDay() ] + ', ' + monDay( d ) + ( withYear ? ', ' + d.getFullYear() : '' );
+	}
+
+	/** "Nov 3" (Spanish "3 nov"), for chart axes and short lists. */
+	function monDay( d ) {
+		var mon = MONTHS[ d.getMonth() ].slice( 0, 3 );
+		return I18N ? d.getDate() + ' ' + mon.toLowerCase() : mon + ' ' + d.getDate();
 	}
 
 	function fmtNum( n, digits ) {
@@ -559,7 +717,7 @@
 		if ( ! ph || ph.on ) {
 			return null;
 		}
-		return { title: p.compound + ': off week ' + ph.week + ' of ' + ph.of + '.', text: 'Back on ' + fmtDay( ph.next ).replace( /^\w+, /, '' ) + ( stepsOf( p ).length ? ' at ' + amountLabel( doseOn( p, ph.next ), p.unit ) : '' ) + '. ' + from };
+		return { title: p.compound + ': off week ' + ph.week + ' of ' + ph.of + '.', text: 'Back on ' + fmtDay( ph.next ).replace( /^[^,]+, /, '' ) + ( stepsOf( p ).length ? ' at ' + amountLabel( doseOn( p, ph.next ), p.unit ) : '' ) + '. ' + from };
 	}
 
 	/**
@@ -1004,7 +1162,7 @@
 		if ( ! info.expires ) {
 			return null;
 		}
-		var on = fmtDay( info.expires ).replace( /^\w+, /, '' );
+		var on = fmtDay( info.expires ).replace( /^[^,]+, /, '' );
 		var n = info.expiresIn;
 		if ( n <= 0 ) {
 			return { tone: 'bad', text: n === 0 ? 'Expires today' : 'Expired ' + on };
@@ -1758,7 +1916,7 @@
 			}
 			ui.day = todayStr();
 			go( 'today' );
-		} }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), h( 'span', null, 'Yeffo', h( 'span', { class: 'ypt-appbar__h' }, 'Health' ) ) );
+		} }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), h( 'span', { 'data-noi18n': '' }, 'Yeffo', h( 'span', { class: 'ypt-appbar__h' }, 'Health' ) ) );
 		if ( guest ) {
 			return h( 'header', { class: 'ypt-appbar' },
 				h( 'div', { class: 'ypt-appbar__inner' },
@@ -2247,7 +2405,7 @@
 			} ).length + 1;
 			var total = plan.end && plan.known ? plan.segments.length + ( v ? 0 : 1 ) : 0;
 			card.appendChild( h( 'div', { class: 'ypt-mixday' },
-				h( 'b', null, 'Mix day. ' ), v ? ( vi.expired && vi.dosesLeft !== 0 ? 'This ' + what + ' expired ' + ( vi.expiresIn === 0 ? 'today' : fmtDay( vi.expires ).replace( /^\w+, /, '' ) ) + '.' : 'This ' + what + ' is used up.' ) : 'Mix a ' + what + ' to see the units for this dose.',
+				h( 'b', null, 'Mix day. ' ), v ? ( vi.expired && vi.dosesLeft !== 0 ? 'This ' + what + ' expired ' + ( vi.expiresIn === 0 ? 'today' : fmtDay( vi.expires ).replace( /^[^,]+, /, '' ) ) + '.' : 'This ' + what + ' is used up.' ) : 'Mix a ' + what + ' to see the units for this dose.',
 				have ? ' You have ' + have + ' on hand.' : ' You have none on hand.',
 				h( 'div', { class: 'ypt-mixday__actions' },
 					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent', onclick: function () {
@@ -2277,7 +2435,7 @@
 				var soon = ! log && info && info.expires && info.expiresIn <= EXPIRY_WARN_DAYS;
 				card.appendChild( h( 'div', { class: 'ypt-draw' + ( soon ? ' ypt-draw--warn' : '' ) },
 					isPen( v ) ? [ log ? 'Dialed ' : 'Dial ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on your pen' ] : [ log ? 'Drew ' : 'Draw ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on a U-100 syringe' ],
-					v ? ' · ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) : '',
+					v ? ' · ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) : '',
 					soon ? ' · expires ' + ( info.expiresIn <= 0 ? 'today' : info.expiresIn === 1 ? 'tomorrow' : 'in ' + info.expiresIn + ' days' ) : '',
 					! log && info && info.dosesLeft === 1 && s.date === todayStr() ? ' · last dose in this ' + what : '',
 					isBlend( v ) ? h( 'span', { class: 'ypt-draw__blend' }, 'Each dose: ' + blendDoseLine( v, units ) ) : null
@@ -2682,10 +2840,10 @@
 		var v = x.v;
 		var what = isPen( v ) ? 'pen' : 'vial';
 		var n = x.info.expiresIn;
-		var when = n < 0 ? 'expired ' + fmtDay( x.info.expires ).replace( /^\w+, /, '' ) : n === 0 ? 'expires today' : n === 1 ? 'expires tomorrow' : 'expires in ' + n + ' days';
+		var when = n < 0 ? 'expired ' + fmtDay( x.info.expires ).replace( /^[^,]+, /, '' ) : n === 0 ? 'expires today' : n === 1 ? 'expires tomorrow' : 'expires in ' + n + ' days';
 		return h( 'div', { class: 'ypt-banner ypt-banner--warn' },
 			h( 'div', null, h( 'b', null, 'Your ' + v.compound + ' ' + what + ' ' + when + '. ' ),
-				'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days.' + ( list.length > 1 ? ' Plus ' + ( list.length - 1 ) + ' more.' : '' ),
+				'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days.' + ( list.length > 1 ? ' Plus ' + ( list.length - 1 ) + ' more.' : '' ),
 				h( 'div', { style: { marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
 					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--white', onclick: function () {
 						openVialSheet( null, { compound: v.compound, kind: what, preset: { kind: v.kind, mode: v.mode, amount: v.amount, water: v.water, conc: v.conc, volume: v.volume, parts: v.parts, blend: v.blend, syringe: v.syringe, goodFor: v.goodFor }, replaces: v.id } );
@@ -2757,7 +2915,7 @@
 
 		var opts = h( 'div', null );
 		if ( Math.abs( diff ) > EASE_STEP ) {
-			opts.appendChild( option( 'ease', 'Ease into ' + city + ' time', 'Shift ' + EASE_STEP / 60 + ' hours a day. On ' + city + ' time by ' + fmtDay( addDays( todayStr(), steps ) ).replace( /^\w+, /, '' ) + '.' ) );
+			opts.appendChild( option( 'ease', 'Ease into ' + city + ' time', 'Shift ' + EASE_STEP / 60 + ' hours a day. On ' + city + ' time by ' + fmtDay( addDays( todayStr(), steps ) ).replace( /^[^,]+, /, '' ) + '.' ) );
 		}
 		opts.appendChild( option( 'switch', 'Switch now', 'Your ' + fmtTime( first ) + ' dose moves to ' + fmtTime( first ) + ' ' + city + ' time, ' + hoursLabel( diff ) + ' ' + ( diff > 0 ? 'earlier' : 'later' ) + ', once.' ) );
 		opts.appendChild( option( 'home', 'Keep ' + homeName + ' time', 'Doses stay at ' + fmtTime( atHere ) + ' here. Good for short trips.' ) );
@@ -2871,7 +3029,7 @@
 
 	function newsItem( n ) {
 		return h( 'div', { class: 'ypt-news' },
-			h( 'div', { class: 'ypt-eyebrow' }, fmtDay( n.date ).replace( /^\w+, /, '' ) ),
+			h( 'div', { class: 'ypt-eyebrow' }, fmtDay( n.date ).replace( /^[^,]+, /, '' ) ),
 			h( 'b', null, n.title ),
 			h( 'p', { class: 'ypt-small' }, n.text ) );
 	}
@@ -3419,7 +3577,7 @@
 			var status = now == null ? 'Log your weight to check your range.' : now > hi + 0.05 ? fmtMetric( now - hi, 'weight' ) + ' above your range' : now < lo - 0.05 ? fmtMetric( lo - now, 'weight' ) + ' below your range' : 'In your range';
 			card.appendChild( h( 'div', { class: 'ypt-goal__head' },
 				h( 'div', null,
-					h( 'div', { class: 'ypt-eyebrow' }, 'Maintenance · since ' + fmtDay( since ).replace( /^\w+, /, '' ) ),
+					h( 'div', { class: 'ypt-eyebrow' }, 'Maintenance · since ' + fmtDay( since ).replace( /^[^,]+, /, '' ) ),
 					h( 'b', null, 'Keep between ' + fmtNum( lo, 1 ) + ' and ' + fmtMetric( hi, 'weight' ) )
 				), editBtn ) );
 			card.appendChild( h( 'p', { class: 'ypt-goal__status' + ( status === 'In your range' ? ' is-good' : now == null ? '' : ' is-warn' ) }, status ) );
@@ -3440,7 +3598,7 @@
 		card.appendChild( h( 'div', { class: 'ypt-bar ypt-goal__bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String( Math.round( pct ) ), 'aria-label': 'Progress to goal' }, h( 'i', { style: { width: pct + '%' } } ) ) );
 		if ( x.start != null && ! reached ) {
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } },
-				( done > 0.05 ? fmtMetric( done, 'weight' ) + ( x.losing ? ' down' : ' up' ) + ' since ' + fmtDay( g.set ).replace( /^\w+, /, '' ) : 'Started at ' + fmtMetric( x.start, 'weight' ) + ' on ' + fmtDay( g.set ).replace( /^\w+, /, '' ) ) + ' · ' + Math.round( pct ) + '% there' ) );
+				( done > 0.05 ? fmtMetric( done, 'weight' ) + ( x.losing ? ' down' : ' up' ) + ' since ' + fmtDay( g.set ).replace( /^[^,]+, /, '' ) : 'Started at ' + fmtMetric( x.start, 'weight' ) + ' on ' + fmtDay( g.set ).replace( /^[^,]+, /, '' ) ) + ' · ' + Math.round( pct ) + '% there' ) );
 		}
 		if ( reached ) {
 			card.appendChild( h( 'p', { class: 'ypt-goal__status is-good' }, 'You reached your goal. Nice work!' ) );
@@ -3476,7 +3634,7 @@
 					unit = u;
 					unitLabel.textContent = u;
 				} ) )
-			), last ? 'You’re at ' + fmtMetric( metricValue( last, 'weight' ), 'weight' ) + ' (' + fmtDay( last.date ).replace( /^\w+, /, '' ) + ').' : 'Log a weigh-in too, so we can show how far to go.', 'ypt-goal-w' ),
+			), last ? 'You’re at ' + fmtMetric( metricValue( last, 'weight' ), 'weight' ) + ' (' + fmtDay( last.date ).replace( /^[^,]+, /, '' ) + ').' : 'Log a weigh-in too, so we can show how far to go.', 'ypt-goal-w' ),
 			h( 'label', { class: 'ypt-goal__check' }, h( 'input', { type: 'checkbox', checked: maintain, onchange: function ( ev ) {
 				maintain = ev.target.checked;
 				bandBox.hidden = ! maintain;
@@ -3556,10 +3714,10 @@
 			var base = inRange.length > 1 ? inRange[ 0 ] : null;
 			var change = base ? lv - metricValue( base, key ) : null;
 			head.appendChild( h( 'div', null,
-				h( 'div', { class: 'ypt-eyebrow' }, metricName( key ) + ' · ' + fmtDay( latest.date ).replace( /^\w+, /, '' ) ),
+				h( 'div', { class: 'ypt-eyebrow' }, metricName( key ) + ' · ' + fmtDay( latest.date ).replace( /^[^,]+, /, '' ) ),
 				h( 'div', { class: 'ypt-prog-head__big' }, fmtMetric( lv, key ) ),
 				change != null ? h( 'div', { class: 'ypt-prog-head__delta' + ( Math.abs( change ) < 0.05 ? '' : change < 0 ? ' is-down' : ' is-up' ) },
-					( change > 0 ? '+' : change < 0 ? '−' : '±' ) + fmtMetric( Math.abs( change ), key ) + ' since ' + fmtDay( base.date ).replace( /^\w+, /, '' ) ) : h( 'div', { class: 'ypt-muted ypt-small' }, 'Log again to see your change.' )
+					( change > 0 ? '+' : change < 0 ? '−' : '±' ) + fmtMetric( Math.abs( change ), key ) + ' since ' + fmtDay( base.date ).replace( /^[^,]+, /, '' ) ) : h( 'div', { class: 'ypt-muted ypt-small' }, 'Log again to see your change.' )
 			) );
 		} else {
 			head.appendChild( h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Progress' ), h( 'div', { class: 'ypt-muted' }, 'No ' + metricName( key ).toLowerCase() + ' logged yet.' ) ) );
@@ -3601,7 +3759,7 @@
 					var w = metricValue( x.entry, 'weight' );
 					return h( 'button', { type: 'button', class: 'ypt-thennow__item', onclick: function () {
 						openPhotoViewer( photos, n ? photos.length - 1 : 0 );
-					} }, photoImg( x.id ), h( 'span', null, h( 'b', null, pair.length > 1 ? ( n ? 'Now' : 'Then' ) : 'First photo' ), ' · ' + fmtDay( x.date ).replace( /^\w+, /, '' ) + ( w != null ? ' · ' + fmtMetric( w, 'weight' ) : '' ) ) );
+					} }, photoImg( x.id ), h( 'span', null, h( 'b', null, pair.length > 1 ? ( n ? 'Now' : 'Then' ) : 'First photo' ), ' · ' + fmtDay( x.date ).replace( /^[^,]+, /, '' ) + ( w != null ? ' · ' + fmtMetric( w, 'weight' ) : '' ) ) );
 				} ) ),
 				photos.length > 2 ? h( 'button', { type: 'button', class: 'ypt-link', style: { marginTop: '10px' }, onclick: function () {
 					openPhotoViewer( photos, photos.length - 1 );
@@ -3632,7 +3790,7 @@
 			return h( 'button', { type: 'button', class: 'ypt-list-row ypt-prog-row', onclick: function () {
 				openProgressSheet( e );
 			} },
-				h( 'span', null, h( 'b', null, fmtDay( e.date ).replace( /^\w+, /, '' ) ), bits.length || e.note ? h( 'span', { class: 'ypt-muted ypt-small ypt-prog-row__sub' }, bits.join( ' · ' ) + ( e.note ? ( bits.length ? ' · ' : '' ) + '“' + e.note + '”' : '' ) ) : null ),
+				h( 'span', null, h( 'b', null, fmtDay( e.date ).replace( /^[^,]+, /, '' ) ), bits.length || e.note ? h( 'span', { class: 'ypt-muted ypt-small ypt-prog-row__sub' }, bits.join( ' · ' ) + ( e.note ? ( bits.length ? ' · ' : '' ) + '“' + e.note + '”' : '' ) ) : null ),
 				h( 'span', { class: 'ypt-prog-row__right' },
 					nPhotos ? h( 'span', { class: 'ypt-prog-row__cam', 'aria-label': nPhotos + ' photo' + ( nPhotos === 1 ? '' : 's' ) }, icon( 'camera' ), String( nPhotos ) ) : null,
 					w != null ? h( 'b', null, fmtMetric( w, 'weight' ) ) : null,
@@ -3736,7 +3894,7 @@
 				svg( 'rect', { x: L, y: gTop, width: plotW, height: Math.max( 1, yOf( goal.goal - goal.band ) - gTop ), class: 'g-band' }, s );
 			}
 			svg( 'line', { x1: L, x2: W - R, y1: yOf( goal.goal ), y2: yOf( goal.goal ), class: 'g-goal' }, s );
-			svg( 'text', { x: W - R - 2, y: yOf( goal.goal ) - 4, class: 'g-goal-label' }, s ).textContent = 'Goal ' + fmtNum( goal.goal, 1 );
+			svg( 'text', { x: W - R - 2, y: yOf( goal.goal ) - 5, class: 'g-goal-label' }, s ).textContent = 'Goal ' + fmtNum( goal.goal, 1 );
 		}
 		if ( band ) {
 			var bTop = yOf( band.high != null ? band.high : hi );
@@ -3749,7 +3907,7 @@
 		}
 		// X labels: start, middle, end.
 		[ from, addDays( from, Math.round( span / 2 ) ), to ].forEach( function ( d, i ) {
-			svg( 'text', { x: xOf( d ), y: TOP + CH + 14, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : i === 2 ? ' is-end' : '' ) }, s ).textContent = MONTHS[ parseDate( d ).getMonth() ].slice( 0, 3 ) + ' ' + parseDate( d ).getDate();
+			svg( 'text', { x: xOf( d ), y: TOP + CH + 14, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : i === 2 ? ' is-end' : '' ) }, s ).textContent = monDay( parseDate( d ) );
 		} );
 
 		// Titration steps that start inside the range.
@@ -3913,7 +4071,7 @@
 				} },
 					h( 'span', { class: 'ypt-lab-row__main' },
 						h( 'b', null, g.name ),
-						h( 'span', { class: 'ypt-muted ypt-small' }, fmtDay( r.date, true ).replace( /^\w+, /, '' ) + ( g.list.length > 1 ? ' · ' + g.list.length + ' results' : '' ) + ( diff != null && diff !== 0 ? ' · ' + ( diff > 0 ? '+' : '−' ) + fmtNum( Math.abs( diff ), 3 ) + ' since last' : '' ) )
+						h( 'span', { class: 'ypt-muted ypt-small' }, fmtDay( r.date, true ).replace( /^[^,]+, /, '' ) + ( g.list.length > 1 ? ' · ' + g.list.length + ' results' : '' ) + ( diff != null && diff !== 0 ? ' · ' + ( diff > 0 ? '+' : '−' ) + fmtNum( Math.abs( diff ), 3 ) + ' since last' : '' ) )
 					),
 					h( 'span', { class: 'ypt-lab-row__val' },
 						h( 'b', null, fmtLab( r.value, r.unit ) ),
@@ -3965,7 +4123,7 @@
 					openLabSheet( r );
 				} },
 					h( 'span', { class: 'ypt-lab-row__main' },
-						h( 'b', null, fmtDay( r.date, true ).replace( /^\w+, /, '' ) ),
+						h( 'b', null, fmtDay( r.date, true ).replace( /^[^,]+, /, '' ) ),
 						r.note ? h( 'span', { class: 'ypt-muted ypt-small' }, r.note ) : null
 					),
 					h( 'span', { class: 'ypt-lab-row__val' }, h( 'b', null, fmtLab( r.value, r.unit ) ), flag ? h( 'span', { class: 'ypt-tag ypt-tag--' + flag.tone }, flag.text ) : null )
@@ -4257,7 +4415,7 @@
 				h( 'div', { class: 'ypt-row' }, num( e.weight, prev && metricValue( prev, 'weight' ) != null ? fmtNum( convert( +prev.weight, prev.wUnit || 'lb', e.wUnit ), 1 ) : '', 'Weight', function ( v ) {
 					e.weight = v;
 				}, 'ypt-g-weight' ), unitBox ),
-				prev && metricValue( prev, 'weight' ) != null ? h( 'p', { class: 'ypt-hint' }, 'Last time: ' + fmtNum( convert( +prev.weight, prev.wUnit || 'lb', e.wUnit ), 1 ) + ' ' + e.wUnit + ' on ' + fmtDay( prev.date ).replace( /^\w+, /, '' ) + '.' ) : null
+				prev && metricValue( prev, 'weight' ) != null ? h( 'p', { class: 'ypt-hint' }, 'Last time: ' + fmtNum( convert( +prev.weight, prev.wUnit || 'lb', e.wUnit ), 1 ) + ' ' + e.wUnit + ' on ' + fmtDay( prev.date ).replace( /^[^,]+, /, '' ) + '.' ) : null
 			),
 			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Measurements (optional)' ), moreBtn, measuresBox ),
 			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Photos (optional)' ), photosBox, picker,
@@ -4593,7 +4751,7 @@
 
 	function shortDate( s, withYear ) {
 		var d = parseDate( s );
-		return MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate() + ( withYear ? ', ' + d.getFullYear() : '' );
+		return monDay( d ) + ( withYear ? ', ' + d.getFullYear() : '' );
 	}
 
 	/** The first day a report of `range` days covers ('' range 0 = since the first entry). */
@@ -5385,7 +5543,7 @@
 		if ( plan.all ) {
 			return { protocol: null, left: left, plan: plan, tone: 'ok', text: 'Enough for ' + plan.mixes.length + ' mix' + ( plan.mixes.length === 1 ? '' : 'es' ), low: false };
 		}
-		var until = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+		var until = fmtDay( plan.nextNeeded ).replace( /^[^,]+, /, '' );
 		if ( ! plan.covered ) {
 			var soon = daysBetween( todayStr(), plan.nextNeeded ) < warn;
 			return { protocol: null, left: left, plan: plan, tone: soon ? 'bad' : 'warn', text: 'Not enough for your next mix', low: warn > 0 && soon };
@@ -5414,7 +5572,7 @@
 		}
 		var daysLeft = plan.coveredUntil ? daysBetween( todayStr(), plan.coveredUntil ) : -1;
 		var low = warn > 0 && daysLeft < warn;
-		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) : '';
+		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) : '';
 		if ( ! plan.covered ) {
 			return { protocol: p, left: left, plan: plan, tone: 'bad', text: 'Out', low: warn > 0 };
 		}
@@ -5442,14 +5600,14 @@
 	function lowLine( x ) {
 		var plan = x.st.plan;
 		if ( isWaterStock( x.s ) ) {
-			var mixDay = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+			var mixDay = fmtDay( plan.nextNeeded ).replace( /^[^,]+, /, '' );
 			return ! x.st.left ? 'You’re out, and you mix next on ' + mixDay + '.'
 				: fmtNum( x.st.left, 1 ) + ' mL left' + ( plan.covered ? ', enough for your mixes until ' + mixDay + '.' : ', not enough for your mix on ' + mixDay + '.' );
 		}
 		if ( ! plan || ! plan.covered ) {
 			return 'You’ve run out.';
 		}
-		var until = fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' );
+		var until = fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' );
 		return usesVial( x.st.protocol )
 			? ( x.st.left ? 'You have enough until ' + until + '.' : 'Your ' + ( x.s.form === 'pen' ? 'pen' : 'vial' ) + ' runs out ' + until + ' and you have none on hand.' )
 			: fmtNum( x.st.left, 0 ) + ' ' + countUnit( x.s, x.st.left ) + ' left, enough until ' + until + '.';
@@ -5485,7 +5643,7 @@
 				date: day,
 				time: '10:00',
 				title: st.compound + ' is running low',
-				body: 'You have enough until ' + fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) + '. Time to reorder.',
+				body: 'You have enough until ' + fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) + '. Time to reorder.',
 			} );
 		} );
 		if ( s.mixReminders !== false ) {
@@ -5529,7 +5687,7 @@
 					date: day,
 					time: '10:00',
 					title: 'Your ' + v.compound + ' ' + what + ' expires in ' + EXPIRY_NOTICE_DAYS + ' days',
-					body: 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days. Plan to mix a new one by ' + fmtDay( exp ).replace( /^\w+, /, '' ) + '.',
+					body: 'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days. Plan to mix a new one by ' + fmtDay( exp ).replace( /^[^,]+, /, '' ) + '.',
 				} );
 			} );
 		}
@@ -5618,7 +5776,7 @@
 		}
 		var plan = supplyPlan( p );
 		var have = plan.onHand;
-		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) : '';
+		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) : '';
 		var low = lowSupplies().some( function ( x ) {
 			return sameCompound( x.s.compound, p.compound );
 		} );
@@ -5654,7 +5812,7 @@
 		list.forEach( function ( v ) {
 			var info = vialInfo( v );
 			var color = colorForCompound( v.compound );
-			var detail = [ 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) ];
+			var detail = [ 'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) ];
 			if ( v.mode === 'conc' ) {
 				detail.push( fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' );
 			} else if ( isBlend( v ) ) {
@@ -5676,7 +5834,7 @@
 			if ( info.dosesLeft != null ) {
 				status.push( h( 'b', null, info.dosesLeft + ' dose' + ( info.dosesLeft === 1 ? '' : 's' ) + ' left' ) );
 				if ( info.lastDose ) {
-					status.push( ' · last dose ' + fmtDay( info.lastDose ).replace( /^\w+, /, '' ) );
+					status.push( ' · last dose ' + fmtDay( info.lastDose ).replace( /^[^,]+, /, '' ) );
 				}
 			} else if ( info.left != null ) {
 				status.push( h( 'b', null, fmtNum( info.left, 0 ) + ' units left' ) );
@@ -5714,7 +5872,7 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' }, finished.slice( 0, 10 ).map( function ( v ) {
 				return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
 					openVialSheet( v, null );
-				} }, h( 'span', null, v.compound ), h( 'span', null, 'Mixed ' + fmtDay( v.mixed, true ).replace( /^\w+, /, '' ) ) );
+				} }, h( 'span', null, v.compound ), h( 'span', null, 'Mixed ' + fmtDay( v.mixed, true ).replace( /^[^,]+, /, '' ) ) );
 			} ) ) );
 		}
 		return wrap;
@@ -5819,16 +5977,16 @@
 		var plan = supplyPlan( p );
 		var what = p.device === 'pen' ? 'pen' : 'vial';
 		var card = h( 'div', { class: 'ypt-card' } );
-		card.appendChild( h( 'div', { class: 'ypt-eyebrow' }, plan.end ? 'This cycle · ' + fmtDay( p.start ).replace( /^\w+, /, '' ) + ' to ' + fmtDay( plan.end ).replace( /^\w+, /, '' ) : 'Ongoing · ' + scheduleLabel( p ) ) );
+		card.appendChild( h( 'div', { class: 'ypt-eyebrow' }, plan.end ? 'This cycle · ' + fmtDay( p.start ).replace( /^[^,]+, /, '' ) + ' to ' + fmtDay( plan.end ).replace( /^[^,]+, /, '' ) : 'Ongoing · ' + scheduleLabel( p ) ) );
 		var headline;
 		if ( ! plan.known ) {
 			headline = usesVial( p ) ? 'Add the strength of your ' + what + 's on hand to see how long they last.' : 'Add your dose to see how long this lasts.';
 		} else if ( plan.all ) {
 			headline = plan.end ? [ 'You have enough to finish this cycle.' ] : [ 'You’re covered for 2+ years.' ];
 		} else if ( plan.needBuy ) {
-			headline = [ 'You need ', h( 'span', { class: 'ypt-hl' }, plan.needBuy + ' more ' + what + ( plan.needBuy === 1 ? '' : 's' ) ), ' to finish. Buy by ' + fmtDay( plan.buyBy ).replace( /^\w+, /, '' ) + '.' ];
+			headline = [ 'You need ', h( 'span', { class: 'ypt-hl' }, plan.needBuy + ' more ' + what + ( plan.needBuy === 1 ? '' : 's' ) ), ' to finish. Buy by ' + fmtDay( plan.buyBy ).replace( /^[^,]+, /, '' ) + '.' ];
 		} else if ( plan.coveredUntil ) {
-			headline = [ 'Covered to ', h( 'span', { class: 'ypt-hl' }, fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ];
+			headline = [ 'Covered to ', h( 'span', { class: 'ypt-hl' }, fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) ), '.' ];
 		} else {
 			headline = [ h( 'span', { class: 'ypt-hl' }, 'You’re out.' ), ' Add what you have to plan ahead.' ];
 		}
@@ -5865,12 +6023,12 @@
 				var sub;
 				if ( sg.status === 'use' ) {
 					title = label + ' · in use';
-					sub = 'Mixed ' + fmtDay( sg.mixOn ).replace( /^\w+, /, '' ) + ( sg.expiresFirst ? ' · expires ' + fmtDay( sg.expires ).replace( /^\w+, /, '' ) : sg.to ? ' · runs out ' + fmtDay( sg.to ).replace( /^\w+, /, '' ) : ' · used up' );
+					sub = 'Mixed ' + fmtDay( sg.mixOn ).replace( /^[^,]+, /, '' ) + ( sg.expiresFirst ? ' · expires ' + fmtDay( sg.expires ).replace( /^[^,]+, /, '' ) : sg.to ? ' · runs out ' + fmtDay( sg.to ).replace( /^[^,]+, /, '' ) : ' · used up' );
 				} else {
-					title = 'Mix ' + what + ' ' + n + ' · ' + fmtDay( sg.mixOn ).replace( /^\w+, /, '' );
+					title = 'Mix ' + what + ' ' + n + ' · ' + fmtDay( sg.mixOn ).replace( /^[^,]+, /, '' );
 					sub = sg.status === 'buy'
 						? 'You don’t have this one yet' + ( sg.doses < plan.perVial ? ' · ' + sg.doses + ' dose' + ( sg.doses === 1 ? '' : 's' ) + ' needed' : '' )
-						: 'From your supply · lasts to ' + fmtDay( sg.to ).replace( /^\w+, /, '' );
+						: 'From your supply · lasts to ' + fmtDay( sg.to ).replace( /^[^,]+, /, '' );
 				}
 				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--' + sg.status }, h( 'b', null, title ), h( 'span', null, sub ) ) );
 			} );
@@ -5878,12 +6036,12 @@
 				tl.appendChild( h( 'div', { class: 'ypt-tl__item' }, h( 'span', null, '+ ' + ( plan.segments.length - 12 ) + ' more' ) ) );
 			}
 			if ( plan.end ) {
-				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--end' }, h( 'b', null, 'Cycle ends ' + fmtDay( plan.end ).replace( /^\w+, /, '' ) ),
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--end' }, h( 'b', null, 'Cycle ends ' + fmtDay( plan.end ).replace( /^[^,]+, /, '' ) ),
 					h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
 						openProtocolSheet( p );
 					} }, 'Change length' ) ) );
 			} else if ( plan.nextNeeded && plan.known ) {
-				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--buy' }, h( 'b', null, 'Next ' + what + ' needed ' + fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' ) ),
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--buy' }, h( 'b', null, 'Next ' + what + ' needed ' + fmtDay( plan.nextNeeded ).replace( /^[^,]+, /, '' ) ),
 					h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
 						openProtocolSheet( p );
 					} }, 'Set a cycle length' ) ) );
@@ -5998,7 +6156,7 @@
 				if ( wp.known && total() > 0 ) {
 					preview.appendChild( h( 'div', { class: 'ypt-calc-result ypt-plan__preview' },
 						fmtNum( total(), 1 ) + ' mL = ', h( 'b', null, wp.covered + ' of your next ' + wp.mixes.length + ' mix' + ( wp.mixes.length === 1 ? '' : 'es' ) ), '. ',
-						wp.all ? 'That’s enough for every vial you have planned.' : [ 'You’re covered to ', h( 'b', null, fmtDay( wp.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ]
+						wp.all ? 'That’s enough for every vial you have planned.' : [ 'You’re covered to ', h( 'b', null, fmtDay( wp.coveredUntil ).replace( /^[^,]+, /, '' ) ), '.' ]
 					) );
 				}
 				return;
@@ -6025,7 +6183,7 @@
 			var doses = isVialStock( s ) ? ( plan.perVial || 0 ) * n : Math.floor( n / ( perDoseCount( p ) || 1 ) );
 			preview.appendChild( h( 'div', { class: 'ypt-calc-result ypt-plan__preview' },
 				n + ' ' + ( isVialStock( s ) ? ( s.form === 'pen' ? 'pen' : 'vial' ) + ( n === 1 ? '' : 's' ) : countUnit( s, n ) ) + ' = ', h( 'b', null, doses + ' dose' + ( doses === 1 ? '' : 's' ) ), ' on your ' + p.compound + ' schedule. ',
-				plan.all ? ( plan.end ? 'That’s enough to finish this cycle.' : 'That covers you for 2+ years.' ) : plan.coveredUntil ? [ 'With these you’re covered to ', h( 'b', null, fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ] : ''
+				plan.all ? ( plan.end ? 'That’s enough to finish this cycle.' : 'That covers you for 2+ years.' ) : plan.coveredUntil ? [ 'With these you’re covered to ', h( 'b', null, fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) ), '.' ] : ''
 			) );
 		}
 
@@ -6935,6 +7093,16 @@
 			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, themePref() === 'auto' ? 'Matches your phone’s light or dark setting.' : 'Just on this device.' )
 		) );
 
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Language' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-card' },
+			seg( LANGS, langPref(), function ( v ) {
+				saveJSON( LANG_KEY, v );
+				// Every label is swapped as it's drawn, so a fresh start is the clean way to switch.
+				window.location.reload();
+			} ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, langPref() === 'auto' ? 'Follows your phone’s language.' : 'Just on this device.' )
+		) );
+
 		var health = healthCard();
 		if ( health ) {
 			wrap.appendChild( health );
@@ -6978,7 +7146,7 @@
 				state.shares.map( function ( sh ) {
 					return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
 						openSharedLinkSheet( sh );
-					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, MONTHS[ parseDate( sh.created ).getMonth() ].slice( 0, 3 ) + ' ' + parseDate( sh.created ).getDate() + ' ›' ) );
+					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, monDay( parseDate( sh.created ) ) + ' ›' ) );
 				} )
 			) );
 		}
@@ -7838,7 +8006,7 @@
 			if ( i === 1 ) {
 				return;
 			}
-			svg( 'text', { x: xOf( t ), y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : ' is-end' ) }, s ).textContent = MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate();
+			svg( 'text', { x: xOf( t ), y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : ' is-end' ) }, s ).textContent = monDay( d );
 		} );
 		series.forEach( function ( x ) {
 			var scale = norm ? ( x.max > 0 ? 100 / x.max : 0 ) : 1;
@@ -8018,7 +8186,7 @@
 			var hcNote = [ +hc[ k ] > 0 ? fmtFood( k, +hc[ k ] ) + ' from ' + HC_NAME : '', fromItems > 0 ? fmtFood( k, fromItems ) + ' from the foods you added' : '' ].filter( Boolean ).join( ' and ' );
 			hcNote = hcNote ? 'Plus ' + hcNote + '.' : null;
 			return h( 'div', { class: 'ypt-field' },
-				h( 'label', { for: id }, foodName( k ) + ( date === todayStr() ? ' today' : ' on ' + fmtDay( date ).replace( /^\w+, /, '' ) ) ),
+				h( 'label', { for: id }, foodName( k ) + ( date === todayStr() ? ' today' : ' on ' + fmtDay( date ).replace( /^[^,]+, /, '' ) ) ),
 				numRow( k, vals, id, '0' ),
 				h( 'div', { class: 'ypt-chips', style: { marginTop: '6px' } }, chips.map( function ( c ) {
 					return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', onclick: function () {
@@ -8134,7 +8302,7 @@
 		}
 		[ 0, list.length - 1 ].forEach( function ( j ) {
 			var d = parseDate( list[ j ].date );
-			svg( 'text', { x: L + j * bw + bw / 2, y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( j ? ' is-end' : ' is-start' ) }, s ).textContent = MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate();
+			svg( 'text', { x: L + j * bw + bw / 2, y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( j ? ' is-end' : ' is-start' ) }, s ).textContent = monDay( d );
 		} );
 		wrap.appendChild( h( 'div', { class: 'ypt-card' },
 			h( 'div', { class: 'ypt-chips', style: { marginBottom: '8px' } }, FOOD_KEYS.map( function ( k ) {
@@ -9551,7 +9719,7 @@
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '10px 0 0' } }, 'Read only: nothing from your tracker is written there. Imported numbers are encrypted here like everything else.' ) );
 			return wrap;
 		}
-		card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, h( 'b', null, 'Connected. ' ), st.last ? 'Last brought in ' + fmtDay( dateStr( new Date( st.last ) ) ).replace( /^\w+, /, '' ) + ' at ' + fmtTime( pad( new Date( st.last ).getHours() ) + ':' + pad( new Date( st.last ).getMinutes() ) ) + '.' : 'Bringing in your data…' ) );
+		card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, h( 'b', null, 'Connected. ' ), st.last ? 'Last brought in ' + fmtDay( dateStr( new Date( st.last ) ) ).replace( /^[^,]+, /, '' ) + ' at ' + fmtTime( pad( new Date( st.last ).getHours() ) + ':' + pad( new Date( st.last ).getMinutes() ) ) + '.' : 'Bringing in your data…' ) );
 		card.appendChild( h( 'div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
 			h( 'button', { type: 'button', class: 'ypt-btn', disabled: hcBusy, onclick: function () {
 				hcSync( true );
@@ -10356,7 +10524,7 @@
 				vialBox.appendChild( h( 'div', { class: 'ypt-vialpick' },
 					h( 'div', null,
 						h( 'b', null, v.mode === 'conc' ? fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' : isBlend( v ) ? blendSummary( v ) + ' · ' + fmtNum( +v.water ) + ' mL' : fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) + ' + ' + fmtNum( +v.water ) + ' mL water' ),
-						h( 'span', null, 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ( c ? ' · ' + fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' : '' ) )
+						h( 'span', null, 'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) + ( c ? ' · ' + fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' : '' ) )
 					),
 					h( 'button', { type: 'button', class: 'ypt-pill', onclick: detourToVial }, pen ? 'New pen' : 'New vial' )
 				) );
@@ -10818,7 +10986,7 @@
 			} } );
 			function keepsLine() {
 				var e = vialExpiry( v );
-				return e ? 'Expires ' + fmtDay( e ).replace( /^\w+, /, '' ) + '. We’ll remind you ' + EXPIRY_NOTICE_DAYS + ' days before.' : 'No expiry countdown for this ' + ( pen ? 'pen' : 'vial' ) + '.';
+				return e ? 'Expires ' + fmtDay( e ).replace( /^[^,]+, /, '' ) + '. We’ll remind you ' + EXPIRY_NOTICE_DAYS + ' days before.' : 'No expiry countdown for this ' + ( pen ? 'pen' : 'vial' ) + '.';
 			}
 			var chipsBox = h( 'div', { class: 'ypt-chips' }, [ [ 14, '14 days' ], [ 21, '21' ], [ 28, '28' ], [ 42, '42' ], [ 0, 'Off' ] ].map( function ( c ) {
 				return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': +v.goodFor === c[ 0 ] ? 'true' : 'false', onclick: function () {
@@ -12149,7 +12317,7 @@
 			if ( sample.length ) {
 				preview.appendChild( h( 'ul', { class: 'ypt-import__sample' }, sample.map( function ( it ) {
 					var d = it.data;
-					return h( 'li', null, fmtDay( d.date ).replace( /^\w+, /, '' ) + ' · ' + d.compound + ' ' + fmtNum( d.dose, 3 ) + ' ' + d.unit + ( d.site ? ' · ' + siteLabel( d.site ) : '' ) );
+					return h( 'li', null, fmtDay( d.date ).replace( /^[^,]+, /, '' ) + ' · ' + d.compound + ' ' + fmtNum( d.dose, 3 ) + ' ' + d.unit + ( d.site ? ' · ' + siteLabel( d.site ) : '' ) );
 				} ) ) );
 			}
 			btn.disabled = ! plan.items.length;
