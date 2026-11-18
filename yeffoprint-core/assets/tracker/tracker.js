@@ -4385,14 +4385,7 @@
 				return /[",\r\n]/.test( s ) ? '"' + s.replace( /"/g, '""' ) + '"' : s;
 			} ).join( ',' );
 		} ).join( '\n' );
-		var blob = new Blob( [ csv ], { type: 'text/csv' } );
-		var a = h( 'a', { href: URL.createObjectURL( blob ), download: 'dose-history-' + todayStr() + '.csv' } );
-		document.body.appendChild( a );
-		a.click();
-		setTimeout( function () {
-			URL.revokeObjectURL( a.href );
-			a.remove();
-		}, 1000 );
+		downloadBlob( new Blob( [ csv ], { type: 'text/csv' } ), 'dose-history-' + todayStr() + '.csv' );
 	}
 
 	/* =========================================================
@@ -7002,6 +6995,7 @@
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openLibrarySheet }, h( 'span', null, 'Compound library' ), h( 'span', null, 'Half-lives & storage ›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openReportSheet }, h( 'span', null, 'Printable report (PDF)' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: exportCsv }, h( 'span', null, 'Export dose history (CSV)' ), h( 'span', null, '›' ) ),
+			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openBackupSheet }, h( 'span', null, 'Backup, restore & import' ), h( 'span', null, '›' ) ),
 			h( 'a', { class: 'ypt-list-row', href: CFG.homeUrl }, h( 'span', null, 'YeffoDesign.com' ), h( 'span', null, '›' ) )
 		) );
 
@@ -11566,6 +11560,665 @@
 			} );
 			toast( 'Extra dose logged' + ( d.site ? ' · ' + siteLabel( d.site ) : '' ) );
 		} }, 'Log dose' ) );
+	}
+
+	/* =========================================================
+	 * Backup, restore & import (Me › Tools)
+	 *
+	 * Backup: one JSON file with every record (and, if asked, the
+	 * progress photos as data URLs). It's a plain file on the customer's
+	 * device, so the sheet says so: it isn't encrypted the way the
+	 * tracker is. Restore reads that file back, keeping record ids, so
+	 * restoring twice doesn't double anything. Import reads a CSV from
+	 * another app (or our own Export CSV): the columns are guessed from
+	 * their headers and the customer can fix the guess before importing.
+	 * Both save through POST /tracker/records/batch, 100 at a time.
+	 * ======================================================= */
+
+	var BACKUP_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food', 'myfood' ];
+	var BATCH_SIZE = 100;
+
+	function downloadBlob( blob, name ) {
+		var a = h( 'a', { href: URL.createObjectURL( blob ), download: name } );
+		document.body.appendChild( a );
+		a.click();
+		setTimeout( function () {
+			URL.revokeObjectURL( a.href );
+			a.remove();
+		}, 1000 );
+	}
+
+	function blobToDataUrl( blob ) {
+		return new Promise( function ( resolve, reject ) {
+			var r = new FileReader();
+			r.onload = function () {
+				resolve( r.result );
+			};
+			r.onerror = reject;
+			r.readAsDataURL( blob );
+		} );
+	}
+
+	function readFileText( file ) {
+		return new Promise( function ( resolve, reject ) {
+			var r = new FileReader();
+			r.onload = function () {
+				resolve( String( r.result || '' ) );
+			};
+			r.onerror = function () {
+				reject( new Error( 'That file couldn’t be read.' ) );
+			};
+			r.readAsText( file );
+		} );
+	}
+
+	function recordCount( records ) {
+		var n = 0;
+		BACKUP_KINDS.forEach( function ( k ) {
+			n += Object.keys( records[ k ] || {} ).length;
+		} );
+		return n;
+	}
+
+	function makeBackup( withPhotos, onStep ) {
+		var records = {};
+		BACKUP_KINDS.forEach( function ( k ) {
+			records[ k ] = JSON.parse( JSON.stringify( state.records[ k ] || {} ) );
+		} );
+		var out = { app: 'YeffoHealth', type: 'backup', version: 1, exported: new Date().toISOString(), records: records, photos: {} };
+		if ( ! withPhotos ) {
+			return Promise.resolve( out );
+		}
+		var ids = allPhotos().map( function ( x ) {
+			return x.id;
+		} );
+		var chain = Promise.resolve();
+		ids.forEach( function ( id, i ) {
+			chain = chain.then( function () {
+				onStep( 'Adding photo ' + ( i + 1 ) + ' of ' + ids.length + '…' );
+				return fetch( CFG.restUrl + 'tracker/photos/' + encodeURIComponent( id ), { credentials: 'same-origin', cache: 'no-store', headers: { 'X-WP-Nonce': CFG.nonce } } ).then( function ( res ) {
+					return res.ok ? res.blob().then( blobToDataUrl ).then( function ( url ) {
+						out.photos[ id ] = url;
+					} ) : null;
+				} ).catch( function () {} );
+			} );
+		} );
+		return chain.then( function () {
+			return out;
+		} );
+	}
+
+	/** Save [{ kind, id, data }] in batches; local copy first so the app shows it straight away. */
+	function saveMany( items, onStep ) {
+		var saved = 0;
+		var failed = 0;
+		var chain = Promise.resolve();
+		for ( var i = 0; i < items.length; i += BATCH_SIZE ) {
+			( function ( part, from ) {
+				chain = chain.then( function () {
+					onStep( 'Saving ' + Math.min( from + part.length, items.length ) + ' of ' + items.length + '…' );
+					return api( 'POST', 'tracker/records/batch', { items: part } ).then( function ( res ) {
+						saved += res.saved || 0;
+						failed += res.failed || 0;
+						part.forEach( function ( it ) {
+							state.records[ it.kind ][ it.id ] = it.data;
+						} );
+						persist();
+					} );
+				} );
+			} )( items.slice( i, i + BATCH_SIZE ), i );
+		}
+		return chain.then( function () {
+			render();
+			return { saved: saved, failed: failed };
+		} );
+	}
+
+	function openBackupSheet() {
+		var status = h( 'p', { class: 'ypt-muted ypt-small', role: 'status', hidden: true } );
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var withPhotos = false;
+		var nPhotos = allPhotos().length;
+		var busy = false;
+		var picker = h( 'input', { type: 'file', accept: '.json,.csv,.txt,application/json,text/csv', hidden: true, onchange: function () {
+			var file = picker.files && picker.files[ 0 ];
+			picker.value = '';
+			if ( ! file ) {
+				return;
+			}
+			err.hidden = true;
+			if ( file.size > 60 * 1024 * 1024 ) {
+				err.textContent = 'That file is too big to import.';
+				err.hidden = false;
+				return;
+			}
+			readFileText( file ).then( function ( text ) {
+				var trimmed = text.replace( /^﻿/, '' ).trim();
+				if ( trimmed.charAt( 0 ) === '{' ) {
+					var data;
+					try {
+						data = JSON.parse( trimmed );
+					} catch ( x ) {
+						throw new Error( 'That doesn’t look like a YeffoHealth backup.' );
+					}
+					if ( ! data || data.app !== 'YeffoHealth' || ! data.records ) {
+						throw new Error( 'That doesn’t look like a YeffoHealth backup.' );
+					}
+					openRestoreSheet( data );
+					return;
+				}
+				var rows = parseCsv( trimmed );
+				if ( rows.length < 2 ) {
+					throw new Error( 'That file has no rows to import. Pick a CSV (spreadsheet) file with a header row.' );
+				}
+				openImportSheet( rows, file.name );
+			} ).catch( function ( x ) {
+				err.textContent = x.message;
+				err.hidden = false;
+			} );
+		} } );
+		var backupBtn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			if ( busy ) {
+				return;
+			}
+			if ( withPhotos && state.offline ) {
+				err.textContent = 'You’re offline. Connect to the internet to add photos to the backup.';
+				err.hidden = false;
+				return;
+			}
+			busy = true;
+			err.hidden = true;
+			status.hidden = false;
+			status.textContent = 'Making your backup…';
+			makeBackup( withPhotos, function ( m ) {
+				status.textContent = m;
+			} ).then( function ( data ) {
+				downloadBlob( new Blob( [ JSON.stringify( data ) ], { type: 'application/json' } ), 'yeffohealth-backup-' + todayStr() + '.json' );
+				status.textContent = 'Backup saved: ' + recordCount( data.records ) + ' entries' + ( withPhotos ? ', ' + Object.keys( data.photos ).length + ' photos' : '' ) + '.';
+				busy = false;
+			} ).catch( function () {
+				busy = false;
+				status.hidden = true;
+				err.textContent = 'The backup couldn’t be made. Try again.';
+				err.hidden = false;
+			} );
+		} }, 'Download backup' );
+		openSheet( 'Backup, restore & import', 'Your data', [
+			h( 'h3', { class: 'ypt-sheet-h' }, 'Back up' ),
+			h( 'p', { class: 'ypt-small' }, 'Saves everything in your tracker to one file on this device. Keep it somewhere safe: the file isn’t encrypted, so anyone who opens it can read it.' ),
+			nPhotos ? h( 'label', { class: 'ypt-goal__check' }, h( 'input', { type: 'checkbox', onchange: function ( ev ) {
+				withPhotos = ev.target.checked;
+			} } ), h( 'span', null, 'Include my ' + nPhotos + ' progress photo' + ( nPhotos === 1 ? '' : 's' ) + ' (bigger file)' ) ) : null,
+			backupBtn,
+			status,
+			h( 'h3', { class: 'ypt-sheet-h', style: { marginTop: '22px' } }, 'Restore or import' ),
+			h( 'p', { class: 'ypt-small' }, 'Pick a YeffoHealth backup to restore it, or a CSV file exported from another tracker app or a spreadsheet to bring in your doses and weigh-ins. Nothing you already have is deleted.' ),
+			picker,
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', onclick: function () {
+				if ( state.offline ) {
+					err.textContent = 'You’re offline. Connect to the internet to restore or import.';
+					err.hidden = false;
+					return;
+				}
+				picker.click();
+			} }, 'Choose a file' ),
+			err,
+		] );
+	}
+
+	function openRestoreSheet( data ) {
+		var counts = [];
+		var names = { protocol: [ 'peptide or medication', 'peptides and medications' ], dose: [ 'dose', 'doses' ], vial: [ 'vial', 'vials' ], stock: [ 'supply item', 'supply items' ], progress: [ 'progress entry', 'progress entries' ], lab: [ 'lab result', 'lab results' ], food: [ 'food day', 'food days' ], myfood: [ 'saved food', 'saved foods' ] };
+		var items = [];
+		BACKUP_KINDS.forEach( function ( k ) {
+			var recs = data.records[ k ];
+			if ( ! recs || typeof recs !== 'object' || Array.isArray( recs ) ) {
+				return;
+			}
+			var n = 0;
+			Object.keys( recs ).forEach( function ( id ) {
+				if ( /^[A-Za-z0-9_-]{1,64}$/.test( id ) && recs[ id ] && typeof recs[ id ] === 'object' ) {
+					var d = Object.assign( {}, recs[ id ] );
+					delete d.id;
+					items.push( { kind: k, id: id, data: d } );
+					n++;
+				}
+			} );
+			if ( n && names[ k ] ) {
+				counts.push( n + ' ' + names[ k ][ n === 1 ? 0 : 1 ] );
+			}
+		} );
+		var photos = data.photos && typeof data.photos === 'object' ? Object.keys( data.photos ).filter( function ( id ) {
+			return /^[A-Za-z0-9_-]{1,64}$/.test( id ) && /^data:image\/(jpeg|png|webp);base64,/.test( String( data.photos[ id ] ) );
+		} ) : [];
+		if ( photos.length ) {
+			counts.push( photos.length + ' photo' + ( photos.length === 1 ? '' : 's' ) );
+		}
+		var status = h( 'p', { class: 'ypt-muted ypt-small', role: 'status', hidden: true } );
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var btn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', disabled: ! items.length && ! photos.length, onclick: function () {
+			btn.disabled = true;
+			status.hidden = false;
+			err.hidden = true;
+			var chain = Promise.resolve();
+			var photoFails = 0;
+			photos.forEach( function ( id, i ) {
+				chain = chain.then( function () {
+					status.textContent = 'Restoring photo ' + ( i + 1 ) + ' of ' + photos.length + '…';
+					return api( 'PUT', 'tracker/photos/' + id, { data: data.photos[ id ] } ).catch( function ( x ) {
+						if ( isNetworkError( x ) ) {
+							throw x;
+						}
+						photoFails++;
+					} );
+				} );
+			} );
+			chain.then( function () {
+				return saveMany( items, function ( m ) {
+					status.textContent = m;
+				} );
+			} ).then( function ( r ) {
+				ensureSettings();
+				closeSheet();
+				go( 'today' );
+				toast( 'Restored ' + r.saved + ' entries' + ( r.failed + photoFails ? ' · ' + ( r.failed + photoFails ) + ' couldn’t be restored' : '' ) );
+			} ).catch( function ( x ) {
+				btn.disabled = false;
+				status.hidden = true;
+				if ( handleAuthError( x ) ) {
+					return;
+				}
+				err.textContent = isNetworkError( x ) ? 'You went offline. Connect and try again: nothing will be doubled.' : x.message || 'That couldn’t be restored.';
+				err.hidden = false;
+			} );
+		} }, 'Restore' );
+		openSheet( 'Restore backup', data.exported ? 'Made ' + fmtDay( String( data.exported ).slice( 0, 10 ), true ) : 'Backup', [
+			h( 'p', null, counts.length ? 'This backup has ' + listJoin( counts ) + '.' : 'This backup is empty.' ),
+			h( 'p', { class: 'ypt-muted ypt-small' }, 'Entries from the backup replace the same entries here. Anything you added since stays.' ),
+			status,
+			err,
+		], btn );
+	}
+
+	function listJoin( arr ) {
+		return arr.length < 2 ? arr.join( '' ) : arr.slice( 0, -1 ).join( ', ' ) + ' and ' + arr[ arr.length - 1 ];
+	}
+
+	/* ---------- CSV import ---------- */
+
+	function parseCsv( text ) {
+		// Tab-separated if the header has tabs and no commas.
+		var first = text.split( /\r?\n/ )[ 0 ] || '';
+		var sep = first.indexOf( '\t' ) !== -1 && first.indexOf( ',' ) === -1 ? '\t' : first.split( ';' ).length > first.split( ',' ).length ? ';' : ',';
+		var rows = [];
+		var row = [];
+		var cell = '';
+		var q = false;
+		for ( var i = 0; i < text.length; i++ ) {
+			var c = text.charAt( i );
+			if ( q ) {
+				if ( c === '"' ) {
+					if ( text.charAt( i + 1 ) === '"' ) {
+						cell += '"';
+						i++;
+					} else {
+						q = false;
+					}
+				} else {
+					cell += c;
+				}
+			} else if ( c === '"' && cell === '' ) {
+				q = true;
+			} else if ( c === sep ) {
+				row.push( cell );
+				cell = '';
+			} else if ( c === '\n' || c === '\r' ) {
+				if ( c === '\r' && text.charAt( i + 1 ) === '\n' ) {
+					i++;
+				}
+				row.push( cell );
+				cell = '';
+				if ( row.some( function ( x ) {
+					return x.trim();
+				} ) ) {
+					rows.push( row );
+				}
+				row = [];
+			} else {
+				cell += c;
+			}
+			if ( rows.length > 20000 ) {
+				break;
+			}
+		}
+		row.push( cell );
+		if ( row.some( function ( x ) {
+			return x.trim();
+		} ) ) {
+			rows.push( row );
+		}
+		return rows.map( function ( r ) {
+			return r.map( function ( x ) {
+				// Our own Export CSV guards formula-looking cells with a leading '.
+				return x.trim().replace( /^'(?=[=+\-@])/, '' );
+			} );
+		} );
+	}
+
+	// Which header words mean which field. Order matters: the first match wins.
+	var IMPORT_FIELDS = [
+		[ 'date', 'Date', /^(date|day|logged|taken|when|timestamp|date ?time|injection date|dose date|created)/i ],
+		[ 'time', 'Time', /^(time|hour|at)\b/i ],
+		[ 'compound', 'Medication', /(compound|medication|medicine|med\b|drug|peptide|name|product|item|what)/i ],
+		[ 'dose', 'Dose', /(^dose|dosage|amount|qty|quantity|strength)/i ],
+		[ 'unit', 'Unit', /^(unit|units|uom|dose unit)$/i ],
+		[ 'site', 'Injection site', /(site|location|spot|area|where)/i ],
+		[ 'weight', 'Weight', /(weight|lbs?\b|kg\b)/i ],
+		[ 'status', 'Taken or skipped', /^(status|taken|skipped)/i ],
+		[ 'note', 'Notes', /(note|comment|memo|side effect|felt|symptom)/i ],
+	];
+
+	function guessColumns( header ) {
+		var map = {};
+		IMPORT_FIELDS.forEach( function ( f ) {
+			for ( var i = 0; i < header.length; i++ ) {
+				var taken = Object.keys( map ).some( function ( k ) {
+					return map[ k ] === i;
+				} );
+				if ( ! taken && f[ 2 ].test( header[ i ].trim() ) ) {
+					map[ f[ 0 ] ] = i;
+					return;
+				}
+			}
+		} );
+		return map;
+	}
+
+	/** 'YYYY-MM-DD' (and 'HH:MM' if the cell had a time) from the many ways apps write dates, or null. */
+	function parseImportDate( s ) {
+		s = String( s || '' ).trim();
+		if ( ! s ) {
+			return null;
+		}
+		var time = null;
+		var tm = s.match( /(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?\s*([AaPp][Mm])?/ );
+		if ( tm ) {
+			var hr = +tm[ 1 ] % ( tm[ 3 ] ? 12 : 24 );
+			if ( tm[ 3 ] && /p/i.test( tm[ 3 ] ) ) {
+				hr += 12;
+			}
+			time = ( hr < 10 ? '0' : '' ) + hr + ':' + tm[ 2 ];
+		}
+		var m = s.match( /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/ );
+		var y;
+		var mo;
+		var d;
+		if ( m ) {
+			y = +m[ 1 ];
+			mo = +m[ 2 ];
+			d = +m[ 3 ];
+			// An ISO time with a zone (2026-11-03T15:20:00Z) is read in the customer's own clock.
+			if ( /T\d{2}:\d{2}.*(Z|[+-]\d{2}:?\d{2})$/.test( s ) ) {
+				var dt = new Date( s );
+				if ( ! isNaN( dt ) ) {
+					y = dt.getFullYear();
+					mo = dt.getMonth() + 1;
+					d = dt.getDate();
+					time = ( dt.getHours() < 10 ? '0' : '' ) + dt.getHours() + ':' + ( dt.getMinutes() < 10 ? '0' : '' ) + dt.getMinutes();
+				}
+			}
+		} else if ( ( m = s.match( /^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/ ) ) ) {
+			// US order unless the first number can't be a month.
+			var a = +m[ 1 ];
+			var b = +m[ 2 ];
+			mo = a > 12 ? b : a;
+			d = a > 12 ? a : b;
+			y = +m[ 3 ] < 100 ? 2000 + +m[ 3 ] : +m[ 3 ];
+		} else {
+			var p = new Date( s.replace( /(\d)(st|nd|rd|th)\b/, '$1' ) );
+			if ( isNaN( p ) ) {
+				return null;
+			}
+			y = p.getFullYear();
+			mo = p.getMonth() + 1;
+			d = p.getDate();
+		}
+		if ( ! ( y > 1990 && y < 2100 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31 ) ) {
+			return null;
+		}
+		return { date: y + '-' + ( mo < 10 ? '0' : '' ) + mo + '-' + ( d < 10 ? '0' : '' ) + d, time: time };
+	}
+
+	/** A dose cell like "2.5", "2.5 mg" or "250mcg": { dose, unit }. */
+	function parseImportDose( s, unitCell ) {
+		var m = String( s || '' ).replace( ',', '.' ).match( /(\d+(?:\.\d+)?)\s*([A-Za-zµμ]+)?/ );
+		if ( ! m ) {
+			return null;
+		}
+		return { dose: +m[ 1 ], unit: normUnit( unitCell || m[ 2 ] || '' ) };
+	}
+
+	function normUnit( u ) {
+		u = String( u || '' ).trim().toLowerCase().replace( /[µμ]g/, 'mcg' ).replace( /\.$/, '' );
+		var alias = { ug: 'mcg', mcgs: 'mcg', mgs: 'mg', milligram: 'mg', milligrams: 'mg', microgram: 'mcg', micrograms: 'mcg', iu: 'IU', ius: 'IU', unit: 'units', u: 'units', ml: 'mL', cc: 'mL', tab: 'tablet', tabs: 'tablet', tablets: 'tablet', pill: 'tablet', pills: 'tablet', caps: 'capsule', capsules: 'capsule', sprays: 'spray', drops: 'drop', puffs: 'puff', patches: 'patch', clicks: 'units' };
+		if ( alias[ u ] ) {
+			return alias[ u ];
+		}
+		var hit = UNITS.filter( function ( x ) {
+			return x.toLowerCase() === u;
+		} )[ 0 ];
+		return hit || '';
+	}
+
+	/** Injection site text from another app ("Abdomen - Left Lower", "R thigh") to one of our spots, or ''. */
+	function matchSiteText( s ) {
+		s = ' ' + String( s || '' ).toLowerCase().replace( /[^a-z ]+/g, ' ' ) + ' ';
+		if ( ! s.trim() ) {
+			return '';
+		}
+		var exact = SITES.filter( function ( x ) {
+			return ' ' + x.label.toLowerCase().replace( /[^a-z ]+/g, ' ' ) + ' ' === s.replace( /\s+/g, ' ' );
+		} )[ 0 ];
+		if ( exact ) {
+			return exact.id;
+		}
+		var side = /\b(left|lt|l)\b/.test( s ) ? 'l' : /\b(right|rt|r)\b/.test( s ) ? 'r' : '';
+		var area = /(belly|abdomen|abdominal|stomach|tummy|navel|umbilic)/.test( s ) ? 'belly' : /(thigh|leg|quad)/.test( s ) ? 'thigh' : /(glute|butt|buttock|hip|ventrogluteal|dorsogluteal)/.test( s ) ? 'glute' : /(delt|shoulder)/.test( s ) ? 'delt' : /(arm|tricep)/.test( s ) ? 'arm' : /(flank|love handle|side|waist)/.test( s ) ? 'flank' : '';
+		if ( ! area || ! side ) {
+			return '';
+		}
+		if ( area === 'belly' ) {
+			return 'belly-' + ( /\b(upper|top|above)\b/.test( s ) ? 'u' : 'l' ) + side;
+		}
+		return area + '-' + side;
+	}
+
+	function openImportSheet( rows, fileName ) {
+		var header = rows[ 0 ];
+		var body = rows.slice( 1 );
+		var map = guessColumns( header );
+		var defUnit = 'mg';
+		var wUnit = weightUnit();
+		var preview = h( 'div', { class: 'ypt-import__preview' } );
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var status = h( 'p', { class: 'ypt-muted ypt-small', role: 'status', hidden: true } );
+		var btn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block' }, 'Import' );
+		var plan = { items: [], doses: 0, weights: 0, skipped: 0, dupes: 0 };
+
+		function cell( r, k ) {
+			return map[ k ] == null ? '' : String( r[ map[ k ] ] || '' ).trim();
+		}
+
+		function build() {
+			plan = { items: [], doses: 0, weights: 0, skipped: 0, dupes: 0 };
+			var have = {};
+			values( state.records.dose ).forEach( function ( d ) {
+				have[ d.date + '|' + String( d.compound ).toLowerCase() + '|' + ( d.time || '' ) ] = true;
+			} );
+			var haveW = {};
+			progressEntries().forEach( function ( e ) {
+				if ( +e.weight > 0 ) {
+					haveW[ e.date ] = true;
+				}
+			} );
+			var seen = {};
+			var byName = {};
+			protocols().forEach( function ( p ) {
+				byName[ String( p.compound ).toLowerCase() ] = p;
+			} );
+			body.forEach( function ( r, i ) {
+				var when = parseImportDate( cell( r, 'date' ) + ( map.time != null ? ' ' + cell( r, 'time' ) : '' ) );
+				if ( ! when || when.date > todayStr() ) {
+					plan.skipped++;
+					return;
+				}
+				var used = false;
+				var w = parseFloat( String( cell( r, 'weight' ) ).replace( ',', '.' ) );
+				if ( w > 0 && w < 2000 ) {
+					used = true;
+					if ( haveW[ when.date ] || seen[ 'w' + when.date ] ) {
+						plan.dupes++;
+					} else {
+						seen[ 'w' + when.date ] = true;
+						plan.weights++;
+						plan.items.push( { kind: 'progress', id: 'g-imp' + when.date.replace( /-/g, '' ), data: { date: when.date, weight: Math.round( w * 100 ) / 100, wUnit: wUnit, m: {}, mUnit: lengthUnit(), fat: 0, note: '', photos: [] } } );
+					}
+				}
+				var name = cell( r, 'compound' ).slice( 0, 60 );
+				var ds = parseImportDose( cell( r, 'dose' ), cell( r, 'unit' ) );
+				if ( name && ds && ds.dose > 0 ) {
+					used = true;
+					var time = when.time || '09:00';
+					var key = when.date + '|' + name.toLowerCase() + '|' + time;
+					if ( have[ key ] || seen[ key ] ) {
+						plan.dupes++;
+						return;
+					}
+					seen[ key ] = true;
+					var st = cell( r, 'status' ).toLowerCase();
+					var p = byName[ name.toLowerCase() ] || null;
+					plan.doses++;
+					plan.items.push( { kind: 'dose', id: 'x-imp' + ( i + 1 ) + '-' + uid( '' ).slice( 0, 6 ), data: {
+						protocolId: p ? p.id : '',
+						compound: p ? p.compound : name,
+						date: when.date,
+						time: time,
+						status: /skip|miss|no\b|false/.test( st ) ? 'skipped' : 'taken',
+						at: wallToIso( when.date, time ),
+						dose: ds.dose,
+						unit: ds.unit || ( p ? p.unit : defUnit ),
+						strength: 0,
+						strengthUnit: '',
+						vialId: '',
+						units: null,
+						note: cell( r, 'note' ).slice( 0, 500 ),
+						site: matchSiteText( cell( r, 'site' ) ),
+						tags: [],
+					} } );
+				}
+				if ( ! used ) {
+					plan.skipped++;
+				}
+			} );
+			drawPreview();
+		}
+
+		function drawPreview() {
+			preview.textContent = '';
+			var bits = [];
+			if ( plan.doses ) {
+				bits.push( plan.doses + ' dose' + ( plan.doses === 1 ? '' : 's' ) );
+			}
+			if ( plan.weights ) {
+				bits.push( plan.weights + ' weigh-in' + ( plan.weights === 1 ? '' : 's' ) );
+			}
+			preview.appendChild( h( 'p', { class: 'ypt-import__sum' }, bits.length ? 'Ready to import ' + listJoin( bits ) + '.' : 'Nothing to import yet. Check the columns above.' ) );
+			var notes = [];
+			if ( plan.dupes ) {
+				notes.push( plan.dupes + ' already in your tracker' );
+			}
+			if ( plan.skipped ) {
+				notes.push( plan.skipped + ' row' + ( plan.skipped === 1 ? '' : 's' ) + ' without a date we could read or a dose' );
+			}
+			if ( notes.length ) {
+				preview.appendChild( h( 'p', { class: 'ypt-muted ypt-small' }, 'Skipping ' + listJoin( notes ) + '.' ) );
+			}
+			var sample = plan.items.filter( function ( it ) {
+				return it.kind === 'dose';
+			} ).slice( 0, 3 );
+			if ( sample.length ) {
+				preview.appendChild( h( 'ul', { class: 'ypt-import__sample' }, sample.map( function ( it ) {
+					var d = it.data;
+					return h( 'li', null, fmtDay( d.date ).replace( /^\w+, /, '' ) + ' · ' + d.compound + ' ' + fmtNum( d.dose, 3 ) + ' ' + d.unit + ( d.site ? ' · ' + siteLabel( d.site ) : '' ) );
+				} ) ) );
+			}
+			btn.disabled = ! plan.items.length;
+			btn.textContent = plan.items.length ? 'Import ' + plan.items.length : 'Import';
+		}
+
+		var colOpts = [ [ '', 'Not in this file' ] ].concat( header.map( function ( x, i ) {
+			return [ String( i ), x || 'Column ' + ( i + 1 ) ];
+		} ) );
+		var mapping = h( 'div', { class: 'ypt-import__map' }, IMPORT_FIELDS.map( function ( f ) {
+			return h( 'label', { class: 'ypt-import__row' }, h( 'span', null, f[ 1 ] ), h( 'select', { class: 'ypt-select', onchange: function ( ev ) {
+				if ( ev.target.value === '' ) {
+					delete map[ f[ 0 ] ];
+				} else {
+					map[ f[ 0 ] ] = +ev.target.value;
+				}
+				build();
+			} }, colOpts.map( function ( o ) {
+				return h( 'option', { value: o[ 0 ], selected: map[ f[ 0 ] ] != null ? String( map[ f[ 0 ] ] ) === o[ 0 ] : o[ 0 ] === '' }, o[ 1 ] );
+			} ) ) );
+		} ) );
+
+		btn.onclick = function () {
+			if ( ! plan.items.length ) {
+				return;
+			}
+			btn.disabled = true;
+			err.hidden = true;
+			status.hidden = false;
+			saveMany( plan.items, function ( m ) {
+				status.textContent = m;
+			} ).then( function ( r ) {
+				closeSheet();
+				go( 'today' );
+				toast( 'Imported ' + r.saved + ( r.failed ? ' · ' + r.failed + ' couldn’t be saved' : '' ) );
+			} ).catch( function ( x ) {
+				btn.disabled = false;
+				status.hidden = true;
+				if ( handleAuthError( x ) ) {
+					return;
+				}
+				err.textContent = isNetworkError( x ) ? 'You went offline. Connect and try again: nothing will be doubled.' : x.message || 'That couldn’t be imported.';
+				err.hidden = false;
+			} );
+		};
+
+		build();
+		openSheet( 'Import', fileName || 'CSV file', [
+			h( 'p', { class: 'ypt-small' }, 'We matched these columns from your file. Change any that look wrong.' ),
+			mapping,
+			h( 'div', { class: 'ypt-row', style: { alignItems: 'center', margin: '10px 0' } },
+				h( 'span', { class: 'ypt-small ypt-muted ypt-shrink' }, 'Weights are in' ),
+				h( 'div', { class: 'ypt-shrink' }, seg( [ 'lb', 'kg' ], wUnit, function ( u ) {
+					wUnit = u;
+					build();
+				} ) )
+			),
+			h( 'div', { class: 'ypt-row', style: { alignItems: 'center', margin: '0 0 10px' } },
+				h( 'span', { class: 'ypt-small ypt-muted ypt-shrink' }, 'Doses without a unit are in' ),
+				h( 'div', { class: 'ypt-shrink' }, seg( [ 'mg', 'mcg', 'units', 'mL' ], defUnit, function ( u ) {
+					defUnit = u;
+					build();
+				} ) )
+			),
+			preview,
+			h( 'p', { class: 'ypt-muted ypt-small' }, 'Doses come in as past doses. They don’t create a schedule: add the peptide or medication too if you want reminders.' ),
+			status,
+			err,
+		], btn );
 	}
 
 	/* ---------- Delete everything ---------- */

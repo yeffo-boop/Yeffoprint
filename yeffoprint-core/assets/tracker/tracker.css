@@ -2315,3 +2315,12 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 .ypt-siteinsights ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
 .ypt-siteinsights li + li { margin-top: 4px; }
 .ypt-siteinsights li.is-warn { color: var(--ypt-warn); }
+
+/* Backup, restore & import */
+.ypt-sheet-h { font-size: 16px; margin: 4px 0 6px; }
+.ypt-import__map { display: grid; gap: 8px; }
+.ypt-import__row { display: grid; grid-template-columns: 9.5em 1fr; gap: 10px; align-items: center; font-size: 14px; }
+.ypt-import__row .ypt-select { min-width: 0; }
+.ypt-import__preview { margin: 6px 0 8px; padding: 10px 12px; border-radius: 12px; background: var(--ypt-soft, var(--ypt-line)); }
+.ypt-import__sum { margin: 0; font-weight: 600; }
+.ypt-import__sample { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ypt-mute); }
