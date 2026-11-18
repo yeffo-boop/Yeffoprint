@@ -171,6 +171,154 @@
 		return node;
 	}
 
+
+	/* =========================================================
+	 * Language (Me › Language): English or Spanish
+	 *
+	 * The app is written in English. In Spanish, tracker-es.js (loaded
+	 * just before this file) supplies window.YPT_I18N.es: `dict` (whole
+	 * English phrases → Spanish), `svg` (the same for chart and body map
+	 * labels, where a word can mean something else) and `patterns`
+	 * ([ RegExp, template ] for phrases with numbers or names in them;
+	 * $1 is a group as-is, {1} a group translated too). A
+	 * MutationObserver swaps every text node and label attribute the app
+	 * adds, so the rest of the code doesn't need to know. Customer text
+	 * (names, notes) isn't in the dictionary, so it stays as typed.
+	 * The choice is per device, like the theme.
+	 * ======================================================= */
+	var LANG_KEY = 'ypt-lang';
+	var LANGS = [ [ 'auto', 'Automatic' ], [ 'en', 'English' ], [ 'es', 'Español' ] ];
+
+	function langPref() {
+		var v = loadJSON( LANG_KEY, 'auto' );
+		return v === 'en' || v === 'es' ? v : 'auto';
+	}
+
+	function currentLang() {
+		var p = langPref();
+		if ( p === 'auto' ) {
+			p = /^es\b/i.test( navigator.language || '' ) ? 'es' : 'en';
+		}
+		return p === 'es' && window.YPT_I18N && window.YPT_I18N.es ? 'es' : 'en';
+	}
+
+	var LANG = currentLang();
+	var I18N = LANG === 'es' ? window.YPT_I18N.es : null;
+	var trCache = {};
+	var I18N_ATTRS = [ 'placeholder', 'aria-label', 'title', 'alt' ];
+
+	/** `s` in the app's language (unchanged in English, or when there's no translation). */
+	function tr( s ) {
+		if ( ! I18N || ! s || ! /[A-Za-z]/.test( s ) ) {
+			return s;
+		}
+		if ( Object.prototype.hasOwnProperty.call( trCache, s ) ) {
+			return trCache[ s ];
+		}
+		var m = /^(\s*)([\s\S]*?)(\s*)$/.exec( s );
+		var core = m[ 2 ];
+		var out = Object.prototype.hasOwnProperty.call( I18N.dict, core ) ? I18N.dict[ core ] : null;
+		if ( out == null ) {
+			for ( var i = 0; i < I18N.patterns.length && out == null; i++ ) {
+				var hit = I18N.patterns[ i ][ 0 ].exec( core );
+				if ( hit ) {
+					out = fillTemplate( I18N.patterns[ i ][ 1 ], hit );
+				}
+			}
+		}
+		// Labels built from parts ("250 mcg · subcutaneous · daily", "Belly, lower left, used 3 days ago"): each part on its own.
+		if ( out == null ) {
+			out = trParts( core, ' · ' ) || trParts( core, ', ' ) || trParts( core, ' / ' );
+		}
+		// "10 units", "3 doses taken": the number stays, the words get translated.
+		if ( out == null ) {
+			var num = /^([\d.,]+\+?) (.+)$/.exec( core );
+			if ( num && tr( num[ 2 ] ) !== num[ 2 ] ) {
+				out = num[ 1 ] + ' ' + tr( num[ 2 ] );
+			}
+		}
+		var res = out == null ? s : m[ 1 ] + out + m[ 3 ];
+		trCache[ s ] = res;
+		return res;
+	}
+
+	/** `core` split on `sep` with each part translated, or null when none of the parts has a translation. */
+	function trParts( core, sep ) {
+		if ( core.indexOf( sep ) === -1 ) {
+			return null;
+		}
+		var changed = false;
+		var parts = core.split( sep ).map( function ( x ) {
+			var t = tr( x );
+			changed = changed || t !== x;
+			return t;
+		} );
+		return changed ? parts.join( sep ) : null;
+	}
+
+	function fillTemplate( tpl, hit ) {
+		if ( typeof tpl === 'function' ) {
+			return tpl( hit, tr );
+		}
+		return tpl.replace( /\{(\d)\}/g, function ( x, n ) {
+			return tr( hit[ +n ] || '' );
+		} ).replace( /\$(\d)/g, function ( x, n ) {
+			return hit[ +n ] || '';
+		} );
+	}
+
+	function translateAttrs( el ) {
+		I18N_ATTRS.forEach( function ( a ) {
+			var v = el.getAttribute( a );
+			if ( v ) {
+				var t = tr( v );
+				if ( t !== v ) {
+					el.setAttribute( a, t );
+				}
+			}
+		} );
+	}
+
+	function translateNode( n ) {
+		if ( n.nodeType === 3 ) {
+			var v = n.nodeValue;
+			var parent = n.parentNode;
+			var t = parent && parent.namespaceURI === SVG_NS && Object.prototype.hasOwnProperty.call( I18N.svg, v.trim() ) ? I18N.svg[ v.trim() ] : tr( v );
+			if ( t !== v ) {
+				n.nodeValue = t;
+			}
+			return;
+		}
+		if ( n.nodeType !== 1 || n.hasAttribute( 'data-noi18n' ) || n.tagName === 'SCRIPT' || n.tagName === 'STYLE' ) {
+			return;
+		}
+		translateAttrs( n );
+		// A textarea's text is what the customer typed: only its placeholder.
+		if ( n.tagName === 'TEXTAREA' ) {
+			return;
+		}
+		for ( var c = n.firstChild; c; c = c.nextSibling ) {
+			translateNode( c );
+		}
+	}
+
+	if ( I18N ) {
+		document.documentElement.lang = 'es';
+		DOW = [ 'D', 'L', 'M', 'M', 'J', 'V', 'S' ];
+		DOW_LONG = [ 'dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb' ];
+		MONTHS = [ 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre' ];
+		new MutationObserver( function ( muts ) {
+			muts.forEach( function ( mu ) {
+				if ( mu.type === 'attributes' ) {
+					translateAttrs( mu.target );
+				} else {
+					[].forEach.call( mu.addedNodes, translateNode );
+				}
+			} );
+		} ).observe( document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: I18N_ATTRS } );
+		translateNode( document.body );
+	}
+
 	var ICONS = {
 		today: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M8 13l2.5 2.5L16 12',
 		history: 'M4 19V9M10 19V5M16 19v-7M22 19H2',
@@ -333,7 +481,7 @@
 		}
 		var p = t.split( ':' );
 		var hr = +p[ 0 ];
-		return ( ( hr % 12 ) || 12 ) + ':' + p[ 1 ] + ' ' + ( hr < 12 ? 'AM' : 'PM' );
+		return ( ( hr % 12 ) || 12 ) + ':' + p[ 1 ] + ' ' + ( I18N ? ( hr < 12 ? 'a. m.' : 'p. m.' ) : hr < 12 ? 'AM' : 'PM' );
 	}
 
 	function fmtIsoTime( iso ) {
@@ -343,7 +491,17 @@
 
 	function fmtDay( s, withYear ) {
 		var d = parseDate( s );
-		return DOW_LONG[ d.getDay() ] + ', ' + MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate() + ( withYear ? ', ' + d.getFullYear() : '' );
+		if ( I18N ) {
+			// "lun, 3 nov" (and ", 2026"): Spanish puts the day first.
+			return DOW_LONG[ d.getDay() ] + ', ' + d.getDate() + ' ' + MONTHS[ d.getMonth() ].slice( 0, 3 ).toLowerCase() + ( withYear ? ', ' + d.getFullYear() : '' );
+		}
+		return DOW_LONG[ d.getDay() ] + ', ' + monDay( d ) + ( withYear ? ', ' + d.getFullYear() : '' );
+	}
+
+	/** "Nov 3" (Spanish "3 nov"), for chart axes and short lists. */
+	function monDay( d ) {
+		var mon = MONTHS[ d.getMonth() ].slice( 0, 3 );
+		return I18N ? d.getDate() + ' ' + mon.toLowerCase() : mon + ' ' + d.getDate();
 	}
 
 	function fmtNum( n, digits ) {
@@ -559,7 +717,7 @@
 		if ( ! ph || ph.on ) {
 			return null;
 		}
-		return { title: p.compound + ': off week ' + ph.week + ' of ' + ph.of + '.', text: 'Back on ' + fmtDay( ph.next ).replace( /^\w+, /, '' ) + ( stepsOf( p ).length ? ' at ' + amountLabel( doseOn( p, ph.next ), p.unit ) : '' ) + '. ' + from };
+		return { title: p.compound + ': off week ' + ph.week + ' of ' + ph.of + '.', text: 'Back on ' + fmtDay( ph.next ).replace( /^[^,]+, /, '' ) + ( stepsOf( p ).length ? ' at ' + amountLabel( doseOn( p, ph.next ), p.unit ) : '' ) + '. ' + from };
 	}
 
 	/**
@@ -1004,7 +1162,7 @@
 		if ( ! info.expires ) {
 			return null;
 		}
-		var on = fmtDay( info.expires ).replace( /^\w+, /, '' );
+		var on = fmtDay( info.expires ).replace( /^[^,]+, /, '' );
 		var n = info.expiresIn;
 		if ( n <= 0 ) {
 			return { tone: 'bad', text: n === 0 ? 'Expires today' : 'Expired ' + on };
@@ -1155,16 +1313,82 @@
 		return last;
 	}
 
-	/** The spot in the rotation that has rested longest (never-used spots first, in map order). */
-	function nextSite( p, exceptId ) {
-		var last = siteLastUsed( exceptId );
-		var best = null;
-		rotationOf( p ).forEach( function ( s ) {
-			if ( ! best || ( last[ s.id ] || '' ) < ( last[ best.id ] || '' ) ) {
-				best = s;
+	var SORE_TAGS = [ 'Sore injection site', 'Redness or bump' ];
+	var SITE_REST_DAYS = 3;
+
+	/**
+	 * How each spot has reacted over the last 90 days:
+	 * { siteId: { uses, sore } }, where `sore` counts doses tagged with a
+	 * site reaction (sore, red or a bump).
+	 */
+	function siteReactions( exceptId ) {
+		var since = addDays( todayStr(), -90 );
+		var out = {};
+		values( state.records.dose ).forEach( function ( d ) {
+			if ( d.status !== 'taken' || ! d.site || d.id === exceptId || d.date < since ) {
+				return;
+			}
+			var r = out[ d.site ] = out[ d.site ] || { uses: 0, sore: 0 };
+			r.uses++;
+			if ( tagsOf( d ).some( function ( t ) {
+				return SORE_TAGS.some( function ( x ) {
+					return sameCompound( x, t );
+				} );
+			} ) ) {
+				r.sore++;
 			}
 		} );
+		return out;
+	}
+
+	/** A spot that keeps reacting: sore or red at least twice, and at least half the time. */
+	function isSoreSite( r ) {
+		return !! r && r.sore >= 2 && r.sore / r.uses >= 0.5;
+	}
+
+	/**
+	 * The spot in the rotation that has rested longest (never-used spots
+	 * first, in map order). Spots that keep getting sore come last, unless
+	 * every other spot was used in the last couple of days.
+	 */
+	function nextSite( p, exceptId ) {
+		var last = siteLastUsed( exceptId );
+		var react = siteReactions( exceptId );
+		function pick( list ) {
+			var best = null;
+			list.forEach( function ( s ) {
+				if ( ! best || ( last[ s.id ] || '' ) < ( last[ best.id ] || '' ) ) {
+					best = s;
+				}
+			} );
+			return best;
+		}
+		var all = rotationOf( p );
+		var calm = all.filter( function ( s ) {
+			return ! isSoreSite( react[ s.id ] );
+		} );
+		var best = pick( calm );
+		if ( ! best || siteHeat( last[ best.id ] ) === 'recent' ) {
+			best = pick( all );
+		}
 		return best ? best.id : '';
+	}
+
+	/**
+	 * Heads-ups for using a spot: used too recently, or it keeps getting
+	 * sore. Returns a list of sentences (empty when the spot is fine).
+	 */
+	function siteWarnings( id, last, react, suggested ) {
+		var out = [];
+		var n = last[ id ] ? daysBetween( last[ id ], todayStr() ) : null;
+		if ( n != null && n < SITE_REST_DAYS ) {
+			out.push( ( n <= 0 ? 'You already used this spot today.' : n === 1 ? 'You used this spot yesterday.' : 'You used this spot ' + n + ' days ago.' ) + ' Spots heal better with ' + SITE_REST_DAYS + '+ days of rest' + ( suggested && suggested !== id ? '. ' + siteLabel( suggested ) + ' has rested longest.' : '.' ) );
+		}
+		var r = react[ id ];
+		if ( isSoreSite( r ) ) {
+			out.push( 'Sore or red ' + r.sore + ' of the last ' + r.uses + ' times here. Try another spot for a while.' );
+		}
+		return out;
 	}
 
 	function restedLabel( date ) {
@@ -1255,6 +1479,7 @@
 	function sitePicker( p, current, exceptId, onChange, noDefault ) {
 		var wrap = h( 'div', { class: 'ypt-sitepick' } );
 		var last = siteLastUsed( exceptId );
+		var react = siteReactions( exceptId );
 		var suggested = nextSite( p, exceptId );
 		var sel = current || ( noDefault ? '' : suggested );
 		// A spot logged outside the rotation (or before it changed) still shows.
@@ -1274,6 +1499,11 @@
 			wrap.appendChild( sel ? h( 'p', { class: 'ypt-sitepick__line' },
 				h( 'b', null, siteLabel( sel ) ),
 				' · ' + restedLabel( last[ sel ] ) + ( sel === suggested ? ' · suggested' : '' ) ) : h( 'p', { class: 'ypt-sitepick__line ypt-muted' }, 'Tap the spot you used.' ) );
+			if ( sel && ! noDefault ) {
+				siteWarnings( sel, last, react, suggested ).forEach( function ( w ) {
+					wrap.appendChild( h( 'p', { class: 'ypt-sitepick__warn', role: 'status' }, w ) );
+				} );
+			}
 			wrap.appendChild( mapLegend() );
 		}
 		draw();
@@ -1686,7 +1916,7 @@
 			}
 			ui.day = todayStr();
 			go( 'today' );
-		} }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), h( 'span', null, 'Yeffo', h( 'span', { class: 'ypt-appbar__h' }, 'Health' ) ) );
+		} }, h( 'img', { src: iconUrl( 'icon-192.png' ), alt: '' } ), h( 'span', { 'data-noi18n': '' }, 'Yeffo', h( 'span', { class: 'ypt-appbar__h' }, 'Health' ) ) );
 		if ( guest ) {
 			return h( 'header', { class: 'ypt-appbar' },
 				h( 'div', { class: 'ypt-appbar__inner' },
@@ -2175,7 +2405,7 @@
 			} ).length + 1;
 			var total = plan.end && plan.known ? plan.segments.length + ( v ? 0 : 1 ) : 0;
 			card.appendChild( h( 'div', { class: 'ypt-mixday' },
-				h( 'b', null, 'Mix day. ' ), v ? ( vi.expired && vi.dosesLeft !== 0 ? 'This ' + what + ' expired ' + ( vi.expiresIn === 0 ? 'today' : fmtDay( vi.expires ).replace( /^\w+, /, '' ) ) + '.' : 'This ' + what + ' is used up.' ) : 'Mix a ' + what + ' to see the units for this dose.',
+				h( 'b', null, 'Mix day. ' ), v ? ( vi.expired && vi.dosesLeft !== 0 ? 'This ' + what + ' expired ' + ( vi.expiresIn === 0 ? 'today' : fmtDay( vi.expires ).replace( /^[^,]+, /, '' ) ) + '.' : 'This ' + what + ' is used up.' ) : 'Mix a ' + what + ' to see the units for this dose.',
 				have ? ' You have ' + have + ' on hand.' : ' You have none on hand.',
 				h( 'div', { class: 'ypt-mixday__actions' },
 					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--accent', onclick: function () {
@@ -2205,7 +2435,7 @@
 				var soon = ! log && info && info.expires && info.expiresIn <= EXPIRY_WARN_DAYS;
 				card.appendChild( h( 'div', { class: 'ypt-draw' + ( soon ? ' ypt-draw--warn' : '' ) },
 					isPen( v ) ? [ log ? 'Dialed ' : 'Dial ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on your pen' ] : [ log ? 'Drew ' : 'Draw ', h( 'b', null, fmtNum( units, 1 ) + ' units' ), ' on a U-100 syringe' ],
-					v ? ' · ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) : '',
+					v ? ' · ' + ( isPen( v ) ? 'pen' : 'vial' ) + ' mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) : '',
 					soon ? ' · expires ' + ( info.expiresIn <= 0 ? 'today' : info.expiresIn === 1 ? 'tomorrow' : 'in ' + info.expiresIn + ' days' ) : '',
 					! log && info && info.dosesLeft === 1 && s.date === todayStr() ? ' · last dose in this ' + what : '',
 					isBlend( v ) ? h( 'span', { class: 'ypt-draw__blend' }, 'Each dose: ' + blendDoseLine( v, units ) ) : null
@@ -2610,10 +2840,10 @@
 		var v = x.v;
 		var what = isPen( v ) ? 'pen' : 'vial';
 		var n = x.info.expiresIn;
-		var when = n < 0 ? 'expired ' + fmtDay( x.info.expires ).replace( /^\w+, /, '' ) : n === 0 ? 'expires today' : n === 1 ? 'expires tomorrow' : 'expires in ' + n + ' days';
+		var when = n < 0 ? 'expired ' + fmtDay( x.info.expires ).replace( /^[^,]+, /, '' ) : n === 0 ? 'expires today' : n === 1 ? 'expires tomorrow' : 'expires in ' + n + ' days';
 		return h( 'div', { class: 'ypt-banner ypt-banner--warn' },
 			h( 'div', null, h( 'b', null, 'Your ' + v.compound + ' ' + what + ' ' + when + '. ' ),
-				'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days.' + ( list.length > 1 ? ' Plus ' + ( list.length - 1 ) + ' more.' : '' ),
+				'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days.' + ( list.length > 1 ? ' Plus ' + ( list.length - 1 ) + ' more.' : '' ),
 				h( 'div', { style: { marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' } },
 					h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--white', onclick: function () {
 						openVialSheet( null, { compound: v.compound, kind: what, preset: { kind: v.kind, mode: v.mode, amount: v.amount, water: v.water, conc: v.conc, volume: v.volume, parts: v.parts, blend: v.blend, syringe: v.syringe, goodFor: v.goodFor }, replaces: v.id } );
@@ -2685,7 +2915,7 @@
 
 		var opts = h( 'div', null );
 		if ( Math.abs( diff ) > EASE_STEP ) {
-			opts.appendChild( option( 'ease', 'Ease into ' + city + ' time', 'Shift ' + EASE_STEP / 60 + ' hours a day. On ' + city + ' time by ' + fmtDay( addDays( todayStr(), steps ) ).replace( /^\w+, /, '' ) + '.' ) );
+			opts.appendChild( option( 'ease', 'Ease into ' + city + ' time', 'Shift ' + EASE_STEP / 60 + ' hours a day. On ' + city + ' time by ' + fmtDay( addDays( todayStr(), steps ) ).replace( /^[^,]+, /, '' ) + '.' ) );
 		}
 		opts.appendChild( option( 'switch', 'Switch now', 'Your ' + fmtTime( first ) + ' dose moves to ' + fmtTime( first ) + ' ' + city + ' time, ' + hoursLabel( diff ) + ' ' + ( diff > 0 ? 'earlier' : 'later' ) + ', once.' ) );
 		opts.appendChild( option( 'home', 'Keep ' + homeName + ' time', 'Doses stay at ' + fmtTime( atHere ) + ' here. Good for short trips.' ) );
@@ -2799,7 +3029,7 @@
 
 	function newsItem( n ) {
 		return h( 'div', { class: 'ypt-news' },
-			h( 'div', { class: 'ypt-eyebrow' }, fmtDay( n.date ).replace( /^\w+, /, '' ) ),
+			h( 'div', { class: 'ypt-eyebrow' }, fmtDay( n.date ).replace( /^[^,]+, /, '' ) ),
 			h( 'b', null, n.title ),
 			h( 'p', { class: 'ypt-small' }, n.text ) );
 	}
@@ -3280,6 +3510,172 @@
 		openSheet( 'Progress photos', 'Only you can see these', [ box ] );
 	}
 
+	/* ---------- Goal weight and maintenance ----------
+	 * settings.me.goal = { weight, unit:'lb'|'kg', set:'YYYY-MM-DD',
+	 *   start: weight when the goal was set (same unit),
+	 *   maintain: null | { since:'YYYY-MM-DD', band: ± in `unit` } }
+	 * Losing or gaining is read from start vs goal. Once the latest
+	 * weigh-in reaches the goal the customer can switch to maintenance,
+	 * which keeps a range around the goal instead of a finish line.
+	 */
+	function weightGoal() {
+		var g = ( state.records.settings.me || {} ).goal;
+		return g && +g.weight > 0 ? g : null;
+	}
+
+	function saveGoal( g ) {
+		put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { goal: g } ) );
+	}
+
+	/** The goal in the customer's units: { goal, start, band, losing, maintain }. */
+	function goalInUnits( g ) {
+		var u = g.unit === 'kg' ? 'kg' : 'lb';
+		var goal = convert( +g.weight, u, weightUnit() );
+		var start = +g.start > 0 ? convert( +g.start, u, weightUnit() ) : null;
+		return {
+			goal: goal,
+			start: start,
+			losing: start == null || start >= goal,
+			maintain: g.maintain || null,
+			band: g.maintain ? convert( +g.maintain.band > 0 ? +g.maintain.band : u === 'kg' ? 1.5 : 3, u, weightUnit() ) : 0,
+		};
+	}
+
+	function latestWeight() {
+		var w = progressEntries().filter( function ( e ) {
+			return metricValue( e, 'weight' ) != null;
+		} );
+		return w.length ? w[ w.length - 1 ] : null;
+	}
+
+	function goalCard() {
+		var g = weightGoal();
+		var last = latestWeight();
+		var card = h( 'div', { class: 'ypt-card ypt-goal' } );
+		if ( ! g ) {
+			card.appendChild( h( 'button', { type: 'button', class: 'ypt-list-row ypt-goal__set', onclick: function () {
+				openGoalSheet();
+			} }, h( 'span', null, h( 'b', null, 'Set a goal weight' ), h( 'span', { class: 'ypt-muted ypt-small ypt-prog-row__sub' }, 'See how far you’ve come and how far to go.' ) ), h( 'span', null, '›' ) ) );
+			return card;
+		}
+		var x = goalInUnits( g );
+		var now = last ? metricValue( last, 'weight' ) : null;
+		var editBtn = h( 'button', { type: 'button', class: 'ypt-link', onclick: function () {
+			openGoalSheet();
+		} }, 'Edit' );
+		if ( x.maintain ) {
+			var lo = x.goal - x.band;
+			var hi = x.goal + x.band;
+			var since = x.maintain.since || g.set;
+			var recent = progressEntries().filter( function ( e ) {
+				return e.date >= since && metricValue( e, 'weight' ) != null;
+			} );
+			var inRange = recent.filter( function ( e ) {
+				var v = metricValue( e, 'weight' );
+				return v >= lo - 0.05 && v <= hi + 0.05;
+			} ).length;
+			var status = now == null ? 'Log your weight to check your range.' : now > hi + 0.05 ? fmtMetric( now - hi, 'weight' ) + ' above your range' : now < lo - 0.05 ? fmtMetric( lo - now, 'weight' ) + ' below your range' : 'In your range';
+			card.appendChild( h( 'div', { class: 'ypt-goal__head' },
+				h( 'div', null,
+					h( 'div', { class: 'ypt-eyebrow' }, 'Maintenance · since ' + fmtDay( since ).replace( /^[^,]+, /, '' ) ),
+					h( 'b', null, 'Keep between ' + fmtNum( lo, 1 ) + ' and ' + fmtMetric( hi, 'weight' ) )
+				), editBtn ) );
+			card.appendChild( h( 'p', { class: 'ypt-goal__status' + ( status === 'In your range' ? ' is-good' : now == null ? '' : ' is-warn' ) }, status ) );
+			if ( recent.length ) {
+				card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '4px 0 0' } }, 'In range at ' + inRange + ' of ' + recent.length + ' weigh-in' + ( recent.length === 1 ? '' : 's' ) + ' since you started maintenance.' ) );
+			}
+			return card;
+		}
+		var reached = now != null && ( x.losing ? now <= x.goal + 0.05 : now >= x.goal - 0.05 );
+		var total = x.start != null ? Math.abs( x.start - x.goal ) : 0;
+		var done = x.start != null && now != null ? ( x.losing ? x.start - now : now - x.start ) : 0;
+		var pct = reached ? 100 : total > 0 ? Math.max( 0, Math.min( 100, ( done / total ) * 100 ) ) : 0;
+		card.appendChild( h( 'div', { class: 'ypt-goal__head' },
+			h( 'div', null,
+				h( 'div', { class: 'ypt-eyebrow' }, 'Goal' ),
+				h( 'b', null, fmtMetric( x.goal, 'weight' ) + ( reached ? ' · reached' : now != null ? ' · ' + fmtMetric( Math.abs( now - x.goal ), 'weight' ) + ' to go' : '' ) )
+			), editBtn ) );
+		card.appendChild( h( 'div', { class: 'ypt-bar ypt-goal__bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String( Math.round( pct ) ), 'aria-label': 'Progress to goal' }, h( 'i', { style: { width: pct + '%' } } ) ) );
+		if ( x.start != null && ! reached ) {
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } },
+				( done > 0.05 ? fmtMetric( done, 'weight' ) + ( x.losing ? ' down' : ' up' ) + ' since ' + fmtDay( g.set ).replace( /^[^,]+, /, '' ) : 'Started at ' + fmtMetric( x.start, 'weight' ) + ' on ' + fmtDay( g.set ).replace( /^[^,]+, /, '' ) ) + ' · ' + Math.round( pct ) + '% there' ) );
+		}
+		if ( reached ) {
+			card.appendChild( h( 'p', { class: 'ypt-goal__status is-good' }, 'You reached your goal. Nice work!' ) );
+			card.appendChild( h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', style: { marginTop: '8px' }, onclick: function () {
+				saveGoal( Object.assign( {}, g, { maintain: { since: todayStr(), band: g.unit === 'kg' ? 1.5 : 3 } } ) );
+				toast( 'Maintenance started' );
+			} }, 'Start maintenance' ) );
+			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '6px 0 0' } }, 'Maintenance keeps a range around your goal, so you can see when your weight drifts.' ) );
+		}
+		return card;
+	}
+
+	function openGoalSheet() {
+		var g = weightGoal();
+		var last = latestWeight();
+		var unit = g ? ( g.unit === 'kg' ? 'kg' : 'lb' ) : weightUnit();
+		var val = g ? String( g.weight ) : '';
+		var maintain = !! ( g && g.maintain );
+		var band = g && g.maintain && +g.maintain.band > 0 ? String( g.maintain.band ) : unit === 'kg' ? '1.5' : '3';
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var bandBox = h( 'div', { hidden: ! maintain } );
+		var unitLabel = h( 'span', null, unit );
+		append( bandBox, [ field( 'Stay within (±)', h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+			h( 'input', { class: 'ypt-input', id: 'ypt-goal-band', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: band, oninput: function ( ev ) {
+				band = ev.target.value;
+			} } ), h( 'span', { class: 'ypt-shrink ypt-muted' }, unitLabel ) ), 'How far your weight can move either way before we flag it.', 'ypt-goal-band' ) ] );
+		var body = [
+			field( 'Goal weight', h( 'div', { class: 'ypt-row', style: { alignItems: 'center' } },
+				h( 'input', { class: 'ypt-input', id: 'ypt-goal-w', type: 'number', inputmode: 'decimal', min: '0', step: 'any', value: val, placeholder: last ? fmtNum( metricValue( last, 'weight' ), 0 ) : '', oninput: function ( ev ) {
+					val = ev.target.value;
+				} } ),
+				h( 'div', { class: 'ypt-shrink' }, seg( [ 'lb', 'kg' ], unit, function ( u ) {
+					unit = u;
+					unitLabel.textContent = u;
+				} ) )
+			), last ? 'You’re at ' + fmtMetric( metricValue( last, 'weight' ), 'weight' ) + ' (' + fmtDay( last.date ).replace( /^[^,]+, /, '' ) + ').' : 'Log a weigh-in too, so we can show how far to go.', 'ypt-goal-w' ),
+			h( 'label', { class: 'ypt-goal__check' }, h( 'input', { type: 'checkbox', checked: maintain, onchange: function ( ev ) {
+				maintain = ev.target.checked;
+				bandBox.hidden = ! maintain;
+			} } ), h( 'span', null, 'I’m maintaining this weight' ) ),
+			bandBox,
+			err,
+		];
+		if ( g ) {
+			body.push( h( 'button', { type: 'button', class: 'ypt-link ypt-goal__remove', onclick: function () {
+				closeSheet();
+				saveGoal( null );
+				toast( 'Goal removed' );
+			} }, 'Remove goal' ) );
+		}
+		openSheet( g ? 'Edit goal' : 'Goal weight', 'Progress', body, h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			var w = parseFloat( val );
+			if ( ! ( w > 0 ) || w > 2000 ) {
+				err.textContent = 'Enter your goal weight.';
+				err.hidden = false;
+				return;
+			}
+			var b = parseFloat( band );
+			var startW = g && g.unit === unit && +g.start > 0 ? +g.start : last ? Math.round( convert( +last.weight, last.wUnit || 'lb', unit ) * 10 ) / 10 : 0;
+			var changed = ! g || Math.abs( convert( +g.weight, g.unit || 'lb', unit ) - w ) > 0.05;
+			var out = {
+				weight: Math.round( w * 10 ) / 10,
+				unit: unit,
+				// A new target restarts the "since" counting from today's weight.
+				set: g && ! changed ? g.set : todayStr(),
+				start: changed && last ? Math.round( convert( +last.weight, last.wUnit || 'lb', unit ) * 10 ) / 10 : startW,
+				maintain: maintain ? { since: g && g.maintain ? g.maintain.since : todayStr(), band: b > 0 ? Math.round( b * 10 ) / 10 : unit === 'kg' ? 1.5 : 3 } : null,
+			};
+			closeSheet();
+			saveGoal( out );
+			if ( ! ( state.records.settings.me || {} ).units ) {
+				put( 'settings', 'me', Object.assign( {}, state.records.settings.me || {}, { units: unit === 'kg' ? 'metric' : 'us' } ) );
+			}
+			toast( g ? 'Goal updated' : 'Goal set' );
+		} }, 'Save' ) );
+	}
+
 	/* ---------- The Progress view ---------- */
 
 	function renderProgress() {
@@ -3318,16 +3714,19 @@
 			var base = inRange.length > 1 ? inRange[ 0 ] : null;
 			var change = base ? lv - metricValue( base, key ) : null;
 			head.appendChild( h( 'div', null,
-				h( 'div', { class: 'ypt-eyebrow' }, metricName( key ) + ' · ' + fmtDay( latest.date ).replace( /^\w+, /, '' ) ),
+				h( 'div', { class: 'ypt-eyebrow' }, metricName( key ) + ' · ' + fmtDay( latest.date ).replace( /^[^,]+, /, '' ) ),
 				h( 'div', { class: 'ypt-prog-head__big' }, fmtMetric( lv, key ) ),
 				change != null ? h( 'div', { class: 'ypt-prog-head__delta' + ( Math.abs( change ) < 0.05 ? '' : change < 0 ? ' is-down' : ' is-up' ) },
-					( change > 0 ? '+' : change < 0 ? '−' : '±' ) + fmtMetric( Math.abs( change ), key ) + ' since ' + fmtDay( base.date ).replace( /^\w+, /, '' ) ) : h( 'div', { class: 'ypt-muted ypt-small' }, 'Log again to see your change.' )
+					( change > 0 ? '+' : change < 0 ? '−' : '±' ) + fmtMetric( Math.abs( change ), key ) + ' since ' + fmtDay( base.date ).replace( /^[^,]+, /, '' ) ) : h( 'div', { class: 'ypt-muted ypt-small' }, 'Log again to see your change.' )
 			) );
 		} else {
 			head.appendChild( h( 'div', null, h( 'div', { class: 'ypt-eyebrow' }, 'Progress' ), h( 'div', { class: 'ypt-muted' }, 'No ' + metricName( key ).toLowerCase() + ' logged yet.' ) ) );
 		}
 		head.appendChild( logBtn );
 		wrap.appendChild( head );
+		if ( key === 'weight' ) {
+			wrap.appendChild( goalCard() );
+		}
 
 		if ( metrics.length > 1 ) {
 			wrap.appendChild( h( 'div', { class: 'ypt-chips', style: { margin: '2px 0 10px' } }, metrics.map( function ( k ) {
@@ -3345,7 +3744,7 @@
 				render();
 			} }, r[ 1 ] );
 		} ) ) );
-		chartCard.appendChild( progressChart( entries, key, from, today ) );
+		chartCard.appendChild( progressChart( entries, key, from, today, key === 'weight' && weightGoal() ? { goal: goalInUnits( weightGoal() ) } : null ) );
 		wrap.appendChild( chartCard );
 
 		// Then & now: the first and latest photos side by side.
@@ -3360,7 +3759,7 @@
 					var w = metricValue( x.entry, 'weight' );
 					return h( 'button', { type: 'button', class: 'ypt-thennow__item', onclick: function () {
 						openPhotoViewer( photos, n ? photos.length - 1 : 0 );
-					} }, photoImg( x.id ), h( 'span', null, h( 'b', null, pair.length > 1 ? ( n ? 'Now' : 'Then' ) : 'First photo' ), ' · ' + fmtDay( x.date ).replace( /^\w+, /, '' ) + ( w != null ? ' · ' + fmtMetric( w, 'weight' ) : '' ) ) );
+					} }, photoImg( x.id ), h( 'span', null, h( 'b', null, pair.length > 1 ? ( n ? 'Now' : 'Then' ) : 'First photo' ), ' · ' + fmtDay( x.date ).replace( /^[^,]+, /, '' ) + ( w != null ? ' · ' + fmtMetric( w, 'weight' ) : '' ) ) );
 				} ) ),
 				photos.length > 2 ? h( 'button', { type: 'button', class: 'ypt-link', style: { marginTop: '10px' }, onclick: function () {
 					openPhotoViewer( photos, photos.length - 1 );
@@ -3391,7 +3790,7 @@
 			return h( 'button', { type: 'button', class: 'ypt-list-row ypt-prog-row', onclick: function () {
 				openProgressSheet( e );
 			} },
-				h( 'span', null, h( 'b', null, fmtDay( e.date ).replace( /^\w+, /, '' ) ), bits.length || e.note ? h( 'span', { class: 'ypt-muted ypt-small ypt-prog-row__sub' }, bits.join( ' · ' ) + ( e.note ? ( bits.length ? ' · ' : '' ) + '“' + e.note + '”' : '' ) ) : null ),
+				h( 'span', null, h( 'b', null, fmtDay( e.date ).replace( /^[^,]+, /, '' ) ), bits.length || e.note ? h( 'span', { class: 'ypt-muted ypt-small ypt-prog-row__sub' }, bits.join( ' · ' ) + ( e.note ? ( bits.length ? ' · ' : '' ) + '“' + e.note + '”' : '' ) ) : null ),
 				h( 'span', { class: 'ypt-prog-row__right' },
 					nPhotos ? h( 'span', { class: 'ypt-prog-row__cam', 'aria-label': nPhotos + ' photo' + ( nPhotos === 1 ? '' : 's' ) }, icon( 'camera' ), String( nPhotos ) ) : null,
 					w != null ? h( 'b', null, fmtMetric( w, 'weight' ) ) : null,
@@ -3476,6 +3875,11 @@
 				return v != null;
 			} ) );
 		}
+		// A goal weight (and its maintenance range) counts too, so the line to it shows.
+		var goal = opts.goal || null;
+		if ( goal && pts.length ) {
+			vals = vals.concat( [ goal.goal - goal.band, goal.goal + goal.band ] );
+		}
 		var lo = vals.length ? Math.min.apply( null, vals ) : 0;
 		var hi = vals.length ? Math.max.apply( null, vals ) : 1;
 		var pad = opts.pts ? Math.max( ( hi - lo ) * 0.15, Math.abs( hi ) * 0.05, 0.05 ) : Math.max( ( hi - lo ) * 0.15, key === 'weight' ? 1 : 0.5 );
@@ -3483,6 +3887,14 @@
 		hi += pad;
 		function yOf( v ) {
 			return TOP + CH - ( ( v - lo ) / ( hi - lo ) ) * CH;
+		}
+		if ( goal && pts.length ) {
+			if ( goal.band ) {
+				var gTop = yOf( goal.goal + goal.band );
+				svg( 'rect', { x: L, y: gTop, width: plotW, height: Math.max( 1, yOf( goal.goal - goal.band ) - gTop ), class: 'g-band' }, s );
+			}
+			svg( 'line', { x1: L, x2: W - R, y1: yOf( goal.goal ), y2: yOf( goal.goal ), class: 'g-goal' }, s );
+			svg( 'text', { x: W - R - 2, y: yOf( goal.goal ) - 5, class: 'g-goal-label' }, s ).textContent = 'Goal ' + fmtNum( goal.goal, 1 );
 		}
 		if ( band ) {
 			var bTop = yOf( band.high != null ? band.high : hi );
@@ -3495,7 +3907,7 @@
 		}
 		// X labels: start, middle, end.
 		[ from, addDays( from, Math.round( span / 2 ) ), to ].forEach( function ( d, i ) {
-			svg( 'text', { x: xOf( d ), y: TOP + CH + 14, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : i === 2 ? ' is-end' : '' ) }, s ).textContent = MONTHS[ parseDate( d ).getMonth() ].slice( 0, 3 ) + ' ' + parseDate( d ).getDate();
+			svg( 'text', { x: xOf( d ), y: TOP + CH + 14, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : i === 2 ? ' is-end' : '' ) }, s ).textContent = monDay( parseDate( d ) );
 		} );
 
 		// Titration steps that start inside the range.
@@ -3659,7 +4071,7 @@
 				} },
 					h( 'span', { class: 'ypt-lab-row__main' },
 						h( 'b', null, g.name ),
-						h( 'span', { class: 'ypt-muted ypt-small' }, fmtDay( r.date, true ).replace( /^\w+, /, '' ) + ( g.list.length > 1 ? ' · ' + g.list.length + ' results' : '' ) + ( diff != null && diff !== 0 ? ' · ' + ( diff > 0 ? '+' : '−' ) + fmtNum( Math.abs( diff ), 3 ) + ' since last' : '' ) )
+						h( 'span', { class: 'ypt-muted ypt-small' }, fmtDay( r.date, true ).replace( /^[^,]+, /, '' ) + ( g.list.length > 1 ? ' · ' + g.list.length + ' results' : '' ) + ( diff != null && diff !== 0 ? ' · ' + ( diff > 0 ? '+' : '−' ) + fmtNum( Math.abs( diff ), 3 ) + ' since last' : '' ) )
 					),
 					h( 'span', { class: 'ypt-lab-row__val' },
 						h( 'b', null, fmtLab( r.value, r.unit ) ),
@@ -3711,7 +4123,7 @@
 					openLabSheet( r );
 				} },
 					h( 'span', { class: 'ypt-lab-row__main' },
-						h( 'b', null, fmtDay( r.date, true ).replace( /^\w+, /, '' ) ),
+						h( 'b', null, fmtDay( r.date, true ).replace( /^[^,]+, /, '' ) ),
 						r.note ? h( 'span', { class: 'ypt-muted ypt-small' }, r.note ) : null
 					),
 					h( 'span', { class: 'ypt-lab-row__val' }, h( 'b', null, fmtLab( r.value, r.unit ) ), flag ? h( 'span', { class: 'ypt-tag ypt-tag--' + flag.tone }, flag.text ) : null )
@@ -4003,7 +4415,7 @@
 				h( 'div', { class: 'ypt-row' }, num( e.weight, prev && metricValue( prev, 'weight' ) != null ? fmtNum( convert( +prev.weight, prev.wUnit || 'lb', e.wUnit ), 1 ) : '', 'Weight', function ( v ) {
 					e.weight = v;
 				}, 'ypt-g-weight' ), unitBox ),
-				prev && metricValue( prev, 'weight' ) != null ? h( 'p', { class: 'ypt-hint' }, 'Last time: ' + fmtNum( convert( +prev.weight, prev.wUnit || 'lb', e.wUnit ), 1 ) + ' ' + e.wUnit + ' on ' + fmtDay( prev.date ).replace( /^\w+, /, '' ) + '.' ) : null
+				prev && metricValue( prev, 'weight' ) != null ? h( 'p', { class: 'ypt-hint' }, 'Last time: ' + fmtNum( convert( +prev.weight, prev.wUnit || 'lb', e.wUnit ), 1 ) + ' ' + e.wUnit + ' on ' + fmtDay( prev.date ).replace( /^[^,]+, /, '' ) + '.' ) : null
 			),
 			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Measurements (optional)' ), moreBtn, measuresBox ),
 			h( 'div', { class: 'ypt-field' }, h( 'span', { class: 'ypt-label' }, 'Photos (optional)' ), photosBox, picker,
@@ -4054,9 +4466,63 @@
 			} } ) );
 			card.appendChild( line );
 			card.appendChild( mapLegend() );
+			var tips = siteInsights( last );
+			if ( tips.length ) {
+				card.appendChild( h( 'div', { class: 'ypt-siteinsights' },
+					h( 'div', { class: 'ypt-eyebrow' }, 'Site tips' ),
+					h( 'ul', null, tips.map( function ( t ) {
+						return h( 'li', { class: t.warn ? 'is-warn' : '' }, t.text );
+					} ) )
+				) );
+			}
 		}
 		draw( '' );
 		return card;
+	}
+
+	/**
+	 * A few plain lines about the customer's spots over the last 90 days:
+	 * spots that keep getting sore, a spot carrying most of the load, and
+	 * spots in the rotation that never get used.
+	 */
+	function siteInsights( last ) {
+		var react = siteReactions();
+		var tips = [];
+		var total = 0;
+		Object.keys( react ).forEach( function ( id ) {
+			total += react[ id ].uses;
+		} );
+		Object.keys( react ).sort( function ( a, b ) {
+			return react[ b ].sore - react[ a ].sore;
+		} ).forEach( function ( id ) {
+			if ( isSoreSite( react[ id ] ) ) {
+				tips.push( { warn: true, text: siteLabel( id ) + ': sore or red ' + react[ id ].sore + ' of ' + react[ id ].uses + ' times. We’ll suggest it last for now.' } );
+			}
+		} );
+		var top = Object.keys( react ).sort( function ( a, b ) {
+			return react[ b ].uses - react[ a ].uses;
+		} )[ 0 ];
+		var spots = Object.keys( react ).length;
+		if ( top && total >= 6 && spots > 1 && react[ top ].uses / total >= 0.4 ) {
+			tips.push( { warn: false, text: Math.round( ( react[ top ].uses / total ) * 100 ) + '% of your shots went in ' + siteLabel( top ).toLowerCase() + '. Spreading them out helps avoid lumps.' } );
+		}
+		var unused = [];
+		protocols().forEach( function ( p ) {
+			if ( ! tracksSites( p ) ) {
+				return;
+			}
+			rotationOf( p ).forEach( function ( x ) {
+				if ( ! last[ x.id ] && unused.indexOf( x.id ) === -1 ) {
+					unused.push( x.id );
+				}
+			} );
+		} );
+		if ( total >= 6 && unused.length && unused.length <= 4 ) {
+			tips.push( { warn: false, text: 'Not used yet: ' + unused.map( function ( id ) {
+				return siteLabel( id ).toLowerCase();
+			} ).join( ', ' ) + '.' } );
+		}
+		return tips;
 	}
 
 	function exportCsv() {
@@ -4077,14 +4543,7 @@
 				return /[",\r\n]/.test( s ) ? '"' + s.replace( /"/g, '""' ) + '"' : s;
 			} ).join( ',' );
 		} ).join( '\n' );
-		var blob = new Blob( [ csv ], { type: 'text/csv' } );
-		var a = h( 'a', { href: URL.createObjectURL( blob ), download: 'dose-history-' + todayStr() + '.csv' } );
-		document.body.appendChild( a );
-		a.click();
-		setTimeout( function () {
-			URL.revokeObjectURL( a.href );
-			a.remove();
-		}, 1000 );
+		downloadBlob( new Blob( [ csv ], { type: 'text/csv' } ), 'dose-history-' + todayStr() + '.csv' );
 	}
 
 	/* =========================================================
@@ -4292,7 +4751,7 @@
 
 	function shortDate( s, withYear ) {
 		var d = parseDate( s );
-		return MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate() + ( withYear ? ', ' + d.getFullYear() : '' );
+		return monDay( d ) + ( withYear ? ', ' + d.getFullYear() : '' );
 	}
 
 	/** The first day a report of `range` days covers ('' range 0 = since the first entry). */
@@ -5084,7 +5543,7 @@
 		if ( plan.all ) {
 			return { protocol: null, left: left, plan: plan, tone: 'ok', text: 'Enough for ' + plan.mixes.length + ' mix' + ( plan.mixes.length === 1 ? '' : 'es' ), low: false };
 		}
-		var until = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+		var until = fmtDay( plan.nextNeeded ).replace( /^[^,]+, /, '' );
 		if ( ! plan.covered ) {
 			var soon = daysBetween( todayStr(), plan.nextNeeded ) < warn;
 			return { protocol: null, left: left, plan: plan, tone: soon ? 'bad' : 'warn', text: 'Not enough for your next mix', low: warn > 0 && soon };
@@ -5113,7 +5572,7 @@
 		}
 		var daysLeft = plan.coveredUntil ? daysBetween( todayStr(), plan.coveredUntil ) : -1;
 		var low = warn > 0 && daysLeft < warn;
-		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) : '';
+		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) : '';
 		if ( ! plan.covered ) {
 			return { protocol: p, left: left, plan: plan, tone: 'bad', text: 'Out', low: warn > 0 };
 		}
@@ -5141,14 +5600,14 @@
 	function lowLine( x ) {
 		var plan = x.st.plan;
 		if ( isWaterStock( x.s ) ) {
-			var mixDay = fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' );
+			var mixDay = fmtDay( plan.nextNeeded ).replace( /^[^,]+, /, '' );
 			return ! x.st.left ? 'You’re out, and you mix next on ' + mixDay + '.'
 				: fmtNum( x.st.left, 1 ) + ' mL left' + ( plan.covered ? ', enough for your mixes until ' + mixDay + '.' : ', not enough for your mix on ' + mixDay + '.' );
 		}
 		if ( ! plan || ! plan.covered ) {
 			return 'You’ve run out.';
 		}
-		var until = fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' );
+		var until = fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' );
 		return usesVial( x.st.protocol )
 			? ( x.st.left ? 'You have enough until ' + until + '.' : 'Your ' + ( x.s.form === 'pen' ? 'pen' : 'vial' ) + ' runs out ' + until + ' and you have none on hand.' )
 			: fmtNum( x.st.left, 0 ) + ' ' + countUnit( x.s, x.st.left ) + ' left, enough until ' + until + '.';
@@ -5184,7 +5643,7 @@
 				date: day,
 				time: '10:00',
 				title: st.compound + ' is running low',
-				body: 'You have enough until ' + fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) + '. Time to reorder.',
+				body: 'You have enough until ' + fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) + '. Time to reorder.',
 			} );
 		} );
 		if ( s.mixReminders !== false ) {
@@ -5228,7 +5687,7 @@
 					date: day,
 					time: '10:00',
 					title: 'Your ' + v.compound + ' ' + what + ' expires in ' + EXPIRY_NOTICE_DAYS + ' days',
-					body: 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days. Plan to mix a new one by ' + fmtDay( exp ).replace( /^\w+, /, '' ) + '.',
+					body: 'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) + ', good for ' + vialGoodFor( v ) + ' days. Plan to mix a new one by ' + fmtDay( exp ).replace( /^[^,]+, /, '' ) + '.',
 				} );
 			} );
 		}
@@ -5317,7 +5776,7 @@
 		}
 		var plan = supplyPlan( p );
 		var have = plan.onHand;
-		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) : '';
+		var until = plan.coveredUntil ? fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) : '';
 		var low = lowSupplies().some( function ( x ) {
 			return sameCompound( x.s.compound, p.compound );
 		} );
@@ -5353,7 +5812,7 @@
 		list.forEach( function ( v ) {
 			var info = vialInfo( v );
 			var color = colorForCompound( v.compound );
-			var detail = [ 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) ];
+			var detail = [ 'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) ];
 			if ( v.mode === 'conc' ) {
 				detail.push( fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' );
 			} else if ( isBlend( v ) ) {
@@ -5375,7 +5834,7 @@
 			if ( info.dosesLeft != null ) {
 				status.push( h( 'b', null, info.dosesLeft + ' dose' + ( info.dosesLeft === 1 ? '' : 's' ) + ' left' ) );
 				if ( info.lastDose ) {
-					status.push( ' · last dose ' + fmtDay( info.lastDose ).replace( /^\w+, /, '' ) );
+					status.push( ' · last dose ' + fmtDay( info.lastDose ).replace( /^[^,]+, /, '' ) );
 				}
 			} else if ( info.left != null ) {
 				status.push( h( 'b', null, fmtNum( info.left, 0 ) + ' units left' ) );
@@ -5413,7 +5872,7 @@
 			wrap.appendChild( h( 'div', { class: 'ypt-card ypt-list' }, finished.slice( 0, 10 ).map( function ( v ) {
 				return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
 					openVialSheet( v, null );
-				} }, h( 'span', null, v.compound ), h( 'span', null, 'Mixed ' + fmtDay( v.mixed, true ).replace( /^\w+, /, '' ) ) );
+				} }, h( 'span', null, v.compound ), h( 'span', null, 'Mixed ' + fmtDay( v.mixed, true ).replace( /^[^,]+, /, '' ) ) );
 			} ) ) );
 		}
 		return wrap;
@@ -5518,16 +5977,16 @@
 		var plan = supplyPlan( p );
 		var what = p.device === 'pen' ? 'pen' : 'vial';
 		var card = h( 'div', { class: 'ypt-card' } );
-		card.appendChild( h( 'div', { class: 'ypt-eyebrow' }, plan.end ? 'This cycle · ' + fmtDay( p.start ).replace( /^\w+, /, '' ) + ' to ' + fmtDay( plan.end ).replace( /^\w+, /, '' ) : 'Ongoing · ' + scheduleLabel( p ) ) );
+		card.appendChild( h( 'div', { class: 'ypt-eyebrow' }, plan.end ? 'This cycle · ' + fmtDay( p.start ).replace( /^[^,]+, /, '' ) + ' to ' + fmtDay( plan.end ).replace( /^[^,]+, /, '' ) : 'Ongoing · ' + scheduleLabel( p ) ) );
 		var headline;
 		if ( ! plan.known ) {
 			headline = usesVial( p ) ? 'Add the strength of your ' + what + 's on hand to see how long they last.' : 'Add your dose to see how long this lasts.';
 		} else if ( plan.all ) {
 			headline = plan.end ? [ 'You have enough to finish this cycle.' ] : [ 'You’re covered for 2+ years.' ];
 		} else if ( plan.needBuy ) {
-			headline = [ 'You need ', h( 'span', { class: 'ypt-hl' }, plan.needBuy + ' more ' + what + ( plan.needBuy === 1 ? '' : 's' ) ), ' to finish. Buy by ' + fmtDay( plan.buyBy ).replace( /^\w+, /, '' ) + '.' ];
+			headline = [ 'You need ', h( 'span', { class: 'ypt-hl' }, plan.needBuy + ' more ' + what + ( plan.needBuy === 1 ? '' : 's' ) ), ' to finish. Buy by ' + fmtDay( plan.buyBy ).replace( /^[^,]+, /, '' ) + '.' ];
 		} else if ( plan.coveredUntil ) {
-			headline = [ 'Covered to ', h( 'span', { class: 'ypt-hl' }, fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ];
+			headline = [ 'Covered to ', h( 'span', { class: 'ypt-hl' }, fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) ), '.' ];
 		} else {
 			headline = [ h( 'span', { class: 'ypt-hl' }, 'You’re out.' ), ' Add what you have to plan ahead.' ];
 		}
@@ -5564,12 +6023,12 @@
 				var sub;
 				if ( sg.status === 'use' ) {
 					title = label + ' · in use';
-					sub = 'Mixed ' + fmtDay( sg.mixOn ).replace( /^\w+, /, '' ) + ( sg.expiresFirst ? ' · expires ' + fmtDay( sg.expires ).replace( /^\w+, /, '' ) : sg.to ? ' · runs out ' + fmtDay( sg.to ).replace( /^\w+, /, '' ) : ' · used up' );
+					sub = 'Mixed ' + fmtDay( sg.mixOn ).replace( /^[^,]+, /, '' ) + ( sg.expiresFirst ? ' · expires ' + fmtDay( sg.expires ).replace( /^[^,]+, /, '' ) : sg.to ? ' · runs out ' + fmtDay( sg.to ).replace( /^[^,]+, /, '' ) : ' · used up' );
 				} else {
-					title = 'Mix ' + what + ' ' + n + ' · ' + fmtDay( sg.mixOn ).replace( /^\w+, /, '' );
+					title = 'Mix ' + what + ' ' + n + ' · ' + fmtDay( sg.mixOn ).replace( /^[^,]+, /, '' );
 					sub = sg.status === 'buy'
 						? 'You don’t have this one yet' + ( sg.doses < plan.perVial ? ' · ' + sg.doses + ' dose' + ( sg.doses === 1 ? '' : 's' ) + ' needed' : '' )
-						: 'From your supply · lasts to ' + fmtDay( sg.to ).replace( /^\w+, /, '' );
+						: 'From your supply · lasts to ' + fmtDay( sg.to ).replace( /^[^,]+, /, '' );
 				}
 				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--' + sg.status }, h( 'b', null, title ), h( 'span', null, sub ) ) );
 			} );
@@ -5577,12 +6036,12 @@
 				tl.appendChild( h( 'div', { class: 'ypt-tl__item' }, h( 'span', null, '+ ' + ( plan.segments.length - 12 ) + ' more' ) ) );
 			}
 			if ( plan.end ) {
-				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--end' }, h( 'b', null, 'Cycle ends ' + fmtDay( plan.end ).replace( /^\w+, /, '' ) ),
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--end' }, h( 'b', null, 'Cycle ends ' + fmtDay( plan.end ).replace( /^[^,]+, /, '' ) ),
 					h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
 						openProtocolSheet( p );
 					} }, 'Change length' ) ) );
 			} else if ( plan.nextNeeded && plan.known ) {
-				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--buy' }, h( 'b', null, 'Next ' + what + ' needed ' + fmtDay( plan.nextNeeded ).replace( /^\w+, /, '' ) ),
+				tl.appendChild( h( 'div', { class: 'ypt-tl__item ypt-tl__item--buy' }, h( 'b', null, 'Next ' + what + ' needed ' + fmtDay( plan.nextNeeded ).replace( /^[^,]+, /, '' ) ),
 					h( 'button', { type: 'button', class: 'ypt-link ypt-small', onclick: function () {
 						openProtocolSheet( p );
 					} }, 'Set a cycle length' ) ) );
@@ -5697,7 +6156,7 @@
 				if ( wp.known && total() > 0 ) {
 					preview.appendChild( h( 'div', { class: 'ypt-calc-result ypt-plan__preview' },
 						fmtNum( total(), 1 ) + ' mL = ', h( 'b', null, wp.covered + ' of your next ' + wp.mixes.length + ' mix' + ( wp.mixes.length === 1 ? '' : 'es' ) ), '. ',
-						wp.all ? 'That’s enough for every vial you have planned.' : [ 'You’re covered to ', h( 'b', null, fmtDay( wp.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ]
+						wp.all ? 'That’s enough for every vial you have planned.' : [ 'You’re covered to ', h( 'b', null, fmtDay( wp.coveredUntil ).replace( /^[^,]+, /, '' ) ), '.' ]
 					) );
 				}
 				return;
@@ -5724,7 +6183,7 @@
 			var doses = isVialStock( s ) ? ( plan.perVial || 0 ) * n : Math.floor( n / ( perDoseCount( p ) || 1 ) );
 			preview.appendChild( h( 'div', { class: 'ypt-calc-result ypt-plan__preview' },
 				n + ' ' + ( isVialStock( s ) ? ( s.form === 'pen' ? 'pen' : 'vial' ) + ( n === 1 ? '' : 's' ) : countUnit( s, n ) ) + ' = ', h( 'b', null, doses + ' dose' + ( doses === 1 ? '' : 's' ) ), ' on your ' + p.compound + ' schedule. ',
-				plan.all ? ( plan.end ? 'That’s enough to finish this cycle.' : 'That covers you for 2+ years.' ) : plan.coveredUntil ? [ 'With these you’re covered to ', h( 'b', null, fmtDay( plan.coveredUntil ).replace( /^\w+, /, '' ) ), '.' ] : ''
+				plan.all ? ( plan.end ? 'That’s enough to finish this cycle.' : 'That covers you for 2+ years.' ) : plan.coveredUntil ? [ 'With these you’re covered to ', h( 'b', null, fmtDay( plan.coveredUntil ).replace( /^[^,]+, /, '' ) ), '.' ] : ''
 			) );
 		}
 
@@ -6634,6 +7093,16 @@
 			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, themePref() === 'auto' ? 'Matches your phone’s light or dark setting.' : 'Just on this device.' )
 		) );
 
+		wrap.appendChild( h( 'div', { class: 'ypt-eyebrow ypt-section-label' }, 'Language' ) );
+		wrap.appendChild( h( 'div', { class: 'ypt-card' },
+			seg( LANGS, langPref(), function ( v ) {
+				saveJSON( LANG_KEY, v );
+				// Every label is swapped as it's drawn, so a fresh start is the clean way to switch.
+				window.location.reload();
+			} ),
+			h( 'p', { class: 'ypt-muted ypt-small', style: { marginTop: '8px' } }, langPref() === 'auto' ? 'Follows your phone’s language.' : 'Just on this device.' )
+		) );
+
 		var health = healthCard();
 		if ( health ) {
 			wrap.appendChild( health );
@@ -6677,7 +7146,7 @@
 				state.shares.map( function ( sh ) {
 					return h( 'button', { type: 'button', class: 'ypt-list-row', onclick: function () {
 						openSharedLinkSheet( sh );
-					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, MONTHS[ parseDate( sh.created ).getMonth() ].slice( 0, 3 ) + ' ' + parseDate( sh.created ).getDate() + ' ›' ) );
+					} }, h( 'span', null, sh.compound || 'Protocol' ), h( 'span', null, monDay( parseDate( sh.created ) ) + ' ›' ) );
 				} )
 			) );
 		}
@@ -6694,6 +7163,7 @@
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openLibrarySheet }, h( 'span', null, 'Compound library' ), h( 'span', null, 'Half-lives & storage ›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openReportSheet }, h( 'span', null, 'Printable report (PDF)' ), h( 'span', null, '›' ) ),
 			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: exportCsv }, h( 'span', null, 'Export dose history (CSV)' ), h( 'span', null, '›' ) ),
+			h( 'button', { type: 'button', class: 'ypt-list-row', onclick: openBackupSheet }, h( 'span', null, 'Backup, restore & import' ), h( 'span', null, '›' ) ),
 			h( 'a', { class: 'ypt-list-row', href: CFG.homeUrl }, h( 'span', null, 'YeffoDesign.com' ), h( 'span', null, '›' ) )
 		) );
 
@@ -7536,7 +8006,7 @@
 			if ( i === 1 ) {
 				return;
 			}
-			svg( 'text', { x: xOf( t ), y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : ' is-end' ) }, s ).textContent = MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate();
+			svg( 'text', { x: xOf( t ), y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( i === 0 ? ' is-start' : ' is-end' ) }, s ).textContent = monDay( d );
 		} );
 		series.forEach( function ( x ) {
 			var scale = norm ? ( x.max > 0 ? 100 / x.max : 0 ) : 1;
@@ -7716,7 +8186,7 @@
 			var hcNote = [ +hc[ k ] > 0 ? fmtFood( k, +hc[ k ] ) + ' from ' + HC_NAME : '', fromItems > 0 ? fmtFood( k, fromItems ) + ' from the foods you added' : '' ].filter( Boolean ).join( ' and ' );
 			hcNote = hcNote ? 'Plus ' + hcNote + '.' : null;
 			return h( 'div', { class: 'ypt-field' },
-				h( 'label', { for: id }, foodName( k ) + ( date === todayStr() ? ' today' : ' on ' + fmtDay( date ).replace( /^\w+, /, '' ) ) ),
+				h( 'label', { for: id }, foodName( k ) + ( date === todayStr() ? ' today' : ' on ' + fmtDay( date ).replace( /^[^,]+, /, '' ) ) ),
 				numRow( k, vals, id, '0' ),
 				h( 'div', { class: 'ypt-chips', style: { marginTop: '6px' } }, chips.map( function ( c ) {
 					return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', onclick: function () {
@@ -7832,7 +8302,7 @@
 		}
 		[ 0, list.length - 1 ].forEach( function ( j ) {
 			var d = parseDate( list[ j ].date );
-			svg( 'text', { x: L + j * bw + bw / 2, y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( j ? ' is-end' : ' is-start' ) }, s ).textContent = MONTHS[ d.getMonth() ].slice( 0, 3 ) + ' ' + d.getDate();
+			svg( 'text', { x: L + j * bw + bw / 2, y: TOP + CH + 13, class: 'g-axis g-axis--x' + ( j ? ' is-end' : ' is-start' ) }, s ).textContent = monDay( d );
 		} );
 		wrap.appendChild( h( 'div', { class: 'ypt-card' },
 			h( 'div', { class: 'ypt-chips', style: { marginBottom: '8px' } }, FOOD_KEYS.map( function ( k ) {
@@ -9249,7 +9719,7 @@
 			card.appendChild( h( 'p', { class: 'ypt-muted ypt-small', style: { margin: '10px 0 0' } }, 'Read only: nothing from your tracker is written there. Imported numbers are encrypted here like everything else.' ) );
 			return wrap;
 		}
-		card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, h( 'b', null, 'Connected. ' ), st.last ? 'Last brought in ' + fmtDay( dateStr( new Date( st.last ) ) ).replace( /^\w+, /, '' ) + ' at ' + fmtTime( pad( new Date( st.last ).getHours() ) + ':' + pad( new Date( st.last ).getMinutes() ) ) + '.' : 'Bringing in your data…' ) );
+		card.appendChild( h( 'p', { class: 'ypt-small', style: { marginTop: '0' } }, h( 'b', null, 'Connected. ' ), st.last ? 'Last brought in ' + fmtDay( dateStr( new Date( st.last ) ) ).replace( /^[^,]+, /, '' ) + ' at ' + fmtTime( pad( new Date( st.last ).getHours() ) + ':' + pad( new Date( st.last ).getMinutes() ) ) + '.' : 'Bringing in your data…' ) );
 		card.appendChild( h( 'div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
 			h( 'button', { type: 'button', class: 'ypt-btn', disabled: hcBusy, onclick: function () {
 				hcSync( true );
@@ -10054,7 +10524,7 @@
 				vialBox.appendChild( h( 'div', { class: 'ypt-vialpick' },
 					h( 'div', null,
 						h( 'b', null, v.mode === 'conc' ? fmtNum( +v.conc ) + ' mg/mL · ' + fmtNum( +v.volume ) + ' mL' : isBlend( v ) ? blendSummary( v ) + ' · ' + fmtNum( +v.water ) + ' mL' : fmtNum( +v.amount ) + ( v.mode === 'iu' ? ' IU' : ' mg' ) + ' + ' + fmtNum( +v.water ) + ' mL water' ),
-						h( 'span', null, 'Mixed ' + fmtDay( v.mixed ).replace( /^\w+, /, '' ) + ( c ? ' · ' + fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' : '' ) )
+						h( 'span', null, 'Mixed ' + fmtDay( v.mixed ).replace( /^[^,]+, /, '' ) + ( c ? ' · ' + fmtNum( c.amount, 2 ) + ' ' + c.unit + '/mL' : '' ) )
 					),
 					h( 'button', { type: 'button', class: 'ypt-pill', onclick: detourToVial }, pen ? 'New pen' : 'New vial' )
 				) );
@@ -10516,7 +10986,7 @@
 			} } );
 			function keepsLine() {
 				var e = vialExpiry( v );
-				return e ? 'Expires ' + fmtDay( e ).replace( /^\w+, /, '' ) + '. We’ll remind you ' + EXPIRY_NOTICE_DAYS + ' days before.' : 'No expiry countdown for this ' + ( pen ? 'pen' : 'vial' ) + '.';
+				return e ? 'Expires ' + fmtDay( e ).replace( /^[^,]+, /, '' ) + '. We’ll remind you ' + EXPIRY_NOTICE_DAYS + ' days before.' : 'No expiry countdown for this ' + ( pen ? 'pen' : 'vial' ) + '.';
 			}
 			var chipsBox = h( 'div', { class: 'ypt-chips' }, [ [ 14, '14 days' ], [ 21, '21' ], [ 28, '28' ], [ 42, '42' ], [ 0, 'Off' ] ].map( function ( c ) {
 				return h( 'button', { type: 'button', class: 'ypt-chip ypt-chip--sm', 'aria-pressed': +v.goodFor === c[ 0 ] ? 'true' : 'false', onclick: function () {
@@ -11260,6 +11730,665 @@
 		} }, 'Log dose' ) );
 	}
 
+	/* =========================================================
+	 * Backup, restore & import (Me › Tools)
+	 *
+	 * Backup: one JSON file with every record (and, if asked, the
+	 * progress photos as data URLs). It's a plain file on the customer's
+	 * device, so the sheet says so: it isn't encrypted the way the
+	 * tracker is. Restore reads that file back, keeping record ids, so
+	 * restoring twice doesn't double anything. Import reads a CSV from
+	 * another app (or our own Export CSV): the columns are guessed from
+	 * their headers and the customer can fix the guess before importing.
+	 * Both save through POST /tracker/records/batch, 100 at a time.
+	 * ======================================================= */
+
+	var BACKUP_KINDS = [ 'protocol', 'dose', 'vial', 'stock', 'settings', 'progress', 'lab', 'food', 'myfood' ];
+	var BATCH_SIZE = 100;
+
+	function downloadBlob( blob, name ) {
+		var a = h( 'a', { href: URL.createObjectURL( blob ), download: name } );
+		document.body.appendChild( a );
+		a.click();
+		setTimeout( function () {
+			URL.revokeObjectURL( a.href );
+			a.remove();
+		}, 1000 );
+	}
+
+	function blobToDataUrl( blob ) {
+		return new Promise( function ( resolve, reject ) {
+			var r = new FileReader();
+			r.onload = function () {
+				resolve( r.result );
+			};
+			r.onerror = reject;
+			r.readAsDataURL( blob );
+		} );
+	}
+
+	function readFileText( file ) {
+		return new Promise( function ( resolve, reject ) {
+			var r = new FileReader();
+			r.onload = function () {
+				resolve( String( r.result || '' ) );
+			};
+			r.onerror = function () {
+				reject( new Error( 'That file couldn’t be read.' ) );
+			};
+			r.readAsText( file );
+		} );
+	}
+
+	function recordCount( records ) {
+		var n = 0;
+		BACKUP_KINDS.forEach( function ( k ) {
+			n += Object.keys( records[ k ] || {} ).length;
+		} );
+		return n;
+	}
+
+	function makeBackup( withPhotos, onStep ) {
+		var records = {};
+		BACKUP_KINDS.forEach( function ( k ) {
+			records[ k ] = JSON.parse( JSON.stringify( state.records[ k ] || {} ) );
+		} );
+		var out = { app: 'YeffoHealth', type: 'backup', version: 1, exported: new Date().toISOString(), records: records, photos: {} };
+		if ( ! withPhotos ) {
+			return Promise.resolve( out );
+		}
+		var ids = allPhotos().map( function ( x ) {
+			return x.id;
+		} );
+		var chain = Promise.resolve();
+		ids.forEach( function ( id, i ) {
+			chain = chain.then( function () {
+				onStep( 'Adding photo ' + ( i + 1 ) + ' of ' + ids.length + '…' );
+				return fetch( CFG.restUrl + 'tracker/photos/' + encodeURIComponent( id ), { credentials: 'same-origin', cache: 'no-store', headers: { 'X-WP-Nonce': CFG.nonce } } ).then( function ( res ) {
+					return res.ok ? res.blob().then( blobToDataUrl ).then( function ( url ) {
+						out.photos[ id ] = url;
+					} ) : null;
+				} ).catch( function () {} );
+			} );
+		} );
+		return chain.then( function () {
+			return out;
+		} );
+	}
+
+	/** Save [{ kind, id, data }] in batches; local copy first so the app shows it straight away. */
+	function saveMany( items, onStep ) {
+		var saved = 0;
+		var failed = 0;
+		var chain = Promise.resolve();
+		for ( var i = 0; i < items.length; i += BATCH_SIZE ) {
+			( function ( part, from ) {
+				chain = chain.then( function () {
+					onStep( 'Saving ' + Math.min( from + part.length, items.length ) + ' of ' + items.length + '…' );
+					return api( 'POST', 'tracker/records/batch', { items: part } ).then( function ( res ) {
+						saved += res.saved || 0;
+						failed += res.failed || 0;
+						part.forEach( function ( it ) {
+							state.records[ it.kind ][ it.id ] = it.data;
+						} );
+						persist();
+					} );
+				} );
+			} )( items.slice( i, i + BATCH_SIZE ), i );
+		}
+		return chain.then( function () {
+			render();
+			return { saved: saved, failed: failed };
+		} );
+	}
+
+	function openBackupSheet() {
+		var status = h( 'p', { class: 'ypt-muted ypt-small', role: 'status', hidden: true } );
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var withPhotos = false;
+		var nPhotos = allPhotos().length;
+		var busy = false;
+		var picker = h( 'input', { type: 'file', accept: '.json,.csv,.txt,application/json,text/csv', hidden: true, onchange: function () {
+			var file = picker.files && picker.files[ 0 ];
+			picker.value = '';
+			if ( ! file ) {
+				return;
+			}
+			err.hidden = true;
+			if ( file.size > 60 * 1024 * 1024 ) {
+				err.textContent = 'That file is too big to import.';
+				err.hidden = false;
+				return;
+			}
+			readFileText( file ).then( function ( text ) {
+				var trimmed = text.replace( /^﻿/, '' ).trim();
+				if ( trimmed.charAt( 0 ) === '{' ) {
+					var data;
+					try {
+						data = JSON.parse( trimmed );
+					} catch ( x ) {
+						throw new Error( 'That doesn’t look like a YeffoHealth backup.' );
+					}
+					if ( ! data || data.app !== 'YeffoHealth' || ! data.records ) {
+						throw new Error( 'That doesn’t look like a YeffoHealth backup.' );
+					}
+					openRestoreSheet( data );
+					return;
+				}
+				var rows = parseCsv( trimmed );
+				if ( rows.length < 2 ) {
+					throw new Error( 'That file has no rows to import. Pick a CSV (spreadsheet) file with a header row.' );
+				}
+				openImportSheet( rows, file.name );
+			} ).catch( function ( x ) {
+				err.textContent = x.message;
+				err.hidden = false;
+			} );
+		} } );
+		var backupBtn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', onclick: function () {
+			if ( busy ) {
+				return;
+			}
+			if ( withPhotos && state.offline ) {
+				err.textContent = 'You’re offline. Connect to the internet to add photos to the backup.';
+				err.hidden = false;
+				return;
+			}
+			busy = true;
+			err.hidden = true;
+			status.hidden = false;
+			status.textContent = 'Making your backup…';
+			makeBackup( withPhotos, function ( m ) {
+				status.textContent = m;
+			} ).then( function ( data ) {
+				downloadBlob( new Blob( [ JSON.stringify( data ) ], { type: 'application/json' } ), 'yeffohealth-backup-' + todayStr() + '.json' );
+				status.textContent = 'Backup saved: ' + recordCount( data.records ) + ' entries' + ( withPhotos ? ', ' + Object.keys( data.photos ).length + ' photos' : '' ) + '.';
+				busy = false;
+			} ).catch( function () {
+				busy = false;
+				status.hidden = true;
+				err.textContent = 'The backup couldn’t be made. Try again.';
+				err.hidden = false;
+			} );
+		} }, 'Download backup' );
+		openSheet( 'Backup, restore & import', 'Your data', [
+			h( 'h3', { class: 'ypt-sheet-h' }, 'Back up' ),
+			h( 'p', { class: 'ypt-small' }, 'Saves everything in your tracker to one file on this device. Keep it somewhere safe: the file isn’t encrypted, so anyone who opens it can read it.' ),
+			nPhotos ? h( 'label', { class: 'ypt-goal__check' }, h( 'input', { type: 'checkbox', onchange: function ( ev ) {
+				withPhotos = ev.target.checked;
+			} } ), h( 'span', null, 'Include my ' + nPhotos + ' progress photo' + ( nPhotos === 1 ? '' : 's' ) + ' (bigger file)' ) ) : null,
+			backupBtn,
+			status,
+			h( 'h3', { class: 'ypt-sheet-h', style: { marginTop: '22px' } }, 'Restore or import' ),
+			h( 'p', { class: 'ypt-small' }, 'Pick a YeffoHealth backup to restore it, or a CSV file exported from another tracker app or a spreadsheet to bring in your doses and weigh-ins. Nothing you already have is deleted.' ),
+			picker,
+			h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--block', onclick: function () {
+				if ( state.offline ) {
+					err.textContent = 'You’re offline. Connect to the internet to restore or import.';
+					err.hidden = false;
+					return;
+				}
+				picker.click();
+			} }, 'Choose a file' ),
+			err,
+		] );
+	}
+
+	function openRestoreSheet( data ) {
+		var counts = [];
+		var names = { protocol: [ 'peptide or medication', 'peptides and medications' ], dose: [ 'dose', 'doses' ], vial: [ 'vial', 'vials' ], stock: [ 'supply item', 'supply items' ], progress: [ 'progress entry', 'progress entries' ], lab: [ 'lab result', 'lab results' ], food: [ 'food day', 'food days' ], myfood: [ 'saved food', 'saved foods' ] };
+		var items = [];
+		BACKUP_KINDS.forEach( function ( k ) {
+			var recs = data.records[ k ];
+			if ( ! recs || typeof recs !== 'object' || Array.isArray( recs ) ) {
+				return;
+			}
+			var n = 0;
+			Object.keys( recs ).forEach( function ( id ) {
+				if ( /^[A-Za-z0-9_-]{1,64}$/.test( id ) && recs[ id ] && typeof recs[ id ] === 'object' ) {
+					var d = Object.assign( {}, recs[ id ] );
+					delete d.id;
+					items.push( { kind: k, id: id, data: d } );
+					n++;
+				}
+			} );
+			if ( n && names[ k ] ) {
+				counts.push( n + ' ' + names[ k ][ n === 1 ? 0 : 1 ] );
+			}
+		} );
+		var photos = data.photos && typeof data.photos === 'object' ? Object.keys( data.photos ).filter( function ( id ) {
+			return /^[A-Za-z0-9_-]{1,64}$/.test( id ) && /^data:image\/(jpeg|png|webp);base64,/.test( String( data.photos[ id ] ) );
+		} ) : [];
+		if ( photos.length ) {
+			counts.push( photos.length + ' photo' + ( photos.length === 1 ? '' : 's' ) );
+		}
+		var status = h( 'p', { class: 'ypt-muted ypt-small', role: 'status', hidden: true } );
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var btn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block', disabled: ! items.length && ! photos.length, onclick: function () {
+			btn.disabled = true;
+			status.hidden = false;
+			err.hidden = true;
+			var chain = Promise.resolve();
+			var photoFails = 0;
+			photos.forEach( function ( id, i ) {
+				chain = chain.then( function () {
+					status.textContent = 'Restoring photo ' + ( i + 1 ) + ' of ' + photos.length + '…';
+					return api( 'PUT', 'tracker/photos/' + id, { data: data.photos[ id ] } ).catch( function ( x ) {
+						if ( isNetworkError( x ) ) {
+							throw x;
+						}
+						photoFails++;
+					} );
+				} );
+			} );
+			chain.then( function () {
+				return saveMany( items, function ( m ) {
+					status.textContent = m;
+				} );
+			} ).then( function ( r ) {
+				ensureSettings();
+				closeSheet();
+				go( 'today' );
+				toast( 'Restored ' + r.saved + ' entries' + ( r.failed + photoFails ? ' · ' + ( r.failed + photoFails ) + ' couldn’t be restored' : '' ) );
+			} ).catch( function ( x ) {
+				btn.disabled = false;
+				status.hidden = true;
+				if ( handleAuthError( x ) ) {
+					return;
+				}
+				err.textContent = isNetworkError( x ) ? 'You went offline. Connect and try again: nothing will be doubled.' : x.message || 'That couldn’t be restored.';
+				err.hidden = false;
+			} );
+		} }, 'Restore' );
+		openSheet( 'Restore backup', data.exported ? 'Made ' + fmtDay( String( data.exported ).slice( 0, 10 ), true ) : 'Backup', [
+			h( 'p', null, counts.length ? 'This backup has ' + listJoin( counts ) + '.' : 'This backup is empty.' ),
+			h( 'p', { class: 'ypt-muted ypt-small' }, 'Entries from the backup replace the same entries here. Anything you added since stays.' ),
+			status,
+			err,
+		], btn );
+	}
+
+	function listJoin( arr ) {
+		return arr.length < 2 ? arr.join( '' ) : arr.slice( 0, -1 ).join( ', ' ) + ' and ' + arr[ arr.length - 1 ];
+	}
+
+	/* ---------- CSV import ---------- */
+
+	function parseCsv( text ) {
+		// Tab-separated if the header has tabs and no commas.
+		var first = text.split( /\r?\n/ )[ 0 ] || '';
+		var sep = first.indexOf( '\t' ) !== -1 && first.indexOf( ',' ) === -1 ? '\t' : first.split( ';' ).length > first.split( ',' ).length ? ';' : ',';
+		var rows = [];
+		var row = [];
+		var cell = '';
+		var q = false;
+		for ( var i = 0; i < text.length; i++ ) {
+			var c = text.charAt( i );
+			if ( q ) {
+				if ( c === '"' ) {
+					if ( text.charAt( i + 1 ) === '"' ) {
+						cell += '"';
+						i++;
+					} else {
+						q = false;
+					}
+				} else {
+					cell += c;
+				}
+			} else if ( c === '"' && cell === '' ) {
+				q = true;
+			} else if ( c === sep ) {
+				row.push( cell );
+				cell = '';
+			} else if ( c === '\n' || c === '\r' ) {
+				if ( c === '\r' && text.charAt( i + 1 ) === '\n' ) {
+					i++;
+				}
+				row.push( cell );
+				cell = '';
+				if ( row.some( function ( x ) {
+					return x.trim();
+				} ) ) {
+					rows.push( row );
+				}
+				row = [];
+			} else {
+				cell += c;
+			}
+			if ( rows.length > 20000 ) {
+				break;
+			}
+		}
+		row.push( cell );
+		if ( row.some( function ( x ) {
+			return x.trim();
+		} ) ) {
+			rows.push( row );
+		}
+		return rows.map( function ( r ) {
+			return r.map( function ( x ) {
+				// Our own Export CSV guards formula-looking cells with a leading '.
+				return x.trim().replace( /^'(?=[=+\-@])/, '' );
+			} );
+		} );
+	}
+
+	// Which header words mean which field. Order matters: the first match wins.
+	var IMPORT_FIELDS = [
+		[ 'date', 'Date', /^(date|day|logged|taken|when|timestamp|date ?time|injection date|dose date|created)/i ],
+		[ 'time', 'Time', /^(time|hour|at)\b/i ],
+		[ 'compound', 'Medication', /(compound|medication|medicine|med\b|drug|peptide|name|product|item|what)/i ],
+		[ 'dose', 'Dose', /(^dose|dosage|amount|qty|quantity|strength)/i ],
+		[ 'unit', 'Unit', /^(unit|units|uom|dose unit)$/i ],
+		[ 'site', 'Injection site', /(site|location|spot|area|where)/i ],
+		[ 'weight', 'Weight', /(weight|lbs?\b|kg\b)/i ],
+		[ 'status', 'Taken or skipped', /^(status|taken|skipped)/i ],
+		[ 'note', 'Notes', /(note|comment|memo|side effect|felt|symptom)/i ],
+	];
+
+	function guessColumns( header ) {
+		var map = {};
+		IMPORT_FIELDS.forEach( function ( f ) {
+			for ( var i = 0; i < header.length; i++ ) {
+				var taken = Object.keys( map ).some( function ( k ) {
+					return map[ k ] === i;
+				} );
+				if ( ! taken && f[ 2 ].test( header[ i ].trim() ) ) {
+					map[ f[ 0 ] ] = i;
+					return;
+				}
+			}
+		} );
+		return map;
+	}
+
+	/** 'YYYY-MM-DD' (and 'HH:MM' if the cell had a time) from the many ways apps write dates, or null. */
+	function parseImportDate( s ) {
+		s = String( s || '' ).trim();
+		if ( ! s ) {
+			return null;
+		}
+		var time = null;
+		var tm = s.match( /(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?\s*([AaPp][Mm])?/ );
+		if ( tm ) {
+			var hr = +tm[ 1 ] % ( tm[ 3 ] ? 12 : 24 );
+			if ( tm[ 3 ] && /p/i.test( tm[ 3 ] ) ) {
+				hr += 12;
+			}
+			time = ( hr < 10 ? '0' : '' ) + hr + ':' + tm[ 2 ];
+		}
+		var m = s.match( /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/ );
+		var y;
+		var mo;
+		var d;
+		if ( m ) {
+			y = +m[ 1 ];
+			mo = +m[ 2 ];
+			d = +m[ 3 ];
+			// An ISO time with a zone (2026-11-03T15:20:00Z) is read in the customer's own clock.
+			if ( /T\d{2}:\d{2}.*(Z|[+-]\d{2}:?\d{2})$/.test( s ) ) {
+				var dt = new Date( s );
+				if ( ! isNaN( dt ) ) {
+					y = dt.getFullYear();
+					mo = dt.getMonth() + 1;
+					d = dt.getDate();
+					time = ( dt.getHours() < 10 ? '0' : '' ) + dt.getHours() + ':' + ( dt.getMinutes() < 10 ? '0' : '' ) + dt.getMinutes();
+				}
+			}
+		} else if ( ( m = s.match( /^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/ ) ) ) {
+			// US order unless the first number can't be a month.
+			var a = +m[ 1 ];
+			var b = +m[ 2 ];
+			mo = a > 12 ? b : a;
+			d = a > 12 ? a : b;
+			y = +m[ 3 ] < 100 ? 2000 + +m[ 3 ] : +m[ 3 ];
+		} else {
+			var p = new Date( s.replace( /(\d)(st|nd|rd|th)\b/, '$1' ) );
+			if ( isNaN( p ) ) {
+				return null;
+			}
+			y = p.getFullYear();
+			mo = p.getMonth() + 1;
+			d = p.getDate();
+		}
+		if ( ! ( y > 1990 && y < 2100 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31 ) ) {
+			return null;
+		}
+		return { date: y + '-' + ( mo < 10 ? '0' : '' ) + mo + '-' + ( d < 10 ? '0' : '' ) + d, time: time };
+	}
+
+	/** A dose cell like "2.5", "2.5 mg" or "250mcg": { dose, unit }. */
+	function parseImportDose( s, unitCell ) {
+		var m = String( s || '' ).replace( ',', '.' ).match( /(\d+(?:\.\d+)?)\s*([A-Za-zµμ]+)?/ );
+		if ( ! m ) {
+			return null;
+		}
+		return { dose: +m[ 1 ], unit: normUnit( unitCell || m[ 2 ] || '' ) };
+	}
+
+	function normUnit( u ) {
+		u = String( u || '' ).trim().toLowerCase().replace( /[µμ]g/, 'mcg' ).replace( /\.$/, '' );
+		var alias = { ug: 'mcg', mcgs: 'mcg', mgs: 'mg', milligram: 'mg', milligrams: 'mg', microgram: 'mcg', micrograms: 'mcg', iu: 'IU', ius: 'IU', unit: 'units', u: 'units', ml: 'mL', cc: 'mL', tab: 'tablet', tabs: 'tablet', tablets: 'tablet', pill: 'tablet', pills: 'tablet', caps: 'capsule', capsules: 'capsule', sprays: 'spray', drops: 'drop', puffs: 'puff', patches: 'patch', clicks: 'units' };
+		if ( alias[ u ] ) {
+			return alias[ u ];
+		}
+		var hit = UNITS.filter( function ( x ) {
+			return x.toLowerCase() === u;
+		} )[ 0 ];
+		return hit || '';
+	}
+
+	/** Injection site text from another app ("Abdomen - Left Lower", "R thigh") to one of our spots, or ''. */
+	function matchSiteText( s ) {
+		s = ' ' + String( s || '' ).toLowerCase().replace( /[^a-z ]+/g, ' ' ) + ' ';
+		if ( ! s.trim() ) {
+			return '';
+		}
+		var exact = SITES.filter( function ( x ) {
+			return ' ' + x.label.toLowerCase().replace( /[^a-z ]+/g, ' ' ) + ' ' === s.replace( /\s+/g, ' ' );
+		} )[ 0 ];
+		if ( exact ) {
+			return exact.id;
+		}
+		var side = /\b(left|lt|l)\b/.test( s ) ? 'l' : /\b(right|rt|r)\b/.test( s ) ? 'r' : '';
+		var area = /(belly|abdomen|abdominal|stomach|tummy|navel|umbilic)/.test( s ) ? 'belly' : /(thigh|leg|quad)/.test( s ) ? 'thigh' : /(glute|butt|buttock|hip|ventrogluteal|dorsogluteal)/.test( s ) ? 'glute' : /(delt|shoulder)/.test( s ) ? 'delt' : /(arm|tricep)/.test( s ) ? 'arm' : /(flank|love handle|side|waist)/.test( s ) ? 'flank' : '';
+		if ( ! area || ! side ) {
+			return '';
+		}
+		if ( area === 'belly' ) {
+			return 'belly-' + ( /\b(upper|top|above)\b/.test( s ) ? 'u' : 'l' ) + side;
+		}
+		return area + '-' + side;
+	}
+
+	function openImportSheet( rows, fileName ) {
+		var header = rows[ 0 ];
+		var body = rows.slice( 1 );
+		var map = guessColumns( header );
+		var defUnit = 'mg';
+		var wUnit = weightUnit();
+		var preview = h( 'div', { class: 'ypt-import__preview' } );
+		var err = h( 'p', { class: 'ypt-error', hidden: true, role: 'alert' } );
+		var status = h( 'p', { class: 'ypt-muted ypt-small', role: 'status', hidden: true } );
+		var btn = h( 'button', { type: 'button', class: 'ypt-btn ypt-btn--primary ypt-btn--block' }, 'Import' );
+		var plan = { items: [], doses: 0, weights: 0, skipped: 0, dupes: 0 };
+
+		function cell( r, k ) {
+			return map[ k ] == null ? '' : String( r[ map[ k ] ] || '' ).trim();
+		}
+
+		function build() {
+			plan = { items: [], doses: 0, weights: 0, skipped: 0, dupes: 0 };
+			var have = {};
+			values( state.records.dose ).forEach( function ( d ) {
+				have[ d.date + '|' + String( d.compound ).toLowerCase() + '|' + ( d.time || '' ) ] = true;
+			} );
+			var haveW = {};
+			progressEntries().forEach( function ( e ) {
+				if ( +e.weight > 0 ) {
+					haveW[ e.date ] = true;
+				}
+			} );
+			var seen = {};
+			var byName = {};
+			protocols().forEach( function ( p ) {
+				byName[ String( p.compound ).toLowerCase() ] = p;
+			} );
+			body.forEach( function ( r, i ) {
+				var when = parseImportDate( cell( r, 'date' ) + ( map.time != null ? ' ' + cell( r, 'time' ) : '' ) );
+				if ( ! when || when.date > todayStr() ) {
+					plan.skipped++;
+					return;
+				}
+				var used = false;
+				var w = parseFloat( String( cell( r, 'weight' ) ).replace( ',', '.' ) );
+				if ( w > 0 && w < 2000 ) {
+					used = true;
+					if ( haveW[ when.date ] || seen[ 'w' + when.date ] ) {
+						plan.dupes++;
+					} else {
+						seen[ 'w' + when.date ] = true;
+						plan.weights++;
+						plan.items.push( { kind: 'progress', id: 'g-imp' + when.date.replace( /-/g, '' ), data: { date: when.date, weight: Math.round( w * 100 ) / 100, wUnit: wUnit, m: {}, mUnit: lengthUnit(), fat: 0, note: '', photos: [] } } );
+					}
+				}
+				var name = cell( r, 'compound' ).slice( 0, 60 );
+				var ds = parseImportDose( cell( r, 'dose' ), cell( r, 'unit' ) );
+				if ( name && ds && ds.dose > 0 ) {
+					used = true;
+					var time = when.time || '09:00';
+					var key = when.date + '|' + name.toLowerCase() + '|' + time;
+					if ( have[ key ] || seen[ key ] ) {
+						plan.dupes++;
+						return;
+					}
+					seen[ key ] = true;
+					var st = cell( r, 'status' ).toLowerCase();
+					var p = byName[ name.toLowerCase() ] || null;
+					plan.doses++;
+					plan.items.push( { kind: 'dose', id: 'x-imp' + ( i + 1 ) + '-' + uid( '' ).slice( 0, 6 ), data: {
+						protocolId: p ? p.id : '',
+						compound: p ? p.compound : name,
+						date: when.date,
+						time: time,
+						status: /skip|miss|no\b|false/.test( st ) ? 'skipped' : 'taken',
+						at: wallToIso( when.date, time ),
+						dose: ds.dose,
+						unit: ds.unit || ( p ? p.unit : defUnit ),
+						strength: 0,
+						strengthUnit: '',
+						vialId: '',
+						units: null,
+						note: cell( r, 'note' ).slice( 0, 500 ),
+						site: matchSiteText( cell( r, 'site' ) ),
+						tags: [],
+					} } );
+				}
+				if ( ! used ) {
+					plan.skipped++;
+				}
+			} );
+			drawPreview();
+		}
+
+		function drawPreview() {
+			preview.textContent = '';
+			var bits = [];
+			if ( plan.doses ) {
+				bits.push( plan.doses + ' dose' + ( plan.doses === 1 ? '' : 's' ) );
+			}
+			if ( plan.weights ) {
+				bits.push( plan.weights + ' weigh-in' + ( plan.weights === 1 ? '' : 's' ) );
+			}
+			preview.appendChild( h( 'p', { class: 'ypt-import__sum' }, bits.length ? 'Ready to import ' + listJoin( bits ) + '.' : 'Nothing to import yet. Check the columns above.' ) );
+			var notes = [];
+			if ( plan.dupes ) {
+				notes.push( plan.dupes + ' already in your tracker' );
+			}
+			if ( plan.skipped ) {
+				notes.push( plan.skipped + ' row' + ( plan.skipped === 1 ? '' : 's' ) + ' without a date we could read or a dose' );
+			}
+			if ( notes.length ) {
+				preview.appendChild( h( 'p', { class: 'ypt-muted ypt-small' }, 'Skipping ' + listJoin( notes ) + '.' ) );
+			}
+			var sample = plan.items.filter( function ( it ) {
+				return it.kind === 'dose';
+			} ).slice( 0, 3 );
+			if ( sample.length ) {
+				preview.appendChild( h( 'ul', { class: 'ypt-import__sample' }, sample.map( function ( it ) {
+					var d = it.data;
+					return h( 'li', null, fmtDay( d.date ).replace( /^[^,]+, /, '' ) + ' · ' + d.compound + ' ' + fmtNum( d.dose, 3 ) + ' ' + d.unit + ( d.site ? ' · ' + siteLabel( d.site ) : '' ) );
+				} ) ) );
+			}
+			btn.disabled = ! plan.items.length;
+			btn.textContent = plan.items.length ? 'Import ' + plan.items.length : 'Import';
+		}
+
+		var colOpts = [ [ '', 'Not in this file' ] ].concat( header.map( function ( x, i ) {
+			return [ String( i ), x || 'Column ' + ( i + 1 ) ];
+		} ) );
+		var mapping = h( 'div', { class: 'ypt-import__map' }, IMPORT_FIELDS.map( function ( f ) {
+			return h( 'label', { class: 'ypt-import__row' }, h( 'span', null, f[ 1 ] ), h( 'select', { class: 'ypt-select', onchange: function ( ev ) {
+				if ( ev.target.value === '' ) {
+					delete map[ f[ 0 ] ];
+				} else {
+					map[ f[ 0 ] ] = +ev.target.value;
+				}
+				build();
+			} }, colOpts.map( function ( o ) {
+				return h( 'option', { value: o[ 0 ], selected: map[ f[ 0 ] ] != null ? String( map[ f[ 0 ] ] ) === o[ 0 ] : o[ 0 ] === '' }, o[ 1 ] );
+			} ) ) );
+		} ) );
+
+		btn.onclick = function () {
+			if ( ! plan.items.length ) {
+				return;
+			}
+			btn.disabled = true;
+			err.hidden = true;
+			status.hidden = false;
+			saveMany( plan.items, function ( m ) {
+				status.textContent = m;
+			} ).then( function ( r ) {
+				closeSheet();
+				go( 'today' );
+				toast( 'Imported ' + r.saved + ( r.failed ? ' · ' + r.failed + ' couldn’t be saved' : '' ) );
+			} ).catch( function ( x ) {
+				btn.disabled = false;
+				status.hidden = true;
+				if ( handleAuthError( x ) ) {
+					return;
+				}
+				err.textContent = isNetworkError( x ) ? 'You went offline. Connect and try again: nothing will be doubled.' : x.message || 'That couldn’t be imported.';
+				err.hidden = false;
+			} );
+		};
+
+		build();
+		openSheet( 'Import', fileName || 'CSV file', [
+			h( 'p', { class: 'ypt-small' }, 'We matched these columns from your file. Change any that look wrong.' ),
+			mapping,
+			h( 'div', { class: 'ypt-row', style: { alignItems: 'center', margin: '10px 0' } },
+				h( 'span', { class: 'ypt-small ypt-muted ypt-shrink' }, 'Weights are in' ),
+				h( 'div', { class: 'ypt-shrink' }, seg( [ 'lb', 'kg' ], wUnit, function ( u ) {
+					wUnit = u;
+					build();
+				} ) )
+			),
+			h( 'div', { class: 'ypt-row', style: { alignItems: 'center', margin: '0 0 10px' } },
+				h( 'span', { class: 'ypt-small ypt-muted ypt-shrink' }, 'Doses without a unit are in' ),
+				h( 'div', { class: 'ypt-shrink' }, seg( [ 'mg', 'mcg', 'units', 'mL' ], defUnit, function ( u ) {
+					defUnit = u;
+					build();
+				} ) )
+			),
+			preview,
+			h( 'p', { class: 'ypt-muted ypt-small' }, 'Doses come in as past doses. They don’t create a schedule: add the peptide or medication too if you want reminders.' ),
+			status,
+			err,
+		], btn );
+	}
+
 	/* ---------- Delete everything ---------- */
 
 	function confirmDeleteAll() {
@@ -11797,6 +12926,24 @@
 		// iOS settles the safe-area insets a moment after it rotates.
 		setTimeout( applySideRail, 250 );
 	} );
+	// iOS also reports the side strip late when the app opens (Jeff saw the
+	// rail only after turning the phone sideways and back), and opening
+	// from the Home Screen or the app switcher fires no resize. Check again
+	// as the page settles and whenever it comes back into view.
+	[ 50, 200, 500, 1000, 2000, 4000 ].forEach( function ( ms ) {
+		setTimeout( applySideRail, ms );
+	} );
+	window.addEventListener( 'load', applySideRail );
+	window.addEventListener( 'pageshow', applySideRail );
+	document.addEventListener( 'visibilitychange', function () {
+		if ( ! document.hidden ) {
+			applySideRail();
+			setTimeout( applySideRail, 300 );
+		}
+	} );
+	if ( window.visualViewport ) {
+		window.visualViewport.addEventListener( 'resize', applySideRail );
+	}
 	if ( darkQuery && darkQuery.addEventListener ) {
 		darkQuery.addEventListener( 'change', applyTheme );
 	}

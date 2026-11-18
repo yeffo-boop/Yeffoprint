@@ -21,9 +21,9 @@ function grab(name) {
 }
 const lines = src.split('\n');
 const vars = ['DOW_LONG', 'MONTHS'].map((v) => lines.find((l) => l.startsWith('\tvar ' + v + ' ='))).join('\n');
-const fns = ['pad', 'dateStr', 'parseDate', 'addDays', 'daysBetween', 'shortDate', 'fmtDay', 'isDueOn', 'timesOf', 'scheduleLabel',
+const fns = ['pad', 'dateStr', 'parseDate', 'addDays', 'daysBetween', 'monDay', 'shortDate', 'fmtDay', 'isDueOn', 'timesOf', 'scheduleLabel',
 	'weekLabel', 'cycleOf', 'cyclePhase', 'stepsOf', 'doseOn', 'restingNote', 'startAfterResume'].map(grab).join('\n');
-const api = new Function(vars + '\nfunction amountLabel(d, u) { return d + " " + u; }\n' + fns +
+const api = new Function(vars + '\nvar I18N = null;\nfunction amountLabel(d, u) { return d + " " + u; }\n' + fns +
 	'\nreturn { isDueOn, cyclePhase, restingNote, startAfterResume, addDays, daysBetween, weekLabel };')();
 
 let failed = 0;

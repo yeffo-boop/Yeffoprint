@@ -716,6 +716,10 @@ a { color: var(--ypt-cyan-deep); }
 .ypt-siderail .ypt-toast { bottom: calc(24px + var(--ypt-safe-bottom)); }
 .ypt-siderail[data-ypt-rail="right"] .ypt-appbar__inner { padding-right: calc(16px + var(--ypt-rail-w, 0px)); }
 .ypt-siderail[data-ypt-rail="left"] .ypt-appbar__inner { padding-left: calc(16px + var(--ypt-rail-w, 0px)); }
+/* Sheets (What's new, every form) stop short of the strip too, so Cancel isn't under the clock. */
+.ypt-siderail[data-ypt-rail="right"] .ypt-sheet-backdrop { padding-right: var(--ypt-rail-w, 0px); }
+.ypt-siderail[data-ypt-rail="left"] .ypt-sheet-backdrop { padding-left: var(--ypt-rail-w, 0px); }
+.ypt-siderail .ypt-sheet { max-height: calc(100dvh - 12px - env(safe-area-inset-top, 0px)); }
 
 /* ---------- Banners ---------- */
 
@@ -2292,3 +2296,36 @@ body:has(.ypt-sheet-backdrop) .ypt-toast {
 @media (prefers-reduced-motion: reduce) {
 	.ypt-scan__frame i { animation: none; }
 }
+
+/* Goal weight and maintenance (Progress, weight chart) */
+.ypt-goal { padding-top: 12px; padding-bottom: 12px; }
+.ypt-goal__set { width: 100%; padding: 2px 0; border: 0; background: none; text-align: left; }
+.ypt-goal__set > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.ypt-goal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ypt-goal__head b { display: block; font-size: 16px; margin-top: 2px; }
+.ypt-goal__bar { margin: 10px 0 0; }
+.ypt-goal__bar i { background: var(--ypt-ok); }
+.ypt-goal__status { margin: 8px 0 0; font-weight: 600; font-size: 14px; }
+.ypt-goal__status.is-good { color: var(--ypt-ok); }
+.ypt-goal__status.is-warn { color: var(--ypt-warn, #B26A00); }
+.ypt-goal__check { display: flex; gap: 10px; align-items: center; padding: 10px 0; font-size: 15px; }
+.ypt-goal__check input { width: 20px; height: 20px; flex: none; }
+.ypt-goal__remove { margin-top: 14px; color: var(--ypt-danger); }
+.ypt-chart .g-goal { stroke: var(--ypt-ok); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.ypt-chart .g-goal-label { font-size: 9px; font-weight: 700; fill: var(--ypt-ok); text-anchor: end; paint-order: stroke; stroke: var(--ypt-card); stroke-width: 3px; }
+
+/* Injection site heads-ups and tips */
+.ypt-sitepick__warn { margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--ypt-warn-soft, rgba(178, 107, 0, 0.1)); color: var(--ypt-ink); font-size: 13px; line-height: 1.4; }
+.ypt-siteinsights { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ypt-line); }
+.ypt-siteinsights ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+.ypt-siteinsights li + li { margin-top: 4px; }
+.ypt-siteinsights li.is-warn { color: var(--ypt-warn); }
+
+/* Backup, restore & import */
+.ypt-sheet-h { font-size: 16px; margin: 4px 0 6px; }
+.ypt-import__map { display: grid; gap: 8px; }
+.ypt-import__row { display: grid; grid-template-columns: 9.5em 1fr; gap: 10px; align-items: center; font-size: 14px; }
+.ypt-import__row .ypt-select { min-width: 0; }
+.ypt-import__preview { margin: 6px 0 8px; padding: 10px 12px; border-radius: 12px; background: var(--ypt-soft, var(--ypt-line)); }
+.ypt-import__sum { margin: 0; font-weight: 600; }
+.ypt-import__sample { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ypt-mute); }
