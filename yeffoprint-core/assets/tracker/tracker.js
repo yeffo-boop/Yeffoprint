@@ -12926,6 +12926,24 @@
 		// iOS settles the safe-area insets a moment after it rotates.
 		setTimeout( applySideRail, 250 );
 	} );
+	// iOS also reports the side strip late when the app opens (Jeff saw the
+	// rail only after turning the phone sideways and back), and opening
+	// from the Home Screen or the app switcher fires no resize. Check again
+	// as the page settles and whenever it comes back into view.
+	[ 50, 200, 500, 1000, 2000, 4000 ].forEach( function ( ms ) {
+		setTimeout( applySideRail, ms );
+	} );
+	window.addEventListener( 'load', applySideRail );
+	window.addEventListener( 'pageshow', applySideRail );
+	document.addEventListener( 'visibilitychange', function () {
+		if ( ! document.hidden ) {
+			applySideRail();
+			setTimeout( applySideRail, 300 );
+		}
+	} );
+	if ( window.visualViewport ) {
+		window.visualViewport.addEventListener( 'resize', applySideRail );
+	}
 	if ( darkQuery && darkQuery.addEventListener ) {
 		darkQuery.addEventListener( 'change', applyTheme );
 	}

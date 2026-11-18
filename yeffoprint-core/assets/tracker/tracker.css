@@ -716,6 +716,10 @@ a { color: var(--ypt-cyan-deep); }
 .ypt-siderail .ypt-toast { bottom: calc(24px + var(--ypt-safe-bottom)); }
 .ypt-siderail[data-ypt-rail="right"] .ypt-appbar__inner { padding-right: calc(16px + var(--ypt-rail-w, 0px)); }
 .ypt-siderail[data-ypt-rail="left"] .ypt-appbar__inner { padding-left: calc(16px + var(--ypt-rail-w, 0px)); }
+/* Sheets (What's new, every form) stop short of the strip too, so Cancel isn't under the clock. */
+.ypt-siderail[data-ypt-rail="right"] .ypt-sheet-backdrop { padding-right: var(--ypt-rail-w, 0px); }
+.ypt-siderail[data-ypt-rail="left"] .ypt-sheet-backdrop { padding-left: var(--ypt-rail-w, 0px); }
+.ypt-siderail .ypt-sheet { max-height: calc(100dvh - 12px - env(safe-area-inset-top, 0px)); }
 
 /* ---------- Banners ---------- */
 
