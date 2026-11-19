@@ -652,20 +652,20 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		if ( ! $labels ) {
 			$has_other = count( $result['items'] ) > 0;
-			return $has_other ? [] : [ __( 'The labels you need: what each one says (for example “BPC-157 10mg”), how many of each, and the size', 'yeffoprint-core' ) ];
+			return $has_other ? [] : [ __( 'Your label list (what each says, how many, and the size)', 'yeffoprint-core' ) ];
 		}
 
 		if ( '' === $result['customer']['email'] || ! is_email( $result['customer']['email'] ) ) {
-			$lines[] = __( 'Your email address, for your receipt and order updates', 'yeffoprint-core' );
+			$lines[] = __( 'Email', 'yeffoprint-core' );
 		}
 
 		if ( ! self::complete_address( $result['shipping_address'] ) && ! self::account_has_address( $result['customer']['email'] ) ) {
-			$lines[] = __( 'Your shipping address (name, street, city, state and ZIP code)', 'yeffoprint-core' );
+			$lines[] = __( 'Shipping address', 'yeffoprint-core' );
 		}
 
 		$custom = array_filter( $labels, static function ( $item ) { return 'custom_design' === $item['kind']; } );
 		if ( $custom && '' === $result['brand_name'] && array_filter( $custom, static function ( $item ) { return '' === $item['brand_name']; } ) ) {
-			$lines[] = __( 'The brand name to print on the labels', 'yeffoprint-core' );
+			$lines[] = __( 'Brand name for the labels', 'yeffoprint-core' );
 		}
 
 		$catalog = YeffoPrint_Email_Order_Reader::catalog();
@@ -694,17 +694,20 @@ class YeffoPrint_Telegram_Chat_Orders {
 		}
 
 		$words = [
-			'size'     => __( 'The size', 'yeffoprint-core' ),
-			'material' => __( 'The material', 'yeffoprint-core' ),
-			'quantity' => __( 'How many', 'yeffoprint-core' ),
+			'size'     => __( 'Size', 'yeffoprint-core' ),
+			'material' => __( 'Material', 'yeffoprint-core' ),
+			'quantity' => __( 'How many of each', 'yeffoprint-core' ),
 		];
 		foreach ( $needs as $what => $for ) {
 			if ( ! $for ) {
 				continue;
 			}
 			$options = array_unique( array_merge( ...array_values( array_map( 'array_values', $for ) ) ?: [ [] ] ) );
-			$which   = count( $for ) === count( $labels ) ? '' : ' for ' . implode( ', ', array_keys( $for ) );
-			$lines[] = $words[ $what ] . $which . ( $options ? ' (' . implode( ', ', array_slice( $options, 0, 12 ) ) . ')' : '' );
+			// Direct feedback: the first version named every label and was too long to read. Name labels only
+			// when some (not all) need this, and at most two of them.
+			$names = array_keys( $for );
+			$which = count( $for ) === count( $labels ) ? '' : ' for ' . implode( ', ', array_slice( $names, 0, 2 ) ) . ( count( $names ) > 2 ? sprintf( ' +%d more', count( $names ) - 2 ) : '' );
+			$lines[] = $words[ $what ] . $which . ( $options ? ': ' . implode( ', ', array_slice( $options, 0, 12 ) ) : '' );
 		}
 
 		return $lines;
@@ -712,8 +715,8 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 	private static function question_text( array $missing, int $round ): string {
 		$intro = 1 === $round
-			? __( 'Thanks! To finish your order I just need:', 'yeffoprint-core' )
-			: __( 'Thanks! I still need:', 'yeffoprint-core' );
+			? __( 'Thanks! Just need a few things:', 'yeffoprint-core' )
+			: __( 'Thanks! Still need:', 'yeffoprint-core' );
 		return $intro . "\n\n" . implode( "\n", array_map( static function ( $line ) { return '• ' . $line; }, $missing ) );
 	}
 
