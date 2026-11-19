@@ -60,6 +60,7 @@ class YeffoPrint_Admin_Settings_Controller {
 
 		update_option( YeffoPrint_Shippo_Settings::API_KEY_OPTION, sanitize_text_field( (string) ( $params['shippo_api_key'] ?? '' ) ) );
 		YeffoPrint_Email_Orders::save_settings( $params );
+		YeffoPrint_Telegram_Chat_Orders::save_settings( $params );
 		YeffoPrint_Spam_Guard::save_settings( $params );
 		// Only when sent, so an older copy of the app open on a phone can't blank it.
 		if ( array_key_exists( 'usda_api_key', $params ) ) {
@@ -245,6 +246,6 @@ class YeffoPrint_Admin_Settings_Controller {
 			'apple_key_id'               => (string) get_option( $M::APPLE_KEY_ID_OPTION, '' ),
 			'apple_private_key'          => (string) get_option( $M::APPLE_PRIVATE_KEY_OPTION, '' ),
 			'apple_redirect_uri'         => esc_url_raw( YeffoPrint_Social_Login::callback_url( 'apple' ) ),
-		] + YeffoPrint_Email_Orders::settings();
+		] + YeffoPrint_Email_Orders::settings() + YeffoPrint_Telegram_Chat_Orders::settings();
 	}
 }

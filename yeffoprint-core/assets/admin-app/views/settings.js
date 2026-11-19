@@ -394,6 +394,24 @@
 					'<p class="yp-panel__hint">Shows a "Log in with Telegram" button on the login/account pages, using the same bot token above — no separate app registration needed. One extra step on Telegram\'s side: message @BotFather with <code>/setdomain</code> and authorize this site\'s domain, or Telegram refuses to render the button.</p>' +
 				'</div>' +
 
+				// Direct request: build orders from customers chatting with Jeff's own Telegram (class-telegram-chat-orders.php).
+				'<div class="yp-panel" id="telegram-chat-orders">' +
+					'<div class="yp-panel__head"><h2>Telegram chat orders</h2></div>' +
+					'<p class="yp-panel__hint">When a customer sends you their label list in your own Telegram, type <code>/order</code> in that chat. The bot reads the chat with Claude, asks them only for what\'s missing (email if their Telegram isn\'t linked to an account, shipping address, brand, size, material or quantity), shows a summary, and when they reply YES it creates the order and sends the pay link there. You get a push alert for each one. Type <code>/cancel</code> in the chat to stop it. Anything it can\'t do itself waits in Orders › Email Orders, and Create Order there sends the pay link in the chat.</p>' +
+					'<p class="yp-panel__hint"><strong>Setup:</strong> in @BotFather open your bot › Bot Settings › Business Mode and turn it on. Then in Telegram (needs Premium): Settings › Telegram Business › Chatbots, add your bot, pick which chats it can see, and allow it to reply to messages. Uses the Claude API key from Email orders above.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-tgco-enabled"' + ( settings.telegram_chat_orders_enabled ? ' checked' : '' ) + ' /><label for="yp-set-tgco-enabled">Let /order build orders in my Telegram chats</label></div>' +
+					( function () {
+						var connection = settings.telegram_business_connection;
+						if ( ! connection ) {
+							return '<p class="yp-panel__hint">Not connected yet. Once you add the bot under Telegram Business › Chatbots, it shows here.</p>';
+						}
+						if ( ! connection.enabled ) {
+							return '<p class="yp-form__error">The bot was removed from Telegram Business › Chatbots. Add it again to use /order.</p>';
+						}
+						return '<p class="yp-panel__hint">Connected to ' + YP.escapeHtml( connection.name || 'your Telegram' ) + '.' + ( connection.can_reply ? '' : ' <strong>It isn\'t allowed to reply yet:</strong> turn on "Reply to messages" for the bot under Telegram Business › Chatbots.' ) + '</p>';
+					}() ) +
+				'</div>' +
+
 				'<div class="yp-panel">' +
 					'<div class="yp-panel__head"><h2>Social Login</h2></div>' +
 					'<p class="yp-panel__hint">Lets customers sign up/log in with Google, Discord, or Apple instead of a password. For each provider, register a developer app with its redirect/return URL set to the exact URL shown below, then paste in the credentials it gives you.</p>' +
@@ -581,6 +599,7 @@
 				email_orders_password: viewEl.querySelector( '#yp-set-eo-password' ).value,
 				email_orders_senders: viewEl.querySelector( '#yp-set-eo-senders' ).value,
 				claude_api_key: viewEl.querySelector( '#yp-set-claude-key' ) ? viewEl.querySelector( '#yp-set-claude-key' ).value.trim() : '',
+				telegram_chat_orders_enabled: viewEl.querySelector( '#yp-set-tgco-enabled' ).checked,
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
 				telegram_bot_username: viewEl.querySelector( '#yp-set-telegram-username' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,

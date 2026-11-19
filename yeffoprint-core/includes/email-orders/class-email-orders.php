@@ -61,6 +61,9 @@ class YeffoPrint_Email_Orders {
 	private const META_ORDER_ID   = '_yp_eo_order_id';
 	private const META_EMAIL_DATE = '_yp_eo_email_date';
 	private const META_EARLIER    = '_yp_eo_earlier';
+	/** 'telegram' for a draft built from a Telegram chat (class-telegram-chat-orders.php); empty for an email. */
+	public const META_SOURCE      = '_yp_eo_source';
+	public const META_TG_CHAT     = '_yp_eo_tg_chat';
 
 	/** queued: waiting to be read. ready: read, waiting on Jeff. failed: couldn't be read. created / dismissed: done. */
 	public const STATES = [ 'queued', 'ready', 'failed', 'created', 'dismissed' ];
@@ -356,6 +359,11 @@ class YeffoPrint_Email_Orders {
 			return false;
 		}
 
+		// "Read again" on a Telegram chat draft reads the chat as it is now.
+		if ( 'telegram' === get_post_meta( $id, self::META_SOURCE, true ) ) {
+			return YeffoPrint_Telegram_Chat_Orders::reread_record( $id );
+		}
+
 		$text    = $post->post_content;
 		$earlier = (string) get_post_meta( $id, self::META_EARLIER, true );
 		if ( '' === $earlier ) {
@@ -473,7 +481,47 @@ class YeffoPrint_Email_Orders {
 			'customer_user' => $user ? [ 'id' => $user->ID, 'display_name' => $user->display_name, 'email' => $user->user_email ] : null,
 			'order_id'      => $order ? $order->get_id() : 0,
 			'order_number'  => $order ? $order->get_order_number() : '',
+			'source'        => 'telegram' === get_post_meta( $post->ID, self::META_SOURCE, true ) ? 'telegram' : 'email',
+			// Telegram chat drafts: whether the pay link went to the customer in the chat.
+			'pay_link_sent' => (bool) get_post_meta( $post->ID, '_yp_eo_tg_pay_link_sent', true ),
 		];
+	}
+
+	/**
+	 * Saves (or updates) the draft for a Telegram chat (class-telegram-
+	 * chat-orders.php), so it shows in Orders › Email Orders like an email.
+	 *
+	 * @param array{title:string, from:string, text:string, chat_id:int, result:?array, state:string, error?:string} $chat
+	 */
+	public static function save_chat( int $id, array $chat ): int {
+		if ( $id && self::exists( $id ) ) {
+			wp_update_post( [ 'ID' => $id, 'post_title' => mb_substr( $chat['title'], 0, 190 ), 'post_content' => $chat['text'] ] );
+		} else {
+			$id = wp_insert_post( [
+				'post_type'    => self::POST_TYPE,
+				'post_status'  => 'private',
+				'post_title'   => mb_substr( $chat['title'], 0, 190 ),
+				'post_content' => $chat['text'],
+			], true );
+			if ( is_wp_error( $id ) ) {
+				return 0;
+			}
+			update_post_meta( $id, self::META_SOURCE, 'telegram' );
+			update_post_meta( $id, self::META_TG_CHAT, (int) $chat['chat_id'] );
+			update_post_meta( $id, self::META_EMAIL_DATE, gmdate( 'r' ) );
+		}
+
+		update_post_meta( $id, self::META_FROM, $chat['from'] );
+		if ( null !== $chat['result'] ) {
+			update_post_meta( $id, self::META_RESULT, wp_slash( wp_json_encode( $chat['result'] ) ) );
+		}
+		if ( ! empty( $chat['error'] ) ) {
+			update_post_meta( $id, self::META_ERROR, $chat['error'] );
+		} else {
+			delete_post_meta( $id, self::META_ERROR );
+		}
+		self::set_state( (int) $id, $chat['state'] );
+		return (int) $id;
 	}
 
 	public static function set_state( int $id, string $state ): void {
@@ -483,6 +531,9 @@ class YeffoPrint_Email_Orders {
 	public static function mark_created( int $id, int $order_id ): void {
 		update_post_meta( $id, self::META_ORDER_ID, $order_id );
 		self::set_state( $id, 'created' );
+
+		/** A draft became a real order (class-telegram-chat-orders.php sends a chat draft's pay link). */
+		do_action( 'yeffoprint_email_order_created', $id, $order_id );
 	}
 
 	/** Dismisses every open record. @return int how many. */

@@ -33,7 +33,7 @@ class YeffoPrint_Telegram_Webhook_Sync {
 	 * save" reasoning as class-yeffoprint-core.php's own rewrite-flush
 	 * version check.
 	 */
-	private const WEBHOOK_CONFIG_VERSION = 2;
+	private const WEBHOOK_CONFIG_VERSION = 3; // 3: Telegram Business updates (class-telegram-chat-orders.php).
 
 	public function __construct() {
 		$M = 'YeffoPrint_Admin_Menu';
