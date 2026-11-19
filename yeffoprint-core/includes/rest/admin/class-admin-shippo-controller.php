@@ -90,7 +90,23 @@ class YeffoPrint_Admin_Shippo_Controller {
 			}
 		}
 
-		$result = $client->get_rates( $address_to, $parcel, $customs );
+		$insure = $this->insurance_from_request( $params );
+		if ( is_wp_error( $insure ) ) {
+			return $insure;
+		}
+
+		$value  = YeffoPrint_Order_Value::package_value( $order );
+		$result = $client->get_rates( $address_to, $parcel, $customs, [
+			'insurance_amount' => $insure,
+			'currency'         => $value['currency'],
+			'content'          => $this->generic_contents( $order ),
+			'metadata'         => sprintf(
+				/* translators: 1: order number, 2: package value, e.g. "$45.00" */
+				__( 'Order #%1$s · value %2$s', 'yeffoprint-core' ),
+				$order->get_order_number(),
+				html_entity_decode( wp_strip_all_tags( wc_price( $value['value'], [ 'currency' => $value['currency'] ] ) ) )
+			) . ( $insure > 0 ? ' · ' . __( 'insured', 'yeffoprint-core' ) : '' ),
+		] );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
@@ -131,6 +147,11 @@ class YeffoPrint_Admin_Shippo_Controller {
 			return $label;
 		}
 
+		// The insured amount the panel asked rates for (insurance rides on
+		// the shipment those rates came from), kept with the label so the
+		// order shows it later. Informational only.
+		$insured = isset( $params['insured_amount'] ) ? max( 0.0, round( (float) $params['insured_amount'], 2 ) ) : 0.0;
+
 		// Direct request: "The site would need to send a new tracking
 		// notification if I generate a second label for an order." An
 		// order still moving toward Shipped picks this label up for
@@ -143,7 +164,11 @@ class YeffoPrint_Admin_Shippo_Controller {
 		// on an already-shipped order always gets its own notification.
 		$was_already_shipped = $order->has_status( YeffoPrint_Order_Shipment_Status::STATUS );
 
-		YeffoPrint_Order_Tracking::record_shippo_label( $order, $label['tracking_number'], $label['carrier_id'], $label['label_url'], $label['transaction_id'], $label['customs'] );
+		YeffoPrint_Order_Tracking::record_shippo_label( $order, $label['tracking_number'], $label['carrier_id'], $label['label_url'], $label['transaction_id'], $label['customs'], $insured );
+		if ( $insured > 0 ) {
+			/* translators: 1: amount, 2: tracking number */
+			$order->add_order_note( sprintf( __( 'Shipping label insured with Shippo for %1$s (tracking %2$s).', 'yeffoprint-core' ), html_entity_decode( wp_strip_all_tags( wc_price( $insured, [ 'currency' => $order->get_currency() ] ) ) ), $label['tracking_number'] ), false, true );
+		}
 		$order->save();
 
 		if ( $was_already_shipped ) {
@@ -152,6 +177,7 @@ class YeffoPrint_Admin_Shippo_Controller {
 
 		$labels           = YeffoPrint_Order_Tracking::get_shippo_labels( $order );
 		$label['customs'] = $labels ? end( $labels )['customs'] : null;
+		$label['insured'] = $insured;
 
 		return rest_ensure_response( [
 			'label'  => $label,
@@ -249,6 +275,32 @@ class YeffoPrint_Admin_Shippo_Controller {
 	}
 
 	/**
+	 * "Add insurance" on the panel: the amount to insure, or 0 when the box
+	 * is off. Prefilled with the package value (YeffoPrint_Order_Value) and
+	 * editable, e.g. to leave shipping out or to cover a replacement.
+	 *
+	 * @return float|\WP_Error
+	 */
+	private function insurance_from_request( array $params ) {
+		if ( empty( $params['insure'] ) ) {
+			return 0.0;
+		}
+		$amount = round( (float) ( $params['insurance_amount'] ?? 0 ), 2 );
+		if ( $amount <= 0 ) {
+			return new \WP_Error( 'yeffoprint_shippo_insurance_amount', __( 'Enter the amount to insure, or untick Add insurance.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		if ( $amount > 10000 ) {
+			return new \WP_Error( 'yeffoprint_shippo_insurance_amount', __( 'Shippo insurance covers up to $10,000 per package.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		return $amount;
+	}
+
+	/** "Printed labels", "Printed labels, 3D printed item"…: never the label details. */
+	private function generic_contents( \WC_Order $order ): string {
+		return implode( ', ', array_unique( array_column( YeffoPrint_Order_Value::lines( $order ), 'description' ) ) );
+	}
+
+	/**
 	 * The panel's customs fields (prefilled from customs_payload()), falling
 	 * back to the same defaults when a field is left blank.
 	 *
@@ -286,10 +338,7 @@ class YeffoPrint_Admin_Shippo_Controller {
 		$defaults = YeffoPrint_Shippo_Settings::get_customs_defaults();
 		$country  = '' !== trim( $order->get_shipping_address_1() ) ? $order->get_shipping_country() : $order->get_billing_country();
 
-		$value = 0.0;
-		foreach ( $order->get_items() as $item ) {
-			$value += (float) $item->get_total();
-		}
+		$value = YeffoPrint_Order_Value::merchandise_value( $order );
 
 		return [
 			'international' => 'international' === YeffoPrint_Shippo_Settings::region_for_country( (string) $country ),

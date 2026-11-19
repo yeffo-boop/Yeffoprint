@@ -142,6 +142,7 @@
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-delay>Send delay email</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="slip">Print packing slips</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="invoice">Print invoices</button>' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="value">Print proof of value</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="trash">Move to trash</button>' ) +
 				'<button type="button" class="yp-link-button" data-yp-bulk-clear>Clear</button>' +
 				'<span data-yp-bulk-status-msg></span>';

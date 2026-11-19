@@ -40,9 +40,18 @@ class YeffoPrint_Shippo_Client {
 	 * @param array|null $customs {description, value, currency, tariff_number, signer} — required
 	 *                            by every carrier for an international shipment; a label bought
 	 *                            from one of these rates carries the customs form automatically.
+	 * @param array $options {
+	 *     Optional extras for the admin Shippo panel (checkout's live rates pass none).
+	 *     @type float  $insurance_amount Shippo insurance for this package, 0 for none. Bought
+	 *                                    with the label, so it only costs anything on purchase.
+	 *     @type string $currency         Currency of the amount (default USD).
+	 *     @type string $content          Generic contents for the insurance record, e.g. "Printed labels".
+	 *     @type string $metadata         Free text Shippo keeps on the shipment (max 100 chars),
+	 *                                    used for the order number and package value.
+	 * }
 	 * @return array{rates:array}|\WP_Error
 	 */
-	public function get_rates( array $address_to, array $parcel, ?array $customs = null ) {
+	public function get_rates( array $address_to, array $parcel, ?array $customs = null, array $options = [] ) {
 		$from = YeffoPrint_Shippo_Settings::get_ship_from_address();
 		$body = [
 			'address_from' => $this->format_address( $from ),
@@ -60,6 +69,22 @@ class YeffoPrint_Shippo_Client {
 
 		if ( $customs ) {
 			$body['customs_declaration'] = $this->customs_declaration( $customs, $parcel, $from['country'] );
+		}
+
+		// Shippo's own insurance (no provider given), which covers every
+		// carrier on the account. Shippo bills it with the label.
+		$insurance = round( (float) ( $options['insurance_amount'] ?? 0 ), 2 );
+		if ( $insurance > 0 ) {
+			$body['extra'] = [
+				'insurance' => [
+					'amount'   => number_format( $insurance, 2, '.', '' ),
+					'currency' => (string) ( $options['currency'] ?? 'USD' ) ?: 'USD',
+					'content'  => (string) ( $options['content'] ?? '' ),
+				],
+			];
+		}
+		if ( ! empty( $options['metadata'] ) ) {
+			$body['metadata'] = mb_substr( (string) $options['metadata'], 0, 100 );
 		}
 
 		$response = $this->call( 'POST', '/shipments/', $body );

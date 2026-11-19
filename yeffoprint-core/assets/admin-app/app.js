@@ -370,7 +370,7 @@
 		} ).join( '' ) + '</div>';
 	};
 
-	/** Printable invoice / packing slip page for these order ids (class-admin-order-actions-controller.php). `kind`: 'invoice' or 'slip'. */
+	/** Printable invoice / packing slip page for these order ids (class-admin-order-actions-controller.php). `kind`: 'invoice', 'slip' or 'value' (proof of value for a carrier claim). */
 	YP.printOrdersUrl = function ( ids, kind ) {
 		return yeffoprintAdminApp.printOrdersUrl + '&kind=' + encodeURIComponent( kind ) + '&ids=' + ids.map( Number ).join( ',' );
 	};
@@ -3195,6 +3195,11 @@
 							'<div class="yp-field"><label for="yp-shippo-customs-value">Value (' + YP.escapeHtml( customs.currency ) + ')</label><input type="number" min="0.01" step="0.01" id="yp-shippo-customs-value" value="' + YP.escapeAttr( customs.value ) + '" /></div>' +
 						'</div>'
 					: '' ) +
+				'<p class="yp-panel__hint">Package value: ' + YP.escapeHtml( Number( ( order.shippo_package_value || {} ).value || 0 ).toFixed( 2 ) ) + ' ' + YP.escapeHtml( ( order.shippo_package_value || {} ).currency || 'USD' ) + ' (items after discounts).</p>' +
+				'<div class="yp-shippo-dims">' +
+					'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-shippo-insure" /><label for="yp-shippo-insure">Add Shippo insurance</label></div>' +
+					'<div class="yp-field"><label for="yp-shippo-insure-amount">Insure for</label><input type="number" min="0.01" step="0.01" id="yp-shippo-insure-amount" value="' + YP.escapeAttr( ( order.shippo_package_value || {} ).value || '' ) + '" /></div>' +
+				'</div>' +
 				'<button type="button" class="wp-block-button__link is-style-outline yp-shippo-get-rates" data-yp-shippo-get-rates>Get Rates</button>' +
 				'<div data-yp-shippo-rates></div>' +
 				'<div data-yp-shippo-error></div>' +
@@ -3295,6 +3300,12 @@
 			parcel.customs_value = panel.querySelector( '#yp-shippo-customs-value' ).value;
 		}
 
+		var insureBox = panel.querySelector( '#yp-shippo-insure' );
+		parcel.insure = !! ( insureBox && insureBox.checked );
+		parcel.insurance_amount = parcel.insure ? panel.querySelector( '#yp-shippo-insure-amount' ).value : 0;
+		// Shippo puts insurance on the shipment these rates belong to; the purchase records it.
+		panel.removeAttribute( 'data-yp-rated-insured' );
+
 		button.disabled = true;
 		button.textContent = 'Getting rates…';
 		errorEl.innerHTML = '';
@@ -3308,6 +3319,7 @@
 			.then( function ( response ) {
 				button.disabled = false;
 				button.textContent = 'Get Rates';
+				panel.setAttribute( 'data-yp-rated-insured', parcel.insure ? String( parseFloat( parcel.insurance_amount ) || 0 ) : '0' );
 				renderShippoRates( order, panel, response.rates || [] );
 			} )
 			.catch( function ( error ) {
@@ -3529,7 +3541,7 @@
 		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/shippo/purchase', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label } )
+			body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label, insured_amount: parseFloat( panel.getAttribute( 'data-yp-rated-insured' ) ) || 0 } )
 		} )
 			.then( function ( response ) {
 				resultEl.innerHTML =
