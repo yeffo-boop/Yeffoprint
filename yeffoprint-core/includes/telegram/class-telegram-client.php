@@ -48,6 +48,20 @@ class YeffoPrint_Telegram_Client {
 		return ! is_wp_error( $response );
 	}
 
+	/** Replaces a sent message's text and drops its buttons (Telegram chat orders: a tapped size shows as "Size: 3mL ✓"). */
+	public function edit_message_text( int $chat_id, int $message_id, string $text, string $business_connection_id = '' ): bool {
+		$params = [
+			'chat_id'                  => $chat_id,
+			'message_id'               => $message_id,
+			'text'                     => $text,
+			'disable_web_page_preview' => true,
+		];
+		if ( '' !== $business_connection_id ) {
+			$params['business_connection_id'] = $business_connection_id;
+		}
+		return ! is_wp_error( $this->call( 'editMessageText', $params ) );
+	}
+
 	/**
 	 * Posts the actual proof image inline in the chat (direct follow-up
 	 * report: buttons alone let a customer approve/reject "blind,"

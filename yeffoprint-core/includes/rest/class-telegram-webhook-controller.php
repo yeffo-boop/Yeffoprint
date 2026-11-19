@@ -105,6 +105,12 @@ class YeffoPrint_Telegram_Webhook_Controller {
 			return rest_ensure_response( [ 'ok' => true ] );
 		}
 
+		// Direct request: start a label order right in the bot's chat (/neworder). While one is open, the
+		// customer's messages go to it instead of the FAQ bot. See class-telegram-chat-orders.php.
+		if ( YeffoPrint_Telegram_Chat_Orders::handle_direct( $message ) ) {
+			return rest_ensure_response( [ 'ok' => true ] );
+		}
+
 		$reply = ( new YeffoPrint_Telegram_Message_Handler() )->handle( $message );
 
 		( new YeffoPrint_Telegram_Client( YeffoPrint_Telegram_Settings::get_bot_token() ) )->send_message( $chat_id, $reply );

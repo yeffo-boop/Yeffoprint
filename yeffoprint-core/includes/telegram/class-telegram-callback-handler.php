@@ -47,6 +47,12 @@ class YeffoPrint_Telegram_Callback_Handler {
 		$parts  = explode( ':', $data, 2 );
 		$action = $parts[0] ?? '';
 
+		// Size / material / "Looks good" buttons on a Telegram chat order (class-telegram-chat-orders.php).
+		if ( 'tgco' === $action ) {
+			YeffoPrint_Telegram_Chat_Orders::handle_callback( $callback_query );
+			return;
+		}
+
 		// The owner's "✅ Got it" on an Express order alert
 		// (class-telegram-express-alerts.php) — gated to the owner's own
 		// chat, not to a linked customer account like the proof buttons.
