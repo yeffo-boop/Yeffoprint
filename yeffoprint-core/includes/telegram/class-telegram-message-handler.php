@@ -214,7 +214,8 @@ class YeffoPrint_Telegram_Message_Handler {
 		$parsed = self::extract_order_ref_and_email( $args_text );
 
 		if ( ! $parsed ) {
-			return __( "To check an order, send your order number and the email you used at checkout, like:\nYP-1042 jane@example.com", 'yeffoprint-core' );
+			return __( "To check an order, send your order number and the email you used at checkout, like:\nYP-1042 jane@example.com", 'yeffoprint-core' ) .
+				( class_exists( 'YeffoPrint_Telegram_Chat_Orders' ) && YeffoPrint_Telegram_Chat_Orders::is_enabled() ? "\n\n" . __( 'To place a new label order, send /neworder.', 'yeffoprint-core' ) : '' );
 		}
 
 		if ( ! function_exists( 'wc_get_order' ) ) {
@@ -389,15 +390,22 @@ class YeffoPrint_Telegram_Message_Handler {
 	private function help_text(): string {
 		$text = __(
 			"Hi! I'm the YeffoDesign order & FAQ bot. I can help with:\n\n" .
-			"📦 Order status — send your order number and checkout email, e.g. \"YP-1042 jane@example.com\"\n" .
+			"%s📦 Order status — send your order number and checkout email, e.g. \"YP-1042 jane@example.com\"\n" .
 			"📋 All your orders — /orders, once your account is connected\n" .
 			"🔁 Reorder — /reorder plus your order number and email\n" .
 			"📮 Update a shipping address — /address plus your order number and email (only before a shipping label is generated)\n" .
 			"🔍 Find a design — /search plus a name or keyword, e.g. \"/search labs\"\n" .
 			"🔗 Connect your account — /link plus the code from My Account → Connect Telegram, so I can message you directly and let you approve proofs right here\n" .
 			"❓ Questions — ask about sizes, materials, shipping, the custom design fee, accounts, QR codes, or adding the Peptide Calculator or Dose Tracker to your Home Screen\n\n" .
-			'Commands: /order, /orders, /reorder, /address, /search, /link, /faq, /help',
+			'Commands: %s/order, /orders, /reorder, /address, /search, /link, /faq, /help',
 			'yeffoprint-core'
+		);
+		// Telegram chat orders (class-telegram-chat-orders.php), only when switched on.
+		$ordering = class_exists( 'YeffoPrint_Telegram_Chat_Orders' ) && YeffoPrint_Telegram_Chat_Orders::is_enabled();
+		$text     = sprintf(
+			$text,
+			$ordering ? __( "🛒 New label order — /neworder, then send your list\n", 'yeffoprint-core' ) : '',
+			$ordering ? '/neworder, ' : ''
 		);
 
 		return $text . $this->away_mode_note();
