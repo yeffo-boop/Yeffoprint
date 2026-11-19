@@ -256,6 +256,7 @@ class YeffoPrint_Order_Tracking {
 				'transaction_id'  => (string) ( $label['transaction_id'] ?? '' ),
 				'voided'          => ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'],
 				'customs'         => self::label_customs_summary( $label['customs'] ?? null ),
+				'insured'         => (float) ( $label['insured'] ?? 0 ),
 			];
 		}
 
@@ -333,7 +334,7 @@ class YeffoPrint_Order_Tracking {
 	 * single save() also carries the order-status auto-advance and any
 	 * other meta changes made in the same request.
 	 */
-	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '', ?array $customs = null ): void {
+	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '', ?array $customs = null, float $insured = 0.0 ): void {
 		$labels   = $order->get_meta( self::SHIPPO_LABELS_META, true );
 		$labels   = is_array( $labels ) ? $labels : [];
 		$labels[] = [
@@ -343,6 +344,7 @@ class YeffoPrint_Order_Tracking {
 			'transaction_id' => $transaction_id,
 			'refund'         => [],
 			'customs'        => $customs,
+			'insured'        => $insured,
 		];
 
 		$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );

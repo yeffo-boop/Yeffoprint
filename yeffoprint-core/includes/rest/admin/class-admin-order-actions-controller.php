@@ -166,13 +166,14 @@ class YeffoPrint_Admin_Order_Actions_Controller {
 		return rest_ensure_response( [ 'sent' => true, 'to' => $order->get_billing_email() ] );
 	}
 
-	/** admin-post.php?action=yeffoprint_print_orders&kind=invoice|slip&ids=1,2 */
+	/** admin-post.php?action=yeffoprint_print_orders&kind=invoice|slip|value&ids=1,2 */
 	public function render_print_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'yeffoprint-core' ), 403 );
 		}
 
-		$kind   = 'slip' === sanitize_key( (string) ( $_GET['kind'] ?? '' ) ) ? 'slip' : 'invoice';
+		$kind   = sanitize_key( (string) ( $_GET['kind'] ?? '' ) );
+		$kind   = in_array( $kind, [ 'slip', 'value' ], true ) ? $kind : 'invoice';
 		$ids    = array_slice( array_filter( array_map( 'absint', explode( ',', (string) wp_unslash( $_GET['ids'] ?? '' ) ) ) ), 0, self::MAX_BULK );
 		$orders = array_values( array_filter( array_map( 'wc_get_order', $ids ), static function ( $order ) {
 			return $order instanceof \WC_Order;
@@ -181,7 +182,12 @@ class YeffoPrint_Admin_Order_Actions_Controller {
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 
-		$title = 'slip' === $kind ? __( 'Packing slip', 'yeffoprint-core' ) : __( 'Invoice', 'yeffoprint-core' );
+		$titles = [
+			'slip'    => __( 'Packing slip', 'yeffoprint-core' ),
+			'invoice' => __( 'Invoice', 'yeffoprint-core' ),
+			'value'   => __( 'Proof of value', 'yeffoprint-core' ),
+		];
+		$title  = $titles[ $kind ];
 		?>
 <!doctype html>
 <html lang="en">
@@ -220,6 +226,15 @@ class YeffoPrint_Admin_Order_Actions_Controller {
 	.note { margin-top: 24px; padding: 12px; background: #f7f7f5; border-radius: 6px; }
 	.note p { margin: 0; white-space: pre-line; }
 	.thanks { margin-top: 32px; color: #555; font-size: 13px; }
+	.worth { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 0 0 24px; padding: 14px 16px; border: 2px solid #141414; border-radius: 6px; }
+	.worth > span { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #555; }
+	.worth b { font-size: 22px; }
+	.facts { margin: 0 0 24px; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
+	.facts dt { color: #777; }
+	.facts dd { margin: 0; white-space: pre-line; }
+	.statement { margin-top: 28px; font-size: 13px; color: #333; }
+	.sign { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-top: 40px; font-size: 12px; color: #555; }
+	.sign div { border-top: 1px solid #141414; padding-top: 4px; }
 	@media print {
 		body { background: #fff; }
 		.bar { display: none; }
@@ -241,7 +256,11 @@ class YeffoPrint_Admin_Order_Actions_Controller {
 			echo '<div class="page"><p>' . esc_html__( 'No orders to print.', 'yeffoprint-core' ) . '</p></div>';
 		}
 		foreach ( $orders as $order ) {
-			$this->render_order_page( $order, $kind );
+			if ( 'value' === $kind ) {
+				$this->render_value_page( $order );
+			} else {
+				$this->render_order_page( $order, $kind );
+			}
 		}
 		?>
 <script>window.addEventListener( 'load', function () { setTimeout( function () { window.print(); }, 300 ); } );</script>
@@ -324,6 +343,124 @@ class YeffoPrint_Admin_Order_Actions_Controller {
 	<?php endif; ?>
 
 	<p class="thanks"><?php esc_html_e( 'Thank you for your order!', 'yeffoprint-core' ); ?> <?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></p>
+</div>
+		<?php
+	}
+
+	/**
+	 * Proof of value for a carrier (UPS) damage/loss claim. Direct request:
+	 * "I don't want it to list specifics about the labels, just the cost,
+	 * the quantity, the generic 'printed labels' text and all of the fees,
+	 * shipping, etc." Rows come from YeffoPrint_Order_Value, which only
+	 * ever outputs generic wording; no item names or item meta are read
+	 * here. Works for any order, old or new, since it's built from what
+	 * the order already stores.
+	 */
+	private function render_value_page( \WC_Order $order ): void {
+		$money    = static function ( float $amount ) use ( $order ): string {
+			return wc_price( $amount, [ 'currency' => $order->get_currency() ] );
+		};
+		$to_text  = static function ( string $html ): string {
+			return trim( wp_strip_all_tags( str_replace( [ '<br/>', '<br>', '<br />' ], "\n", $html ) ) );
+		};
+		$base     = function_exists( 'WC' ) && WC()->countries ? WC()->countries : null;
+		$store    = array_filter( [
+			get_option( 'woocommerce_store_address' ),
+			get_option( 'woocommerce_store_address_2' ),
+			trim( implode( ' ', array_filter( [ trim( (string) get_option( 'woocommerce_store_city' ) ) . ( $base && $base->get_base_state() ? ',' : '' ), $base ? $base->get_base_state() : '', get_option( 'woocommerce_store_postcode' ) ] ) ) ),
+			get_option( 'woocommerce_email_from_address' ),
+			wp_parse_url( home_url(), PHP_URL_HOST ),
+		] );
+		$shipping = $order->get_formatted_shipping_address() ?: $order->get_formatted_billing_address();
+		$lines    = YeffoPrint_Order_Value::lines( $order );
+		$charges  = YeffoPrint_Order_Value::charges( $order );
+		$subtotal = array_sum( array_column( $lines, 'total' ) );
+		$refunded = (float) $order->get_total_refunded();
+		$paid     = $order->is_paid() || $order->get_date_paid();
+		$net      = (float) $order->get_total() - $refunded;
+		$date     = $order->get_date_created();
+		$paid_on  = $order->get_date_paid();
+		$tracking = [];
+		if ( class_exists( 'YeffoPrint_Order_Tracking' ) ) {
+			foreach ( YeffoPrint_Order_Tracking::get_shippo_labels( $order ) as $label ) {
+				if ( empty( $label['voided'] ) && '' !== $label['tracking_number'] ) {
+					$tracking[] = trim( $label['carrier_label'] . ' ' . $label['tracking_number'] );
+				}
+			}
+		}
+		?>
+<div class="page">
+	<div class="head">
+		<div class="brand"><?php echo esc_html( get_bloginfo( 'name' ) ); ?><small><?php echo esc_html( implode( "\n", $store ) ); ?></small></div>
+		<div class="doc">
+			<h1><?php esc_html_e( 'Proof of value', 'yeffoprint-core' ); ?></h1>
+			<div><?php esc_html_e( 'Sales receipt', 'yeffoprint-core' ); ?></div>
+			<div><?php echo esc_html( sprintf( __( 'Order #%s', 'yeffoprint-core' ), $order->get_order_number() ) ); ?></div>
+		</div>
+	</div>
+
+	<div class="worth">
+		<span><?php echo esc_html( $paid ? __( 'Total paid by customer', 'yeffoprint-core' ) : __( 'Order total (not paid yet)', 'yeffoprint-core' ) ); ?></span>
+		<b><?php echo wp_kses_post( $money( $net ) ); ?></b>
+	</div>
+
+	<div class="addr">
+		<div><h2><?php esc_html_e( 'Shipped to', 'yeffoprint-core' ); ?></h2><p><?php echo esc_html( $to_text( (string) $shipping ) ?: '—' ); ?></p></div>
+		<div>
+			<h2><?php esc_html_e( 'Order details', 'yeffoprint-core' ); ?></h2>
+			<dl class="facts">
+				<?php if ( $date ) : ?><dt><?php esc_html_e( 'Order date', 'yeffoprint-core' ); ?></dt><dd><?php echo esc_html( wc_format_datetime( $date ) ); ?></dd><?php endif; ?>
+				<?php if ( $paid_on ) : ?><dt><?php esc_html_e( 'Paid on', 'yeffoprint-core' ); ?></dt><dd><?php echo esc_html( wc_format_datetime( $paid_on ) ); ?></dd><?php endif; ?>
+				<?php if ( $order->get_payment_method_title() ) : ?><dt><?php esc_html_e( 'Paid by', 'yeffoprint-core' ); ?></dt><dd><?php echo esc_html( $order->get_payment_method_title() ); ?></dd><?php endif; ?>
+				<?php if ( $tracking ) : ?><dt><?php esc_html_e( 'Tracking', 'yeffoprint-core' ); ?></dt><dd><?php echo esc_html( implode( "\n", $tracking ) ); ?></dd><?php endif; ?>
+			</dl>
+		</div>
+	</div>
+
+	<table>
+		<thead><tr>
+			<th><?php esc_html_e( 'Description', 'yeffoprint-core' ); ?></th>
+			<th class="n"><?php esc_html_e( 'Qty', 'yeffoprint-core' ); ?></th>
+			<th class="n"><?php esc_html_e( 'Unit price', 'yeffoprint-core' ); ?></th>
+			<th class="n"><?php esc_html_e( 'Amount', 'yeffoprint-core' ); ?></th>
+		</tr></thead>
+		<tbody>
+		<?php foreach ( $lines as $line ) : ?>
+			<tr>
+				<td><?php echo esc_html( $line['description'] ); ?></td>
+				<td class="n"><?php echo esc_html( number_format_i18n( $line['qty'] ) ); ?></td>
+				<td class="n"><?php echo wp_kses_post( wc_price( $line['unit'], [ 'currency' => $order->get_currency(), 'decimals' => $line['unit'] > 0 && $line['unit'] < 1 ? 3 : wc_get_price_decimals() ] ) ); ?></td>
+				<td class="n"><?php echo wp_kses_post( $money( $line['total'] ) ); ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+
+	<table class="totals">
+		<tr><td><?php esc_html_e( 'Items subtotal', 'yeffoprint-core' ); ?></td><td class="n"><?php echo wp_kses_post( $money( $subtotal ) ); ?></td></tr>
+		<?php foreach ( $charges as $charge ) : ?>
+			<tr><td><?php echo esc_html( $charge['label'] ); ?></td><td class="n"><?php echo wp_kses_post( $charge['amount'] < 0 ? '−' . $money( -$charge['amount'] ) : $money( $charge['amount'] ) ); ?></td></tr>
+		<?php endforeach; ?>
+		<tr class="<?php echo $refunded > 0 ? '' : 'grand'; ?>"><td><?php esc_html_e( 'Order total', 'yeffoprint-core' ); ?></td><td class="n"><?php echo wp_kses_post( $money( (float) $order->get_total() ) ); ?></td></tr>
+		<?php if ( $refunded > 0 ) : ?>
+			<tr><td><?php esc_html_e( 'Refunded', 'yeffoprint-core' ); ?></td><td class="n">−<?php echo wp_kses_post( $money( $refunded ) ); ?></td></tr>
+			<tr class="grand"><td><?php esc_html_e( 'Net paid', 'yeffoprint-core' ); ?></td><td class="n"><?php echo wp_kses_post( $money( $net ) ); ?></td></tr>
+		<?php endif; ?>
+	</table>
+
+	<p class="statement"><?php
+		echo esc_html( sprintf(
+			/* translators: 1: store name, 2: order number, 3: merchandise value */
+			(float) $order->get_total_tax() > 0
+				? __( 'This receipt confirms the goods in order #%2$s were sold and shipped by %1$s. Merchandise value after discounts: %3$s.', 'yeffoprint-core' )
+				: __( 'This receipt confirms the goods in order #%2$s were sold and shipped by %1$s. Merchandise value after discounts: %3$s. No sales tax is charged (Oregon).', 'yeffoprint-core' ),
+			get_bloginfo( 'name' ),
+			$order->get_order_number(),
+			html_entity_decode( wp_strip_all_tags( $money( YeffoPrint_Order_Value::merchandise_value( $order ) ) ) )
+		) );
+	?></p>
+
+	<div class="sign"><div><?php esc_html_e( 'Signature', 'yeffoprint-core' ); ?></div><div><?php esc_html_e( 'Date', 'yeffoprint-core' ); ?></div></div>
 </div>
 		<?php
 	}
