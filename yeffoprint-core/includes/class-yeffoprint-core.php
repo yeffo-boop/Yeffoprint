@@ -221,6 +221,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-address-update.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-log.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-digest.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-chat-orders.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-telegram-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-chat-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-crypto.php';
@@ -388,6 +389,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Llms_Txt();
 		new YeffoPrint_Telegram_Unanswered_Log();
 		new YeffoPrint_Telegram_Unanswered_Digest();
+		new YeffoPrint_Telegram_Chat_Orders();
 		new YeffoPrint_Proof_Reminder_Scheduler();
 		new YeffoPrint_Telegram_Express_Alerts();
 		new YeffoPrint_Abandoned_Carts();
