@@ -136,7 +136,11 @@ class YeffoPrint_Telegram_Admin_Alerts {
 	private function notify_order( \WC_Order $order, string $heading, string ...$extra ): void {
 		$item_lines = [];
 		foreach ( $order->get_items() as $item ) {
-			$item_lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), $item->get_quantity() );
+			$item_lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), YeffoPrint_Order_Label_Count::item_quantity( $item ) );
+		}
+		$total_line = YeffoPrint_Order_Label_Count::total_line( $order );
+		if ( '' !== $total_line ) {
+			$item_lines[] = $total_line;
 		}
 
 		// YeffoPrint_Telegram_Order_Lookup::plain_total() — not a bare

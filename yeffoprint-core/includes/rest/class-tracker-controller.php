@@ -8,6 +8,7 @@
  *   GET    /tracker/state                 everything the app shows, decrypted for its owner
  *   PUT    /tracker/records/{kind}/{id}   create or replace one record
  *   DELETE /tracker/records/{kind}/{id}
+ *   POST   /tracker/records/batch         save up to 100 records at once (Me › Backup, restore & import)
  *   POST   /tracker/push                  save this browser's push subscription (reminders on)
  *   DELETE /tracker/push                  remove it
  *   POST   /tracker/push/test             send a test reminder to this customer's devices
@@ -64,6 +65,12 @@ class YeffoPrint_Tracker_Controller {
 				'callback'            => [ $this, 'delete_record' ],
 				'permission_callback' => $perm,
 			],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/tracker/records/batch', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'put_records' ],
+			'permission_callback' => $perm,
 		] );
 
 		register_rest_route( self::NAMESPACE, '/tracker/push', [
@@ -233,6 +240,55 @@ class YeffoPrint_Tracker_Controller {
 		YeffoPrint_Tracker_Usage::record( $user_id, $new_dose ? 1 : 0 );
 
 		return self::no_store( [ 'ok' => true, 'data' => $data ] );
+	}
+
+	/** Records per batch call (a restore sends a few hundred in a handful of calls). */
+	private const MAX_BATCH = 100;
+
+	/**
+	 * Restore a backup or import from another app: the same checks as
+	 * put_record() for each item, and one bad item doesn't stop the rest.
+	 * Body: { items: [ { kind, id, data } ] }. Answers { saved, failed }.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function put_records( \WP_REST_Request $request ) {
+		$body  = $request->get_json_params();
+		$items = is_array( $body['items'] ?? null ) ? array_values( $body['items'] ) : null;
+		if ( null === $items || ! $items || count( $items ) > self::MAX_BATCH ) {
+			return new \WP_Error( 'yeffoprint_tracker_bad_record', __( 'Those entries couldn’t be saved.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$user_id   = get_current_user_id();
+		$saved   = 0;
+		$failed  = 0;
+		foreach ( $items as $item ) {
+			$kind = is_array( $item ) ? (string) ( $item['kind'] ?? '' ) : '';
+			$id   = is_array( $item ) ? (string) ( $item['id'] ?? '' ) : '';
+			$data = is_array( $item ) && is_array( $item['data'] ?? null ) ? self::clean( $item['data'], 0 ) : null;
+			if ( null === $data || ! in_array( $kind, self::WRITABLE_KINDS, true ) || ! YeffoPrint_Tracker_Store::valid_id( $id )
+				|| strlen( (string) wp_json_encode( $data ) ) > ( 'food' === $kind ? YeffoPrint_Tracker_Store::MAX_FOOD_DAY_BYTES : YeffoPrint_Tracker_Store::MAX_RECORD_BYTES ) ) {
+				++$failed;
+				continue;
+			}
+			$exists = YeffoPrint_Tracker_Store::exists( $user_id, $kind, $id );
+			if ( 'myfood' === $kind && ! $exists && YeffoPrint_Tracker_Store::count( $user_id, $kind ) >= self::MAX_MY_FOODS ) {
+				++$failed;
+				continue;
+			}
+			if ( is_wp_error( YeffoPrint_Tracker_Store::put( $user_id, $kind, $id, $data ) ) ) {
+				++$failed;
+				continue;
+			}
+			++$saved;
+		}
+		// Counts this as a day the customer used the app, but imported
+		// history isn't "doses logged today" on the admin Dashboard.
+		if ( $saved ) {
+			YeffoPrint_Tracker_Usage::record( $user_id, 0 );
+		}
+
+		return self::no_store( [ 'ok' => true, 'saved' => $saved, 'failed' => $failed ] );
 	}
 
 	public function delete_record( \WP_REST_Request $request ): \WP_REST_Response {

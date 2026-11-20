@@ -634,6 +634,19 @@ body.yp-next .ypn-search {
 	color: #11702f;
 }
 
+/* Total labels/stickers on the order (class-order-label-count.php). */
+.ypn-order__count {
+	color: var(--ypn-ink);
+	font-size: 12.5px;
+	font-weight: 700;
+	margin: -4px 0 8px;
+}
+
+.ypn-card__title .ypn-count {
+	color: var(--ypn-ink);
+	font-weight: 700;
+}
+
 .ypn-order__items {
 	color: var(--ypn-mute);
 	font-size: 12.5px;
@@ -2886,4 +2899,25 @@ body.yp-next .ypn-note-add textarea {
 .ypn-lfe__grid input,
 .ypn-lfe__grid select {
 	width: 100%;
+}
+
+/* Shippo panel: package value + optional insurance. */
+.ypn-insure {
+	margin-bottom: 12px;
+	padding: 10px 12px;
+	border: 1px solid var(--ypn-line, #e3e3e0);
+	border-radius: 10px;
+}
+
+.ypn-insure__value {
+	margin: 0 0 6px;
+}
+
+.ypn-insure__value span {
+	font-size: 12px;
+	color: var(--ypn-mute);
+}
+
+.ypn-insure .ypn-dims {
+	margin: 8px 0 4px;
 }

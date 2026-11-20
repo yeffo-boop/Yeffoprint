@@ -87,6 +87,12 @@ class YeffoPrint_Order_Delivery_Status {
 	}
 
 	private function check_order( \WC_Order $order ): void {
+		// Shipped in the same box as a linked order: that order's own
+		// check completes this one too (class-order-addon-shipping.php).
+		if ( class_exists( 'YeffoPrint_Order_Addon_Shipping' ) && (int) $order->get_meta( YeffoPrint_Order_Addon_Shipping::SHIPPED_WITH_META, true ) ) {
+			return;
+		}
+
 		$shipments = YeffoPrint_Order_Tracking::get_shipments( $order );
 		if ( ! $shipments ) {
 			return;

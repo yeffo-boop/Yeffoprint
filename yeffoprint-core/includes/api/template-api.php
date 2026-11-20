@@ -169,6 +169,16 @@ if ( ! function_exists( 'yeffoprint_core_away_mode' ) ) {
 	}
 }
 
+if ( ! function_exists( 'yeffoprint_core_sales_paused' ) ) {
+	/**
+	 * The customer message while "Pause all sales" is on, or null when
+	 * sales are open. Read by the theme's away-bar block.
+	 */
+	function yeffoprint_core_sales_paused(): ?string {
+		return class_exists( 'YeffoPrint_Sales_Pause' ) && YeffoPrint_Sales_Pause::is_paused() ? YeffoPrint_Sales_Pause::message() : null;
+	}
+}
+
 if ( ! function_exists( 'yeffoprint_core_rewards_points_per_dollar_label' ) ) {
 	/**
 	 * Used by patterns/rewards-promo.php so the homepage promo's earn

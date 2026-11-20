@@ -99,7 +99,7 @@
 			'<div class="yp-bulk-bar" data-yp-bulk hidden></div>' +
 			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
 				'<th class="yp-bulk-check"><input type="checkbox" data-yp-check-all aria-label="Select all orders on this page"></th>' +
-				'<th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th>' +
+				'<th>Order</th><th>Customer</th><th>Date</th><th>Labels</th><th>Total</th><th>Status</th>' +
 			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="7">Loading&hellip;</td></tr></tbody></table></div>' +
 			'<div class="yp-pagination" data-yp-pagination></div>';
 
@@ -139,8 +139,10 @@
 								return '<option value="' + YP.escapeAttr( key ) + '">' + YP.escapeHtml( yeffoprintAdminApp.wcOrderStatuses[ key ] ) + '</option>';
 							} ).join( '' ) +
 						'</select><button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="status">Apply</button></span>' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-delay>Send delay email</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="slip">Print packing slips</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="invoice">Print invoices</button>' +
+						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-print="value">Print proof of value</button>' +
 						'<button type="button" class="wp-block-button__link is-style-outline" data-yp-bulk-act="trash">Move to trash</button>' ) +
 				'<button type="button" class="yp-link-button" data-yp-bulk-clear>Clear</button>' +
 				'<span data-yp-bulk-status-msg></span>';
@@ -193,6 +195,8 @@
 				runBulk( act.getAttribute( 'data-yp-bulk-act' ), act );
 			} else if ( print ) {
 				window.open( YP.printOrdersUrl( selectedIds(), print.getAttribute( 'data-yp-bulk-print' ) ), '_blank' );
+			} else if ( event.target.closest( '[data-yp-bulk-delay]' ) ) {
+				YP.delayEmailModal( selectedIds(), load );
 			} else if ( event.target.closest( '[data-yp-bulk-clear]' ) ) {
 				selected = {};
 				rowsEl.querySelectorAll( '[data-yp-check]' ).forEach( function ( box ) { box.checked = false; } );
@@ -320,7 +324,7 @@
 							'<div class="yp-field__hint" style="margin:0;">' + YP.escapeHtml( order.customer_email || '' ) + '</div>' +
 						'</td>' +
 						'<td>' + ( order.date ? YP.escapeHtml( new Date( order.date ).toLocaleDateString() ) : '—' ) + '</td>' +
-						'<td>' + order.item_count + '</td>' +
+						'<td>' + ( order.label_summary ? YP.escapeHtml( order.label_summary ) : order.item_count + ( 1 === order.item_count ? ' item' : ' items' ) ) + '</td>' +
 						'<td>$' + order.total.toFixed( 2 ) + '</td>' +
 						'<td><span class="yp-pill yp-pill--' + pillClass + '">' + YP.escapeHtml( order.status_label ) + '</span>' + ( order.express ? ' <span class="yp-pill yp-pill--crit">Express</span>' : '' ) + '</td>' +
 					'</tr>'

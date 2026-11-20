@@ -247,11 +247,23 @@ class YeffoPrint_Admin_Order_Controller {
 			'customer_email' => $order->get_billing_email(),
 			'total'          => (float) $order->get_total(),
 			'item_count'     => $order->get_item_count(),
+			'label_summary'  => YeffoPrint_Order_Label_Count::summary( $order ),
 			'express'        => YeffoPrint_Express_Order::is_express( $order ),
 		];
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */
+	/** "Carrier Service" saved on the order's shipping line by live checkout rates, or ''. */
+	private static function live_shipping_service( \WC_Order $order ): string {
+		foreach ( $order->get_shipping_methods() as $line ) {
+			$service = (string) $line->get_meta( YeffoPrint_Live_Shipping_Rates::SERVICE_META );
+			if ( '' !== $service ) {
+				return $service;
+			}
+		}
+		return '';
+	}
+
 	public function get_order( \WP_REST_Request $request ) {
 		$order = $this->validate_order( (int) $request['id'] );
 		if ( is_wp_error( $order ) ) {
@@ -613,7 +625,14 @@ class YeffoPrint_Admin_Order_Controller {
 			// service for that plugin to auto-select — this surfaces the choice as a plain string so
 			// the frontend can show it right next to the embedded label form instead.
 			'shipping_method'      => $order->get_shipping_method(),
+			// The carrier service a live checkout price came from (e.g. "UPS
+			// Worldwide Expedited" behind "International Shipping"), so the
+			// Ship screen pre-selects that rate. Empty for flat-rate orders.
+			'shipping_service'     => self::live_shipping_service( $order ),
 			'items'                => array_values( array_filter( array_map( [ $this, 'item_payload' ], $order->get_items() ) ) ),
+			// Total labels and stickers on the order (class-order-label-count.php).
+			'label_totals'         => YeffoPrint_Order_Label_Count::totals( $order ),
+			'label_summary'        => YeffoPrint_Order_Label_Count::summary( $order ),
 			'subtotal'             => (float) $order->get_subtotal(),
 			'shipping_total'       => (float) $order->get_shipping_total(),
 			'discount_total'       => (float) $order->get_discount_total(),
@@ -670,6 +689,9 @@ class YeffoPrint_Admin_Order_Controller {
 			'shippo_configured'        => YeffoPrint_Shippo_Settings::is_configured(),
 			'shippo_default_package'   => YeffoPrint_Shippo_Settings::get_default_package(),
 			'shippo_customs'           => YeffoPrint_Admin_Shippo_Controller::customs_payload( $order ),
+			'shippo_package_value'     => YeffoPrint_Order_Value::package_value( $order ),
+			// Pre-ticks "Add Shippo insurance": the customer paid for it at checkout, or the order is over the auto-insure amount.
+			'shippo_auto_insure'       => YeffoPrint_Shipping_Insurance::should_insure( $order ),
 			// Direct request: "need the ability to go back and print the label later." Every
 			// Shippo label already purchased on this order, printable link included, so the panel
 			// can offer a reprint regardless of whether it was purchased in this drawer session or
@@ -782,6 +804,9 @@ class YeffoPrint_Admin_Order_Controller {
 			'id'        => $item->get_id(),
 			'name'      => $item->get_name(),
 			'quantity'  => $item->get_quantity(),
+			// {kind: labels|stickers, quantity} for a label/sticker batch, else null.
+			// A Template batch can carry WC quantity 1 with the real count here.
+			'label_count' => YeffoPrint_Order_Label_Count::for_item( $item ),
 			'total'     => (float) $item->get_total(),
 			// The linked product's own image — for a Template line item
 			// this is always the template's featured image, kept in sync

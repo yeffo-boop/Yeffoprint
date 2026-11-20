@@ -15,6 +15,54 @@ defined( 'ABSPATH' ) || exit;
 
 return [
 	[
+		'id'    => '2026-11-18e',
+		'date'  => '2026-11-18',
+		'title' => 'A tidier look',
+		'text'  => 'The + button now shows everything you can add on one screen, Progress starts with your weight, and Me is shorter with one Settings card (now with units). Turn on reminders right from Today, and the chart’s dose labels no longer overlap.',
+	],
+	[
+		'id'    => '2026-11-18d',
+		'date'  => '2026-11-18',
+		'title' => 'YeffoHealth en español',
+		'text'  => 'YeffoHealth now speaks Spanish. It switches on by itself when your phone is set to Spanish, or pick it under Me › Settings.',
+	],
+	[
+		'id'    => '2026-11-18c',
+		'date'  => '2026-11-18',
+		'title' => 'Back up, restore and import',
+		'text'  => 'Me › Backup, restore & import saves everything to one file and brings it back later. Coming from another tracker app? Pick its CSV export and your past doses and weigh-ins come in too.',
+	],
+	[
+		'id'    => '2026-11-18b',
+		'date'  => '2026-11-18',
+		'title' => 'Smarter injection sites',
+		'text'  => 'The spot picker now warns you when a spot was used in the last couple of days or keeps getting sore, and suggests those spots last. History shows tips like a spot that’s carrying most of your shots.',
+	],
+	[
+		'id'    => '2026-11-18a',
+		'date'  => '2026-11-18',
+		'title' => 'Goal weight and maintenance',
+		'text'  => 'Set a goal weight on Progress to see how far you’ve come and how far to go, with your goal on the chart. Once you reach it, switch to maintenance to keep a range around it and see when your weight drifts.',
+	],
+	[
+		'id'    => '2026-11-15a',
+		'date'  => '2026-11-15',
+		'title' => 'Tabs on the side on iPhone Duo',
+		'text'  => 'On an iPhone Duo, where the clock and status icons run down the side of the screen, the Today, Progress, Add, Supply and Calculator buttons now sit in that side strip under the clock, so more of the screen is left for your day. Other phones keep the bar along the bottom.',
+	],
+	[
+		'id'    => '2026-11-09b',
+		'date'  => '2026-11-09',
+		'title' => 'Length and weeks on/off work together',
+		'text'  => 'If you set a Length that ends before your weeks on are done, the edit screen now warns you and offers to clear it, so your on/off cycle keeps repeating instead of stopping early.',
+	],
+	[
+		'id'    => '2026-11-09a',
+		'date'  => '2026-11-09',
+		'title' => 'Clearer weeks on and off',
+		'text'  => 'When a cycle goes into its off weeks or reaches its set length, Today now says so, shows the start date the weeks count from, and has a Change link if that date is wrong. Pausing something with a cycle now stops the clock, so it picks up where it left off when you turn it back on.',
+	],
+	[
 		'id'    => '2026-10-30a',
 		'date'  => '2026-10-30',
 		'title' => 'Made for bigger screens',

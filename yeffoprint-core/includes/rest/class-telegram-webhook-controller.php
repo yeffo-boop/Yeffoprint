@@ -78,6 +78,21 @@ class YeffoPrint_Telegram_Webhook_Controller {
 			return rest_ensure_response( [ 'ok' => true ] );
 		}
 
+		// Telegram Business (direct request: "a customer I'm chatting with
+		// can send over a list of labels needed and the bot can create the
+		// order"). These are the owner's own personal chats, so they never
+		// reach the FAQ bot below: only class-telegram-chat-orders.php
+		// handles them, and it stays silent unless the owner types /order.
+		if ( is_array( $update ) && is_array( $update['business_connection'] ?? null ) ) {
+			YeffoPrint_Telegram_Chat_Orders::handle_connection( $update['business_connection'] );
+			return rest_ensure_response( [ 'ok' => true ] );
+		}
+		$business_message = is_array( $update ) ? ( $update['business_message'] ?? $update['edited_business_message'] ?? null ) : null;
+		if ( is_array( $business_message ) ) {
+			YeffoPrint_Telegram_Chat_Orders::handle_message( $business_message, isset( $update['edited_business_message'] ) );
+			return rest_ensure_response( [ 'ok' => true ] );
+		}
+
 		$message = is_array( $update ) ? ( $update['message'] ?? $update['edited_message'] ?? null ) : null;
 
 		if ( ! is_array( $message ) || empty( $message['chat']['id'] ) || ! isset( $message['text'] ) || ! is_string( $message['text'] ) ) {
@@ -87,6 +102,12 @@ class YeffoPrint_Telegram_Webhook_Controller {
 		$chat_id = (int) $message['chat']['id'];
 
 		if ( $this->is_rate_limited( $chat_id ) ) {
+			return rest_ensure_response( [ 'ok' => true ] );
+		}
+
+		// Direct request: start a label order right in the bot's chat (/neworder). While one is open, the
+		// customer's messages go to it instead of the FAQ bot. See class-telegram-chat-orders.php.
+		if ( YeffoPrint_Telegram_Chat_Orders::handle_direct( $message ) ) {
 			return rest_ensure_response( [ 'ok' => true ] );
 		}
 

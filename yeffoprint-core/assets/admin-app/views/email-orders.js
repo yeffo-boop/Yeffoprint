@@ -42,7 +42,7 @@
 		var names = { sizes: {}, materials: {} };
 
 		viewEl.innerHTML =
-			'<p class="yp-app__intro">Customer order emails you forwarded or labelled for the site. Claude reads each one into a filled-in order. Check it, fix anything flagged, then create it as usual. The mailbox is set up in Settings › Integrations › Email orders.</p>' +
+			'<p class="yp-app__intro">Customer order emails you forwarded or labelled for the site. Claude reads each one into a filled-in order. Check it, fix anything flagged, then create it as usual. The mailbox is set up in Settings › Integrations › Email orders. Orders from your Telegram chats (/order) show here too.</p>' +
 			'<div class="yp-form__actions"><button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-check>Check mailbox now</button><button type="button" class="wp-block-button__link is-style-outline" data-yp-eo-dismiss-all hidden>Dismiss all to check</button><span class="yp-field__hint" data-yp-eo-check-status></span></div>' +
 			'<div class="yp-settings-tabs" role="tablist">' +
 				TABS.map( function ( tab ) {
@@ -210,7 +210,8 @@
 							: '' ) +
 						( result && result.notes_for_owner ? '<p class="yp-panel__hint"><strong>To check:</strong> ' + YP.escapeHtml( result.notes_for_owner ) + '</p>' : '' ) +
 						( result ? itemsHtml( result ) : '' ) +
-						'<details><summary class="yp-field__hint">Show the email</summary><p class="yp-review-admin__text" style="white-space:pre-line">' + YP.escapeHtml( record.text ) + '</p></details>' +
+						( 'telegram' === record.source && 'created' === record.state ? '<p class="yp-panel__hint">' + ( record.pay_link_sent ? 'Pay link sent in the Telegram chat.' : 'Pay link not sent in Telegram. Copy it from the order.' ) + '</p>' : '' ) +
+						'<details><summary class="yp-field__hint">' + ( 'telegram' === record.source ? 'Show the chat' : 'Show the email' ) + '</summary><p class="yp-review-admin__text" style="white-space:pre-line">' + YP.escapeHtml( record.text ) + '</p></details>' +
 						( record.earlier ? '<details><summary class="yp-field__hint">Show earlier in the thread</summary><p class="yp-review-admin__text" style="white-space:pre-line">' + YP.escapeHtml( record.earlier ) + '</p></details>' : '' ) +
 						'<div class="yp-review-admin__actions">' + actions.join( ' ' ) + '</div>' +
 					'</article>'

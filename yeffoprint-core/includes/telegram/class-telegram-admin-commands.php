@@ -54,12 +54,13 @@ class YeffoPrint_Telegram_Admin_Commands {
 		), '' ];
 
 		foreach ( $orders as $order ) {
+			$labels  = YeffoPrint_Order_Label_Count::summary( $order );
 			$lines[] = sprintf(
 				'• %1$s — %2$s — %3$s',
 				$order->get_order_number(),
 				$order->get_formatted_billing_full_name() ?: $order->get_billing_email(),
 				wc_get_order_status_name( $order->get_status() )
-			);
+			) . ( '' !== $labels ? ' — ' . $labels : '' );
 		}
 
 		return implode( "\n", $lines );

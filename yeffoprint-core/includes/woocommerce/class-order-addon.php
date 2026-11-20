@@ -37,7 +37,7 @@ class YeffoPrint_Order_Addon {
 	/** WC()->session key holding the root order id a customer is currently shopping an add-on for. */
 	public const SESSION_KEY = 'yp_addon_to_order_id';
 
-	private static function active_statuses(): array {
+	public static function active_statuses(): array {
 		return [ 'processing', YeffoPrint_Order_Production_Status::STATUS, YeffoPrint_Order_Curing_Status::STATUS ];
 	}
 

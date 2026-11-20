@@ -26,12 +26,18 @@ class YeffoPrint_Telegram_Client {
 	 * class-telegram-order-notifications.php) build the button labels/
 	 * callback_data themselves.
 	 */
-	public function send_message( int $chat_id, string $text, ?array $inline_keyboard = null ): bool {
+	public function send_message( int $chat_id, string $text, ?array $inline_keyboard = null, string $business_connection_id = '' ): bool {
 		$params = [
 			'chat_id'                  => $chat_id,
 			'text'                     => $text,
 			'disable_web_page_preview' => true,
 		];
+
+		// Telegram Business (class-telegram-chat-orders.php): sends in the
+		// owner's own personal chat with this customer, as the owner.
+		if ( '' !== $business_connection_id ) {
+			$params['business_connection_id'] = $business_connection_id;
+		}
 
 		if ( $inline_keyboard ) {
 			$params['reply_markup'] = wp_json_encode( [ 'inline_keyboard' => $inline_keyboard ] );
@@ -40,6 +46,20 @@ class YeffoPrint_Telegram_Client {
 		$response = $this->call( 'sendMessage', $params );
 
 		return ! is_wp_error( $response );
+	}
+
+	/** Replaces a sent message's text and drops its buttons (Telegram chat orders: a tapped size shows as "Size: 3mL ✓"). */
+	public function edit_message_text( int $chat_id, int $message_id, string $text, string $business_connection_id = '' ): bool {
+		$params = [
+			'chat_id'                  => $chat_id,
+			'message_id'               => $message_id,
+			'text'                     => $text,
+			'disable_web_page_preview' => true,
+		];
+		if ( '' !== $business_connection_id ) {
+			$params['business_connection_id'] = $business_connection_id;
+		}
+		return ! is_wp_error( $this->call( 'editMessageText', $params ) );
 	}
 
 	/**
@@ -148,8 +168,16 @@ class YeffoPrint_Telegram_Client {
 			// re-sync for why an existing, already-registered webhook
 			// actually picks this up after a deploy rather than needing an
 			// admin to re-save Settings.
-			'allowed_updates' => wp_json_encode( [ 'message', 'callback_query' ] ),
+			// Telegram Business updates (direct request: build orders from
+			// customers chatting with the owner's personal account, see
+			// class-telegram-chat-orders.php) added in config version 3.
+			'allowed_updates' => wp_json_encode( [ 'message', 'callback_query', 'business_connection', 'business_message', 'edited_business_message' ] ),
 		] );
+	}
+
+	/** @return array|\WP_Error Telegram Business: the connection the owner made under Settings › Telegram Business › Chatbots. */
+	public function get_business_connection( string $business_connection_id ) {
+		return $this->call( 'getBusinessConnection', [ 'business_connection_id' => $business_connection_id ] );
 	}
 
 	/** @return array|\WP_Error */

@@ -405,7 +405,8 @@ table.yp-payment-cta {
 	margin: 2px 0 22px;
 }
 
-table.yp-payment-cta > tbody > tr > td {
+table.yp-payment-cta > tbody > tr > td,
+table.yp-payment-cta > tr > td {
 	background-color: #FDF1F8;
 	border: 1px solid #F3C7E1;
 	border-radius: 10px;
@@ -467,7 +468,8 @@ table.yp-proof-cta {
 	margin: 2px 0 22px;
 }
 
-table.yp-proof-cta > tbody > tr > td {
+table.yp-proof-cta > tbody > tr > td,
+table.yp-proof-cta > tr > td {
 	background-color: #FDF1F8;
 	border: 1px solid #F3C7E1;
 	border-radius: 10px;
@@ -532,7 +534,8 @@ table.yp-review-cta {
 	margin: 2px 0 22px;
 }
 
-table.yp-review-cta > tbody > tr > td {
+table.yp-review-cta > tbody > tr > td,
+table.yp-review-cta > tr > td {
 	background-color: #FFF8E6;
 	border: 1px solid #F6DF9E;
 	border-radius: 10px;
@@ -700,7 +703,8 @@ table.yp-away-email-notice {
 	margin: 0 0 22px;
 }
 
-table.yp-away-email-notice > tbody > tr > td {
+table.yp-away-email-notice > tbody > tr > td,
+table.yp-away-email-notice > tr > td {
 	background-color: #FBF0DB;
 	border: 1px solid #EFDCAE;
 	border-radius: 12px;
@@ -725,6 +729,70 @@ table.yp-away-email-notice > tbody > tr > td {
 	margin: 0;
 }
 
+/* Order delay email (customer-order-delay.php): bigger date and code than
+   the notices they borrow their boxes from, plus the personal note. */
+table.yp-delay-code > tbody > tr > td,
+table.yp-delay-code > tr > td {
+	text-align: center;
+}
+
+.yp-delay-code-value {
+	font-size: 22px;
+	font-weight: 700;
+	letter-spacing: .12em;
+	color: <?php echo esc_attr( $text ); ?>;
+	margin: 4px 0 2px;
+}
+
+table.yp-delay-items {
+	border: 1px solid #ECE8DF;
+	border-radius: 12px;
+	margin: 0 0 22px;
+}
+
+table.yp-delay-items td {
+	padding: 10px 14px;
+	border-bottom: 1px solid #F1EEE7;
+	color: <?php echo esc_attr( $text ); ?>;
+}
+
+table.yp-delay-items td.yp-delay-qty {
+	text-align: right;
+	color: <?php echo esc_attr( $text_muted ); ?>;
+	white-space: nowrap;
+}
+
+.yp-delay-body {
+	font-size: 14px;
+}
+
+.yp-delay-options-eyebrow {
+	display: block;
+	font-size: 10.5px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: <?php echo esc_attr( $link_color ); ?>;
+	font-weight: 700;
+	margin: 0 0 6px;
+}
+
+table.yp-delay-options ul {
+	margin: 0;
+	padding-<?php echo is_rtl() ? 'right' : 'left'; ?>: 18px;
+}
+
+table.yp-delay-options li {
+	margin: 6px 0;
+	color: <?php echo esc_attr( $text ); ?>;
+}
+
+.yp-delay-note {
+	border-left: 3px solid #E6007E;
+	padding: 2px 0 2px 12px;
+	font-style: italic;
+	color: <?php echo esc_attr( $text ); ?>;
+}
+
 /* "Ship it together" add-on nudge (class-order-addon-email-notice.php)
    — cyan-tinted rather than the away-mode notice's amber above, since
    this is an upsell/convenience, not a heads-up about a delay. */
@@ -732,7 +800,8 @@ table.yp-addon-email-notice {
 	margin: 0 0 22px;
 }
 
-table.yp-addon-email-notice > tbody > tr > td {
+table.yp-addon-email-notice > tbody > tr > td,
+table.yp-addon-email-notice > tr > td {
 	background-color: #E5F7FD;
 	border: 1px solid #B8E9F7;
 	border-radius: 12px;
@@ -767,7 +836,8 @@ table.yp-bot-callout {
 	margin: 0 0 22px;
 }
 
-table.yp-bot-callout > tbody > tr > td {
+table.yp-bot-callout > tbody > tr > td,
+table.yp-bot-callout > tr > td {
 	background-color: #FDF1F8;
 	border: 1px solid #F3C7E1;
 	border-radius: 12px;

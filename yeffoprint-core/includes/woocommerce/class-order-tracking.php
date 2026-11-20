@@ -128,8 +128,15 @@ class YeffoPrint_Order_Tracking {
 	 *   — a label can be purchased before the carrier scans the package,
 	 *   so an entry with no tracking number isn't something to show a
 	 *   customer as "trackable" at all.
+	 *
+	 * $include_linked: an add-on group shipped in one box (class-order-
+	 * addon-shipping.php) keeps the label on the one order it was bought
+	 * for; every other order in that box reads the same tracking live
+	 * from there, so a voided or replaced label stays in sync everywhere.
+	 * index_shipments() passes false so a tracking number only ever
+	 * indexes to the order that actually holds the label.
 	 */
-	public static function get_shipments( \WC_Order $order ): array {
+	public static function get_shipments( \WC_Order $order, bool $include_linked = true ): array {
 		$labels = $order->get_meta( self::LABELS_META, true );
 		if ( ! is_array( $labels ) || ! $labels ) {
 			$labels = $order->get_meta( self::LEGACY_LABELS_META, true );
@@ -169,6 +176,18 @@ class YeffoPrint_Order_Tracking {
 				'tracking_number' => $tracking_number,
 				'carrier_url'     => self::carrier_direct_url( $carrier_id, $tracking_number ),
 			];
+		}
+
+		if ( $include_linked && class_exists( 'YeffoPrint_Order_Addon_Shipping' ) ) {
+			$label_order = YeffoPrint_Order_Addon_Shipping::label_order_for( $order );
+			if ( $label_order ) {
+				$known = array_column( $shipments, 'tracking_number' );
+				foreach ( self::get_shipments( $label_order, false ) as $shipment ) {
+					if ( ! in_array( $shipment['tracking_number'], $known, true ) ) {
+						$shipments[] = $shipment;
+					}
+				}
+			}
 		}
 
 		return $shipments;
@@ -256,6 +275,7 @@ class YeffoPrint_Order_Tracking {
 				'transaction_id'  => (string) ( $label['transaction_id'] ?? '' ),
 				'voided'          => ! empty( $label['refund']['status'] ) && 'refunded' === $label['refund']['status'],
 				'customs'         => self::label_customs_summary( $label['customs'] ?? null ),
+				'insured'         => (float) ( $label['insured'] ?? 0 ),
 			];
 		}
 
@@ -289,7 +309,7 @@ class YeffoPrint_Order_Tracking {
 		);
 
 		$added = false;
-		foreach ( self::get_shipments( $order ) as $shipment ) {
+		foreach ( self::get_shipments( $order, false ) as $shipment ) {
 			if ( ! in_array( $shipment['tracking_number'], $existing, true ) ) {
 				$order->add_meta_data( self::TRACKING_INDEX_META, $shipment['tracking_number'], false );
 				$added = true;
@@ -333,7 +353,7 @@ class YeffoPrint_Order_Tracking {
 	 * single save() also carries the order-status auto-advance and any
 	 * other meta changes made in the same request.
 	 */
-	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '', ?array $customs = null ): void {
+	public static function record_shippo_label( \WC_Order $order, string $tracking_number, string $carrier_id, string $label_url, string $transaction_id = '', ?array $customs = null, float $insured = 0.0 ): void {
 		$labels   = $order->get_meta( self::SHIPPO_LABELS_META, true );
 		$labels   = is_array( $labels ) ? $labels : [];
 		$labels[] = [
@@ -343,6 +363,7 @@ class YeffoPrint_Order_Tracking {
 			'transaction_id' => $transaction_id,
 			'refund'         => [],
 			'customs'        => $customs,
+			'insured'        => $insured,
 		];
 
 		$order->update_meta_data( self::SHIPPO_LABELS_META, $labels );

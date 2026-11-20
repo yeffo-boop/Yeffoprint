@@ -278,6 +278,68 @@
 	};
 
 	/**
+	 * "Send delay email" (class-order-delay-email.php) for one or more
+	 * orders, from All orders' bulk bar and an order's page. Pre-fills the
+	 * last used ship date, code and note.
+	 */
+	YP.delayEmailModal = function ( ids, onDone ) {
+		var url = yeffoprintAdminApp.restUrl + 'admin/orders/delay-email';
+		YP.request( url ).then( function ( saved ) {
+			var n = ids.length + ( 1 === ids.length ? ' customer' : ' customers' );
+			YP.confirmModal( {
+				title: 'Send a delay email',
+				message: 'Goes to ' + n + ': sorry for the delay, their items, the new ship date, keep / change labels / cancel options, and your thank-you code. Each order gets a note. Orders that already shipped, aren’t paid, or already got this email are skipped.',
+				bodyHtml: '<div class="ypn-form">' +
+					'<label class="ypn-form__field"><span>New ship date (optional)</span><input type="date" data-yp-delay="ship_date" value="' + YP.escapeAttr( saved.ship_date ) + '"></label>' +
+					'<label class="ypn-form__field"><span>Thank-you coupon code (optional)</span><input type="text" data-yp-delay="code" placeholder="THANKYOU10" value="' + YP.escapeAttr( saved.code ) + '"></label>' +
+					'<label class="ypn-form__field is-wide"><span>Personal note (optional)</span><textarea rows="2" data-yp-delay="note" placeholder="Shown in quotes, signed by you.">' + YP.escapeHtml( saved.note ) + '</textarea></label>' +
+				'</div>' +
+				'<p class="yp-panel__hint">The code must already exist under Customers › Coupons.</p>' +
+				'<label class="ypn-check"><input type="checkbox" data-yp-delay-skip-prints checked> Skip orders that are only 3D prints (they aren’t delayed)</label>' +
+				'<label class="ypn-check"><input type="checkbox" data-yp-delay-resend> Send again to orders that already got one</label>' +
+				'<p><button type="button" class="yp-link-button" data-yp-delay-preview>Preview the email ↗</button></p>',
+				confirmLabel: 'Send to ' + n,
+				onConfirm: function ( dialog ) {
+					YP.request( url, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( read( dialog ) )
+					} ).then( function ( result ) {
+						var msg = result.sent.length ? 'Sent to ' + result.sent.length + ( 1 === result.sent.length ? ' customer.' : ' customers.' ) : 'Nothing was sent.';
+						if ( result.skipped.length ) {
+							msg += '\n\nSkipped:\n' + result.skipped.map( function ( s ) { return '#' + s.number + ' (' + s.reason + ')'; } ).join( '\n' );
+						}
+						window.alert( msg );
+						if ( onDone ) {
+							onDone();
+						}
+					} ).catch( function ( error ) {
+						window.alert( 'Couldn’t send: ' + error.message );
+					} );
+				}
+			} );
+
+			var dialogs = document.querySelectorAll( '.yp-drawer--confirm' );
+			var dialog = dialogs[ dialogs.length - 1 ];
+			function read( el ) {
+				var body = { ids: ids };
+				el.querySelectorAll( '[data-yp-delay]' ).forEach( function ( input ) {
+					body[ input.getAttribute( 'data-yp-delay' ) ] = input.value.trim();
+				} );
+				body.skip_prints = el.querySelector( '[data-yp-delay-skip-prints]' ).checked;
+				body.resend = el.querySelector( '[data-yp-delay-resend]' ).checked;
+				return body;
+			}
+			dialog.querySelector( '[data-yp-delay-preview]' ).addEventListener( 'click', function () {
+				var body = read( dialog );
+				window.open( saved.preview_url + '&id=' + ids[ 0 ] + '&ship_date=' + encodeURIComponent( body.ship_date ) + '&code=' + encodeURIComponent( body.code ) + '&note=' + encodeURIComponent( body.note ), '_blank' );
+			} );
+		} ).catch( function ( error ) {
+			window.alert( 'Couldn’t open the delay email: ' + error.message );
+		} );
+	};
+
+	/**
 	 * Name, contact and address fields for one WooCommerce address
 	 * (`billing` or `shipping`), shared by the order page's Edit details
 	 * form (next/next.js) and the customer drawer (views/customers.js).
@@ -308,7 +370,7 @@
 		} ).join( '' ) + '</div>';
 	};
 
-	/** Printable invoice / packing slip page for these order ids (class-admin-order-actions-controller.php). `kind`: 'invoice' or 'slip'. */
+	/** Printable invoice / packing slip page for these order ids (class-admin-order-actions-controller.php). `kind`: 'invoice', 'slip' or 'value' (proof of value for a carrier claim). */
 	YP.printOrdersUrl = function ( ids, kind ) {
 		return yeffoprintAdminApp.printOrdersUrl + '&kind=' + encodeURIComponent( kind ) + '&ids=' + ids.map( Number ).join( ',' );
 	};
@@ -1330,7 +1392,7 @@
 
 	// The new app's shipping label screen (next/next.js) reuses these.
 	YP.printLabelUrl = function ( url ) { printLabelUrl( url ); };
-	YP.findBestMatchingRateId = function ( rates, method ) { return findBestMatchingRateId( rates, method ); };
+	YP.findBestMatchingRateId = function ( rates, method, service ) { return findBestMatchingRateId( rates, method, service ); };
 
 	// A list row's "open this order": its full page in the new app
 	// (next/next.js, #/order/{id}), the order window everywhere else.
@@ -3133,6 +3195,11 @@
 							'<div class="yp-field"><label for="yp-shippo-customs-value">Value (' + YP.escapeHtml( customs.currency ) + ')</label><input type="number" min="0.01" step="0.01" id="yp-shippo-customs-value" value="' + YP.escapeAttr( customs.value ) + '" /></div>' +
 						'</div>'
 					: '' ) +
+				'<p class="yp-panel__hint">Package value: ' + YP.escapeHtml( Number( ( order.shippo_package_value || {} ).value || 0 ).toFixed( 2 ) ) + ' ' + YP.escapeHtml( ( order.shippo_package_value || {} ).currency || 'USD' ) + ' (items after discounts).</p>' +
+				'<div class="yp-shippo-dims">' +
+					'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-shippo-insure"' + ( order.shippo_auto_insure ? ' checked' : '' ) + ' /><label for="yp-shippo-insure">Add Shippo insurance</label></div>' +
+					'<div class="yp-field"><label for="yp-shippo-insure-amount">Insure for</label><input type="number" min="0.01" step="0.01" id="yp-shippo-insure-amount" value="' + YP.escapeAttr( ( order.shippo_package_value || {} ).value || '' ) + '" /></div>' +
+				'</div>' +
 				'<button type="button" class="wp-block-button__link is-style-outline yp-shippo-get-rates" data-yp-shippo-get-rates>Get Rates</button>' +
 				'<div data-yp-shippo-rates></div>' +
 				'<div data-yp-shippo-error></div>' +
@@ -3233,6 +3300,12 @@
 			parcel.customs_value = panel.querySelector( '#yp-shippo-customs-value' ).value;
 		}
 
+		var insureBox = panel.querySelector( '#yp-shippo-insure' );
+		parcel.insure = !! ( insureBox && insureBox.checked );
+		parcel.insurance_amount = parcel.insure ? panel.querySelector( '#yp-shippo-insure-amount' ).value : 0;
+		// Shippo puts insurance on the shipment these rates belong to; the purchase records it.
+		panel.removeAttribute( 'data-yp-rated-insured' );
+
 		button.disabled = true;
 		button.textContent = 'Getting rates…';
 		errorEl.innerHTML = '';
@@ -3246,6 +3319,7 @@
 			.then( function ( response ) {
 				button.disabled = false;
 				button.textContent = 'Get Rates';
+				panel.setAttribute( 'data-yp-rated-insured', parcel.insure ? String( parseFloat( parcel.insurance_amount ) || 0 ) : '0' );
 				renderShippoRates( order, panel, response.rates || [] );
 			} )
 			.catch( function ( error ) {
@@ -3301,12 +3375,39 @@
 	 * method like "Flat rate" or "Local pickup" was chosen, which no
 	 * Shippo rate could ever legitimately match.
 	 */
-	function findBestMatchingRateId( rates, shippingMethod ) {
+	/*
+	 * Words that say nothing about which carrier service was picked —
+	 * direct bug report: international orders pre-ticked a FedEx rate
+	 * when the customer's "International Shipping" (the cheapest rate at
+	 * checkout, often UPS) was really meant. "International" alone was
+	 * matching "FedEx International Economy"/"Priority", which UPS's
+	 * "Worldwide Expedited"/"Standard" never contain. Ignoring these
+	 * words makes a carrier-less method like "International Shipping"
+	 * fall back to the cheapest rate, which is what checkout charged.
+	 */
+	var GENERIC_RATE_WORDS = [ 'international', 'shipping', 'flat', 'rate' ];
+
+	function findBestMatchingRateId( rates, shippingMethod, shippingService ) {
+		// Live checkout rates save the exact carrier service the price came
+		// from; when one is there, it wins outright.
+		if ( shippingService ) {
+			var wanted = normalizeForRateMatch( shippingService );
+			var exact = rates.filter( function ( rate ) {
+				return normalizeForRateMatch( rate.carrier_label + ' ' + rate.service ) === wanted;
+			} );
+			if ( exact.length ) {
+				return exact[ 0 ].id;
+			}
+		}
 		if ( ! shippingMethod ) {
 			return null;
 		}
 		var haystack = normalizeForRateMatch( shippingMethod );
-		var haystackWords = haystack ? haystack.split( ' ' ) : [];
+		var haystackWords = haystack ? haystack.split( ' ' ).filter( function ( word ) { return GENERIC_RATE_WORDS.indexOf( word ) === -1; } ) : [];
+		haystack = haystackWords.join( ' ' );
+		if ( ! haystack ) {
+			return null;
+		}
 		var bestId = null;
 		var bestScore = 0;
 
@@ -3318,9 +3419,9 @@
 				score += 1;
 			}
 			if ( service ) {
-				var serviceWords = service.split( ' ' );
+				var serviceWords = service.split( ' ' ).filter( function ( word ) { return GENERIC_RATE_WORDS.indexOf( word ) === -1; } );
 				var matchedWords = serviceWords.filter( function ( word ) { return haystackWords.indexOf( word ) !== -1; } );
-				score += 2 * ( matchedWords.length / serviceWords.length );
+				score += serviceWords.length ? 2 * ( matchedWords.length / serviceWords.length ) : 0;
 			}
 			if ( score > bestScore ) {
 				bestScore = score;
@@ -3339,7 +3440,7 @@
 			return;
 		}
 
-		var bestMatchId = findBestMatchingRateId( rates, order.shipping_method );
+		var bestMatchId = findBestMatchingRateId( rates, order.shipping_method, order.shipping_service );
 
 		// One pill per carrier actually present in this response — direct
 		// request: "I'd like to be able to filter carriers from shippo."
@@ -3467,7 +3568,7 @@
 		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/shippo/purchase', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label } )
+			body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label, insured_amount: parseFloat( panel.getAttribute( 'data-yp-rated-insured' ) ) || 0 } )
 		} )
 			.then( function ( response ) {
 				resultEl.innerHTML =

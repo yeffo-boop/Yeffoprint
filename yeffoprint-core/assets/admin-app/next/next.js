@@ -375,7 +375,7 @@
 			var promiseMeta = o.promise && risk
 				? ( 'late' === risk ? late + ( 1 === late ? ' day' : ' days' ) + ' past the promised ship date' : 'Promised to ship ' + o.promise.ship_label )
 				: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) : '' );
-			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
+			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + ( o.label_summary || o.items ) + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
@@ -546,7 +546,7 @@
 				if ( boardState.expressOnly && ! o.express ) {
 					return false;
 				}
-				return ! q || ( o.number + ' ' + o.customer + ' ' + o.items ).toLowerCase().indexOf( q ) !== -1;
+				return ! q || ( o.number + ' ' + o.customer + ' ' + o.items + ' ' + ( o.label_summary || '' ) ).toLowerCase().indexOf( q ) !== -1;
 			} );
 		}
 
@@ -559,6 +559,7 @@
 					'</div>' +
 					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.holo_cure ? ' ' + HOLO_TAG : '' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
+					( o.label_summary ? '<div class="ypn-order__count">' + esc( o.label_summary ) + '</div>' : '' ) +
 					( o.promise && 'shipped' !== o.column ? '<div class="ypn-order__items">' + promiseHtml( o.promise, false ) + '</div>' : '' ) +
 					( 'curing' === o.column && o.curing_ready_at ? '<div class="ypn-order__cure' + ( curingDone( o ) ? ' is-done' : '' ) + '">' + esc( curingText( o ) ) + '</div>' : '' ) +
 					'<div class="ypn-order__row"><span class="ypn-order__meta">' + esc( o.payment_method || o.status_label ) + '</span><b>' + esc( money( o.total ) ) + '</b></div>' +
@@ -1103,7 +1104,9 @@
 					? '<div><span class="ypn-pill' + ( item.holo_border ? ' ypn-pill--holo">Holographic border' : '">No holographic border' ) + '</span></div>'
 					: '' ) +
 				( item.brands && item.brands.length ? '<div class="ypn-lab__brand">Brand: ' + esc( item.brands.join( ', ' ) ) + '</div>' : '' ) +
-				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
+				'<div class="ypn-lab__meta">' + ( item.label_count
+					? esc( Number( item.label_count.quantity ).toLocaleString() + ' ' + ( 'stickers' === item.label_count.kind ? ( 1 === item.label_count.quantity ? 'sticker' : 'stickers' ) : ( 1 === item.label_count.quantity ? 'label' : 'labels' ) ) )
+					: '× ' + esc( String( item.quantity ) ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
 				( item.meta.length
 					// display_value is WooCommerce's own kses-filtered HTML (batch tables, color swatches), rendered the same way the order window does.
 					// Each label/value pair is its own grid cell so Details spreads across the card;
@@ -1280,9 +1283,13 @@
 			actions.push( '<button type="button" class="ypn-act" data-ypn-act="status">Change status <span>' + esc( order.status_label ) + '</span></button>' );
 			if ( order.customer_email && 'trash' !== order.status ) {
 				actions.push( '<button type="button" class="ypn-act" data-ypn-act="email">Resend an email <span>✉</span></button>' );
+				if ( [ 'processing', 'on-hold', 'in-production', 'curing' ].indexOf( order.status ) !== -1 ) {
+					actions.push( '<button type="button" class="ypn-act" data-ypn-act="delay">Send delay email <span>⏳</span></button>' );
+				}
 			}
 			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'slip' ) ) + '" target="_blank" rel="noopener">Print packing slip <span>⎙</span></a>' );
 			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'invoice' ) ) + '" target="_blank" rel="noopener">Print invoice <span>⎙</span></a>' );
+			actions.push( '<a class="ypn-act" href="' + escAttr( YP.printOrdersUrl( [ order.id ], 'value' ) ) + '" target="_blank" rel="noopener" title="Receipt for a UPS or carrier claim. No label details.">Print proof of value <span>⎙</span></a>' );
 			actions.push( '<button type="button" class="ypn-act" data-ypn-act="details">Refunds &amp; all details <span>›</span></button>' );
 			actions.push( 'trash' === order.status
 				? '<button type="button" class="ypn-act" data-ypn-act="restore">Restore from trash <span>↺</span></button>'
@@ -1319,7 +1326,7 @@
 							( website ? '<div class="ypn-wd" data-ypn-wd></div>' : '' ) +
 							customOrders.map( proofCardHtml ).join( '' ) +
 							'<section class="ypn-card">' +
-								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ' · ' + units + ' total</span>' +
+								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + ( order.label_summary ? '<b class="ypn-count">' + esc( order.label_summary ) + '</b> · ' : '' ) + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ( order.label_summary ? '' : ' · ' + units + ' total' ) + '</span>' +
 									( ( order.label_lines || [] ).length ? '<button type="button" class="ypn-more" data-ypn-edit-labels>Edit labels</button>' : '' ) +
 								'</h3>' +
 								'<div data-ypn-label-form hidden></div>' +
@@ -1446,6 +1453,8 @@
 						YP.next.openDetails( order.id, 'Status' );
 					} else if ( 'email' === act ) {
 						resendEmail( order, load );
+					} else if ( 'delay' === act ) {
+						YP.delayEmailModal( [ order.id ], load );
 					} else if ( 'trash' === act || 'restore' === act ) {
 						var run = function () {
 							button.disabled = true;
@@ -1734,6 +1743,11 @@
 		var carrier = '';
 		var picked = '';
 		var bestMatch = null;
+		// "Add insurance": null until the order loads (then prefilled with
+		// the package value). ratedInsured is what the current rates were
+		// asked with, since Shippo puts insurance on the shipment itself.
+		var insure = null;
+		var ratedInsured = 0;
 
 		viewEl.innerHTML = '<p class="yp-field__hint">Loading&hellip;</p>';
 
@@ -1741,6 +1755,9 @@
 			return Promise.all( [ YP.request( api( 'admin/order/' + id ) ), stationStatus() ] ).then( function ( results ) {
 				order = results[ 0 ];
 				station = results[ 1 ];
+				if ( ! insure ) {
+					insure = { on: !! order.shippo_auto_insure, amount: ( order.shippo_package_value || {} ).value || '' };
+				}
 				draw();
 			} ).catch( function ( error ) {
 				viewEl.innerHTML = '<p class="yp-form__error">Couldn’t load this order: ' + esc( error.message ) + '</p>';
@@ -1754,6 +1771,7 @@
 					'<div class="ypn-shiplabel__text"><b>' + esc( label.carrier_label ) + '</b><span class="ypn-mono">' + esc( label.tracking_number ) + '</span>' +
 						( label.voided ? '<span class="ypn-pill">Voided</span>' : '' ) +
 						( label.customs && label.customs.sent_electronically ? '<span class="ypn-pill ypn-pill--grn">Customs sent electronically</span>' : '' ) +
+						( label.insured > 0 ? '<span class="ypn-pill">Insured ' + esc( money( label.insured ) ) + '</span>' : '' ) +
 					'</div>' +
 					( label.voided ? '' :
 						'<div class="ypn-shiplabel__acts">' +
@@ -1805,6 +1823,7 @@
 							'<label><span>Value (' + esc( customs.currency || 'USD' ) + ')</span><input type="number" inputmode="decimal" min="0.01" step="0.01" data-ypn-customs-value value="' + escAttr( customs.value ) + '"></label>' +
 						'</div>'
 						: '' ) +
+					insuranceHtml() +
 					'<button type="button" class="ypn-btn ypn-ship__rates-btn" data-ypn-rates>' + ( rates.length ? 'Refresh rates' : 'Get rates' ) + '</button>' +
 					'<p class="ypn-ship__hint">Comparing rates is free. Buying a label charges your Shippo account.</p>' +
 					'<div data-ypn-rate-list>' + ratesHtml() + '</div>' +
@@ -1840,6 +1859,30 @@
 				'</div>';
 
 			bind();
+		}
+
+		function insuranceHtml() {
+			var value = order.shippo_package_value || {};
+			return (
+				'<div class="ypn-insure">' +
+					'<p class="ypn-insure__value">Package value <b>' + esc( money( value.value ) ) + '</b> <span>items after discounts, same as the proof of value</span></p>' +
+					'<label class="ypn-check"><input type="checkbox" data-ypn-insure' + ( insure.on ? ' checked' : '' ) + '> Add Shippo insurance</label>' +
+					( insure.on
+						? '<div class="ypn-dims ypn-dims--two"><label><span>Insure for (' + esc( value.currency || 'USD' ) + ')</span><input type="number" inputmode="decimal" min="0.01" step="0.01" data-ypn-insure-amount value="' + escAttr( insure.amount ) + '"></label></div>' +
+							'<p class="ypn-ship__hint">Covers loss and damage with any carrier. Shippo adds the insurance cost when you buy the label.</p>'
+						: '' ) +
+				'</div>'
+			);
+		}
+
+		/** Insurance changed after rates came back: those rates were for the old amount, so ask again. */
+		function insuranceChanged() {
+			if ( rates.length ) {
+				rates = [];
+				picked = '';
+				draw();
+				viewEl.querySelector( '[data-ypn-ship-error]' ).innerHTML = '<p class="yp-field__hint">Insurance changed. Get rates again.</p>';
+			}
 		}
 
 		function visibleRates() {
@@ -1918,6 +1961,12 @@
 				order.shippo_customs = Object.assign( {}, order.shippo_customs, { description: parcel.customs_description, value: parcel.customs_value } );
 			}
 			order.shippo_default_package = parcel;
+			var amountInput = viewEl.querySelector( '[data-ypn-insure-amount]' );
+			if ( amountInput ) {
+				insure.amount = amountInput.value;
+			}
+			parcel.insure = insure.on;
+			parcel.insurance_amount = insure.on ? insure.amount : 0;
 
 			button.disabled = true;
 			button.textContent = 'Getting rates…';
@@ -1929,9 +1978,10 @@
 				body: JSON.stringify( parcel )
 			} ).then( function ( response ) {
 				rates = response.rates || [];
+				ratedInsured = insure.on ? parseFloat( insure.amount ) || 0 : 0;
 				carrier = '';
 				picked = '';
-				bestMatch = YP.findBestMatchingRateId ? YP.findBestMatchingRateId( rates, order.shipping_method ) : null;
+				bestMatch = YP.findBestMatchingRateId ? YP.findBestMatchingRateId( rates, order.shipping_method, order.shipping_service ) : null;
 				draw();
 				if ( ! rates.length ) {
 					viewEl.querySelector( '[data-ypn-ship-error]' ).innerHTML = '<p class="yp-field__hint">No rates came back for this address and package.</p>';
@@ -1951,6 +2001,7 @@
 			YP.confirmModal( {
 				title: 'Buy this label?',
 				message: rate.carrier_label + ' ' + rate.service + ' for ' + money( rate.amount ) + '. This charges your Shippo account right away.' +
+					( ratedInsured > 0 ? ' Insured for ' + money( ratedInsured ) + ' (Shippo adds the insurance cost).' : '' ) +
 					( station.station_online ? ' It will print on your label printer.' : '' ),
 				confirmLabel: 'Buy label',
 				onConfirm: function () {
@@ -1961,7 +2012,7 @@
 					YP.request( api( 'admin/order/' + id + '/shippo/purchase' ), {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label } )
+						body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label, insured_amount: ratedInsured } )
 					} ).then( function ( response ) {
 						var label = response.label || {};
 						rates = [];
@@ -2009,6 +2060,26 @@
 			var wcs = viewEl.querySelector( '[data-ypn-wcs]' );
 			if ( wcs ) {
 				wcs.addEventListener( 'click', function () { YP.openWcOrderDrawer( id, true ); } );
+			}
+			var insureBox = viewEl.querySelector( '[data-ypn-insure]' );
+			if ( insureBox ) {
+				insureBox.addEventListener( 'change', function () {
+					insure.on = insureBox.checked;
+					// Keep typed dimensions across the redraw.
+					viewEl.querySelectorAll( '[data-ypn-dim]' ).forEach( function ( input ) {
+						order.shippo_default_package[ input.getAttribute( 'data-ypn-dim' ) ] = input.value;
+					} );
+					rates = [];
+					picked = '';
+					draw();
+				} );
+			}
+			var insureAmount = viewEl.querySelector( '[data-ypn-insure-amount]' );
+			if ( insureAmount ) {
+				insureAmount.addEventListener( 'change', function () {
+					insure.amount = insureAmount.value;
+					insuranceChanged();
+				} );
 			}
 		}
 
@@ -2365,6 +2436,7 @@
 	};
 
 	var SWITCHES = [
+		[ 'sales_paused', 'Pause all sales', 'Stops new label and sticker orders (3D prints stay open) and shows a notice on the site. Set the message in Settings › Storefront.' ],
 		[ 'away_mode', 'Away mode', 'Shows a banner and pauses express orders.' ],
 		[ 'express', 'Express orders', 'The rush checkbox at checkout.' ],
 		[ 'local_pickup', 'Local pickup', 'Pickup option for ticked items.' ],

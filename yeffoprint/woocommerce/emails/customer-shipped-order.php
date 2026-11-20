@@ -28,6 +28,10 @@ defined( 'ABSPATH' ) || exit;
 
 $email_improvements_enabled = FeaturesUtil::feature_is_enabled( 'email_improvements' );
 $shipments                  = YeffoPrint_Order_Tracking::get_shipments( $order );
+// Linked add-on orders packed in this same box (class-order-addon-shipping.php).
+$together_numbers = class_exists( 'YeffoPrint_Order_Addon_Shipping' )
+	? array_map( static fn( $o ) => '#' . $o->get_order_number(), YeffoPrint_Order_Addon_Shipping::shipped_together( $order ) )
+	: [];
 
 /*
  * @hooked WC_Emails::email_header() Output the email header
@@ -46,6 +50,9 @@ if ( ! empty( $order->get_billing_first_name() ) ) {
 ?>
 </p>
 <p><?php esc_html_e( 'Good news — your order is on its way! Here’s your tracking information:', 'yeffoprint' ); ?></p>
+<?php if ( $together_numbers ) : ?>
+<p><?php echo esc_html( sprintf( /* translators: %s: list of order numbers */ _n( 'Your add-on order %s is packed in the same box and uses the same tracking number.', 'Your add-on orders %s are packed in the same box and use the same tracking number.', count( $together_numbers ), 'yeffoprint' ), implode( ', ', $together_numbers ) ) ); ?></p>
+<?php endif; ?>
 <?php echo $email_improvements_enabled ? '</div>' : ''; ?>
 
 <?php if ( $shipments ) : ?>
