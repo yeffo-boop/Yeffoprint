@@ -635,10 +635,49 @@
 			} );
 		}
 
+		// Custom Design and Template labels share one bulk tier with the
+		// order's stickers (same as the storefront cart), so a change to
+		// any of them refreshes both label previews.
 		var previewTimer = null;
 		function refreshPricePreview() {
 			clearTimeout( previewTimer );
-			previewTimer = setTimeout( doRefreshPricePreview, 300 );
+			previewTimer = setTimeout( function () {
+				doRefreshPricePreview();
+				doRefreshTemplatePricePreview();
+			}, 300 );
+		}
+
+		function customLabelQuantity() {
+			var batchBody = state.activeTypes.custom_design ? viewEl.querySelector( '[data-yp-batch]' ) : null;
+			if ( ! batchBody ) {
+				return 0;
+			}
+			return readBatchRows( batchBody ).reduce( function ( sum, row ) {
+				return sum + ( row.size_id && row.material_id && row.quantity > 0 ? row.quantity : 0 );
+			}, 0 );
+		}
+
+		function templateLabelQuantity() {
+			var tbody = state.activeTypes.template && state.templateData ? viewEl.querySelector( '[data-yp-template-variants]' ) : null;
+			if ( ! tbody ) {
+				return 0;
+			}
+			return readTemplateVariants( tbody, state.templateData.field_schema ).reduce( function ( sum, v ) { return sum + v.quantity; }, 0 );
+		}
+
+		function stickerQuantity() {
+			if ( ! state.activeTypes.sticker ) {
+				return 0;
+			}
+			return state.stickers.map( stickerPayload ).filter( stickerIsComplete ).reduce( function ( sum, s ) {
+				return sum + ( parseInt( s.quantity, 10 ) || 0 );
+			}, 0 );
+		}
+
+		// Adding items to an unpaid order: the server also counts what's
+		// already on it toward the tier.
+		function previewOrderId() {
+			return state.addToOrder ? state.addToOrder.id : 0;
 		}
 
 		function doRefreshPricePreview() {
@@ -671,7 +710,7 @@
 			YP.request( coreEndpoint( 'custom-orders/pricing-preview' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify( { mode: mode, batch: batch } )
+				body: JSON.stringify( { mode: mode, batch: batch, manual_order: 1, other_labels: templateLabelQuantity() + stickerQuantity(), order_id: previewOrderId() } )
 			} )
 				.then( function ( pricing ) {
 					previewEl.innerHTML =
@@ -834,6 +873,7 @@
 		function refreshStickerPricePreview() {
 			clearTimeout( stickerPreviewTimer );
 			stickerPreviewTimer = setTimeout( doRefreshStickerPricePreview, 300 );
+			refreshPricePreview(); // Stickers count toward the label tier too.
 		}
 
 		function stickerPayload( sticker ) {
@@ -875,7 +915,7 @@
 			YP.request( coreEndpoint( 'admin/manual-orders/sticker-pricing-preview' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify( { stickers: ready } )
+				body: JSON.stringify( { stickers: ready, order_id: previewOrderId() } )
 			} )
 				.then( function ( pricing ) {
 					var errors = [];
@@ -1211,10 +1251,8 @@
 			bindTemplateVariantListeners();
 		}
 
-		var templatePreviewTimer = null;
 		function refreshTemplatePricePreview() {
-			clearTimeout( templatePreviewTimer );
-			templatePreviewTimer = setTimeout( doRefreshTemplatePricePreview, 300 );
+			refreshPricePreview(); // Shared tier: refreshes both label previews.
 		}
 
 		function doRefreshTemplatePricePreview() {
@@ -1244,7 +1282,7 @@
 			YP.request( coreEndpoint( 'admin/manual-orders/template-pricing-preview' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify( { size_id: sizeId, material_id: materialId, quantity: quantity } )
+				body: JSON.stringify( { size_id: sizeId, material_id: materialId, quantity: quantity, other_labels: customLabelQuantity() + stickerQuantity(), order_id: previewOrderId() } )
 			} )
 				.then( function ( pricing ) {
 					previewEl.innerHTML = '<p><strong>Total: $' + pricing.total.toFixed( 2 ) + '</strong></p>';
