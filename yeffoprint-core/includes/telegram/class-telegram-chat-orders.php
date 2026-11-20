@@ -394,6 +394,30 @@ class YeffoPrint_Telegram_Chat_Orders {
 		$client->answer_callback_query( $query_id );
 	}
 
+	/**
+	 * The chat's newest bot-made order that's still unpaid, from its Email
+	 * Orders record. Direct request: chats whose pay link went out before
+	 * the Edit button existed have no open session, so Jeff's /order there
+	 * would otherwise make a second order instead of replacing the first.
+	 */
+	private static function unpaid_order_for_chat( int $chat_id ): int {
+		$ids = get_posts( [
+			'post_type'      => YeffoPrint_Email_Orders::POST_TYPE,
+			'post_status'    => 'private',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				[ 'key' => YeffoPrint_Email_Orders::META_TG_CHAT, 'value' => $chat_id ],
+				[ 'key' => '_yp_eo_state', 'value' => 'created' ],
+			],
+		] );
+		if ( ! $ids || ! function_exists( 'wc_get_order' ) ) {
+			return 0;
+		}
+		$order = wc_get_order( (int) get_post_meta( (int) $ids[0], '_yp_eo_order_id', true ) );
+		return $order instanceof \WC_Order && YeffoPrint_Manual_Order_Creator::is_editable( $order ) ? $order->get_id() : 0;
+	}
+
 	/** "Edit my order": back to collecting, keeping the order it will replace. */
 	private static function begin_edit( int $chat_id, array $session ): void {
 		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) ( $session['order_id'] ?? 0 ) ) : null;
@@ -524,7 +548,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 			'started'       => time(),
 			'token'         => '',
 			'picks'         => [],
-			'order_id'      => (int) ( $old['order_id'] ?? 0 ), // An unpaid order this one replaces.
+			'order_id'      => (int) ( $old['order_id'] ?? 0 ) ?: self::unpaid_order_for_chat( $chat_id ), // An unpaid order this one replaces.
 		] );
 		self::send( $chat_id, __( 'Thanks! Give me a moment to put your order together.', 'yeffoprint-core' ) );
 		self::run_soon( $chat_id, 0 );
