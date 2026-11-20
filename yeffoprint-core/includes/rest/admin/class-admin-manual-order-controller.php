@@ -289,11 +289,11 @@ class YeffoPrint_Admin_Manual_Order_Controller {
 		$quantity    = max( 1, absint( $params['quantity'] ?? 1 ) );
 
 		// Same pool the order itself uses: this template's labels, the
-		// order's Custom Design labels (other_labels, from the form) and
-		// labels already on the order when adding items to it.
-		$tier_quantity = $quantity
-			+ absint( $params['other_labels'] ?? 0 )
-			+ YeffoPrint_Manual_Order_Creator::preview_existing_quantities( absint( $params['order_id'] ?? 0 ) )['labels'];
+		// order's Custom Design labels and stickers (other_labels, from
+		// the form) and labels/stickers already on the order when adding
+		// items to it.
+		$existing      = YeffoPrint_Manual_Order_Creator::preview_existing_quantities( absint( $params['order_id'] ?? 0 ) );
+		$tier_quantity = $quantity + absint( $params['other_labels'] ?? 0 ) + $existing['labels'] + $existing['stickers'];
 
 		$pricing = YeffoPrint_Pricing_Rule::calculate(
 			$this->record_adjustment( 'yp_material', $material_id ),

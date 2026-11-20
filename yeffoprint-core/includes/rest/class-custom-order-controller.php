@@ -189,14 +189,15 @@ class YeffoPrint_Custom_Order_Controller {
 	 * Labels outside this batch that share its bulk tier. A shopper:
 	 * whatever's in their cart. The admin app's Create Order
 	 * (manual_order set, staff only): never the staff member's own cart,
-	 * just the order's Template labels (other_labels) plus labels already
-	 * on the order when adding items to it (order_id), the same pool
+	 * just the order's Template labels and stickers (other_labels) plus
+	 * labels and stickers already on the order when adding items to it
+	 * (order_id), the same pool
 	 * YeffoPrint_Manual_Order_Creator::add_groups() prices against.
 	 */
 	private function preview_other_labels( \WP_REST_Request $request ): int {
 		if ( $request->get_param( 'manual_order' ) && current_user_can( 'manage_options' ) ) {
-			return absint( $request->get_param( 'other_labels' ) )
-				+ YeffoPrint_Manual_Order_Creator::preview_existing_quantities( absint( $request->get_param( 'order_id' ) ) )['labels'];
+			$existing = YeffoPrint_Manual_Order_Creator::preview_existing_quantities( absint( $request->get_param( 'order_id' ) ) );
+			return absint( $request->get_param( 'other_labels' ) ) + $existing['labels'] + $existing['stickers'];
 		}
 
 		return YeffoPrint_Cart_Pricing::combined_label_quantity();

@@ -635,8 +635,9 @@
 			} );
 		}
 
-		// Custom Design and Template labels share one bulk tier (same as
-		// the storefront cart), so a change to either refreshes both.
+		// Custom Design and Template labels share one bulk tier with the
+		// order's stickers (same as the storefront cart), so a change to
+		// any of them refreshes both label previews.
 		var previewTimer = null;
 		function refreshPricePreview() {
 			clearTimeout( previewTimer );
@@ -662,6 +663,15 @@
 				return 0;
 			}
 			return readTemplateVariants( tbody, state.templateData.field_schema ).reduce( function ( sum, v ) { return sum + v.quantity; }, 0 );
+		}
+
+		function stickerQuantity() {
+			if ( ! state.activeTypes.sticker ) {
+				return 0;
+			}
+			return state.stickers.map( stickerPayload ).filter( stickerIsComplete ).reduce( function ( sum, s ) {
+				return sum + ( parseInt( s.quantity, 10 ) || 0 );
+			}, 0 );
 		}
 
 		// Adding items to an unpaid order: the server also counts what's
@@ -700,7 +710,7 @@
 			YP.request( coreEndpoint( 'custom-orders/pricing-preview' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify( { mode: mode, batch: batch, manual_order: 1, other_labels: templateLabelQuantity(), order_id: previewOrderId() } )
+				body: JSON.stringify( { mode: mode, batch: batch, manual_order: 1, other_labels: templateLabelQuantity() + stickerQuantity(), order_id: previewOrderId() } )
 			} )
 				.then( function ( pricing ) {
 					previewEl.innerHTML =
@@ -863,6 +873,7 @@
 		function refreshStickerPricePreview() {
 			clearTimeout( stickerPreviewTimer );
 			stickerPreviewTimer = setTimeout( doRefreshStickerPricePreview, 300 );
+			refreshPricePreview(); // Stickers count toward the label tier too.
 		}
 
 		function stickerPayload( sticker ) {
@@ -1271,7 +1282,7 @@
 			YP.request( coreEndpoint( 'admin/manual-orders/template-pricing-preview' ), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify( { size_id: sizeId, material_id: materialId, quantity: quantity, other_labels: customLabelQuantity(), order_id: previewOrderId() } )
+				body: JSON.stringify( { size_id: sizeId, material_id: materialId, quantity: quantity, other_labels: customLabelQuantity() + stickerQuantity(), order_id: previewOrderId() } )
 			} )
 				.then( function ( pricing ) {
 					previewEl.innerHTML = '<p><strong>Total: $' + pricing.total.toFixed( 2 ) + '</strong></p>';

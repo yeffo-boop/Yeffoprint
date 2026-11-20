@@ -376,18 +376,20 @@ class YeffoPrint_Manual_Order_Creator {
 	 * (create() deletes the whole order, add_items() removes just the new
 	 * items).
 	 *
-	 * Bulk discount tiers use the storefront cart's two pools: every
-	 * label on the order (Custom Design rows and Template labels
-	 * together, class-cart-pricing.php's combined_label_quantity()) and,
-	 * separately, every sticker. $existing adds labels/stickers already
-	 * on the order, so Add items prices new lines against the whole order.
+	 * Bulk discount tiers use the storefront cart's two pools: labels
+	 * are priced on everything on the order (Custom Design rows,
+	 * Template labels and stickers, class-cart-pricing.php's
+	 * combined_label_quantity()), stickers on stickers only
+	 * (combined_sticker_quantity()). $existing adds labels/stickers
+	 * already on the order, so Add items prices new lines against the
+	 * whole order.
 	 *
 	 * @param array{id:int, email:string, name:string} $shell_customer
 	 * @param array{labels:int, stickers:int}           $existing
 	 * @return array<int, array{id:int, order_type:string}>|\WP_Error
 	 */
 	private static function add_groups( \WC_Order $order, array $groups, bool $requires_proof, array $shell_customer, array $existing = [ 'labels' => 0, 'stickers' => 0 ] ) {
-		$label_tier_quantity = self::group_label_quantity( $groups ) + (int) $existing['labels'];
+		$label_tier_quantity = self::group_label_quantity( $groups ) + (int) $existing['labels'] + (int) $existing['stickers'];
 		$sticker_existing    = (int) $existing['stickers'];
 
 		$custom_orders = [];
@@ -468,7 +470,7 @@ class YeffoPrint_Manual_Order_Creator {
 		return $order->has_status( [ 'pending', 'failed' ] ) && ! $order->get_date_paid();
 	}
 
-	/** Every label in $groups: Custom Design rows plus Template variants (stickers have their own pool). */
+	/** Everything in $groups that counts toward the label tier: Custom Design rows, Template variants and stickers (same as the storefront cart). */
 	private static function group_label_quantity( array $groups ): int {
 		$total = 0;
 		foreach ( $groups as list( $type, $group ) ) {
@@ -476,6 +478,8 @@ class YeffoPrint_Manual_Order_Creator {
 				$total += array_sum( array_map( 'intval', array_column( $group['batch'], 'quantity' ) ) );
 			} elseif ( 'template' === $type ) {
 				$total += array_sum( array_map( 'intval', array_column( $group['variants'], 'quantity' ) ) );
+			} elseif ( 'sticker' === $type ) {
+				$total += (int) $group['quantity'];
 			}
 		}
 		return $total;
