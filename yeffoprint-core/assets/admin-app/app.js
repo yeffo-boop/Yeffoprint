@@ -3197,7 +3197,7 @@
 					: '' ) +
 				'<p class="yp-panel__hint">Package value: ' + YP.escapeHtml( Number( ( order.shippo_package_value || {} ).value || 0 ).toFixed( 2 ) ) + ' ' + YP.escapeHtml( ( order.shippo_package_value || {} ).currency || 'USD' ) + ' (items after discounts).</p>' +
 				'<div class="yp-shippo-dims">' +
-					'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-shippo-insure" /><label for="yp-shippo-insure">Add Shippo insurance</label></div>' +
+					'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-shippo-insure"' + ( order.shippo_auto_insure ? ' checked' : '' ) + ' /><label for="yp-shippo-insure">Add Shippo insurance</label></div>' +
 					'<div class="yp-field"><label for="yp-shippo-insure-amount">Insure for</label><input type="number" min="0.01" step="0.01" id="yp-shippo-insure-amount" value="' + YP.escapeAttr( ( order.shippo_package_value || {} ).value || '' ) + '" /></div>' +
 				'</div>' +
 				'<button type="button" class="wp-block-button__link is-style-outline yp-shippo-get-rates" data-yp-shippo-get-rates>Get Rates</button>' +

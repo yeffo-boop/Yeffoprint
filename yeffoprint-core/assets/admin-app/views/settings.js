@@ -224,6 +224,7 @@
 					'<p class="yp-panel__hint">Every Contact form submission is emailed here. Replying goes straight to the customer — their address is set as Reply-To.</p>' +
 				'</div>';
 
+			var autoInsure = settings.auto_insure || { enabled: false, threshold: 200, percent: 1.25 };
 			var liveRates = settings.live_rates || { enabled: false, markup: 1, keep_free: true, services: [], all: [], configured: false };
 			var production = settings.production_time || { enabled: false, per_day: 4, min_days: 1, busy_days: 4, closed_dates: [], now: null };
 			var shippingHtml =
@@ -268,6 +269,20 @@
 						} ).join( '' ) +
 					'</div>' +
 					'<p class="yp-panel__hint">Prices are quoted for the Shippo default package below, so set it to your usual mailer and weight. A 3D print with its own shipping price still charges that price when it’s higher.</p>' +
+				'</div>' +
+
+				// Direct request: insurance added automatically to orders over
+				// $200, folded into the shipping price, no separate line.
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Shipping insurance</h2></div>' +
+					'<p class="yp-panel__hint">On orders over the amount below, checkout adds the Shippo insurance cost into every paid shipping price. Customers see one shipping price, with no separate line. Free shipping stays free unless you tick the box below, and local pickup is never charged. The Ship screen ticks Add Shippo insurance for these orders.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-insure-enabled"' + ( autoInsure.enabled ? ' checked' : '' ) + ' /><label for="yp-set-insure-enabled">Insure bigger orders automatically</label></div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-insure-threshold">Orders over ($, items after discounts)</label><input type="number" min="0" step="1" inputmode="decimal" id="yp-set-insure-threshold" value="' + YP.escapeAttr( autoInsure.threshold ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-insure-percent">Insurance cost (% of the value)</label><input type="number" min="0" max="10" step="0.01" inputmode="decimal" id="yp-set-insure-percent" value="' + YP.escapeAttr( autoInsure.percent ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-insure-free"' + ( autoInsure.on_free ? ' checked' : '' ) + ' /><label for="yp-set-insure-free">Also add it to free shipping (it then shows as "Discounted shipping" at the insurance cost)</label></div>' +
+					'<p class="yp-panel__hint">Shippo charges 1.25% for US packages (1.5% international). A $250 order adds $3.13 to shipping.</p>' +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -572,6 +587,12 @@
 					closed_dates: viewEl.querySelector( '#yp-set-prod-closed' ).value.split( /[\s,]+/ ).filter( Boolean ),
 					closed_holidays: Array.prototype.filter.call( viewEl.querySelectorAll( '[data-yp-prod-holiday]' ), function ( input ) { return input.checked; } )
 						.map( function ( input ) { return input.getAttribute( 'data-yp-prod-holiday' ); } )
+				},
+				auto_insure: {
+					enabled: viewEl.querySelector( '#yp-set-insure-enabled' ).checked,
+					threshold: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-insure-threshold' ).value ) || 0 ),
+					percent: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-insure-percent' ).value ) || 0 ),
+					on_free: viewEl.querySelector( '#yp-set-insure-free' ).checked
 				},
 				live_rates: {
 					enabled: viewEl.querySelector( '#yp-set-live-enabled' ).checked,
