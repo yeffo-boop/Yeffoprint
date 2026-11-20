@@ -621,7 +621,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 		delete_transient( self::SESSION_PREFIX . $chat_id );
 
 		YeffoPrint_Telegram_Admin_Alerts::notify(
-			sprintf( "Telegram order #%s created\n%s · %s\n%s", $order->get_order_number(), $context['label'], self::money( (float) $order->get_total() ), $chat_id > 0 ? 'Pay link sent in your chat.' : 'They ordered in the bot chat; pay link sent there.' ),
+			sprintf( "Telegram order #%s created\n%s · %s\n%s", $order->get_order_number(), $context['label'], implode( ' · ', array_filter( [ YeffoPrint_Order_Label_Count::summary( $order ), self::money( (float) $order->get_total() ) ] ) ), $chat_id > 0 ? 'Pay link sent in your chat.' : 'They ordered in the bot chat; pay link sent there.' ),
 			[ 'section' => 'orders', 'order_id' => $order->get_id() ]
 		);
 	}
@@ -779,11 +779,12 @@ class YeffoPrint_Telegram_Chat_Orders {
 	}
 
 	private static function send_pay_link( int $chat_id, string $connection_id, \WC_Order $order ): bool {
-		$text = sprintf(
-			/* translators: 1: order number, 2: labels total, 3: pay link */
+		$labels = YeffoPrint_Order_Label_Count::summary( $order );
+		$text   = sprintf(
+			/* translators: 1: order number, 2: label count and order total, e.g. "120 labels, $54.00", 3: pay link */
 			__( "Your order #%1\$s is ready (%2\$s before shipping).\n\nYou can check your address, choose shipping and pay here:\n%3\$s\n\nWe'll send a proof to approve before anything is printed.", 'yeffoprint-core' ),
 			$order->get_order_number(),
-			self::money( (float) $order->get_total() ),
+			( '' !== $labels ? $labels . ', ' : '' ) . self::money( (float) $order->get_total() ),
 			$order->get_checkout_payment_url()
 		);
 		return self::send( $chat_id, $text, $connection_id );
@@ -964,11 +965,19 @@ class YeffoPrint_Telegram_Chat_Orders {
 		$materials = array_column( $catalog['materials'], 'name', 'id' );
 
 		$lines = [];
+		$count = 0;
 		foreach ( $result['items'] as $item ) {
+			if ( 'unclear' !== $item['kind'] ) {
+				$count += (int) $item['quantity'];
+			}
 			$what    = 'template' === $item['kind']
 				? $item['template_title'] . ( $item['fields'] ? ': ' . implode( ', ', $item['fields'] ) : '' )
 				: $item['compound_strength'];
 			$lines[] = sprintf( '• %d × %s (%s, %s)', $item['quantity'], $what, $sizes[ $item['size_id'] ] ?? '', $materials[ $item['material_id'] ] ?? '' );
+		}
+		if ( $count ) {
+			/* translators: %s: e.g. "120 labels" */
+			$lines[] = sprintf( __( 'In total: %s', 'yeffoprint-core' ), YeffoPrint_Order_Label_Count::format( [ 'labels' => $count ] ) );
 		}
 
 		$address = $result['shipping_address'];

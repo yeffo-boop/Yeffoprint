@@ -99,7 +99,7 @@
 			'<div class="yp-bulk-bar" data-yp-bulk hidden></div>' +
 			'<div class="yp-record-card"><table class="yp-record-table"><thead><tr>' +
 				'<th class="yp-bulk-check"><input type="checkbox" data-yp-check-all aria-label="Select all orders on this page"></th>' +
-				'<th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th>' +
+				'<th>Order</th><th>Customer</th><th>Date</th><th>Labels</th><th>Total</th><th>Status</th>' +
 			'</tr></thead><tbody data-yp-rows><tr class="yp-empty-row"><td colspan="7">Loading&hellip;</td></tr></tbody></table></div>' +
 			'<div class="yp-pagination" data-yp-pagination></div>';
 
@@ -324,7 +324,7 @@
 							'<div class="yp-field__hint" style="margin:0;">' + YP.escapeHtml( order.customer_email || '' ) + '</div>' +
 						'</td>' +
 						'<td>' + ( order.date ? YP.escapeHtml( new Date( order.date ).toLocaleDateString() ) : '—' ) + '</td>' +
-						'<td>' + order.item_count + '</td>' +
+						'<td>' + ( order.label_summary ? YP.escapeHtml( order.label_summary ) : order.item_count + ( 1 === order.item_count ? ' item' : ' items' ) ) + '</td>' +
 						'<td>$' + order.total.toFixed( 2 ) + '</td>' +
 						'<td><span class="yp-pill yp-pill--' + pillClass + '">' + YP.escapeHtml( order.status_label ) + '</span>' + ( order.express ? ' <span class="yp-pill yp-pill--crit">Express</span>' : '' ) + '</td>' +
 					'</tr>'

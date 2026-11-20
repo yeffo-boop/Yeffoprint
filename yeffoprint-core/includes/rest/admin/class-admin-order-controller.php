@@ -247,6 +247,7 @@ class YeffoPrint_Admin_Order_Controller {
 			'customer_email' => $order->get_billing_email(),
 			'total'          => (float) $order->get_total(),
 			'item_count'     => $order->get_item_count(),
+			'label_summary'  => YeffoPrint_Order_Label_Count::summary( $order ),
 			'express'        => YeffoPrint_Express_Order::is_express( $order ),
 		];
 	}
@@ -614,6 +615,9 @@ class YeffoPrint_Admin_Order_Controller {
 			// the frontend can show it right next to the embedded label form instead.
 			'shipping_method'      => $order->get_shipping_method(),
 			'items'                => array_values( array_filter( array_map( [ $this, 'item_payload' ], $order->get_items() ) ) ),
+			// Total labels and stickers on the order (class-order-label-count.php).
+			'label_totals'         => YeffoPrint_Order_Label_Count::totals( $order ),
+			'label_summary'        => YeffoPrint_Order_Label_Count::summary( $order ),
 			'subtotal'             => (float) $order->get_subtotal(),
 			'shipping_total'       => (float) $order->get_shipping_total(),
 			'discount_total'       => (float) $order->get_discount_total(),
@@ -783,6 +787,9 @@ class YeffoPrint_Admin_Order_Controller {
 			'id'        => $item->get_id(),
 			'name'      => $item->get_name(),
 			'quantity'  => $item->get_quantity(),
+			// {kind: labels|stickers, quantity} for a label/sticker batch, else null.
+			// A Template batch can carry WC quantity 1 with the real count here.
+			'label_count' => YeffoPrint_Order_Label_Count::for_item( $item ),
 			'total'     => (float) $item->get_total(),
 			// The linked product's own image — for a Template line item
 			// this is always the template's featured image, kept in sync
