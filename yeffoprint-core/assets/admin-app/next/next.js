@@ -1981,7 +1981,7 @@
 				ratedInsured = insure.on ? parseFloat( insure.amount ) || 0 : 0;
 				carrier = '';
 				picked = '';
-				bestMatch = YP.findBestMatchingRateId ? YP.findBestMatchingRateId( rates, order.shipping_method ) : null;
+				bestMatch = YP.findBestMatchingRateId ? YP.findBestMatchingRateId( rates, order.shipping_method, order.shipping_service ) : null;
 				draw();
 				if ( ! rates.length ) {
 					viewEl.querySelector( '[data-ypn-ship-error]' ).innerHTML = '<p class="yp-field__hint">No rates came back for this address and package.</p>';

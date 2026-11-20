@@ -253,6 +253,17 @@ class YeffoPrint_Admin_Order_Controller {
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */
+	/** "Carrier Service" saved on the order's shipping line by live checkout rates, or ''. */
+	private static function live_shipping_service( \WC_Order $order ): string {
+		foreach ( $order->get_shipping_methods() as $line ) {
+			$service = (string) $line->get_meta( YeffoPrint_Live_Shipping_Rates::SERVICE_META );
+			if ( '' !== $service ) {
+				return $service;
+			}
+		}
+		return '';
+	}
+
 	public function get_order( \WP_REST_Request $request ) {
 		$order = $this->validate_order( (int) $request['id'] );
 		if ( is_wp_error( $order ) ) {
@@ -614,6 +625,10 @@ class YeffoPrint_Admin_Order_Controller {
 			// service for that plugin to auto-select — this surfaces the choice as a plain string so
 			// the frontend can show it right next to the embedded label form instead.
 			'shipping_method'      => $order->get_shipping_method(),
+			// The carrier service a live checkout price came from (e.g. "UPS
+			// Worldwide Expedited" behind "International Shipping"), so the
+			// Ship screen pre-selects that rate. Empty for flat-rate orders.
+			'shipping_service'     => self::live_shipping_service( $order ),
 			'items'                => array_values( array_filter( array_map( [ $this, 'item_payload' ], $order->get_items() ) ) ),
 			// Total labels and stickers on the order (class-order-label-count.php).
 			'label_totals'         => YeffoPrint_Order_Label_Count::totals( $order ),

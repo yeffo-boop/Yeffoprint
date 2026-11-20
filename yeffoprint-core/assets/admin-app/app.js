@@ -1392,7 +1392,7 @@
 
 	// The new app's shipping label screen (next/next.js) reuses these.
 	YP.printLabelUrl = function ( url ) { printLabelUrl( url ); };
-	YP.findBestMatchingRateId = function ( rates, method ) { return findBestMatchingRateId( rates, method ); };
+	YP.findBestMatchingRateId = function ( rates, method, service ) { return findBestMatchingRateId( rates, method, service ); };
 
 	// A list row's "open this order": its full page in the new app
 	// (next/next.js, #/order/{id}), the order window everywhere else.
@@ -3375,12 +3375,39 @@
 	 * method like "Flat rate" or "Local pickup" was chosen, which no
 	 * Shippo rate could ever legitimately match.
 	 */
-	function findBestMatchingRateId( rates, shippingMethod ) {
+	/*
+	 * Words that say nothing about which carrier service was picked —
+	 * direct bug report: international orders pre-ticked a FedEx rate
+	 * when the customer's "International Shipping" (the cheapest rate at
+	 * checkout, often UPS) was really meant. "International" alone was
+	 * matching "FedEx International Economy"/"Priority", which UPS's
+	 * "Worldwide Expedited"/"Standard" never contain. Ignoring these
+	 * words makes a carrier-less method like "International Shipping"
+	 * fall back to the cheapest rate, which is what checkout charged.
+	 */
+	var GENERIC_RATE_WORDS = [ 'international', 'shipping', 'flat', 'rate' ];
+
+	function findBestMatchingRateId( rates, shippingMethod, shippingService ) {
+		// Live checkout rates save the exact carrier service the price came
+		// from; when one is there, it wins outright.
+		if ( shippingService ) {
+			var wanted = normalizeForRateMatch( shippingService );
+			var exact = rates.filter( function ( rate ) {
+				return normalizeForRateMatch( rate.carrier_label + ' ' + rate.service ) === wanted;
+			} );
+			if ( exact.length ) {
+				return exact[ 0 ].id;
+			}
+		}
 		if ( ! shippingMethod ) {
 			return null;
 		}
 		var haystack = normalizeForRateMatch( shippingMethod );
-		var haystackWords = haystack ? haystack.split( ' ' ) : [];
+		var haystackWords = haystack ? haystack.split( ' ' ).filter( function ( word ) { return GENERIC_RATE_WORDS.indexOf( word ) === -1; } ) : [];
+		haystack = haystackWords.join( ' ' );
+		if ( ! haystack ) {
+			return null;
+		}
 		var bestId = null;
 		var bestScore = 0;
 
@@ -3392,9 +3419,9 @@
 				score += 1;
 			}
 			if ( service ) {
-				var serviceWords = service.split( ' ' );
+				var serviceWords = service.split( ' ' ).filter( function ( word ) { return GENERIC_RATE_WORDS.indexOf( word ) === -1; } );
 				var matchedWords = serviceWords.filter( function ( word ) { return haystackWords.indexOf( word ) !== -1; } );
-				score += 2 * ( matchedWords.length / serviceWords.length );
+				score += serviceWords.length ? 2 * ( matchedWords.length / serviceWords.length ) : 0;
 			}
 			if ( score > bestScore ) {
 				bestScore = score;
@@ -3413,7 +3440,7 @@
 			return;
 		}
 
-		var bestMatchId = findBestMatchingRateId( rates, order.shipping_method );
+		var bestMatchId = findBestMatchingRateId( rates, order.shipping_method, order.shipping_service );
 
 		// One pill per carrier actually present in this response — direct
 		// request: "I'd like to be able to filter carriers from shippo."

@@ -39,6 +39,9 @@ class YeffoPrint_Live_Shipping_Rates {
 	/** Rate id prefix for services added on top of the zone's flat rates. */
 	public const METHOD_ID = 'yp_live_rate';
 
+	/** Shipping line meta: "Carrier Service" the live price was quoted from. */
+	public const SERVICE_META = '_yp_live_service';
+
 	/** Cheapest international rate from any carrier, rather than one Shippo service. */
 	public const INTERNATIONAL = 'international';
 
@@ -200,11 +203,17 @@ class YeffoPrint_Live_Shipping_Rates {
 		return $rates;
 	}
 
-	/** @param array{amount:float, days:?int} $quote */
+	/** @param array{amount:float, days:?int, service?:string} $quote */
 	private static function reprice( WC_Shipping_Rate $rate, array $quote, float $markup, array $package ): void {
 		$rate->set_cost( (string) round( $quote['amount'] + $markup, 2 ) );
 		$rate->set_taxes( [] );
 		$rate->add_meta_data( '_yp_live_rate', (string) round( $quote['amount'], 2 ) );
+		// The carrier service the price came from, so the admin Ship screen
+		// can pre-select it. International checkout only says "International
+		// Shipping", which names no carrier.
+		if ( ! empty( $quote['service'] ) ) {
+			$rate->add_meta_data( self::SERVICE_META, $quote['service'] );
+		}
 		if ( $quote['days'] ) {
 			$rate->set_delivery_time( self::delivery_text( (string) $quote['days'], $package ) );
 		}
@@ -299,7 +308,7 @@ class YeffoPrint_Live_Shipping_Rates {
 		// Domestic prices only depend on the ZIP, so the street isn't part of
 		// the key; international ones get the full address.
 		$cache_address = $domestic ? [ $address['country'], $address['zip'] ] : $address;
-		$cache_key     = 'yp_live_rates_v2_' . md5( wp_json_encode( [ $cache_address, $parcel, $domestic ? null : round( $value ) ] ) );
+		$cache_key     = 'yp_live_rates_v3_' . md5( wp_json_encode( [ $cache_address, $parcel, $domestic ? null : round( $value ) ] ) );
 
 		$cached = get_transient( $cache_key );
 		if ( is_array( $cached ) ) {
@@ -322,7 +331,11 @@ class YeffoPrint_Live_Shipping_Rates {
 			$key = $domestic ? $rate['service_token'] : self::INTERNATIONAL;
 			if ( isset( self::SERVICES[ $key ] ) && ( ! isset( $quotes[ $key ] ) || $rate['amount'] < $quotes[ $key ]['amount'] ) ) {
 				// Carriers' international estimates leave out customs, so those keep the usual range.
-				$quotes[ $key ] = [ 'amount' => $rate['amount'], 'days' => $domestic ? ( $rate['days'] ?: null ) : null ];
+				$quotes[ $key ] = [
+					'amount'  => $rate['amount'],
+					'days'    => $domestic ? ( $rate['days'] ?: null ) : null,
+					'service' => trim( $rate['carrier_label'] . ' ' . $rate['service'] ),
+				];
 			}
 		}
 
