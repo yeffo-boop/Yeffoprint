@@ -60,6 +60,15 @@
  *     order and pay link. While that order is open, their messages go here
  *     instead of to the FAQ bot.
  *
+ * Follow-up request: "can the bot allow them to edit/add to the list of
+ * labels after they've confirmed the order but before they've paid?" The
+ * pay link message has an "✏️ Edit my order" button (or /edit in the bot
+ * chat, or Jeff typing /order again). The session stays open as
+ * 'awaiting_payment' while the order is unpaid; editing goes back through
+ * the same read, questions and summary, and the confirmed order replaces
+ * the unpaid one: a new order and pay link, and the old order is
+ * cancelled with a note. Once it's paid, the button says so instead.
+ *
  * "Session id" ($chat_id below): the Telegram chat id for one of Jeff's
  * business chats, or the NEGATIVE chat id for the bot's own chat with that
  * customer, so the two never share a session or log (both chats have the
@@ -281,6 +290,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 		}
 
 		$session = self::session( $sid );
+		if ( $session && 'awaiting_payment' === $session['stage'] && in_array( $command, [ '/edit', '/change' ], true ) ) {
+			self::begin_edit( $sid, $session );
+			return true;
+		}
 		if ( ! $session || ! in_array( $session['stage'], [ 'listing', 'collecting', 'confirming', 'creating' ], true ) ) {
 			return false;
 		}
@@ -322,6 +335,17 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		$connection = '' !== $business ? self::connection( $business ) : null;
 		$allowed    = $from_id === $chat || ( $connection && $from_id === (int) $connection['user_id'] );
+
+		if ( $session && $allowed && 'awaiting_payment' === $session['stage'] && 'change' === ( $parts[1] ?? '' ) ) {
+			$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) ( $session['order_id'] ?? 0 ) ) : null;
+			if ( ! $order instanceof \WC_Order || ! YeffoPrint_Manual_Order_Creator::is_editable( $order ) ) {
+				$client->answer_callback_query( $query_id, __( 'This order is already paid. Message us to add to it.', 'yeffoprint-core' ) );
+				return;
+			}
+			$client->answer_callback_query( $query_id );
+			self::begin_edit( $sid, $session );
+			return;
+		}
 
 		if ( ! $session || ! $allowed || ! in_array( $session['stage'], [ 'collecting', 'confirming' ], true ) ) {
 			$client->answer_callback_query( $query_id, __( 'This order was already sent or cancelled.', 'yeffoprint-core' ) );
@@ -368,6 +392,33 @@ class YeffoPrint_Telegram_Chat_Orders {
 		}
 
 		$client->answer_callback_query( $query_id );
+	}
+
+	/** "Edit my order": back to collecting, keeping the order it will replace. */
+	private static function begin_edit( int $chat_id, array $session ): void {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) ( $session['order_id'] ?? 0 ) ) : null;
+		if ( ! $order instanceof \WC_Order || ! YeffoPrint_Manual_Order_Creator::is_editable( $order ) ) {
+			self::send( $chat_id, __( 'This order is already paid, so it can’t be changed here. Message us and we’ll add to it.', 'yeffoprint-core' ) );
+			return;
+		}
+		$session['stage']  = 'collecting';
+		$session['rounds'] = 0;
+		unset( $session['asked_size'], $session['asked_material'] );
+		self::save_session( $chat_id, $session );
+		self::send( $chat_id, __( 'Sure! Tell me what to add or change, like “add 50 NAD+ 500mg” or “make the BPC-157 200”.', 'yeffoprint-core' ) );
+	}
+
+	/** After the pay link: keep the chat's order open for edits until it's paid. */
+	private static function await_payment( int $chat_id, string $connection_id, \WC_Order $order, ?array $result ): void {
+		$session = self::session( $chat_id ) ?: [ 'rounds' => 0, 'record_id' => 0, 'picks' => [], 'token' => '' ];
+		$session['stage']         = 'awaiting_payment';
+		$session['connection_id'] = $connection_id;
+		$session['order_id']      = $order->get_id();
+		$session['pending']       = false;
+		if ( $result ) {
+			$session['result'] = $result;
+		}
+		self::save_session( $chat_id, $session );
 	}
 
 	/** Fills labels still missing a size or material with what the customer tapped (when it fits that label). */
@@ -473,6 +524,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 			'started'       => time(),
 			'token'         => '',
 			'picks'         => [],
+			'order_id'      => (int) ( $old['order_id'] ?? 0 ), // An unpaid order this one replaces.
 		] );
 		self::send( $chat_id, __( 'Thanks! Give me a moment to put your order together.', 'yeffoprint-core' ) );
 		self::run_soon( $chat_id, 0 );
@@ -610,18 +662,27 @@ class YeffoPrint_Telegram_Chat_Orders {
 			__( 'Created by the Telegram bot from a chat with %s, after the customer confirmed the summary.', 'yeffoprint-core' ),
 			$context['label']
 		) );
+
+		// An edit of an order they haven't paid yet: this order replaces it.
+		$old      = ! empty( $session['order_id'] ) ? wc_get_order( (int) $session['order_id'] ) : null;
+		$replaced = $old instanceof \WC_Order && $old->get_id() !== $order->get_id() && YeffoPrint_Manual_Order_Creator::is_editable( $old ) ? $old : null;
+		if ( $replaced ) {
+			$order->add_order_note( sprintf( __( 'Replaces unpaid order #%s (the customer changed it in Telegram).', 'yeffoprint-core' ), $replaced->get_order_number() ) );
+			$replaced->update_status( 'cancelled', sprintf( __( 'Replaced by order #%s: the customer changed their labels in Telegram before paying.', 'yeffoprint-core' ), $order->get_order_number() ) );
+		}
 		$order->save();
 
 		$record_id = (int) ( $session['record_id'] ?? 0 );
 		if ( $record_id ) {
+			delete_post_meta( $record_id, self::META_PAY_LINK_SENT ); // An edit sends the new link too.
 			YeffoPrint_Email_Orders::mark_created( $record_id, $order->get_id() ); // Sends the pay link (on_draft_created()).
 		} else {
 			self::send_pay_link( $chat_id, (string) $session['connection_id'], $order );
+			self::await_payment( $chat_id, (string) $session['connection_id'], $order, $result );
 		}
-		delete_transient( self::SESSION_PREFIX . $chat_id );
 
 		YeffoPrint_Telegram_Admin_Alerts::notify(
-			sprintf( "Telegram order #%s created\n%s · %s\n%s", $order->get_order_number(), $context['label'], implode( ' · ', array_filter( [ YeffoPrint_Order_Label_Count::summary( $order ), self::money( (float) $order->get_total() ) ] ) ), $chat_id > 0 ? 'Pay link sent in your chat.' : 'They ordered in the bot chat; pay link sent there.' ),
+			sprintf( "Telegram order #%s %s\n%s · %s\n%s", $order->get_order_number(), $replaced ? 'replaces #' . $replaced->get_order_number() . ' (customer edit)' : 'created', $context['label'], implode( ' · ', array_filter( [ YeffoPrint_Order_Label_Count::summary( $order ), self::money( (float) $order->get_total() ) ] ) ), $chat_id > 0 ? 'Pay link sent in your chat.' : 'They ordered in the bot chat; pay link sent there.' ),
 			[ 'section' => 'orders', 'order_id' => $order->get_id() ]
 		);
 	}
@@ -767,7 +828,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		$session       = self::session( $chat_id );
 		$connection_id = (string) ( $session['connection_id'] ?? get_post_meta( $record_id, '_yp_eo_tg_connection', true ) );
-		if ( self::send_pay_link( $chat_id, $connection_id, $order ) ) {
+		$record        = YeffoPrint_Email_Orders::format( get_post( $record_id ) );
+		$sent          = self::send_pay_link( $chat_id, $connection_id, $order );
+		self::await_payment( $chat_id, $connection_id, $order, is_array( $session['result'] ?? null ) ? $session['result'] : $record['result'] );
+		if ( $sent ) {
 			update_post_meta( $record_id, self::META_PAY_LINK_SENT, 1 );
 		} else {
 			YeffoPrint_Telegram_Admin_Alerts::notify(
@@ -775,19 +839,20 @@ class YeffoPrint_Telegram_Chat_Orders {
 				[ 'section' => 'orders', 'order_id' => $order->get_id() ]
 			);
 		}
-		delete_transient( self::SESSION_PREFIX . $chat_id );
 	}
 
 	private static function send_pay_link( int $chat_id, string $connection_id, \WC_Order $order ): bool {
 		$labels = YeffoPrint_Order_Label_Count::summary( $order );
 		$text   = sprintf(
 			/* translators: 1: order number, 2: label count and order total, e.g. "120 labels, $54.00", 3: pay link */
-			__( "Your order #%1\$s is ready (%2\$s before shipping).\n\nYou can check your address, choose shipping and pay here:\n%3\$s\n\nWe'll send a proof to approve before anything is printed.", 'yeffoprint-core' ),
+			__( "Your order #%1\$s is ready (%2\$s before shipping).\n\nYou can check your address, choose shipping and pay here:\n%3\$s\n\nWe'll send a proof to approve before anything is printed. Need to add or change labels before you pay? Tap Edit my order.", 'yeffoprint-core' ),
 			$order->get_order_number(),
 			( '' !== $labels ? $labels . ', ' : '' ) . self::money( (float) $order->get_total() ),
 			$order->get_checkout_payment_url()
 		);
-		return self::send( $chat_id, $text, $connection_id );
+		return self::send( $chat_id, $text, $connection_id, [ [
+			[ 'text' => __( '✏️ Edit my order', 'yeffoprint-core' ), 'callback_data' => 'tgco:change' ],
+		] ] );
 	}
 
 	private static function money( float $amount ): string {
