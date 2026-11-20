@@ -181,6 +181,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-checkout.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-shipping.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-account.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-label-changes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-email-notice.php';
@@ -351,6 +352,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Web_Design_Digest_Controller();
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Addon_Checkout();
+		new YeffoPrint_Order_Addon_Shipping();
 		new YeffoPrint_Order_Addon_Account();
 		new YeffoPrint_Order_Label_Changes();
 		new YeffoPrint_Order_Addon_Email_Notice();

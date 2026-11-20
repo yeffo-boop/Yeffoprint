@@ -54,6 +54,11 @@ class YeffoPrint_Telegram_Order_Notifications {
 			return;
 		}
 
+		// One "has shipped" message per box for a linked add-on group.
+		if ( class_exists( 'YeffoPrint_Order_Addon_Shipping' ) && ! YeffoPrint_Order_Addon_Shipping::is_email_sender( $order ) ) {
+			return;
+		}
+
 		$lines = [ sprintf( /* translators: %s: order number */ __( 'Your order %s has shipped!', 'yeffoprint-core' ), $order->get_order_number() ) ];
 
 		foreach ( YeffoPrint_Order_Tracking::get_shipments( $order ) as $shipment ) {
