@@ -675,6 +675,8 @@ class YeffoPrint_Admin_Order_Controller {
 			'shippo_default_package'   => YeffoPrint_Shippo_Settings::get_default_package(),
 			'shippo_customs'           => YeffoPrint_Admin_Shippo_Controller::customs_payload( $order ),
 			'shippo_package_value'     => YeffoPrint_Order_Value::package_value( $order ),
+			// Pre-ticks "Add Shippo insurance": the customer paid for it at checkout, or the order is over the auto-insure amount.
+			'shippo_auto_insure'       => YeffoPrint_Shipping_Insurance::should_insure( $order ),
 			// Direct request: "need the ability to go back and print the label later." Every
 			// Shippo label already purchased on this order, printable link included, so the panel
 			// can offer a reprint regardless of whether it was purchased in this drawer session or

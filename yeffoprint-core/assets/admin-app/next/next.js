@@ -1756,7 +1756,7 @@
 				order = results[ 0 ];
 				station = results[ 1 ];
 				if ( ! insure ) {
-					insure = { on: false, amount: ( order.shippo_package_value || {} ).value || '' };
+					insure = { on: !! order.shippo_auto_insure, amount: ( order.shippo_package_value || {} ).value || '' };
 				}
 				draw();
 			} ).catch( function ( error ) {

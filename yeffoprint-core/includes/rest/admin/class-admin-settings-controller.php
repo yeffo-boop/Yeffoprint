@@ -80,6 +80,9 @@ class YeffoPrint_Admin_Settings_Controller {
 		if ( is_array( $params['live_rates'] ?? null ) ) {
 			YeffoPrint_Live_Shipping_Rates::save( $params['live_rates'] );
 		}
+		if ( is_array( $params['auto_insure'] ?? null ) ) {
+			YeffoPrint_Shipping_Insurance::save( $params['auto_insure'] );
+		}
 		if ( is_array( $params['production_time'] ?? null ) ) {
 			YeffoPrint_Production_Time::save( $params['production_time'] );
 		}
@@ -192,6 +195,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			'shippo_webhook_url'         => esc_url_raw( YeffoPrint_Shippo_Webhook_Secret::webhook_url() ),
 			'shippo_webhook_status'      => YeffoPrint_Shippo_Webhook_Sync::last_message(),
 			'live_rates'                 => YeffoPrint_Live_Shipping_Rates::settings(),
+			'auto_insure'                => YeffoPrint_Shipping_Insurance::settings(),
 			'production_time'            => YeffoPrint_Production_Time::settings(),
 			'local_pickup_enabled'       => YeffoPrint_Local_Pickup::is_enabled(),
 			'local_pickup_label'         => (string) get_option( YeffoPrint_Local_Pickup::LABEL_OPTION, '' ),
