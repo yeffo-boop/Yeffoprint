@@ -165,6 +165,8 @@ class YeffoPrint_Admin_Next_Controller {
 			'date'           => $date ? $date->date( 'c' ) : null,
 			'customer'       => trim( $order->get_formatted_billing_full_name() ) ?: $order->get_billing_email(),
 			'items'          => $first_name . ( $more ? sprintf( ' + %d more', $more ) : '' ),
+			// "120 labels · 20 stickers" (class-order-label-count.php); '' for orders with no labels.
+			'label_summary'  => YeffoPrint_Order_Label_Count::summary( $order ),
 			'total'          => (float) $order->get_total(),
 			'express'        => YeffoPrint_Express_Order::is_express( $order ),
 			// Holographic, not Express: ships a day later (24h cure), so it's due a day later too.

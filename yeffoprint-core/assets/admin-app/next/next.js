@@ -375,7 +375,7 @@
 			var promiseMeta = o.promise && risk
 				? ( 'late' === risk ? late + ( 1 === late ? ' day' : ' days' ) + ' past the promised ship date' : 'Promised to ship ' + o.promise.ship_label )
 				: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) : '' );
-			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + o.items + ' · ' + ago( o.date ) };
+			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + ( o.label_summary || o.items ) + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
@@ -546,7 +546,7 @@
 				if ( boardState.expressOnly && ! o.express ) {
 					return false;
 				}
-				return ! q || ( o.number + ' ' + o.customer + ' ' + o.items ).toLowerCase().indexOf( q ) !== -1;
+				return ! q || ( o.number + ' ' + o.customer + ' ' + o.items + ' ' + ( o.label_summary || '' ) ).toLowerCase().indexOf( q ) !== -1;
 			} );
 		}
 
@@ -559,6 +559,7 @@
 					'</div>' +
 					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.holo_cure ? ' ' + HOLO_TAG : '' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
+					( o.label_summary ? '<div class="ypn-order__count">' + esc( o.label_summary ) + '</div>' : '' ) +
 					( o.promise && 'shipped' !== o.column ? '<div class="ypn-order__items">' + promiseHtml( o.promise, false ) + '</div>' : '' ) +
 					( 'curing' === o.column && o.curing_ready_at ? '<div class="ypn-order__cure' + ( curingDone( o ) ? ' is-done' : '' ) + '">' + esc( curingText( o ) ) + '</div>' : '' ) +
 					'<div class="ypn-order__row"><span class="ypn-order__meta">' + esc( o.payment_method || o.status_label ) + '</span><b>' + esc( money( o.total ) ) + '</b></div>' +
@@ -1103,7 +1104,9 @@
 					? '<div><span class="ypn-pill' + ( item.holo_border ? ' ypn-pill--holo">Holographic border' : '">No holographic border' ) + '</span></div>'
 					: '' ) +
 				( item.brands && item.brands.length ? '<div class="ypn-lab__brand">Brand: ' + esc( item.brands.join( ', ' ) ) + '</div>' : '' ) +
-				'<div class="ypn-lab__meta">× ' + esc( String( item.quantity ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
+				'<div class="ypn-lab__meta">' + ( item.label_count
+					? esc( Number( item.label_count.quantity ).toLocaleString() + ' ' + ( 'stickers' === item.label_count.kind ? ( 1 === item.label_count.quantity ? 'sticker' : 'stickers' ) : ( 1 === item.label_count.quantity ? 'label' : 'labels' ) ) )
+					: '× ' + esc( String( item.quantity ) ) ) + ' · ' + esc( money( item.total ) ) + '</div>' +
 				( item.meta.length
 					// display_value is WooCommerce's own kses-filtered HTML (batch tables, color swatches), rendered the same way the order window does.
 					// Each label/value pair is its own grid cell so Details spreads across the card;
@@ -1323,7 +1326,7 @@
 							( website ? '<div class="ypn-wd" data-ypn-wd></div>' : '' ) +
 							customOrders.map( proofCardHtml ).join( '' ) +
 							'<section class="ypn-card">' +
-								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ' · ' + units + ' total</span>' +
+								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + ( order.label_summary ? '<b class="ypn-count">' + esc( order.label_summary ) + '</b> · ' : '' ) + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ( order.label_summary ? '' : ' · ' + units + ' total' ) + '</span>' +
 									( ( order.label_lines || [] ).length ? '<button type="button" class="ypn-more" data-ypn-edit-labels>Edit labels</button>' : '' ) +
 								'</h3>' +
 								'<div data-ypn-label-form hidden></div>' +

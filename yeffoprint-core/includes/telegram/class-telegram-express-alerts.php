@@ -213,12 +213,13 @@ class YeffoPrint_Telegram_Express_Alerts {
 		$lines = explode( "\n", self::alert_text( $order, $count ) );
 		$items = [];
 		foreach ( $order->get_items() as $item ) {
-			$items[] = sprintf( '%1$s × %2$d', $item->get_name(), $item->get_quantity() );
+			$items[] = sprintf( '%1$s × %2$d', $item->get_name(), YeffoPrint_Order_Label_Count::item_quantity( $item ) );
 		}
+		$summary = YeffoPrint_Order_Label_Count::summary( $order );
 
 		YeffoPrint_Admin_Push::send_to_admins( [
 			'title'              => mb_strimwidth( $lines[0], 0, 120, '…' ),
-			'body'               => mb_strimwidth( implode( ' · ', array_filter( [ $lines[1] ?? '', implode( ', ', $items ) ] ) ), 0, 200, '…' ) . "\n" . __( 'Acknowledge to stop the reminders.', 'yeffoprint-core' ),
+			'body'               => mb_strimwidth( implode( ' · ', array_filter( [ $lines[1] ?? '', $summary, implode( ', ', $items ) ] ) ), 0, 200, '…' ) . "\n" . __( 'Acknowledge to stop the reminders.', 'yeffoprint-core' ),
 			'url'                => admin_url( 'admin.php?page=' . YeffoPrint_Admin_Push::APP_SLUG ) . '#/order/' . $order->get_id(),
 			'tag'                => 'order-' . $order->get_id(),
 			'renotify'           => true,
@@ -246,7 +247,11 @@ class YeffoPrint_Telegram_Express_Alerts {
 
 		$lines = [ $heading, trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ), '' ];
 		foreach ( $order->get_items() as $item ) {
-			$lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), $item->get_quantity() );
+			$lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), YeffoPrint_Order_Label_Count::item_quantity( $item ) );
+		}
+		$total_line = YeffoPrint_Order_Label_Count::total_line( $order );
+		if ( '' !== $total_line ) {
+			$lines[] = $total_line;
 		}
 		$lines[] = '';
 		$lines[] = __( 'Tap "Got it" or reply /ack to stop these alerts. They also stop once the order is In Production or Shipped.', 'yeffoprint-core' );

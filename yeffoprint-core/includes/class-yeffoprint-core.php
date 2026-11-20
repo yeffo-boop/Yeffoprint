@@ -102,6 +102,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-sales-pause.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delay-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-value.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-label-count.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-express-order.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-holographic-vinyl.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-curing-status.php';

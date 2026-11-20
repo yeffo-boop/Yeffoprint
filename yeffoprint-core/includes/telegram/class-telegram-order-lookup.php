@@ -69,7 +69,11 @@ class YeffoPrint_Telegram_Order_Lookup {
 		$lines[] = '';
 		$lines[] = __( 'Items:', 'yeffoprint-core' );
 		foreach ( $order->get_items() as $item ) {
-			$lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), $item->get_quantity() );
+			$lines[] = sprintf( '• %1$s × %2$d', $item->get_name(), YeffoPrint_Order_Label_Count::item_quantity( $item ) );
+		}
+		$total_line = YeffoPrint_Order_Label_Count::total_line( $order );
+		if ( '' !== $total_line ) {
+			$lines[] = $total_line;
 		}
 
 		$lines[] = '';
