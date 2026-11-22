@@ -69,6 +69,18 @@
  * the unpaid one: a new order and pay link, and the old order is
  * cancelled with a note. Once it's paid, the button says so instead.
  *
+ * Follow-up request: "Can we have the bot be able to select from a list of
+ * templates? Skip proof if they order a template and have the bot ask for
+ * missing fields."
+ *   - "📋 Pick from our templates" (on the /neworder prompt and the
+ *     summary, or typing "templates") opens category buttons, then that
+ *     category's templates (8 a page). A tap logs "(picked template: X)"
+ *     for the reader and asks what each label should say.
+ *   - Template labels are added without a proof shell, like a template
+ *     bought on the site. Custom design labels still get their proof.
+ *   - Required template fields the chat doesn't fill (color choices have a
+ *     default) are asked as typed questions.
+ *
  * "Session id" ($chat_id below): the Telegram chat id for one of Jeff's
  * business chats, or the NEGATIVE chat id for the bot's own chat with that
  * customer, so the two never share a session or log (both chats have the
@@ -226,6 +238,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 		if ( ! $session || $is_owner ) {
 			return; // Only the customer's answers move an open order along.
 		}
+		if ( in_array( $session['stage'], [ 'collecting', 'confirming' ], true ) && self::asks_for_templates( $text ) ) {
+			self::send_categories( $chat_id );
+			return;
+		}
 		self::customer_said( $chat_id, $session, $text );
 	}
 
@@ -285,7 +301,9 @@ class YeffoPrint_Telegram_Chat_Orders {
 				'token'         => '',
 				'picks'         => [],
 			] );
-			self::send( $sid, __( "Great, let's start your label order!\n\nSend me your list: what each label says (like “BPC-157 10mg”) and how many of each. One message or a few is fine.", 'yeffoprint-core' ) );
+			self::send( $sid, __( "Great, let's start your label order!\n\nSend me your list: what each label says (like “BPC-157 10mg”) and how many of each. One message or a few is fine. Or pick one of our ready-made designs:", 'yeffoprint-core' ), null, [ [
+				[ 'text' => __( '📋 Pick from our templates', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ],
+			] ] );
 			return true;
 		}
 
@@ -304,6 +322,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 		}
 		if ( '/' === $text[0] ) {
 			return false; // Other commands (/help, /orders…) still work mid-order.
+		}
+		if ( self::asks_for_templates( $text ) ) {
+			self::send_categories( $sid );
+			return true;
 		}
 
 		$from = is_array( $message['from'] ?? null ) ? $message['from'] : [];
@@ -344,6 +366,12 @@ class YeffoPrint_Telegram_Chat_Orders {
 			}
 			$client->answer_callback_query( $query_id );
 			self::begin_edit( $sid, $session );
+			return;
+		}
+
+		if ( $session && $allowed && in_array( $parts[1] ?? '', [ 'tl', 'tc', 't' ], true ) && in_array( $session['stage'], [ 'listing', 'collecting', 'confirming' ], true ) ) {
+			$client->answer_callback_query( $query_id );
+			self::template_tap( $sid, $session, $parts, $message, $business );
 			return;
 		}
 
@@ -416,6 +444,106 @@ class YeffoPrint_Telegram_Chat_Orders {
 		}
 		$order = wc_get_order( (int) get_post_meta( (int) $ids[0], '_yp_eo_order_id', true ) );
 		return $order instanceof \WC_Order && YeffoPrint_Manual_Order_Creator::is_editable( $order ) ? $order->get_id() : 0;
+	}
+
+	/* ---------- Template picker ---------- */
+
+	private const TEMPLATES_PER_PAGE = 8;
+
+	private static function asks_for_templates( string $text ): bool {
+		return (bool) preg_match( '/^\s*(show (me )?(the |your )?)?(templates?|designs?|ready[- ]made( designs?)?)\s*[?!.]*\s*$/i', $text );
+	}
+
+	/** Product Type categories that have at least one published template. @return array<int,string> term id => name */
+	private static function template_categories(): array {
+		$terms = get_terms( [ 'taxonomy' => 'yp_product_type', 'hide_empty' => true ] );
+		if ( is_wp_error( $terms ) ) {
+			return [];
+		}
+		$out = [];
+		foreach ( $terms as $term ) {
+			if ( self::templates_in( (int) $term->term_id, 1 ) ) {
+				$out[ (int) $term->term_id ] = $term->name;
+			}
+		}
+		return $out;
+	}
+
+	/** @return \WP_Post[] */
+	private static function templates_in( int $term_id, int $limit, int $offset = 0 ): array {
+		return get_posts( [
+			'post_type'      => 'yp_template',
+			'post_status'    => 'publish',
+			'posts_per_page' => $limit,
+			'offset'         => $offset,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'tax_query'      => [ [ 'taxonomy' => 'yp_product_type', 'field' => 'term_id', 'terms' => $term_id ] ], // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		] );
+	}
+
+	private static function send_categories( int $chat_id ): void {
+		$categories = self::template_categories();
+		if ( ! $categories ) {
+			self::send( $chat_id, __( 'Our templates aren’t available right now. Send me what your labels should say and we’ll design them for you.', 'yeffoprint-core' ) );
+			return;
+		}
+		$buttons = [];
+		foreach ( $categories as $id => $name ) {
+			$buttons[] = [ 'text' => $name, 'callback_data' => 'tgco:tc:' . $id . ':0' ];
+		}
+		self::send( $chat_id, __( 'Which kind of label?', 'yeffoprint-core' ), null, array_chunk( $buttons, 2 ) );
+	}
+
+	/** tgco:tl (categories), tgco:tc:TERM:PAGE (that category's templates), tgco:t:ID (picked). */
+	private static function template_tap( int $chat_id, array $session, array $parts, array $message, string $business ): void {
+		$action = $parts[1];
+		$chat   = abs( $chat_id );
+
+		if ( 'tl' === $action ) {
+			self::send_categories( $chat_id );
+			return;
+		}
+
+		if ( 'tc' === $action ) {
+			$term_id = absint( $parts[2] ?? 0 );
+			$page    = absint( $parts[3] ?? 0 );
+			$posts   = self::templates_in( $term_id, self::TEMPLATES_PER_PAGE + 1, $page * self::TEMPLATES_PER_PAGE );
+			$more    = count( $posts ) > self::TEMPLATES_PER_PAGE;
+			$buttons = [];
+			foreach ( array_slice( $posts, 0, self::TEMPLATES_PER_PAGE ) as $post ) {
+				$buttons[] = [ [ 'text' => mb_strimwidth( $post->post_title, 0, 40, '…' ), 'callback_data' => 'tgco:t:' . $post->ID ] ];
+			}
+			$nav = [];
+			if ( $page > 0 ) {
+				$nav[] = [ 'text' => __( '‹ Back', 'yeffoprint-core' ), 'callback_data' => 'tgco:tc:' . $term_id . ':' . ( $page - 1 ) ];
+			}
+			if ( $more ) {
+				$nav[] = [ 'text' => __( 'More ›', 'yeffoprint-core' ), 'callback_data' => 'tgco:tc:' . $term_id . ':' . ( $page + 1 ) ];
+			}
+			$nav[]     = [ 'text' => __( 'Other kinds', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ];
+			$buttons[] = $nav;
+			$term      = get_term( $term_id, 'yp_product_type' );
+			self::send( $chat_id, sprintf( __( 'Pick a %s template:', 'yeffoprint-core' ), $term && ! is_wp_error( $term ) ? $term->name : '' ), null, $buttons );
+			return;
+		}
+
+		$template = get_post( absint( $parts[2] ?? 0 ) );
+		if ( ! $template || 'yp_template' !== $template->post_type || 'publish' !== $template->post_status ) {
+			return;
+		}
+		self::client()->edit_message_text( $chat, (int) ( $message['message_id'] ?? 0 ), __( 'Template', 'yeffoprint-core' ) . ': ' . $template->post_title . ' ✓', $business );
+		self::log( $chat_id, [ 'id' => 0, 'who' => 'customer', 'name' => '', 'user' => '', 'time' => time(), 'text' => '(picked template: ' . $template->post_title . ')' ] );
+
+		$session['stage'] = 'collecting';
+		self::save_session( $chat_id, $session );
+		$link = get_permalink( $template );
+		self::send( $chat_id, sprintf(
+			/* translators: 1: template title, 2: its page on the site */
+			__( "%1\$s, great choice! What should each label say, and how many of each? For example “BPC-157 10mg, 100”.%2\$s", 'yeffoprint-core' ),
+			$template->post_title,
+			$link ? "\n\n" . sprintf( __( 'See it here: %s', 'yeffoprint-core' ), $link ) : ''
+		) );
 	}
 
 	/** "Edit my order": back to collecting, keeping the order it will replace. */
@@ -520,6 +648,8 @@ class YeffoPrint_Telegram_Chat_Orders {
 				[ 'text' => __( '✅ Looks good, send my payment link', 'yeffoprint-core' ), 'callback_data' => 'tgco:ok' ],
 			], [
 				[ 'text' => __( '✏️ Change something', 'yeffoprint-core' ), 'callback_data' => 'tgco:edit' ],
+			], [
+				[ 'text' => __( '📋 Add a template label', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ],
 			] ] );
 			return;
 		}
@@ -786,7 +916,8 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		$payload = [
 			'customer'                  => $customer,
-			'requires_proof'            => true, // Same default as Create Order.
+			// Direct request: "Skip proof if they order a template." Only custom design labels get one.
+			'requires_proof'            => (bool) $custom,
 			'send_invoice_email'        => false, // The pay link goes in the chat instead.
 			'customer_picks_shipping'   => true,
 			'customer_provides_address' => ! $address,
@@ -816,7 +947,9 @@ class YeffoPrint_Telegram_Chat_Orders {
 			];
 		}
 
-		if ( $groups ) {
+		// Template-only order: the first template makes the order. With custom labels, every template
+		// goes on afterwards with Add items, so none of them gets the custom design's proof.
+		if ( $groups && ! $custom ) {
 			$payload['template'] = $template_payload( array_shift( $groups ) );
 		}
 
@@ -828,7 +961,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		// Create Order takes one template design per order; the others go on with Add items, as Jeff would.
 		foreach ( $groups as $group ) {
-			$added = YeffoPrint_Manual_Order_Creator::add_items( $order, [ 'template' => $template_payload( $group ), 'requires_proof' => true ] );
+			$added = YeffoPrint_Manual_Order_Creator::add_items( $order, [ 'template' => $template_payload( $group ), 'requires_proof' => false ] );
 			if ( is_wp_error( $added ) ) {
 				$order->delete( true );
 				return $added;
@@ -984,6 +1117,31 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		if ( ! self::complete_address( $result['shipping_address'] ) && ! self::account_has_address( $result['customer']['email'] ) ) {
 			$lines[] = __( 'Shipping address', 'yeffoprint-core' );
+		}
+
+		// Direct request: "have the bot ask for missing fields." Required template fields the chat left
+		// blank. Color choices fall back to their default, so they're never asked.
+		$field_gaps = [];
+		foreach ( $labels as $item ) {
+			if ( 'template' !== $item['kind'] || ! $item['template_id'] ) {
+				continue;
+			}
+			$blank = [];
+			foreach ( YeffoPrint_Field_Schema::get_with_colors( $item['template_id'] ) as $field ) {
+				if ( ! empty( $field['required'] ) && ! in_array( $field['type'] ?? '', [ 'color', 'color_choice' ], true ) && '' === trim( (string) ( $item['fields'][ $field['id'] ] ?? '' ) ) ) {
+					$blank[] = (string) $field['label'];
+				}
+			}
+			if ( $blank ) {
+				$first        = $item['fields'] ? reset( $item['fields'] ) : '';
+				$field_gaps[] = implode( ', ', $blank ) . ' for ' . $item['template_title'] . ( '' !== $first ? ' (' . $first . ')' : '' );
+			}
+		}
+		foreach ( array_slice( $field_gaps, 0, 3 ) as $gap ) {
+			$lines[] = $gap;
+		}
+		if ( count( $field_gaps ) > 3 ) {
+			$lines[] = sprintf( __( '…and the same for %d more template labels', 'yeffoprint-core' ), count( $field_gaps ) - 3 );
 		}
 
 		$custom = array_filter( $labels, static function ( $item ) { return 'custom_design' === $item['kind']; } );
