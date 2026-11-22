@@ -44,7 +44,7 @@
  * Jeff types /cancel in the chat to stop the bot there.
  *
  * Only text is kept, only for chats where /order is possible (the
- * feature switched on), for three days, so the reader has the list the
+ * feature switched on), for two weeks, so the reader has the list the
  * customer sent before Jeff typed /order.
  *
  * Follow-up requests: "use buttons or selectors for the vinyl type and
@@ -117,8 +117,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 	private const LOG_PREFIX     = 'yp_tgco_log_';
 	private const SESSION_PREFIX = 'yp_tgco_s_';
 	private const LOCK_PREFIX    = 'yp_tgco_lock_';
-	private const LOG_TTL        = 3 * DAY_IN_SECONDS;
-	private const LOG_MAX        = 80;
+	// Two weeks, so /order or /print can use what was settled a while back (Jeff: "it didn't read our
+	// previous chats"). Telegram never gives a bot older history, only what it saw since it was added.
+	private const LOG_TTL        = 14 * DAY_IN_SECONDS;
+	private const LOG_MAX        = 150;
 
 	/** Seconds after the customer's last message before the chat is read again. */
 	private const DEBOUNCE = 8;
@@ -676,7 +678,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		if ( 'pr' === $action ) {
 			$session['prints'] = [];
-			unset( $session['print_draft'], $session['awaiting'] );
+			unset( $session['print_draft'], $session['awaiting'], $session['print_queue'] );
 			self::client()->edit_message_text( $chat, $msg_id, (string) ( $message['text'] ?? '' ), $business );
 			self::send( $chat_id, __( 'Okay, I took the 3D prints off.', 'yeffoprint-core' ) );
 			self::after_print_change( $chat_id, $session );
@@ -913,7 +915,57 @@ class YeffoPrint_Telegram_Chat_Orders {
 		unset( $session['print_draft'], $session['awaiting'] );
 		/* translators: %s: e.g. "2 × Ghost Can Holder (12oz Can · Base: Black) $28.00" */
 		self::send( $chat_id, sprintf( __( 'Added: %s', 'yeffoprint-core' ), self::print_line( $draft ) ) );
+		if ( ! empty( $session['print_queue'] ) ) {
+			// More prints the chat asked for: ask what each still needs.
+			$session['print_draft'] = array_shift( $session['print_queue'] );
+			self::save_session( $chat_id, $session );
+			self::print_next( $chat_id, $session );
+			return;
+		}
 		self::after_print_change( $chat_id, $session );
+	}
+
+	/**
+	 * Direct feedback: "it didn't read our previous chats to help order an item,
+	 * it started an order from scratch." The first read after /order or /print
+	 * asks Claude which prints the chat already settled on (and their size,
+	 * colors, lid text, how many), then asks only for the rest with buttons.
+	 *
+	 * @return bool true when the print picker took over.
+	 */
+	private static function prefill_prints( int $chat_id, array $session ): bool {
+		$prints_mode = ! empty( $session['prints_mode'] );
+		unset( $session['prefill_prints'], $session['prints_mode'] );
+		self::save_session( $chat_id, $session );
+
+		$found = [];
+		if ( self::orderable_prints() ) {
+			try {
+				$found = YeffoPrint_Email_Order_Reader::read_prints( self::transcript( $chat_id ) );
+			} catch ( \RuntimeException $e ) {
+				$found = []; // The picker still works by hand.
+			}
+		}
+
+		if ( ! $found ) {
+			if ( ! $prints_mode ) {
+				return false;
+			}
+			$session['stage'] = 'listing';
+			self::save_session( $chat_id, $session );
+			self::send_prints( $chat_id );
+			return true;
+		}
+
+		$session['print_draft'] = array_shift( $found );
+		$session['print_queue'] = $found;
+		unset( $session['awaiting'] );
+		self::save_session( $chat_id, $session );
+		$titles = array_map( static function ( $draft ) { return get_the_title( (int) $draft['print_id'] ); }, array_merge( [ $session['print_draft'] ], $found ) );
+		/* translators: %s: print names */
+		self::send( $chat_id, sprintf( __( 'From our chat: %s. Just a couple of quick taps to finish it.', 'yeffoprint-core' ), implode( ', ', $titles ) ) );
+		self::print_next( $chat_id, $session );
+		return true;
 	}
 
 	/** After a print is added or removed: read the chat again for email/address and show the next question or the summary. */
@@ -1215,15 +1267,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 			'picks'         => [],
 			'order_id'      => (int) ( $old['order_id'] ?? 0 ) ?: self::unpaid_order_for_chat( $chat_id ), // An unpaid order this one replaces.
 			'prints'        => [],
+			// First read also looks for 3D prints the chat already settled on.
+			'prefill_prints' => true,
+			'prints_mode'    => $prints,
 		] );
-		if ( $prints ) {
-			// Straight to the print list; the chat is read once a print is added.
-			$session = self::session( $chat_id );
-			$session['stage'] = 'listing';
-			self::save_session( $chat_id, $session );
-			self::send_prints( $chat_id );
-			return;
-		}
 		self::send( $chat_id, __( 'Thanks! Give me a moment to put your order together.', 'yeffoprint-core' ) );
 		self::run_soon( $chat_id, 0 );
 	}
@@ -1301,6 +1348,11 @@ class YeffoPrint_Telegram_Chat_Orders {
 	private static function read_and_ask( int $chat_id, array $session ): void {
 		$token   = (string) ( $session['token'] ?? '' );
 		$context = self::customer_context( $chat_id );
+
+		if ( ! empty( $session['prefill_prints'] ) && self::prefill_prints( $chat_id, $session ) ) {
+			return; // The print picker takes over; the order read runs once the prints are added.
+		}
+		$session = self::session( $chat_id ) ?: $session;
 
 		try {
 			$result = YeffoPrint_Email_Order_Reader::read( [
