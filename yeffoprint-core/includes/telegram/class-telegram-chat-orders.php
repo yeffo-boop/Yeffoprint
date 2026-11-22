@@ -897,6 +897,8 @@ class YeffoPrint_Telegram_Chat_Orders {
 				'template_id' => $group[0]['template_id'],
 				'size_id'     => $group[0]['size_id'],
 				'material_id' => $group[0]['material_id'],
+				// Direct feedback: "When using a template order, we don't need a brand name."
+				'optional_field_ids' => self::brand_field_ids( (int) $group[0]['template_id'] ),
 				'variants'    => array_map( static function ( $item ) {
 					return [ 'quantity' => $item['quantity'], 'values' => $item['fields'] ];
 				}, $group ),
@@ -1128,7 +1130,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 			}
 			$blank = [];
 			foreach ( YeffoPrint_Field_Schema::get_with_colors( $item['template_id'] ) as $field ) {
-				if ( ! empty( $field['required'] ) && ! in_array( $field['type'] ?? '', [ 'color', 'color_choice' ], true ) && '' === trim( (string) ( $item['fields'][ $field['id'] ] ?? '' ) ) ) {
+				if ( ! empty( $field['required'] ) && ! in_array( $field['type'] ?? '', [ 'color', 'color_choice' ], true ) && ! self::is_brand_field( $field ) && '' === trim( (string) ( $item['fields'][ $field['id'] ] ?? '' ) ) ) {
 					$blank[] = (string) $field['label'];
 				}
 			}
@@ -1197,6 +1199,22 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		$out['text'] = $lines;
 		return $out;
+	}
+
+	/** Template labels never need a brand (Jeff), so a required Brand field is neither asked nor enforced. */
+	private static function is_brand_field( array $field ): bool {
+		return false !== stripos( (string) ( $field['id'] ?? '' ), 'brand' ) || false !== stripos( (string) ( $field['label'] ?? '' ), 'brand' );
+	}
+
+	/** @return string[] */
+	private static function brand_field_ids( int $template_id ): array {
+		$ids = [];
+		foreach ( YeffoPrint_Field_Schema::get_with_colors( $template_id ) as $field ) {
+			if ( self::is_brand_field( $field ) ) {
+				$ids[] = (string) $field['id'];
+			}
+		}
+		return $ids;
 	}
 
 	private static function question_text( array $missing, int $round ): string {

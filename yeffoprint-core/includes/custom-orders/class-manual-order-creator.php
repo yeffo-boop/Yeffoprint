@@ -1294,7 +1294,20 @@ class YeffoPrint_Manual_Order_Creator {
 			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$variants = YeffoPrint_Field_Schema::sanitize_variants( $payload['variants'] ?? null, YeffoPrint_Field_Schema::get_with_colors( $template_id ) );
+		// optional_field_ids: fields the caller may leave blank even when the
+		// template marks them required (Telegram chat orders skip Brand on
+		// template labels, which Jeff said don't need one).
+		$schema   = YeffoPrint_Field_Schema::get_with_colors( $template_id );
+		$optional = array_map( 'strval', (array) ( $payload['optional_field_ids'] ?? [] ) );
+		if ( $optional ) {
+			foreach ( $schema as &$schema_field ) {
+				if ( in_array( (string) $schema_field['id'], $optional, true ) ) {
+					$schema_field['required'] = false;
+				}
+			}
+			unset( $schema_field );
+		}
+		$variants = YeffoPrint_Field_Schema::sanitize_variants( $payload['variants'] ?? null, $schema );
 		if ( is_wp_error( $variants ) ) {
 			return $variants;
 		}
