@@ -239,6 +239,13 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		$command = $is_owner ? strtolower( strtok( $text, " \n@" ) ?: '' ) : '';
 
+		// Direct request: "Will I be able to initiate a 3d print order from a chat with me as well?"
+		// /print (or /order prints) opens the 3D print list in the chat right away.
+		$args = strtolower( trim( (string) substr( $text, strlen( $command ) ) ) );
+		if ( '/print' === $command || '/prints' === $command || ( '/order' === $command && preg_match( '/^(3\s*-?d|prints?|3d prints?)$/', $args ) ) ) {
+			self::start( $chat_id, $connection_id, (int) ( $message['message_id'] ?? 0 ), true );
+			return;
+		}
 		if ( '/order' === $command ) {
 			self::start( $chat_id, $connection_id, (int) ( $message['message_id'] ?? 0 ) );
 			return;
@@ -1135,7 +1142,16 @@ class YeffoPrint_Telegram_Chat_Orders {
 				return;
 			}
 			$session['rounds']++;
-			self::send( $chat_id, self::question_text( $missing['text'], $session['rounds'] ) );
+			$nothing = empty( array_filter( $result['items'], static function ( $item ) { return 'unclear' !== $item['kind']; } ) ) && ! $result['prints'];
+			$buttons = null;
+			if ( $nothing ) {
+				// No labels found yet: offer the pickers too, e.g. a chat that's only about a 3D print.
+				$buttons = [ [ [ 'text' => __( '📋 Pick from our templates', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ] ] ];
+				if ( self::orderable_prints() ) {
+					$buttons[] = [ [ 'text' => __( '🖨 Shop 3D prints', 'yeffoprint-core' ), 'callback_data' => 'tgco:pl:0' ] ];
+				}
+			}
+			self::send( $chat_id, self::question_text( $missing['text'], $session['rounds'] ), null, $buttons );
 		}
 
 		if ( $missing['size'] ) {
@@ -1180,7 +1196,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 	}
 
 	/** Jeff typed /order: (re)start the order for this chat. */
-	private static function start( int $chat_id, string $connection_id, int $command_message_id ): void {
+	private static function start( int $chat_id, string $connection_id, int $command_message_id, bool $prints = false ): void {
 		self::delete_command( $connection_id, $chat_id, $command_message_id );
 
 		if ( '' === YeffoPrint_Email_Order_Reader::api_key() ) {
@@ -1198,7 +1214,16 @@ class YeffoPrint_Telegram_Chat_Orders {
 			'token'         => '',
 			'picks'         => [],
 			'order_id'      => (int) ( $old['order_id'] ?? 0 ) ?: self::unpaid_order_for_chat( $chat_id ), // An unpaid order this one replaces.
+			'prints'        => [],
 		] );
+		if ( $prints ) {
+			// Straight to the print list; the chat is read once a print is added.
+			$session = self::session( $chat_id );
+			$session['stage'] = 'listing';
+			self::save_session( $chat_id, $session );
+			self::send_prints( $chat_id );
+			return;
+		}
 		self::send( $chat_id, __( 'Thanks! Give me a moment to put your order together.', 'yeffoprint-core' ) );
 		self::run_soon( $chat_id, 0 );
 	}
