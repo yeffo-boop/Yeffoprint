@@ -91,6 +91,35 @@ class YeffoPrint_Print_Shipping {
 		return $highest;
 	}
 
+	/**
+	 * The print price for one of the pay page's saved shipping options
+	 * ({ label, region }), which aren't zone methods: the zone method with
+	 * the same name, else the lowest price among methods of the same kind
+	 * (international or not), else the lowest print price, so a print never
+	 * ships for the plain label rate.
+	 *
+	 * @param array<string, float> $prices instance id => price
+	 */
+	public static function floor_for_option( array $prices, array $option ): float {
+		if ( ! $prices ) {
+			return 0.0;
+		}
+		$label    = strtolower( trim( (string) ( $option['label'] ?? '' ) ) );
+		$intl     = 'international' === ( $option['region'] ?? '' );
+		$same_way = [];
+		foreach ( $prices as $instance => $price ) {
+			$method = class_exists( 'WC_Shipping_Zones' ) ? \WC_Shipping_Zones::get_shipping_method( (int) $instance ) : null;
+			$title  = $method ? strtolower( trim( (string) $method->get_title() ) ) : '';
+			if ( '' !== $title && $title === $label ) {
+				return (float) $price;
+			}
+			if ( '' !== $title && $intl === ( false !== strpos( $title, 'international' ) ) ) {
+				$same_way[] = (float) $price;
+			}
+		}
+		return $same_way ? min( $same_way ) : (float) min( $prices );
+	}
+
 	public function tag_packages( $packages ) {
 		if ( ! is_array( $packages ) ) {
 			return $packages;

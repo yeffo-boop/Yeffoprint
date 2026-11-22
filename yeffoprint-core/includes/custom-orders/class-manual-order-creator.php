@@ -427,6 +427,8 @@ class YeffoPrint_Manual_Order_Creator {
 				$result = self::add_sticker_row( $order, $group, $custom_order_id, $group['tier_quantity'] + $sticker_existing );
 			} elseif ( 'template' === $type ) {
 				$result = self::add_template_row( $order, $group, $custom_order_id, $label_tier_quantity );
+			} elseif ( 'print' === $type ) {
+				$result = self::add_print_row( $order, $group );
 			} else {
 				$result = self::add_web_design_row( $order, $group );
 			}
@@ -992,6 +994,17 @@ class YeffoPrint_Manual_Order_Creator {
 			$groups[] = [ 'template', $template ];
 		}
 
+		// 3D prints (Telegram chat orders): each entry its own line, no proof shell.
+		if ( ! empty( $payload['prints'] ) && is_array( $payload['prints'] ) ) {
+			foreach ( array_values( array_filter( $payload['prints'], 'is_array' ) ) as $raw_print ) {
+				$print = self::validate_print_fields( $raw_print );
+				if ( is_wp_error( $print ) ) {
+					return $print;
+				}
+				$groups[] = [ 'print', $print ];
+			}
+		}
+
 		if ( ! empty( $payload['web_design'] ) && is_array( $payload['web_design'] ) ) {
 			$web_design = self::validate_web_design_fields( $payload['web_design'] );
 			if ( is_wp_error( $web_design ) ) {
@@ -1367,6 +1380,81 @@ class YeffoPrint_Manual_Order_Creator {
 		$item = $order->get_item( $item_id );
 		if ( $item instanceof \WC_Order_Item_Product ) {
 			YeffoPrint_Order_Item_Meta::apply( $item, $values, $tier_quantity );
+			$item->save();
+		}
+
+		return true;
+	}
+
+	/**
+	 * A 3D print, checked the same way the product page's add to cart checks
+	 * it (class-print-controller.php): { print_id, size, colors: { slot index:
+	 * filament id }, text, text_color, quantity }. No lid image: that needs an
+	 * upload, so the Telegram bot doesn't offer it.
+	 *
+	 * @return array|\WP_Error
+	 */
+	private static function validate_print_fields( array $payload ) {
+		$print_id = absint( $payload['print_id'] ?? 0 );
+		if ( 'yp_print' !== get_post_type( $print_id ) || 'publish' !== get_post_status( $print_id ) ) {
+			return new \WP_Error( 'yeffoprint_print_not_found', __( 'That 3D print was not found.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		$size = YeffoPrint_Print_Meta::resolve_size( $print_id, $payload['size'] ?? '' );
+		if ( is_wp_error( $size ) ) {
+			return $size;
+		}
+		$picks = YeffoPrint_Print_Meta::resolve_picks( $print_id, (array) ( $payload['colors'] ?? [] ) );
+		if ( is_wp_error( $picks ) ) {
+			return $picks;
+		}
+		$addons = YeffoPrint_Print_Meta::resolve_addons( $print_id, $payload['text'] ?? '', 0, $payload['text_color'] ?? 0, 0 );
+		if ( is_wp_error( $addons ) ) {
+			return $addons;
+		}
+		$product_id = YeffoPrint_Print_Product::get_linked_product_id( $print_id );
+		$product    = $product_id ? wc_get_product( $product_id ) : false;
+		if ( ! $product || 'publish' !== $product->get_status() ) {
+			return new \WP_Error( 'yeffoprint_print_unavailable', __( "This 3D print isn't available to order yet.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return [
+			'print_id'   => $print_id,
+			'product_id' => $product_id,
+			'size'       => $size,
+			'picks'      => $picks,
+			'addons'     => $addons,
+			'quantity'   => max( 1, min( 100, absint( $payload['quantity'] ?? 1 ) ) ),
+		];
+	}
+
+	/**
+	 * One line at the item's live price (size + colors + lid text), with the
+	 * same snapshot checkout writes, so the order screen, production board and
+	 * print shipping prices (class-print-shipping.php) read it like any other.
+	 *
+	 * @return true|\WP_Error
+	 */
+	private static function add_print_row( \WC_Order $order, array $print ) {
+		$product = wc_get_product( $print['product_id'] );
+		$unit    = YeffoPrint_Print_Meta::unit_price( $print['print_id'], $print['picks'], $print['size'], $print['addons']['text'], 0 );
+		$total   = round( $unit * $print['quantity'], 2 );
+
+		$item_id = $product ? $order->add_product( $product, $print['quantity'], [ 'subtotal' => $total, 'total' => $total ] ) : 0;
+		if ( ! $item_id ) {
+			return new \WP_Error( 'yeffoprint_add_item_failed', __( "Couldn't add this 3D print to the order.", 'yeffoprint-core' ), [ 'status' => 500 ] );
+		}
+
+		$item = $order->get_item( $item_id );
+		if ( $item instanceof \WC_Order_Item_Product ) {
+			YeffoPrint_Order_Item_Meta::apply( $item, [
+				YeffoPrint_Cart_Item_Keys::PRINT_ID          => $print['print_id'],
+				YeffoPrint_Cart_Item_Keys::PRINT_SIZE        => $print['size'],
+				YeffoPrint_Cart_Item_Keys::PRINT_COLORS      => $print['picks'],
+				YeffoPrint_Cart_Item_Keys::PRINT_TEXT        => $print['addons']['text'],
+				YeffoPrint_Cart_Item_Keys::PRINT_IMAGE       => 0,
+				YeffoPrint_Cart_Item_Keys::PRINT_TEXT_COLOR  => $print['addons']['text_color'],
+				YeffoPrint_Cart_Item_Keys::PRINT_IMAGE_COLOR => null,
+			], 0 );
 			$item->save();
 		}
 

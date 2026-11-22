@@ -81,6 +81,26 @@
  *   - Required template fields the chat doesn't fill (color choices have a
  *     default) are asked as typed questions.
  *
+ * Follow-up request: "Can we also order 3d prints from the bot? Same dropdown to
+ * select a print and options. Ask missing fields?"
+ *   - "🖨 Shop 3D prints" (on the /neworder prompt and the summary, or typing
+ *     "3d prints") lists the prints, then asks with buttons for the size, a
+ *     color for each part, optional lid text (typed) and its color, and how
+ *     many (tap or type). Picks are checked like the product page checks them.
+ *   - Prints live in the session ('prints'), not in Claude's read, and go on
+ *     the order as their own lines (Manual_Order_Creator 'prints'). The pay
+ *     page raises shipping to the prints' shipping prices. Pause all sales
+ *     doesn't stop a prints-only order.
+ *
+ * Follow-up request: "Will the bot link the telegram account to that email for
+ * future orders? Will the bot send order confirmation through telegram once
+ * they pay their order and when shipping updates happen?"
+ *   - The order remembers its chat: a "Payment received" message when it's
+ *     paid, and the shipped message with tracking (the bot's own chat gets
+ *     it from YeffoPrint_Telegram_Order_Notifications).
+ *   - A chat not linked to an account gets a Connect Telegram email for the
+ *     order's account (email_link_offer()); tapping it links the account.
+ *
  * "Session id" ($chat_id below): the Telegram chat id for one of Jeff's
  * business chats, or the NEGATIVE chat id for the bot's own chat with that
  * customer, so the two never share a session or log (both chats have the
@@ -113,6 +133,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 	public function __construct() {
 		add_action( self::CRON_HOOK, [ self::class, 'process' ], 10, 1 );
 		add_action( 'yeffoprint_email_order_created', [ self::class, 'on_draft_created' ], 10, 2 );
+		add_action( 'woocommerce_payment_complete', [ self::class, 'on_paid' ], 20 );
+		add_action( 'woocommerce_order_status_processing', [ self::class, 'on_paid' ], 20 );
+		add_action( 'woocommerce_order_status_completed', [ self::class, 'on_paid' ], 20 );
+		add_action( 'woocommerce_order_status_shipped', [ self::class, 'on_shipped' ], 20 );
 	}
 
 	public static function is_enabled(): bool {
@@ -215,6 +239,13 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 		$command = $is_owner ? strtolower( strtok( $text, " \n@" ) ?: '' ) : '';
 
+		// Direct request: "Will I be able to initiate a 3d print order from a chat with me as well?"
+		// /print (or /order prints) opens the 3D print list in the chat right away.
+		$args = strtolower( trim( (string) substr( $text, strlen( $command ) ) ) );
+		if ( '/print' === $command || '/prints' === $command || ( '/order' === $command && preg_match( '/^(3\s*-?d|prints?|3d prints?)$/', $args ) ) ) {
+			self::start( $chat_id, $connection_id, (int) ( $message['message_id'] ?? 0 ), true );
+			return;
+		}
 		if ( '/order' === $command ) {
 			self::start( $chat_id, $connection_id, (int) ( $message['message_id'] ?? 0 ) );
 			return;
@@ -223,6 +254,13 @@ class YeffoPrint_Telegram_Chat_Orders {
 			delete_transient( self::SESSION_PREFIX . $chat_id );
 			self::delete_command( $connection_id, $chat_id, (int) ( $message['message_id'] ?? 0 ) );
 			return;
+		}
+
+		if ( ! $is_owner && ! $edited ) {
+			$open = self::session( $chat_id );
+			if ( $open && self::print_typed( $chat_id, $open, $text ) ) {
+				return; // Lid text or how many for a 3D print, not part of the label list.
+			}
 		}
 
 		self::log( $chat_id, [
@@ -240,6 +278,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 		}
 		if ( in_array( $session['stage'], [ 'collecting', 'confirming' ], true ) && self::asks_for_templates( $text ) ) {
 			self::send_categories( $chat_id );
+			return;
+		}
+		if ( in_array( $session['stage'], [ 'collecting', 'confirming' ], true ) && self::asks_for_prints( $text ) ) {
+			self::send_prints( $chat_id );
 			return;
 		}
 		self::customer_said( $chat_id, $session, $text );
@@ -300,10 +342,13 @@ class YeffoPrint_Telegram_Chat_Orders {
 				'started'       => time(),
 				'token'         => '',
 				'picks'         => [],
+				'prints'        => [],
 			] );
-			self::send( $sid, __( "Great, let's start your label order!\n\nSend me your list: what each label says (like “BPC-157 10mg”) and how many of each. One message or a few is fine. Or pick one of our ready-made designs:", 'yeffoprint-core' ), null, [ [
-				[ 'text' => __( '📋 Pick from our templates', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ],
-			] ] );
+			$buttons = [ [ [ 'text' => __( '📋 Pick from our templates', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ] ] ];
+			if ( self::orderable_prints() ) {
+				$buttons[] = [ [ 'text' => __( '🖨 Shop 3D prints', 'yeffoprint-core' ), 'callback_data' => 'tgco:pl:0' ] ];
+			}
+			self::send( $sid, __( "Great, let's start your order!\n\nFor labels, send me your list: what each label says (like “BPC-157 10mg”) and how many of each. One message or a few is fine. Or tap below for our ready-made designs or 3D prints:", 'yeffoprint-core' ), null, $buttons );
 			return true;
 		}
 
@@ -323,8 +368,15 @@ class YeffoPrint_Telegram_Chat_Orders {
 		if ( '/' === $text[0] ) {
 			return false; // Other commands (/help, /orders…) still work mid-order.
 		}
+		if ( self::print_typed( $sid, $session, $text ) ) {
+			return true;
+		}
 		if ( self::asks_for_templates( $text ) ) {
 			self::send_categories( $sid );
+			return true;
+		}
+		if ( self::asks_for_prints( $text ) ) {
+			self::send_prints( $sid );
 			return true;
 		}
 
@@ -372,6 +424,12 @@ class YeffoPrint_Telegram_Chat_Orders {
 		if ( $session && $allowed && in_array( $parts[1] ?? '', [ 'tl', 'tc', 't' ], true ) && in_array( $session['stage'], [ 'listing', 'collecting', 'confirming' ], true ) ) {
 			$client->answer_callback_query( $query_id );
 			self::template_tap( $sid, $session, $parts, $message, $business );
+			return;
+		}
+
+		if ( $session && $allowed && in_array( $parts[1] ?? '', [ 'pl', 'p', 'ps', 'pc', 'pt', 'px', 'pq', 'pr' ], true ) && in_array( $session['stage'], [ 'listing', 'collecting', 'confirming' ], true ) ) {
+			$client->answer_callback_query( $query_id );
+			self::print_tap( $sid, $session, $parts, $message, $business );
 			return;
 		}
 
@@ -546,6 +604,461 @@ class YeffoPrint_Telegram_Chat_Orders {
 		) );
 	}
 
+	/* ---------- 3D print picker ---------- */
+
+	private const PRINTS_PER_PAGE = 8;
+
+	/** Most color buttons shown for one choice (Telegram allows 100 buttons; more is unreadable). */
+	private const MAX_COLOR_BUTTONS = 30;
+
+	private static function asks_for_prints( string $text ): bool {
+		return (bool) preg_match( '/^\s*(show (me )?(the |your )?)?(3\s*-?d( prints?)?|prints?)\s*[?!.]*\s*$/i', $text );
+	}
+
+	/** Published 3D prints with a price and a sellable product, by title. @return \WP_Post[] */
+	private static function orderable_prints(): array {
+		$posts = get_posts( [
+			'post_type'      => 'yp_print',
+			'post_status'    => 'publish',
+			'posts_per_page' => 100,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+		] );
+		return array_values( array_filter( $posts, static function ( $post ) {
+			$product_id = YeffoPrint_Print_Product::get_linked_product_id( $post->ID );
+			$product    = $product_id && function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : null;
+			return YeffoPrint_Print_Meta::from_price( $post->ID ) > 0 && $product && 'publish' === $product->get_status();
+		} ) );
+	}
+
+	private static function send_prints( int $chat_id, int $page = 0 ): void {
+		$prints = self::orderable_prints();
+		if ( ! $prints ) {
+			self::send( $chat_id, __( 'Our 3D prints aren’t available to order right now.', 'yeffoprint-core' ) );
+			return;
+		}
+		$buttons = [];
+		foreach ( array_slice( $prints, $page * self::PRINTS_PER_PAGE, self::PRINTS_PER_PAGE ) as $post ) {
+			$buttons[] = [ [
+				/* translators: 1: print name, 2: its lowest price */
+				'text'          => sprintf( __( '%1$s · from %2$s', 'yeffoprint-core' ), mb_strimwidth( $post->post_title, 0, 36, '…' ), self::money( YeffoPrint_Print_Meta::from_price( $post->ID ) ) ),
+				'callback_data' => 'tgco:p:' . $post->ID,
+			] ];
+		}
+		$nav = [];
+		if ( $page > 0 ) {
+			$nav[] = [ 'text' => __( '‹ Back', 'yeffoprint-core' ), 'callback_data' => 'tgco:pl:' . ( $page - 1 ) ];
+		}
+		if ( count( $prints ) > ( $page + 1 ) * self::PRINTS_PER_PAGE ) {
+			$nav[] = [ 'text' => __( 'More ›', 'yeffoprint-core' ), 'callback_data' => 'tgco:pl:' . ( $page + 1 ) ];
+		}
+		if ( $nav ) {
+			$buttons[] = $nav;
+		}
+		self::send( $chat_id, __( 'Which 3D print?', 'yeffoprint-core' ), null, $buttons );
+	}
+
+	/**
+	 * tgco:pl:PAGE (list), tgco:p:ID (picked), tgco:ps:N (size), tgco:pc:SLOT:FILAMENT (color),
+	 * tgco:pt:1|0 (custom text or not), tgco:px:FILAMENT (text color), tgco:pq:N (how many),
+	 * tgco:pr (remove the order's 3D prints).
+	 */
+	private static function print_tap( int $chat_id, array $session, array $parts, array $message, string $business ): void {
+		$action = $parts[1];
+		$chat   = abs( $chat_id );
+		$msg_id = (int) ( $message['message_id'] ?? 0 );
+		$draft  = is_array( $session['print_draft'] ?? null ) ? $session['print_draft'] : null;
+
+		if ( 'pl' === $action ) {
+			self::send_prints( $chat_id, absint( $parts[2] ?? 0 ) );
+			return;
+		}
+
+		if ( 'pr' === $action ) {
+			$session['prints'] = [];
+			unset( $session['print_draft'], $session['awaiting'] );
+			self::client()->edit_message_text( $chat, $msg_id, (string) ( $message['text'] ?? '' ), $business );
+			self::send( $chat_id, __( 'Okay, I took the 3D prints off.', 'yeffoprint-core' ) );
+			self::after_print_change( $chat_id, $session );
+			return;
+		}
+
+		if ( 'p' === $action ) {
+			$print = get_post( absint( $parts[2] ?? 0 ) );
+			if ( ! $print || 'yp_print' !== $print->post_type || 'publish' !== $print->post_status ) {
+				return;
+			}
+			self::client()->edit_message_text( $chat, $msg_id, __( '3D print', 'yeffoprint-core' ) . ': ' . $print->post_title . ' ✓', $business );
+			$session['print_draft'] = [ 'print_id' => $print->ID, 'size' => null, 'colors' => [], 'text' => null, 'text_color' => 0, 'quantity' => 0 ];
+			unset( $session['awaiting'] );
+			self::save_session( $chat_id, $session );
+			$link = get_permalink( $print );
+			if ( $link ) {
+				self::send( $chat_id, sprintf( __( '%1$s, nice pick! See it here: %2$s', 'yeffoprint-core' ), $print->post_title, $link ) );
+			}
+			self::print_next( $chat_id, $session );
+			return;
+		}
+
+		if ( ! $draft ) {
+			return; // A button from a print that's already added or was dropped.
+		}
+		$print_id = (int) $draft['print_id'];
+		$label    = '';
+
+		if ( 'ps' === $action ) {
+			$options = self::print_sizes( $print_id );
+			$index   = absint( $parts[2] ?? 0 );
+			if ( ! isset( $options[ $index ] ) ) {
+				return;
+			}
+			$draft['size'] = $options[ $index ]['name'];
+			$label         = __( 'Size', 'yeffoprint-core' ) . ': ' . $draft['size'];
+		} elseif ( 'pc' === $action ) {
+			$slot  = absint( $parts[2] ?? 0 );
+			$slots = self::print_slots( $print_id );
+			$color = self::in_stock_color( $slots[ $slot ]['colors'] ?? [], absint( $parts[3] ?? 0 ) );
+			if ( ! $color ) {
+				return;
+			}
+			$draft['colors'][ $slot ] = $color['id'];
+			$label                    = $slots[ $slot ]['name'] . ': ' . $color['name'];
+		} elseif ( 'pt' === $action ) {
+			if ( '1' === ( $parts[2] ?? '' ) ) {
+				$session['awaiting'] = 'print_text';
+				$session['print_draft'] = $draft;
+				self::save_session( $chat_id, $session );
+				self::client()->edit_message_text( $chat, $msg_id, (string) ( $message['text'] ?? '' ) . ' ' . __( 'Yes', 'yeffoprint-core' ), $business );
+				$addons = YeffoPrint_Print_Meta::get_addons( $print_id );
+				/* translators: 1: where on the print, e.g. "lid", 2: max characters */
+				self::send( $chat_id, sprintf( __( 'Type the %1$s text (up to %2$d characters):', 'yeffoprint-core' ), $addons['area'], $addons['text_max'] ) );
+				return;
+			}
+			$draft['text'] = '';
+			$label         = (string) ( $message['text'] ?? '' ) . ' ' . __( 'No thanks', 'yeffoprint-core' );
+		} elseif ( 'px' === $action ) {
+			$color = self::in_stock_color( array_values( YeffoPrint_Print_Meta::get_filaments() ), absint( $parts[2] ?? 0 ) );
+			if ( ! $color ) {
+				return;
+			}
+			$draft['text_color'] = $color['id'];
+			$label               = __( 'Text color', 'yeffoprint-core' ) . ': ' . $color['name'];
+		} elseif ( 'pq' === $action ) {
+			$draft['quantity'] = max( 1, min( 100, absint( $parts[2] ?? 1 ) ) );
+			unset( $session['awaiting'] );
+			$label = __( 'How many', 'yeffoprint-core' ) . ': ' . $draft['quantity'];
+		} else {
+			return;
+		}
+
+		self::client()->edit_message_text( $chat, $msg_id, $label . ' ✓', $business );
+		$session['print_draft'] = $draft;
+		self::save_session( $chat_id, $session );
+		self::print_next( $chat_id, $session );
+	}
+
+	/** A typed answer the print picker asked for (lid text, or how many). @return bool true when it was one. */
+	private static function print_typed( int $chat_id, array $session, string $text ): bool {
+		$draft = is_array( $session['print_draft'] ?? null ) ? $session['print_draft'] : null;
+		$what  = (string) ( $session['awaiting'] ?? '' );
+		if ( ! $draft || '' === $what ) {
+			return false;
+		}
+
+		if ( 'print_text' === $what ) {
+			$addons = YeffoPrint_Print_Meta::get_addons( (int) $draft['print_id'] );
+			$clean  = trim( sanitize_text_field( $text ) );
+			if ( '' === $clean || mb_strlen( $clean ) > $addons['text_max'] ) {
+				/* translators: %d: max characters */
+				self::send( $chat_id, sprintf( __( 'Please keep it to %d characters or fewer. Type it again:', 'yeffoprint-core' ), $addons['text_max'] ) );
+				return true;
+			}
+			$draft['text'] = $clean;
+		} elseif ( 'print_qty' === $what ) {
+			if ( ! preg_match( '/^\s*(\d{1,3})\s*$/', $text, $m ) || (int) $m[1] < 1 || (int) $m[1] > 100 ) {
+				return false; // Not a number: read it as part of the order instead.
+			}
+			$draft['quantity'] = (int) $m[1];
+		} else {
+			return false;
+		}
+
+		unset( $session['awaiting'] );
+		$session['print_draft'] = $draft;
+		self::save_session( $chat_id, $session );
+		self::print_next( $chat_id, $session );
+		return true;
+	}
+
+	/** Sizes the print can be bought in (priced ones), in admin order. */
+	private static function print_sizes( int $print_id ): array {
+		return array_values( array_filter( YeffoPrint_Print_Meta::get_size_options( $print_id ), static function ( $option ) { return (float) $option['price'] > 0; } ) );
+	}
+
+	/** The print's color choices with their colors resolved (get_item_payload()'s slots). */
+	private static function print_slots( int $print_id ): array {
+		$payload = YeffoPrint_Print_Meta::get_item_payload( $print_id );
+		return $payload ? $payload['slots'] : [];
+	}
+
+	private static function in_stock_color( array $colors, int $id ): ?array {
+		foreach ( $colors as $color ) {
+			if ( (int) $color['id'] === $id && ! empty( $color['in_stock'] ) ) {
+				return $color;
+			}
+		}
+		return null;
+	}
+
+	/** @param array[] $colors filament data */
+	private static function color_keyboard( string $prefix, array $colors, bool $show_extra = true ): array {
+		$buttons = [];
+		foreach ( array_slice( array_values( array_filter( $colors, static function ( $c ) { return ! empty( $c['in_stock'] ); } ) ), 0, self::MAX_COLOR_BUTTONS ) as $color ) {
+			$buttons[] = [
+				'text'          => $color['name'] . ( $show_extra && (float) $color['extra_charge'] > 0 ? ' +' . self::money( (float) $color['extra_charge'] ) : '' ),
+				'callback_data' => 'tgco:' . $prefix . ':' . $color['id'],
+			];
+		}
+		return array_chunk( $buttons, 2 );
+	}
+
+	/** Asks the next thing the print being added needs (size, each color, lid text, how many), or adds it. */
+	private static function print_next( int $chat_id, array $session ): void {
+		$draft    = (array) $session['print_draft'];
+		$print_id = (int) $draft['print_id'];
+		$title    = get_the_title( $print_id );
+
+		$sizes = self::print_sizes( $print_id );
+		if ( $sizes && null === $draft['size'] ) {
+			$buttons = [];
+			foreach ( $sizes as $index => $option ) {
+				$buttons[] = [ 'text' => $option['name'] . ' · ' . self::money( (float) $option['price'] ), 'callback_data' => 'tgco:ps:' . $index ];
+			}
+			self::send( $chat_id, __( 'Tap a size:', 'yeffoprint-core' ), null, array_chunk( $buttons, 2 ) );
+			return;
+		}
+
+		foreach ( self::print_slots( $print_id ) as $index => $slot ) {
+			if ( isset( $draft['colors'][ $index ] ) ) {
+				continue;
+			}
+			$keyboard = self::color_keyboard( 'pc:' . $index, $slot['colors'] );
+			if ( ! $keyboard ) {
+				unset( $session['print_draft'] );
+				self::save_session( $chat_id, $session );
+				/* translators: 1: part name, 2: print name */
+				self::send( $chat_id, sprintf( __( 'Sorry, every %1$s color for the %2$s is out of stock right now, so I can’t add it.', 'yeffoprint-core' ), $slot['name'], $title ) );
+				self::after_print_change( $chat_id, $session );
+				return;
+			}
+			/* translators: %s: part name, e.g. "Base" */
+			self::send( $chat_id, sprintf( __( 'Tap a color for the %s:', 'yeffoprint-core' ), $slot['name'] ) . ( '' !== (string) ( $slot['hint'] ?? '' ) ? "\n" . $slot['hint'] : '' ), null, $keyboard );
+			return;
+		}
+
+		$addons = YeffoPrint_Print_Meta::get_addons( $print_id );
+		if ( null === $draft['text'] ) {
+			if ( ! $addons['text'] ) {
+				$draft['text'] = '';
+			} else {
+				$session['print_draft'] = $draft;
+				self::save_session( $chat_id, $session );
+				self::send( $chat_id, sprintf(
+					/* translators: 1: where on the print, e.g. "lid", 2: price */
+					__( 'Add custom %1$s text? (%2$s)', 'yeffoprint-core' ),
+					$addons['area'],
+					$addons['text_price'] > 0 ? '+' . self::money( $addons['text_price'] ) : __( 'free', 'yeffoprint-core' )
+				), null, [ [
+					[ 'text' => __( 'Yes', 'yeffoprint-core' ), 'callback_data' => 'tgco:pt:1' ],
+					[ 'text' => __( 'No thanks', 'yeffoprint-core' ), 'callback_data' => 'tgco:pt:0' ],
+				] ] );
+				return;
+			}
+		}
+
+		if ( '' !== $draft['text'] && ! $draft['text_color'] ) {
+			$keyboard = self::color_keyboard( 'px', array_values( YeffoPrint_Print_Meta::get_filaments() ), false ); // Lid text color has no extra charge.
+			if ( $keyboard ) {
+				/* translators: %s: where on the print, e.g. "lid" */
+				self::send( $chat_id, sprintf( __( 'Tap a color for the %s text:', 'yeffoprint-core' ), $addons['area'] ), null, $keyboard );
+				return;
+			}
+			$draft['text'] = ''; // No color to print it in.
+		}
+
+		if ( ! $draft['quantity'] ) {
+			$session['print_draft'] = $draft;
+			$session['awaiting']    = 'print_qty';
+			self::save_session( $chat_id, $session );
+			$buttons = [];
+			foreach ( [ 1, 2, 3, 4, 5 ] as $n ) {
+				$buttons[] = [ 'text' => (string) $n, 'callback_data' => 'tgco:pq:' . $n ];
+			}
+			self::send( $chat_id, __( 'How many? Tap or type a number:', 'yeffoprint-core' ), null, [ $buttons ] );
+			return;
+		}
+
+		// Done: check it like checkout would, then add it to the order.
+		$check = self::print_payload( $draft );
+		$picks = YeffoPrint_Print_Meta::resolve_picks( $print_id, $check['colors'] );
+		if ( is_wp_error( $picks ) ) {
+			unset( $session['print_draft'] );
+			self::save_session( $chat_id, $session );
+			self::send( $chat_id, $picks->get_error_message() . ' ' . __( 'Tap 🖨 to pick it again.', 'yeffoprint-core' ), null, [ [ [ 'text' => __( '🖨 Add a 3D print', 'yeffoprint-core' ), 'callback_data' => 'tgco:p:' . $print_id ] ] ] );
+			return;
+		}
+
+		$session['prints']   = array_values( (array) ( $session['prints'] ?? [] ) );
+		$session['prints'][] = $draft;
+		unset( $session['print_draft'], $session['awaiting'] );
+		/* translators: %s: e.g. "2 × Ghost Can Holder (12oz Can · Base: Black) $28.00" */
+		self::send( $chat_id, sprintf( __( 'Added: %s', 'yeffoprint-core' ), self::print_line( $draft ) ) );
+		self::after_print_change( $chat_id, $session );
+	}
+
+	/** After a print is added or removed: read the chat again for email/address and show the next question or the summary. */
+	private static function after_print_change( int $chat_id, array $session ): void {
+		$session['stage']  = 'collecting';
+		$session['rounds'] = max( 0, (int) ( $session['rounds'] ?? 0 ) - 1 ); // The re-read may repeat a question; don't spend a round on it.
+		self::save_session( $chat_id, $session );
+		self::run_soon( $chat_id, 0 );
+	}
+
+	/** What Create Order takes for one print (Manual_Order_Creator's 'prints'). */
+	private static function print_payload( array $draft ): array {
+		return [
+			'print_id'   => (int) $draft['print_id'],
+			'size'       => (string) ( $draft['size'] ?? '' ),
+			'colors'     => array_map( 'intval', (array) $draft['colors'] ),
+			'text'       => (string) ( $draft['text'] ?? '' ),
+			'text_color' => (int) ( $draft['text_color'] ?? 0 ),
+			'quantity'   => max( 1, (int) $draft['quantity'] ),
+		];
+	}
+
+	/** "2 × Ghost Can Holder (12oz Can · Base: Black · Lid text “Bob”) $28.00" */
+	private static function print_line( array $draft ): string {
+		$print_id = (int) $draft['print_id'];
+		$bits     = [];
+		if ( '' !== (string) ( $draft['size'] ?? '' ) ) {
+			$bits[] = $draft['size'];
+		}
+		$picks = YeffoPrint_Print_Meta::resolve_picks( $print_id, array_map( 'intval', (array) $draft['colors'] ) );
+		if ( ! is_wp_error( $picks ) ) {
+			foreach ( $picks as $pick ) {
+				$bits[] = $pick['slot'] . ': ' . preg_replace( '/\s*\(.*\)$/', '', $pick['name'] );
+			}
+		} else {
+			$picks = [];
+		}
+		$text = (string) ( $draft['text'] ?? '' );
+		if ( '' !== $text ) {
+			$bits[] = sprintf( '%s text “%s”', ucfirst( YeffoPrint_Print_Meta::get_addons( $print_id )['area'] ), $text );
+		}
+		$unit = YeffoPrint_Print_Meta::unit_price( $print_id, $picks, (string) ( $draft['size'] ?? '' ), $text, 0 );
+		return sprintf( '%d × %s%s %s', (int) $draft['quantity'], get_the_title( $print_id ), $bits ? ' (' . implode( ' · ', $bits ) . ')' : '', self::money( $unit * (int) $draft['quantity'] ) );
+	}
+
+	/* ---------- Telegram messages after the pay link ---------- */
+
+	private const META_CHAT       = '_yp_tgco_chat';
+	private const META_CONNECTION = '_yp_tgco_connection';
+	private const META_PAID_SENT  = '_yp_tgco_paid_sent';
+	private const LINK_EMAIL_META = '_yp_tgco_link_emailed';
+
+	/** Remembers which chat an order came from, so payment and shipping updates go back there. */
+	private static function remember_chat( \WC_Order $order, int $chat_id, string $connection_id ): void {
+		$order->update_meta_data( self::META_CHAT, $chat_id );
+		$order->update_meta_data( self::META_CONNECTION, $connection_id );
+		$order->save_meta_data();
+		// The bot's own chat: the existing order updates (shipped, proof ready) go there too.
+		if ( $chat_id < 0 && class_exists( 'YeffoPrint_Telegram_Order_Notifications' ) ) {
+			YeffoPrint_Telegram_Order_Notifications::link( $order, abs( $chat_id ) );
+		}
+	}
+
+	/** Direct request: "send order confirmation through telegram once they pay". */
+	public static function on_paid( int $order_id ): void {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+		if ( ! $order instanceof \WC_Order || ! $order->get_date_paid() ) {
+			return;
+		}
+		$chat_id = (int) $order->get_meta( self::META_CHAT, true );
+		if ( ! $chat_id || $order->get_meta( self::META_PAID_SENT, true ) ) {
+			return;
+		}
+		$order->update_meta_data( self::META_PAID_SENT, time() );
+		$order->save_meta_data();
+
+		$proof = false;
+		foreach ( $order->get_items() as $item ) {
+			if ( (int) $item->get_meta( '_yp_custom_order_id', true ) ) {
+				$proof = true;
+			}
+		}
+		$text = sprintf( __( '✅ Payment received for order #%s. Thank you!', 'yeffoprint-core' ), $order->get_order_number() ) . "\n\n" . ( $proof
+			? __( 'Next we’ll design your labels and send you a proof to approve before anything is printed.', 'yeffoprint-core' )
+			: __( 'We’re getting it ready and will message you here when it ships.', 'yeffoprint-core' ) );
+		self::send( $chat_id, $text, (string) $order->get_meta( self::META_CONNECTION, true ) );
+	}
+
+	/** Direct request: "...and when shipping updates happen". The bot's own chat already gets this (Order_Notifications). */
+	public static function on_shipped( int $order_id ): void {
+		$order   = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+		$chat_id = $order instanceof \WC_Order ? (int) $order->get_meta( self::META_CHAT, true ) : 0;
+		if ( $chat_id <= 0 ) {
+			return;
+		}
+		if ( class_exists( 'YeffoPrint_Order_Addon_Shipping' ) && ! YeffoPrint_Order_Addon_Shipping::is_email_sender( $order ) ) {
+			return; // One message per box for a linked add-on group.
+		}
+		$lines = [ sprintf( __( '📦 Your order #%s has shipped!', 'yeffoprint-core' ), $order->get_order_number() ) ];
+		foreach ( YeffoPrint_Order_Tracking::get_shipments( $order ) as $shipment ) {
+			$lines[] = trim( $shipment['carrier_label'] . ' ' . $shipment['tracking_number'] );
+			if ( $shipment['carrier_url'] ) {
+				$lines[] = $shipment['carrier_url'];
+			}
+		}
+		self::send( $chat_id, implode( "\n", $lines ), (string) $order->get_meta( self::META_CONNECTION, true ) );
+	}
+
+	/**
+	 * Direct request: "Will the bot link the telegram account to that email for
+	 * future orders?" Only once the account's owner says so: the account's
+	 * email gets a Connect Telegram link (the same one-time code as My Account ›
+	 * Connect Telegram, good for a few days), because a linked chat can see the
+	 * account's orders and approve its proofs. At most one email a month.
+	 *
+	 * @return bool true when the email went out.
+	 */
+	private static function email_link_offer( \WC_Order $order ): bool {
+		$user_id = (int) $order->get_customer_id();
+		if ( ! $user_id || YeffoPrint_Telegram_Account_Link::is_linked( $user_id ) ) {
+			return false;
+		}
+		$last = (int) get_user_meta( $user_id, self::LINK_EMAIL_META, true );
+		if ( $last && $last > time() - 30 * DAY_IN_SECONDS ) {
+			return false;
+		}
+		$user = get_user_by( 'id', $user_id );
+		$url  = $user ? YeffoPrint_Telegram_Account_Link::deep_link_url( YeffoPrint_Telegram_Account_Link::generate_code( $user_id, 5 * DAY_IN_SECONDS ) ) : '';
+		if ( '' === $url || ! function_exists( 'WC' ) || ! WC()->mailer() ) {
+			return false;
+		}
+
+		$mailer  = WC()->mailer();
+		$heading = __( 'Connect your Telegram', 'yeffoprint-core' );
+		$body    = '<p>' . esc_html( sprintf( __( 'Thanks for your order #%s on Telegram!', 'yeffoprint-core' ), $order->get_order_number() ) ) . '</p>'
+			. '<p>' . esc_html__( 'Tap the button below to connect your Telegram to your account. Next time the bot will already know your email and address, and it can message you about your orders.', 'yeffoprint-core' ) . '</p>'
+			. '<p><a href="' . esc_url( $url ) . '" style="display:inline-block;padding:12px 20px;background:#229ED9;color:#fff;border-radius:6px;text-decoration:none;font-weight:bold;">' . esc_html__( 'Connect Telegram', 'yeffoprint-core' ) . '</a></p>'
+			. '<p>' . esc_html__( 'The link works for 5 days. If you didn’t order on Telegram, you can ignore this email.', 'yeffoprint-core' ) . '</p>';
+		$sent = $mailer->send( $user->user_email, $heading, $mailer->wrap_message( $heading, $body ), [ 'Content-Type: text/html; charset=UTF-8' ] );
+		if ( $sent ) {
+			update_user_meta( $user_id, self::LINK_EMAIL_META, time() );
+		}
+		return (bool) $sent;
+	}
+
 	/** "Edit my order": back to collecting, keeping the order it will replace. */
 	private static function begin_edit( int $chat_id, array $session ): void {
 		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) ( $session['order_id'] ?? 0 ) ) : null;
@@ -571,6 +1084,11 @@ class YeffoPrint_Telegram_Chat_Orders {
 			$session['result'] = $result;
 		}
 		self::save_session( $chat_id, $session );
+
+		self::remember_chat( $order, $chat_id, $connection_id );
+		if ( ! YeffoPrint_Telegram_Account_Link::get_user_id_for_chat( abs( $chat_id ) ) && self::email_link_offer( $order ) ) {
+			self::send( $chat_id, __( 'I also emailed you a link to connect this Telegram to your account. Tap it and next time I won’t need to ask for your email or address.', 'yeffoprint-core' ), $connection_id );
+		}
 	}
 
 	/** Fills labels still missing a size or material with what the customer tapped (when it fits that label). */
@@ -614,6 +1132,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 	private static function advance( int $chat_id, array $session, bool $after_read ): void {
 		$context = self::customer_context( $chat_id );
 		$result  = self::apply_picks( (array) $session['result'], (array) ( $session['picks'] ?? [] ) );
+		$result['prints'] = array_values( (array) ( $session['prints'] ?? [] ) );
 		$missing = self::missing( $result, $context );
 		$session['result'] = $result;
 
@@ -623,7 +1142,16 @@ class YeffoPrint_Telegram_Chat_Orders {
 				return;
 			}
 			$session['rounds']++;
-			self::send( $chat_id, self::question_text( $missing['text'], $session['rounds'] ) );
+			$nothing = empty( array_filter( $result['items'], static function ( $item ) { return 'unclear' !== $item['kind']; } ) ) && ! $result['prints'];
+			$buttons = null;
+			if ( $nothing ) {
+				// No labels found yet: offer the pickers too, e.g. a chat that's only about a 3D print.
+				$buttons = [ [ [ 'text' => __( '📋 Pick from our templates', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ] ] ];
+				if ( self::orderable_prints() ) {
+					$buttons[] = [ [ 'text' => __( '🖨 Shop 3D prints', 'yeffoprint-core' ), 'callback_data' => 'tgco:pl:0' ] ];
+				}
+			}
+			self::send( $chat_id, self::question_text( $missing['text'], $session['rounds'] ), null, $buttons );
 		}
 
 		if ( $missing['size'] ) {
@@ -644,13 +1172,20 @@ class YeffoPrint_Telegram_Chat_Orders {
 			}
 			$session['stage'] = 'confirming';
 			self::save_session( $chat_id, $session );
-			self::send( $chat_id, self::summary_text( $result, $context ), null, [ [
+			$buttons = [ [
 				[ 'text' => __( '✅ Looks good, send my payment link', 'yeffoprint-core' ), 'callback_data' => 'tgco:ok' ],
 			], [
 				[ 'text' => __( '✏️ Change something', 'yeffoprint-core' ), 'callback_data' => 'tgco:edit' ],
 			], [
 				[ 'text' => __( '📋 Add a template label', 'yeffoprint-core' ), 'callback_data' => 'tgco:tl' ],
-			] ] );
+			] ];
+			if ( self::orderable_prints() ) {
+				$buttons[] = [ [ 'text' => __( '🖨 Add a 3D print', 'yeffoprint-core' ), 'callback_data' => 'tgco:pl:0' ] ];
+			}
+			if ( $result['prints'] ) {
+				$buttons[] = [ [ 'text' => __( '🗑 Remove the 3D prints', 'yeffoprint-core' ), 'callback_data' => 'tgco:pr' ] ];
+			}
+			self::send( $chat_id, self::summary_text( $result, $context ), null, $buttons );
 			return;
 		}
 
@@ -661,7 +1196,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 	}
 
 	/** Jeff typed /order: (re)start the order for this chat. */
-	private static function start( int $chat_id, string $connection_id, int $command_message_id ): void {
+	private static function start( int $chat_id, string $connection_id, int $command_message_id, bool $prints = false ): void {
 		self::delete_command( $connection_id, $chat_id, $command_message_id );
 
 		if ( '' === YeffoPrint_Email_Order_Reader::api_key() ) {
@@ -679,7 +1214,16 @@ class YeffoPrint_Telegram_Chat_Orders {
 			'token'         => '',
 			'picks'         => [],
 			'order_id'      => (int) ( $old['order_id'] ?? 0 ) ?: self::unpaid_order_for_chat( $chat_id ), // An unpaid order this one replaces.
+			'prints'        => [],
 		] );
+		if ( $prints ) {
+			// Straight to the print list; the chat is read once a print is added.
+			$session = self::session( $chat_id );
+			$session['stage'] = 'listing';
+			self::save_session( $chat_id, $session );
+			self::send_prints( $chat_id );
+			return;
+		}
 		self::send( $chat_id, __( 'Thanks! Give me a moment to put your order together.', 'yeffoprint-core' ) );
 		self::run_soon( $chat_id, 0 );
 	}
@@ -799,7 +1343,9 @@ class YeffoPrint_Telegram_Chat_Orders {
 			return;
 		}
 
-		if ( class_exists( 'YeffoPrint_Sales_Pause' ) && YeffoPrint_Sales_Pause::is_paused() ) {
+		// Pause all sales stops labels only; 3D prints use a different printer and stay open.
+		$has_labels = (bool) array_filter( $result['items'], static function ( $item ) { return 'unclear' !== $item['kind']; } );
+		if ( $has_labels && class_exists( 'YeffoPrint_Sales_Pause' ) && YeffoPrint_Sales_Pause::is_paused() ) {
 			self::hand_to_owner( $chat_id, $session, $context, __( 'Sales are paused (Store › Quick switches), so no order was created.', 'yeffoprint-core' ) );
 			return;
 		}
@@ -843,6 +1389,10 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 	/** Something the bot can't do itself: the draft waits in Email Orders, and Create Order there sends the pay link. */
 	private static function hand_to_owner( int $chat_id, array $session, array $context, string $reason ): void {
+		if ( ! empty( $session['prints'] ) ) {
+			// Email Orders drafts hold labels only: the prints are listed for Jeff to add.
+			$reason .= "\nAlso add these 3D prints (Add items on the order):\n" . implode( "\n", array_map( [ self::class, 'print_line' ], (array) $session['prints'] ) );
+		}
 		$session['stage'] = 'waiting_owner';
 		self::save_session( $chat_id, $session );
 		self::send( $chat_id, __( "Thanks! I'll double-check your order and send your payment link here shortly.", 'yeffoprint-core' ) );
@@ -860,7 +1410,7 @@ class YeffoPrint_Telegram_Chat_Orders {
 	 */
 	private static function blocker( array $result ): string {
 		$items = array_filter( $result['items'], static function ( $item ) { return 'unclear' !== $item['kind']; } );
-		if ( ! $items ) {
+		if ( ! $items && empty( $result['prints'] ) ) {
 			return __( 'No labels were found in the chat.', 'yeffoprint-core' );
 		}
 		foreach ( $result['items'] as $item ) {
@@ -954,6 +1504,9 @@ class YeffoPrint_Telegram_Chat_Orders {
 		if ( $groups && ! $custom ) {
 			$payload['template'] = $template_payload( array_shift( $groups ) );
 		}
+		if ( ! empty( $result['prints'] ) ) {
+			$payload['prints'] = array_map( [ self::class, 'print_payload' ], (array) $result['prints'] );
+		}
 
 		$created = YeffoPrint_Manual_Order_Creator::create( $payload );
 		if ( is_wp_error( $created ) ) {
@@ -1002,12 +1555,17 @@ class YeffoPrint_Telegram_Chat_Orders {
 
 	private static function send_pay_link( int $chat_id, string $connection_id, \WC_Order $order ): bool {
 		$labels = YeffoPrint_Order_Label_Count::summary( $order );
+		$proof  = false;
+		foreach ( $order->get_items() as $item ) {
+			$proof = $proof || (int) $item->get_meta( '_yp_custom_order_id', true ) > 0;
+		}
 		$text   = sprintf(
-			/* translators: 1: order number, 2: label count and order total, e.g. "120 labels, $54.00", 3: pay link */
-			__( "Your order #%1\$s is ready (%2\$s before shipping).\n\nYou can check your address, choose shipping and pay here:\n%3\$s\n\nWe'll send a proof to approve before anything is printed. Need to add or change labels before you pay? Tap Edit my order.", 'yeffoprint-core' ),
+			/* translators: 1: order number, 2: label count and order total, e.g. "120 labels, $54.00", 3: pay link, 4: proof note */
+			__( "Your order #%1\$s is ready (%2\$s before shipping).\n\nYou can check your address, choose shipping and pay here:\n%3\$s\n\n%4\$sNeed to add or change something before you pay? Tap Edit my order.", 'yeffoprint-core' ),
 			$order->get_order_number(),
 			( '' !== $labels ? $labels . ', ' : '' ) . self::money( (float) $order->get_total() ),
-			$order->get_checkout_payment_url()
+			$order->get_checkout_payment_url(),
+			$proof ? __( "We'll send a proof to approve before anything is printed. ", 'yeffoprint-core' ) : ''
 		);
 		return self::send( $chat_id, $text, $connection_id, [ [
 			[ 'text' => __( '✏️ Edit my order', 'yeffoprint-core' ), 'callback_data' => 'tgco:change' ],
@@ -1106,7 +1664,8 @@ class YeffoPrint_Telegram_Chat_Orders {
 		$lines  = [];
 		$labels = array_values( array_filter( $result['items'], static function ( $item ) { return 'unclear' !== $item['kind']; } ) );
 
-		if ( ! $labels ) {
+		$prints = (array) ( $result['prints'] ?? [] );
+		if ( ! $labels && ! $prints ) {
 			if ( ! $result['items'] ) {
 				$out['text'][] = __( 'Your label list (what each says and how many of each)', 'yeffoprint-core' );
 			}
@@ -1243,6 +1802,9 @@ class YeffoPrint_Telegram_Chat_Orders {
 		if ( $count ) {
 			/* translators: %s: e.g. "120 labels" */
 			$lines[] = sprintf( __( 'In total: %s', 'yeffoprint-core' ), YeffoPrint_Order_Label_Count::format( [ 'labels' => $count ] ) );
+		}
+		foreach ( (array) ( $result['prints'] ?? [] ) as $print ) {
+			$lines[] = '• ' . self::print_line( $print );
 		}
 
 		$address = $result['shipping_address'];
