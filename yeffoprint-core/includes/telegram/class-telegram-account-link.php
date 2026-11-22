@@ -42,9 +42,10 @@ class YeffoPrint_Telegram_Account_Link {
 	private const BOT_USERNAME_TRANSIENT = 'yp_telegram_bot_username';
 	private const BOT_USERNAME_TTL       = DAY_IN_SECONDS;
 
-	public static function generate_code( int $user_id ): string {
+	/** $ttl: seconds the code works; the Telegram order bot's emailed link uses a few days. */
+	public static function generate_code( int $user_id, int $ttl = 0 ): string {
 		$code = strtoupper( substr( wp_generate_password( 10, false, false ), 0, 8 ) );
-		set_transient( self::CODE_TRANSIENT_PREFIX . $code, $user_id, self::CODE_TTL );
+		set_transient( self::CODE_TRANSIENT_PREFIX . $code, $user_id, $ttl > 0 ? $ttl : self::CODE_TTL );
 
 		return $code;
 	}

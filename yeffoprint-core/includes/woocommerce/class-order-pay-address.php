@@ -289,7 +289,7 @@ class YeffoPrint_Order_Pay_Address {
 			return;
 		}
 
-		$options = YeffoPrint_Shippo_Settings::get_manual_order_shipping_options();
+		$options = self::shipping_options( $order );
 		if ( ! $options ) {
 			return;
 		}
@@ -345,13 +345,34 @@ class YeffoPrint_Order_Pay_Address {
 		<?php
 	}
 
+	/**
+	 * The saved shipping options, each raised to the 3D prints' own shipping
+	 * price for it when the order has prints (class-print-shipping.php), so a
+	 * Telegram order with a print pays the same shipping checkout would charge.
+	 */
+	private static function shipping_options( \WC_Order $order ): array {
+		$options = YeffoPrint_Shippo_Settings::get_manual_order_shipping_options();
+		if ( ! class_exists( 'YeffoPrint_Print_Shipping' ) ) {
+			return $options;
+		}
+		$prices = YeffoPrint_Print_Shipping::order_shipping( $order );
+		if ( ! $prices ) {
+			return $options;
+		}
+		foreach ( $options as &$option ) {
+			$option['amount'] = max( (float) $option['amount'], YeffoPrint_Print_Shipping::floor_for_option( $prices, $option ) );
+		}
+		unset( $option );
+		return $options;
+	}
+
 	/** Index into the saved shipping options of the line the customer already picked (a live pick on this page, or an earlier visit), or null. */
 	private static function chosen_option_index( \WC_Order $order ): ?int {
 		foreach ( $order->get_items( 'shipping' ) as $item ) {
 			if ( ! $item->get_meta( self::CHOSEN_SHIPPING_ITEM_META ) ) {
 				continue;
 			}
-			foreach ( YeffoPrint_Shippo_Settings::get_manual_order_shipping_options() as $index => $option ) {
+			foreach ( self::shipping_options( $order ) as $index => $option ) {
 				if ( $option['label'] === $item->get_method_title() ) {
 					return $index;
 				}
@@ -389,7 +410,7 @@ class YeffoPrint_Order_Pay_Address {
 		if ( ! $errors ) {
 			if ( self::customer_picks_shipping( $order ) ) {
 				$index   = isset( $_POST['yp_pay_shipping'] ) && '' !== $_POST['yp_pay_shipping'] ? absint( $_POST['yp_pay_shipping'] ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-				$options = YeffoPrint_Shippo_Settings::get_manual_order_shipping_options();
+				$options = self::shipping_options( $order );
 				$picked  = null !== $index ? ( $options[ $index ] ?? null ) : null;
 
 				if ( ! $picked ) {
@@ -502,7 +523,7 @@ class YeffoPrint_Order_Pay_Address {
 		if ( isset( $_POST['option'] ) && self::customer_picks_shipping( $order ) ) {
 			$country = isset( $_POST['country'] ) ? strtoupper( sanitize_text_field( wp_unslash( $_POST['country'] ) ) ) : '';
 			$index   = '' !== $_POST['option'] ? absint( $_POST['option'] ) : null;
-			$options = YeffoPrint_Shippo_Settings::get_manual_order_shipping_options();
+			$options = self::shipping_options( $order );
 			$option  = null !== $index ? ( $options[ $index ] ?? null ) : null;
 
 			if ( $option && YeffoPrint_Shippo_Settings::option_ships_to( $option, $country ) ) {
