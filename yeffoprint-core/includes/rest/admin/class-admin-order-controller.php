@@ -649,6 +649,8 @@ class YeffoPrint_Admin_Order_Controller {
 			// Labels card's Edit form, and a customer's request waiting on
 			// Approve / Decline.
 			'label_lines'          => YeffoPrint_Order_Label_Changes::admin_can_edit( $order ) ? YeffoPrint_Order_Label_Changes::editable_lines( $order ) : [],
+			// Unpaid: the Edit labels form also changes quantities (repriced).
+			'label_qty_editable'   => YeffoPrint_Order_Label_Changes::can_edit_quantities( $order ),
 			'change_request'       => YeffoPrint_Order_Label_Changes::get_request( $order ),
 			'payment_url'          => $order->needs_payment() ? $order->get_checkout_payment_url() : null,
 			'customer_picks_shipping' => YeffoPrint_Order_Pay_Address::customer_picks_shipping( $order ),

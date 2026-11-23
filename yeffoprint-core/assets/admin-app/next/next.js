@@ -1617,13 +1617,21 @@
 			if ( list ) {
 				list.style.display = 'none'; // .ypn-labs sets its own display, which beats [hidden].
 			}
+			// Unpaid orders also change quantities here (repriced on save).
+			var qtyEditable = !! order.label_qty_editable;
 			form.innerHTML =
-				order.label_lines.map( function ( line ) {
+				order.label_lines.map( function ( line, lineIndex ) {
 					return '<div class="ypn-lfe">' +
-						'<h4 class="ypn-form__h">' + esc( line.name ) + '</h4>' +
+						'<h4 class="ypn-form__h">' + ( lineIndex + 1 ) + '. ' + esc( line.name ) +
+							( line.details ? ' <span class="ypn-lfe__meta">' + esc( line.details ) + '</span>' : '' ) +
+							( 'number' === typeof line.total ? ' <span class="ypn-lfe__meta">· ' + esc( money( line.total ) ) + '</span>' : '' ) +
+						'</h4>' +
 						line.labels.map( function ( label ) {
-							return ( line.labels.length > 1 ? '<div class="ypn-lfe__lab">Label ' + ( label.index + 1 ) + ' · qty ' + label.quantity + '</div>' : '' ) +
-								'<div class="ypn-lfe__grid">' + label.fields.map( function ( field ) {
+							var qty = qtyEditable
+								? '<label class="yp-field ypn-lfe__qty"><span class="yp-field__label">Quantity</span><input type="number" min="1" step="1" inputmode="numeric" data-ypn-lq="' + escAttr( line.item_id + '|' + label.index ) + '" data-ypn-lq-was="' + escAttr( label.quantity ) + '" value="' + escAttr( label.quantity ) + '"></label>'
+								: '';
+							return ( line.labels.length > 1 ? '<div class="ypn-lfe__lab">Label ' + ( label.index + 1 ) + ( qtyEditable ? '' : ' · qty ' + label.quantity ) + '</div>' : ( qtyEditable ? '' : '<div class="ypn-lfe__lab">Qty ' + label.quantity + '</div>' ) ) +
+								'<div class="ypn-lfe__grid">' + qty + label.fields.map( function ( field ) {
 									return labelFieldHtml( line.item_id, label.index, field );
 								} ).join( '' ) + '</div>';
 						} ).join( '' ) +
@@ -1631,7 +1639,9 @@
 				} ).join( '' ) +
 				'<div data-ypn-labels-error></div>' +
 				'<div class="ypn-form__acts"><button type="button" class="ypn-btn ypn-btn--primary" data-ypn-labels-save>Save changes</button><button type="button" class="ypn-btn" data-ypn-labels-cancel>Cancel</button></div>' +
-				'<p class="ypn-muted">Saved as an order note. The customer isn’t emailed. Size, material and quantity change the price, so use Add items or a new order for those.</p>';
+				'<p class="ypn-muted">' + ( qtyEditable
+					? 'Saved as an order note. The customer isn’t emailed. A new quantity reprices that line at the order’s bulk tier, and the pay link charges the new total. Size and material go through Add items.'
+					: 'Saved as an order note. The customer isn’t emailed. The order is paid, so quantity, size and material changes go through Add items or a new order.' ) + '</p>';
 
 			form.querySelector( '[data-ypn-labels-cancel]' ).addEventListener( 'click', load );
 			form.querySelector( '[data-ypn-labels-save]' ).addEventListener( 'click', function ( event ) {
@@ -1643,12 +1653,30 @@
 					changes[ parts[ 0 ] ][ parts[ 1 ] ] = changes[ parts[ 0 ] ][ parts[ 1 ] ] || {};
 					changes[ parts[ 0 ] ][ parts[ 1 ] ][ parts.slice( 2 ).join( '|' ) ] = input.value;
 				} );
+				var quantities = {};
+				var badQty = false;
+				form.querySelectorAll( '[data-ypn-lq]' ).forEach( function ( input ) {
+					var parts = input.getAttribute( 'data-ypn-lq' ).split( '|' );
+					var value = String( input.value ).trim();
+					if ( ! /^[1-9][0-9]*$/.test( value ) ) {
+						badQty = true;
+						return;
+					}
+					if ( value !== input.getAttribute( 'data-ypn-lq-was' ) ) {
+						quantities[ parts[ 0 ] ] = quantities[ parts[ 0 ] ] || {};
+						quantities[ parts[ 0 ] ][ parts[ 1 ] ] = parseInt( value, 10 );
+					}
+				} );
+				if ( badQty ) {
+					form.querySelector( '[data-ypn-labels-error]' ).innerHTML = '<p class="yp-form__error">Quantity must be a whole number, 1 or more, for every label.</p>';
+					return;
+				}
 				button.disabled = true;
 				button.textContent = 'Saving…';
 				YP.request( api( 'admin/order/' + order.id + '/label-details' ), {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( { changes: changes } )
+					body: JSON.stringify( { changes: changes, quantities: quantities } )
 				} ).then( load ).catch( function ( error ) {
 					button.disabled = false;
 					button.textContent = 'Save changes';

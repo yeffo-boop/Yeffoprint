@@ -2901,6 +2901,17 @@ body.yp-next .ypn-note-add textarea {
 	width: 100%;
 }
 
+.ypn-lfe__meta {
+	font-weight: 500;
+	font-size: 13px;
+	color: var(--ypn-mute);
+}
+
+.ypn-lfe + .ypn-lfe {
+	padding-top: 14px;
+	border-top: 1px solid var(--ypn-line, rgba(0, 0, 0, 0.08));
+}
+
 /* Shippo panel: package value + optional insurance. */
 .ypn-insure {
 	margin-bottom: 12px;
