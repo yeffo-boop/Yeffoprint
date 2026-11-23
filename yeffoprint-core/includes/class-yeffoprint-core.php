@@ -60,6 +60,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-proof-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-order-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-label-changes-controller.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-design-sheet-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-order-actions-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/customers/class-customer-notes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/admin/class-admin-customer-controller.php';
@@ -104,6 +105,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delay-email.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-value.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-label-count.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-design-sheet.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-express-order.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-holographic-vinyl.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-curing-status.php';
@@ -297,6 +299,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Admin_Proof_Controller();
 		new YeffoPrint_Admin_Order_Controller();
 		new YeffoPrint_Admin_Label_Changes_Controller();
+		new YeffoPrint_Admin_Design_Sheet_Controller();
 		new YeffoPrint_Admin_Order_Actions_Controller();
 		new YeffoPrint_Customer_Notes();
 		new YeffoPrint_Admin_Customer_Controller();

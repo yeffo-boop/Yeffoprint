@@ -633,6 +633,8 @@ class YeffoPrint_Admin_Order_Controller {
 			// Total labels and stickers on the order (class-order-label-count.php).
 			'label_totals'         => YeffoPrint_Order_Label_Count::totals( $order ),
 			'label_summary'        => YeffoPrint_Order_Label_Count::summary( $order ),
+			// {done, total} labels checked off on the production screen, or null.
+			'designed'             => YeffoPrint_Order_Design_Sheet::progress( $order ),
 			'subtotal'             => (float) $order->get_subtotal(),
 			'shipping_total'       => (float) $order->get_shipping_total(),
 			'discount_total'       => (float) $order->get_discount_total(),

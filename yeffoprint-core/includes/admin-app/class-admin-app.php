@@ -320,6 +320,13 @@ class YeffoPrint_Admin_App {
 				yeffoprint_core_asset_version( 'assets/admin-app/next/next.js' ),
 				[ 'strategy' => 'defer' ]
 			);
+			wp_enqueue_script(
+				'yeffoprint-admin-app-design-sheet',
+				YEFFOPRINT_CORE_URL . 'assets/admin-app/next/design-sheet.js',
+				[ 'yeffoprint-admin-app', 'yeffoprint-admin-app-next' ],
+				yeffoprint_core_asset_version( 'assets/admin-app/next/design-sheet.js' ),
+				[ 'strategy' => 'defer' ]
+			);
 		}
 	}
 

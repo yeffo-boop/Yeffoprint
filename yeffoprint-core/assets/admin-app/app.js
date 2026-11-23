@@ -489,10 +489,12 @@
 		// `#/ship/{id}`: buy and print that order's shipping label (next/next.js).
 		labelsById.ship       = 'Shipping label';
 		labelsById[ 'print-station' ] = 'Print station';
+		// `#/design-sheet/{id}`: that order's labels to keep open beside the design app (next/design-sheet.js).
+		labelsById[ 'design-sheet' ] = 'Production view';
 	}
 
 	function nextTabFor( id ) {
-		if ( 'order' === id || 'ship' === id ) {
+		if ( 'order' === id || 'ship' === id || 'design-sheet' === id ) {
 			id = 'production';
 		}
 		for ( var i = 0; i < NEXT_TABS.length; i++ ) {
@@ -689,6 +691,9 @@
 
 		if ( NEXT ) {
 			renderNextChrome( id );
+			// The production view sits in a narrow window beside the design
+			// app, so it hides the header, tabs and page title.
+			root.classList.toggle( 'ypn-bare', 'design-sheet' === id );
 		}
 
 		// Fresh view element on every route: views bind delegated click
