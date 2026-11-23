@@ -1247,3 +1247,154 @@ body.yp-has-sticky-bar .yp-chat-widget {
 		transition: none;
 	}
 }
+
+/* ---------- SVG templates (class-label-svg.php / label-svg.js) ---------- */
+
+/* The SVG is the whole label, so the stage takes the file's own
+   proportions (set inline) and sits on white like a printed sticker. */
+.yp-configurator__stage.is-svg {
+	background: var(--wp--preset--color--white);
+	padding: 4%;
+	box-sizing: border-box;
+}
+
+.yp-stage__svg {
+	width: 100%;
+	height: 100%;
+	filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.16));
+}
+
+/* Colorways: tappable mini labels. */
+.yp-colorways {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.6rem;
+	margin-bottom: 0.9rem;
+}
+
+.yp-colorway {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	padding: 0.45rem;
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--control);
+	background: var(--wp--preset--color--white);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--near-black);
+	transition: border-color 150ms ease;
+}
+
+.yp-colorway:hover {
+	border-color: var(--wp--preset--color--charcoal);
+}
+
+.yp-colorway.is-selected {
+	border: 2px solid var(--wp--preset--color--near-black);
+}
+
+.yp-colorway__art {
+	display: block;
+	pointer-events: none;
+}
+
+/* One row per part group; tap a dot to open that part's swatches. */
+.yp-color-rows {
+	border: 1.5px solid var(--wp--preset--color--light-gray);
+	border-radius: var(--wp--custom--radius--card);
+	background: var(--wp--preset--color--white);
+}
+
+.yp-color-row + .yp-color-row {
+	border-top: 1px solid var(--wp--preset--color--light-gray);
+}
+
+.yp-color-row__head {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.7rem 0.9rem;
+}
+
+.yp-color-row__name {
+	font-weight: 600;
+}
+
+.yp-color-row__name small {
+	display: block;
+	font-weight: 400;
+	font-size: 0.8rem;
+	color: var(--wp--preset--color--charcoal);
+}
+
+.yp-color-row__dots {
+	display: flex;
+	gap: 0.4rem;
+	margin-left: auto;
+}
+
+.yp-color-row__dot {
+	width: 30px;
+	height: 30px;
+	padding: 0;
+	border-radius: 50%;
+	border: 2px solid var(--wp--preset--color--white);
+	box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.2);
+	cursor: pointer;
+}
+
+.yp-color-row__dot.is-open {
+	box-shadow: 0 0 0 2.5px var(--wp--preset--color--near-black);
+}
+
+.yp-color-row.is-open {
+	background: rgba(0, 0, 0, 0.02);
+}
+
+.yp-color-row__swatches {
+	padding: 0 0.9rem 0.8rem;
+}
+
+.yp-color-row .yp-color-choice__contrast {
+	margin: 0 0.9rem 0.7rem;
+}
+
+/* Phones: a small copy of the label pinned to the top while typing below. */
+.yp-mini-preview {
+	display: none;
+}
+
+@media (max-width: 960px) {
+	.yp-mini-preview {
+		display: block;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 40;
+		padding: 0.5rem 1rem;
+		background: rgba(255, 255, 255, 0.96);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+		transform: translateY(-110%);
+		transition: transform 200ms ease;
+		pointer-events: none;
+	}
+
+	.yp-mini-preview.is-visible {
+		transform: none;
+	}
+
+	.yp-mini-preview__art {
+		max-width: 260px;
+		margin: 0 auto;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yp-mini-preview {
+		transition: none;
+	}
+}

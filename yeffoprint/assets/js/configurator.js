@@ -87,6 +87,10 @@
 	var saveDesignButtons = document.querySelectorAll( '[data-yp-save-design]' );
 
 	var schema = null;
+	// SVG template (YPLabelSvg, yeffoprint-core/assets/frontend/label-svg.js):
+	// the live label in Label View when the Template has an SVG file.
+	var svgLabel = null;
+	var svgQrTimer = null;
 	var state = {
 		view: 'label',
 		sizeId: null,
@@ -959,6 +963,11 @@
 			return;
 		}
 
+		if ( usesSvg() ) {
+			renderSvgColorChoices( fields );
+			return;
+		}
+
 		colorChoicesEl.innerHTML = fields.map( function ( field, index ) {
 			return (
 				'<div class="yp-color-choice" data-color-choice="' + escapeHtml( field.id ) + '" data-choice-index="' + index + '">' +
@@ -1022,6 +1031,10 @@
 		if ( ! colorChoicesEl ) {
 			return;
 		}
+		if ( usesSvg() ) {
+			syncSvgColorChoices();
+			return;
+		}
 
 		colorChoiceFields().forEach( function ( field ) {
 			var card = colorChoicesEl.querySelector( '[data-color-choice="' + field.id + '"]' );
@@ -1082,6 +1095,14 @@
 			el.parentNode.removeChild( el );
 		} );
 
+		if ( usesSvg() ) {
+			// Vial View is a reference photo; Label View's SVG takes the picks directly.
+			if ( svgLabel ) {
+				svgLabel.setColors( svgColors() );
+			}
+			return;
+		}
+
 		var fields = colorChoiceFields();
 		var isLabel = 'label' === state.view;
 		var textColor = null;
@@ -1141,6 +1162,208 @@
 			if ( el ) {
 				el.style.color = textColor || field.text_color || '#000000';
 			}
+		} );
+	}
+
+	/* ---------- Color choices: SVG templates ---------- */
+
+	/*
+	 * An SVG Template can have many parts (background, text, accent,
+	 * four stripes…), so instead of one big swatch card per part:
+	 * ready-made Colorways (saved by the admin) as tappable mini labels,
+	 * then one compact row per group ("Stripes" holds stripe-1…4). Tap a
+	 * row's color dot to open the swatches for that one part.
+	 */
+	var svgOpenPart = null;
+	var svgColorwayLabels = [];
+
+	function svgGroups( fields ) {
+		var groups = [];
+		var byKey = {};
+		fields.forEach( function ( field ) {
+			var key = field.group || field.part || field.id;
+			if ( ! byKey[ key ] ) {
+				byKey[ key ] = { key: key, fields: [] };
+				groups.push( byKey[ key ] );
+			}
+			byKey[ key ].fields.push( field );
+		} );
+		return groups;
+	}
+
+	function groupTitle( group ) {
+		if ( 1 === group.fields.length ) {
+			return group.fields[ 0 ].label;
+		}
+		return group.key.charAt( 0 ).toUpperCase() + group.key.slice( 1 );
+	}
+
+	function renderSvgColorChoices( fields ) {
+		var colorways = ( schema.svg.colorways || [] );
+		var groups = svgGroups( fields );
+
+		colorChoicesEl.innerHTML =
+			( colorways.length
+				? '<div class="yp-colorways" role="list">' + colorways.map( function ( way, index ) {
+					return '<button type="button" class="yp-colorway" role="listitem" data-colorway="' + index + '" aria-pressed="false">' +
+						'<span class="yp-colorway__art" data-colorway-art></span>' +
+						'<span class="yp-colorway__name">' + escapeHtml( way.name ) + '</span>' +
+					'</button>';
+				} ).join( '' ) + '</div>'
+				: '' ) +
+			'<div class="yp-color-rows">' + groups.map( function ( group ) {
+				var hint = 1 === group.fields.length ? group.fields[ 0 ].hint : group.fields.length + ' colors';
+				return '<div class="yp-color-row" data-color-row="' + escapeHtml( group.key ) + '">' +
+					'<div class="yp-color-row__head">' +
+						'<span class="yp-color-row__name">' + escapeHtml( groupTitle( group ) ) + ( hint ? '<small>' + escapeHtml( hint ) + '</small>' : '' ) + '</span>' +
+						'<span class="yp-color-row__dots">' + group.fields.map( function ( field ) {
+							return '<button type="button" class="yp-color-row__dot" data-color-part="' + escapeHtml( field.id ) + '" aria-expanded="false" title="' + escapeHtml( field.label ) + '"><span class="screen-reader-text">' + escapeHtml( field.label ) + '</span></button>';
+						} ).join( '' ) + '</span>' +
+					'</div>' +
+					'<div class="yp-color-row__swatches" data-color-swatches hidden></div>' +
+					( 'text' === group.key ? '<p class="yp-color-choice__contrast" data-color-contrast hidden></p>' : '' ) +
+				'</div>';
+			} ).join( '' ) + '</div>' +
+			'<p class="yp-color-choices__note">We send a proof before anything prints, so colors can still be tweaked after you see it.</p>';
+
+		// Colorway tiles: each is a tiny live copy of the label in that set's colors.
+		svgColorwayLabels = [];
+		colorChoicesEl.querySelectorAll( '[data-colorway]' ).forEach( function ( button ) {
+			var way = colorways[ parseInt( button.getAttribute( 'data-colorway' ), 10 ) ];
+			var label = window.YPLabelSvg.mount( button.querySelector( '[data-colorway-art]' ), schema.svg, {
+				colors: Object.assign( {}, window.YPLabelSvg.defaults( schema.field_schema ), way.colors ),
+				values: activeVariant().values,
+				placeholders: svgPlaceholders(),
+				font: schema.preview_font || ''
+			} );
+			if ( label ) {
+				label.svg.setAttribute( 'aria-hidden', 'true' );
+				svgColorwayLabels.push( label );
+			}
+			button.addEventListener( 'click', function () {
+				fields.forEach( function ( field ) {
+					if ( field.part && way.colors[ field.part ] ) {
+						activeVariant().values[ field.id ] = way.colors[ field.part ];
+					}
+				} );
+				syncColorChoices();
+				applyStageColors();
+				updateActiveVariantCardSummary();
+			} );
+		} );
+
+		colorChoicesEl.querySelectorAll( '[data-color-part]' ).forEach( function ( dot ) {
+			dot.addEventListener( 'click', function () {
+				var id = dot.getAttribute( 'data-color-part' );
+				svgOpenPart = svgOpenPart === id ? null : id;
+				syncColorChoices();
+				var field = fields.filter( function ( f ) { return f.id === id; } )[ 0 ];
+				if ( svgLabel && field && svgOpenPart ) {
+					svgLabel.highlight( field.part );
+				}
+			} );
+		} );
+
+		colorChoicesEl.querySelectorAll( '[data-color-row]' ).forEach( function ( row ) {
+			var group = groups.filter( function ( g ) { return g.key === row.getAttribute( 'data-color-row' ); } )[ 0 ];
+			row.addEventListener( 'mouseenter', function () {
+				if ( svgLabel ) {
+					svgLabel.highlight( group.fields.map( function ( f ) { return f.part; } ) );
+				}
+			} );
+		} );
+
+		syncColorChoices();
+	}
+
+	function syncSvgColorChoices() {
+		var fields = colorChoiceFields();
+		var open = fields.filter( function ( f ) { return f.id === svgOpenPart; } )[ 0 ] || null;
+
+		colorChoicesEl.querySelectorAll( '[data-color-part]' ).forEach( function ( dot ) {
+			var field = fields.filter( function ( f ) { return f.id === dot.getAttribute( 'data-color-part' ); } )[ 0 ];
+			if ( ! field ) {
+				return;
+			}
+			var value = colorChoiceValue( field );
+			dot.style.background = value;
+			dot.title = field.label + ': ' + colorOptionName( field, value );
+			dot.classList.toggle( 'is-open', field === open );
+			dot.setAttribute( 'aria-expanded', field === open ? 'true' : 'false' );
+		} );
+
+		colorChoicesEl.querySelectorAll( '[data-color-row]' ).forEach( function ( row ) {
+			var swatchesEl = row.querySelector( '[data-color-swatches]' );
+			var inRow = open && row.querySelector( '[data-color-part="' + open.id + '"]' );
+			row.classList.toggle( 'is-open', !! inRow );
+			swatchesEl.hidden = ! inRow;
+			if ( ! inRow ) {
+				swatchesEl.innerHTML = '';
+				return;
+			}
+
+			var value = colorChoiceValue( open ).toUpperCase();
+			var matched = ( open.options || [] ).some( function ( o ) { return o.hex.toUpperCase() === value; } );
+			swatchesEl.innerHTML =
+				'<div class="yp-color-choice__swatches" role="radiogroup" aria-label="' + escapeHtml( open.label ) + '">' +
+					( open.options || [] ).map( function ( option ) {
+						var on = option.hex.toUpperCase() === value;
+						return '<button type="button" role="radio" aria-checked="' + ( on ? 'true' : 'false' ) + '" class="yp-color-swatch' + ( on ? ' is-selected' : '' ) + '" style="background:' + escapeHtml( option.hex ) + '" data-color-hex="' + escapeHtml( option.hex ) + '" title="' + escapeHtml( option.name ) + '" aria-label="' + escapeHtml( option.name ) + '"></button>';
+					} ).join( '' ) +
+					'<label class="yp-color-swatch yp-color-swatch--any' + ( matched ? '' : ' is-selected' ) + '" title="Any color" style="--yp-any-color:' + ( matched ? 'transparent' : escapeHtml( value ) ) + '"><span class="screen-reader-text">Any color</span><input type="color" data-color-any value="' + ( /^#[0-9A-F]{6}$/.test( value ) ? value.toLowerCase() : '#000000' ) + '" /></label>' +
+					'<span class="yp-color-choice__any-label">' + escapeHtml( open.label + ' · ' + colorOptionName( open, value ) ) + '</span>' +
+				'</div>';
+
+			function pick( hex ) {
+				activeVariant().values[ open.id ] = hex;
+				syncColorChoices();
+				applyStageColors();
+				updateActiveVariantCardSummary();
+			}
+			swatchesEl.querySelectorAll( '[data-color-hex]' ).forEach( function ( button ) {
+				button.addEventListener( 'click', function () {
+					pick( button.getAttribute( 'data-color-hex' ) );
+				} );
+			} );
+			var anyInput = swatchesEl.querySelector( '[data-color-any]' );
+			anyInput.addEventListener( 'input', function () {
+				activeVariant().values[ open.id ] = anyInput.value.toUpperCase();
+				applyStageColors();
+				// Refresh the dots only, so the native picker stays open while dragging.
+				colorChoicesEl.querySelectorAll( '[data-color-part="' + open.id + '"]' ).forEach( function ( dot ) {
+					dot.style.background = anyInput.value;
+				} );
+				updateActiveVariantCardSummary();
+			} );
+			anyInput.addEventListener( 'change', function () {
+				syncColorChoices();
+			} );
+		} );
+
+		// Which colorway (if any) the active label matches exactly.
+		var colorways = schema.svg.colorways || [];
+		colorChoicesEl.querySelectorAll( '[data-colorway]' ).forEach( function ( button ) {
+			var way = colorways[ parseInt( button.getAttribute( 'data-colorway' ), 10 ) ];
+			var on = fields.every( function ( field ) {
+				return ! field.part || ! way.colors[ field.part ] || way.colors[ field.part ].toUpperCase() === colorChoiceValue( field ).toUpperCase();
+			} );
+			button.classList.toggle( 'is-selected', on );
+			button.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
+		} );
+
+		var contrastEl = colorChoicesEl.querySelector( '[data-color-contrast]' );
+		if ( contrastEl ) {
+			var ok = colorContrastOk();
+			contrastEl.hidden = null === ok;
+			contrastEl.classList.toggle( 'is-low', false === ok );
+			contrastEl.textContent = false === ok ? 'Background and text are hard to read together.' : '✓ Easy to read';
+		}
+	}
+
+	/** Colorway tiles show the customer's own text too. */
+	function refreshColorwayText() {
+		svgColorwayLabels.forEach( function ( label ) {
+			label.setValues( activeVariant().values );
 		} );
 	}
 
@@ -1315,7 +1538,122 @@
 	// Rebuilds every field element — view toggle, variant switch, and
 	// initial load, where every field's position/value can change at
 	// once. Typing in one field only needs updateStageField() below.
+	/** True when Label View draws the Template's SVG file instead of text over the artwork. */
+	function usesSvg() {
+		return !! ( schema && schema.svg && schema.svg.markup && window.YPLabelSvg );
+	}
+
+	/** Each part's current pick on the active label, as { part: hex }. */
+	function svgColors() {
+		var colors = {};
+		colorChoiceFields().forEach( function ( field ) {
+			if ( field.part ) {
+				colors[ field.part ] = colorChoiceValue( field );
+			}
+		} );
+		return colors;
+	}
+
+	function svgPlaceholders() {
+		var out = {};
+		schema.field_schema.forEach( function ( field ) {
+			out[ field.id ] = field.label;
+		} );
+		return out;
+	}
+
+	/**
+	 * Direct request (2026-11-23): templates never previewed right with
+	 * text laid over a flat image. An SVG Template draws the real label:
+	 * picks recolor each named part, typed text fills the design's own
+	 * {slots}. Always live — the "live preview off" switch was only for
+	 * the old overlay.
+	 */
+	function renderSvgStage() {
+		stageEl.innerHTML = '<div class="yp-stage__svg" data-yp-stage-svg></div>';
+		stageEl.setAttribute( 'data-view', 'label' );
+		stageEl.classList.add( 'is-svg' );
+		stageEl.style.aspectRatio = schema.svg.width && schema.svg.height ? schema.svg.width + ' / ' + schema.svg.height : '';
+		applyStageShape();
+		if ( livePreviewNoteEl ) {
+			livePreviewNoteEl.hidden = true;
+		}
+		overflowWarningEl.hidden = true;
+
+		var mountOptions = {
+			colors: svgColors(),
+			values: activeVariant().values,
+			placeholders: svgPlaceholders(),
+			font: schema.preview_font || '',
+			qrUrl: function ( text ) {
+				return yeffoprintConfigurator.restUrl + 'qr?format=png&text=' + encodeURIComponent( text );
+			}
+		};
+		var main = window.YPLabelSvg.mount( stageEl.querySelector( '[data-yp-stage-svg]' ), schema.svg, mountOptions );
+		if ( ! main ) {
+			return;
+		}
+		main.svg.setAttribute( 'aria-label', ( schema.title || 'Label' ) + ' preview' );
+
+		// Phones: the stage scrolls away above the form, so a small copy
+		// pins to the top of the screen while the customer types below.
+		var mini = mountMiniPreview( mountOptions );
+		var labels = mini ? [ main, mini ] : [ main ];
+		svgLabel = {
+			svg: main.svg,
+			setColors: function ( c ) { labels.forEach( function ( l ) { l.setColors( c ); } ); },
+			setValues: function ( v ) { labels.forEach( function ( l ) { l.setValues( v ); } ); },
+			highlight: function ( k ) { labels.forEach( function ( l ) { l.highlight( k ); } ); },
+			refit: function () { labels.forEach( function ( l ) { l.refit(); } ); }
+		};
+		refreshColorwayText();
+	}
+
+	var miniObserver = null;
+
+	function mountMiniPreview( options ) {
+		var bar = document.querySelector( '[data-yp-mini-preview]' );
+		if ( ! bar ) {
+			bar = document.createElement( 'div' );
+			bar.className = 'yp-mini-preview';
+			bar.setAttribute( 'data-yp-mini-preview', '' );
+			bar.setAttribute( 'aria-hidden', 'true' );
+			bar.innerHTML = '<div class="yp-mini-preview__art" data-yp-mini-art></div>';
+			document.body.appendChild( bar );
+		}
+		var art = bar.querySelector( '[data-yp-mini-art]' );
+		art.style.aspectRatio = schema.svg.width + ' / ' + schema.svg.height;
+		var mini = window.YPLabelSvg.mount( art, schema.svg, options );
+
+		if ( window.IntersectionObserver ) {
+			if ( miniObserver ) {
+				miniObserver.disconnect();
+			}
+			miniObserver = new IntersectionObserver( function ( entries ) {
+				var hidden = entries[ 0 ] && ! entries[ 0 ].isIntersecting && entries[ 0 ].boundingClientRect.top < 0;
+				bar.classList.toggle( 'is-visible', !! hidden && 'label' === state.view );
+				if ( hidden && mini ) {
+					mini.refit();
+				}
+			}, { threshold: 0 } );
+			miniObserver.observe( stageEl );
+		}
+		return mini;
+	}
+
 	function renderStage() {
+		svgLabel = null;
+		var miniBar = document.querySelector( '[data-yp-mini-preview]' );
+		if ( miniBar && 'label' !== state.view ) {
+			miniBar.classList.remove( 'is-visible' );
+		}
+		stageEl.classList.remove( 'is-svg' );
+		stageEl.style.aspectRatio = '';
+		if ( usesSvg() && 'label' === state.view ) {
+			renderSvgStage();
+			return;
+		}
+
 		var backgroundUrl = 'vial' === state.view ? schema.vial_mockup_url : schema.artwork_url;
 
 		stageEl.innerHTML = backgroundUrl
@@ -1441,6 +1779,23 @@
 	// here too, forcing a full layout reflow loop per field per
 	// keystroke rather than one field's).
 	function updateStageField( fieldId ) {
+		if ( svgLabel ) {
+			var typed = schema.field_schema.filter( function ( f ) { return f.id === fieldId; } )[ 0 ];
+			window.clearTimeout( svgQrTimer );
+			if ( typed && 'qr_code' === typed.type ) {
+				// Don't fetch a QR image per keystroke.
+				svgQrTimer = window.setTimeout( function () {
+					if ( svgLabel ) {
+						svgLabel.setValues( activeVariant().values );
+					}
+				}, 400 );
+			} else {
+				svgLabel.setValues( activeVariant().values );
+				refreshColorwayText();
+			}
+			return;
+		}
+
 		var field = schema.field_schema.filter( function ( f ) { return f.id === fieldId; } )[ 0 ];
 		var el = stageEl.querySelector( '[data-field-id="' + fieldId + '"]' );
 		if ( ! field || ! el ) {

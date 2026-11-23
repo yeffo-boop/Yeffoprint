@@ -108,6 +108,195 @@
 				: '<p class="yp-field__hint">The shared preset has no fields yet.</p>' );
 	}
 
+	/* ---------- SVG label file (YeffoPrint_Label_Svg) ---------- */
+
+	var SVG_SAMPLE = {
+		'compound-name': 'BPC-157',
+		'strength-mg-or-iu': '10 mg',
+		'batch-number': 'B-2211',
+		'expiration-date': '12/2027',
+		'design-notes': '2 mL BAC',
+		'qr-code': ''
+	};
+
+	/**
+	 * Direct request (2026-11-23): templates as SVG files with named
+	 * color parts and {slots}, so the product page draws the real label.
+	 * Picking a file sends it to /admin/template-svg/analyze, which cleans
+	 * it and lists what it found; it's only stored on Save.
+	 */
+	function createSvgEditor( config ) {
+		var container = config.container;
+		var state = {
+			data: config.svg || null,          // Analysis (parts, slots, markup…) of the file shown.
+			upload: null,                     // Raw text of a newly picked file, sent on Save.
+			removed: false,
+			colorways: ( config.colorways || [] ).map( function ( way ) {
+				return { name: way.name, colors: Object.assign( {}, way.colors ) };
+			} ),
+			error: ''
+		};
+
+		function defaults() {
+			var out = {};
+			( state.data ? state.data.parts : [] ).forEach( function ( part ) {
+				out[ part.key ] = part.default;
+			} );
+			return out;
+		}
+
+		function payload() {
+			return { markup: state.data.markup, width: state.data.width, height: state.data.height, slot_fields: state.data.slot_fields || {} };
+		}
+
+		function mountPreview( el, colors ) {
+			if ( ! window.YPLabelSvg || ! state.data ) {
+				return;
+			}
+			el.style.aspectRatio = state.data.width + ' / ' + state.data.height;
+			window.YPLabelSvg.mount( el, payload(), {
+				colors: Object.assign( defaults(), colors || {} ),
+				values: SVG_SAMPLE
+			} );
+		}
+
+		function render() {
+			var data = state.data;
+			var slotFields = data && data.slot_fields ? data.slot_fields : {};
+
+			container.innerHTML =
+				'<p class="yp-field__hint">Upload the label as an SVG and the product page draws it live: customers recolor its named parts and their text drops into its {slots}. ' +
+					'Name color layers <code>bg</code>, <code>text</code>, <code>accent</code>, <code>stripe-1</code>… (or <code>color-anything</code>); type <code>{compound}</code>, <code>{strength}</code>, <code>{batch}</code>, <code>{exp}</code> where customer text goes; an optional rectangle named <code>box-compound</code> is the space that text shrinks to fit; a rectangle named <code>qr</code> holds the QR code. Without a file, the artwork image above is used as before.</p>' +
+				'<div class="yp-svg-editor__buttons">' +
+					'<label class="wp-block-button__link is-style-outline yp-svg-editor__pick">' + ( data ? 'Replace SVG' : 'Choose SVG file' ) + '<input type="file" accept=".svg,image/svg+xml" data-yp-svg-file hidden /></label>' +
+					( data ? '<button type="button" class="yp-row-action" data-yp-svg-remove>Remove SVG</button>' : '' ) +
+					( state.upload ? '<span class="yp-svg-editor__pending">New file, saved when you click Save</span>' : '' ) +
+					( state.removed ? '<span class="yp-svg-editor__pending">Removed when you click Save</span>' : '' ) +
+				'</div>' +
+				( state.error ? '<p class="yp-form__error">' + YP.escapeHtml( state.error ) + '</p>' : '' ) +
+				( data
+					? '<div class="yp-svg-editor__preview" data-yp-svg-preview></div>' +
+						( data.warnings && data.warnings.length ? '<ul class="yp-svg-editor__warnings">' + data.warnings.map( function ( w ) { return '<li>' + YP.escapeHtml( w ) + '</li>'; } ).join( '' ) + '</ul>' : '' ) +
+						'<div class="yp-svg-editor__found">' +
+							'<div><h3>Color parts</h3>' + ( data.parts.length
+								? '<ul>' + data.parts.map( function ( part ) {
+									return '<li><i style="background:' + YP.escapeAttr( part.default ) + '"></i><code>' + YP.escapeHtml( part.key ) + '</code> ' + YP.escapeHtml( part.label ) + '</li>';
+								} ).join( '' ) + '</ul>'
+								: '<p class="yp-field__hint">None found.</p>' ) + '</div>' +
+							'<div><h3>Text slots</h3>' + ( data.slots.length
+								? '<ul>' + data.slots.map( function ( slot ) {
+									var field = slotFields[ slot ];
+									return '<li><code>{' + YP.escapeHtml( slot ) + '}</code> ' + ( field ? '&rarr; ' + YP.escapeHtml( field ) : '<span class="yp-svg-editor__bad">no matching Label Field</span>' ) + '</li>';
+								} ).join( '' ) + '</ul>'
+								: '<p class="yp-field__hint">None found.</p>' ) +
+								( data.qr ? '<p class="yp-field__hint">QR code spot found.</p>' : '' ) +
+							'</div>' +
+						'</div>' +
+						'<h3 class="yp-svg-editor__subhead">Colorways</h3>' +
+						'<p class="yp-field__hint">Ready-made color sets customers can tap. The first one isn’t applied automatically; the file’s own colors are the starting point.</p>' +
+						'<div class="yp-svg-editor__ways">' + state.colorways.map( function ( way, index ) {
+							return '<div class="yp-svg-way" data-way="' + index + '">' +
+								'<div class="yp-svg-way__art" data-way-art></div>' +
+								'<div class="yp-svg-way__body">' +
+									'<input type="text" value="' + YP.escapeAttr( way.name ) + '" data-way-name aria-label="Colorway name" />' +
+									'<div class="yp-svg-way__colors">' + data.parts.map( function ( part ) {
+										var hex = way.colors[ part.key ] || part.default;
+										return '<label title="' + YP.escapeAttr( part.label ) + '"><input type="color" value="' + YP.escapeAttr( hex.toLowerCase() ) + '" data-way-part="' + YP.escapeAttr( part.key ) + '" /><span>' + YP.escapeHtml( part.label ) + '</span></label>';
+									} ).join( '' ) + '</div>' +
+									'<button type="button" class="yp-row-action" data-way-remove>Remove</button>' +
+								'</div>' +
+							'</div>';
+						} ).join( '' ) + '</div>' +
+						( state.colorways.length < 8 ? '<button type="button" class="wp-block-button__link is-style-outline" data-way-add>Add colorway</button>' : '' )
+					: '' );
+
+			var fileInput = container.querySelector( '[data-yp-svg-file]' );
+			fileInput.addEventListener( 'change', function () {
+				var file = fileInput.files && fileInput.files[ 0 ];
+				if ( ! file ) {
+					return;
+				}
+				file.text().then( function ( text ) {
+					state.error = '';
+					return YP.request( yeffoprintAdminApp.restUrl + 'admin/template-svg/analyze', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( { svg: text } )
+					} ).then( function ( result ) {
+						state.data = result;
+						state.upload = text;
+						state.removed = false;
+						if ( config.onChange ) { config.onChange( true ); }
+						render();
+					} );
+				} ).catch( function ( error ) {
+					state.error = 'Couldn’t read that file: ' + error.message;
+					render();
+				} );
+			} );
+
+			var removeButton = container.querySelector( '[data-yp-svg-remove]' );
+			if ( removeButton ) {
+				removeButton.addEventListener( 'click', function () {
+					state.data = null;
+					state.upload = null;
+					state.removed = true;
+					if ( config.onChange ) { config.onChange( false ); }
+					render();
+				} );
+			}
+
+			if ( ! data ) {
+				return;
+			}
+
+			mountPreview( container.querySelector( '[data-yp-svg-preview]' ) );
+
+			container.querySelectorAll( '[data-way]' ).forEach( function ( row ) {
+				var way = state.colorways[ parseInt( row.getAttribute( 'data-way' ), 10 ) ];
+				var art = row.querySelector( '[data-way-art]' );
+				mountPreview( art, way.colors );
+				row.querySelector( '[data-way-name]' ).addEventListener( 'input', function ( event ) {
+					way.name = event.target.value;
+				} );
+				row.querySelectorAll( '[data-way-part]' ).forEach( function ( input ) {
+					input.addEventListener( 'input', function () {
+						way.colors[ input.getAttribute( 'data-way-part' ) ] = input.value.toUpperCase();
+						mountPreview( art, way.colors );
+					} );
+				} );
+				row.querySelector( '[data-way-remove]' ).addEventListener( 'click', function () {
+					state.colorways.splice( state.colorways.indexOf( way ), 1 );
+					render();
+				} );
+			} );
+
+			var addButton = container.querySelector( '[data-way-add]' );
+			if ( addButton ) {
+				addButton.addEventListener( 'click', function () {
+					state.colorways.push( { name: state.colorways.length ? 'Colorway ' + ( state.colorways.length + 1 ) : 'Original', colors: defaults() } );
+					render();
+				} );
+			}
+		}
+
+		render();
+
+		return {
+			hasSvg: function () { return !! state.data; },
+			/** Fields for the gap endpoint: `svg` only when it changed. */
+			getPayload: function () {
+				var out = { svg_colorways: state.colorways };
+				if ( state.upload ) {
+					out.svg = state.upload;
+				} else if ( state.removed ) {
+					out.svg = null;
+				}
+				return out;
+			}
+		};
+	}
+
 	/* ---------- Color choices (YeffoPrint_Label_Color_Meta) ---------- */
 
 	var COLOR_TARGETS = [
@@ -795,6 +984,10 @@
 									'</div>' +
 								'</div>' +
 							'</div>' +
+							'<div class="yp-panel">' +
+								'<div class="yp-panel__head"><h2>Label file (SVG)</h2></div>' +
+								'<div data-yp-svg-container><p class="yp-field__hint">Loading&hellip;</p></div>' +
+							'</div>' +
 							'<div class="yp-field"><label>Vial mockup image</label>' +
 								'<p class="yp-field__hint">Square (e.g. 800&times;800px) for Vial View and the gallery card hover-swap.</p>' +
 								'<div class="yp-media-field">' +
@@ -820,6 +1013,7 @@
 							'</div>' +
 							'<div class="yp-panel">' +
 								'<div class="yp-panel__head"><h2>Color choices</h2></div>' +
+								'<p class="yp-field__hint" data-yp-color-choices-svg-note hidden>This template has an SVG file, so customers pick colors for its named parts instead. These choices are kept in case the file is removed.</p>' +
 								'<div data-yp-color-choices-container><p class="yp-field__hint">Loading&hellip;</p></div>' +
 							'</div>' +
 							'<div class="yp-panel">' +
@@ -856,6 +1050,7 @@
 			// URL so the editor opens already pointed at it.
 			var fieldSchemaEditor = null;
 			var colorChoicesEditor = null;
+			var svgEditor = null;
 			var pendingPreviewUrl = featuredMediaUrl;
 
 			YP.bindMediaPicker( {
@@ -924,7 +1119,7 @@
 
 				var loadGap = isEdit
 					? YP.request( adminEndpoint( template.id ) )
-					: Promise.resolve( { compatible_sizes: [], compatible_materials: [], field_schema: [], color_choices: yeffoprintAdminApp.defaultColorChoices || [] } );
+					: Promise.resolve( { compatible_sizes: [], compatible_materials: [], field_schema: [], color_choices: yeffoprintAdminApp.defaultColorChoices || [], svg: null, svg_colorways: [] } );
 
 				var loadPresets = ( ! sharedPreset && presetPosts.length )
 					? Promise.all( presetPosts.map( function ( p ) {
@@ -984,6 +1179,19 @@
 						previewUrl: pendingPreviewUrl
 					} );
 
+					var colorChoicesPanel = drawer.querySelector( '[data-yp-color-choices-container]' );
+					function showSvgMode( on ) {
+						drawer.querySelector( '[data-yp-color-choices-svg-note]' ).hidden = ! on;
+						colorChoicesPanel.hidden = on;
+					}
+					svgEditor = createSvgEditor( {
+						container: drawer.querySelector( '[data-yp-svg-container]' ),
+						svg: results2[ 0 ].svg || null,
+						colorways: results2[ 0 ].svg_colorways || [],
+						onChange: showSvgMode
+					} );
+					showSvgMode( svgEditor.hasSvg() );
+
 					saveButtonEl.disabled = false;
 				} );
 			} ).catch( function ( error ) {
@@ -1015,11 +1223,11 @@
 
 			drawer.querySelector( '[data-yp-form]' ).addEventListener( 'submit', function ( event ) {
 				event.preventDefault();
-				save( template, drawer, function () { return fieldSchemaEditor.getFields(); }, function () { return colorChoicesEditor ? colorChoicesEditor.getChoices() : null; } );
+				save( template, drawer, function () { return fieldSchemaEditor.getFields(); }, function () { return colorChoicesEditor ? colorChoicesEditor.getChoices() : null; }, function () { return svgEditor ? svgEditor.getPayload() : {}; } );
 			} );
 		}
 
-		function save( existing, drawer, getFields, getColorChoices ) {
+		function save( existing, drawer, getFields, getColorChoices, getSvg ) {
 			var form = drawer.querySelector( '[data-yp-form]' );
 			var errorEl = drawer.querySelector( '[data-yp-form-error]' );
 			var saveButton = drawer.querySelector( '[data-yp-save]' );
@@ -1073,6 +1281,7 @@
 					if ( colorChoices ) {
 						gapBody.color_choices = colorChoices;
 					}
+					Object.assign( gapBody, getSvg ? getSvg() : {} );
 					return YP.request( adminEndpoint( saved.id ), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( gapBody ) } );
 				} )
 				.then( function () {

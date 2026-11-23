@@ -38,6 +38,12 @@ class YeffoPrint_Admin_Template_Controller {
 	}
 
 	public function register_routes(): void {
+		register_rest_route( self::NAMESPACE, '/admin/template-svg/analyze', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'analyze_svg' ],
+			'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
+		] );
+
 		register_rest_route( self::NAMESPACE, '/admin/template/(?P<id>\d+)', [
 			[
 				'methods'             => \WP_REST_Server::READABLE,
@@ -50,6 +56,28 @@ class YeffoPrint_Admin_Template_Controller {
 				'permission_callback' => [ 'YeffoPrint_Rest_Security', 'admin_write' ],
 			],
 		] );
+	}
+
+	/**
+	 * Reads an SVG the admin just picked, before it's saved — the
+	 * drawer shows what was found (parts, slots, problems) and a
+	 * preview, and a brand new Template has no id yet.
+	 *
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function analyze_svg( \WP_REST_Request $request ) {
+		$params = $request->get_json_params() ?: [];
+		$result = YeffoPrint_Label_Svg::analyze( (string) ( $params['svg'] ?? '' ) );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$fields = YeffoPrint_Field_Schema::get( YeffoPrint_Field_Schema::get_default_preset_id() ?: 0 );
+		$result['slot_fields'] = (object) array_filter( array_combine( $result['slots'], array_map( static function ( $slot ) use ( $fields ) {
+			return YeffoPrint_Label_Svg::resolve_slot( $slot, $fields );
+		}, $result['slots'] ) ?: [] ) ?: [] );
+
+		return rest_ensure_response( $result );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */
@@ -91,6 +119,22 @@ class YeffoPrint_Admin_Template_Controller {
 			YeffoPrint_Field_Schema::update( $post_id, is_array( $params['field_schema'] ?? null ) ? $params['field_schema'] : [] );
 		}
 
+		// SVG template file: a string replaces it, null/"" removes it.
+		// Only when sent, so an older admin tab never wipes it.
+		if ( array_key_exists( 'svg', $params ) ) {
+			if ( is_string( $params['svg'] ) && '' !== trim( $params['svg'] ) ) {
+				$saved = YeffoPrint_Label_Svg::save( $post_id, $params['svg'] );
+				if ( is_wp_error( $saved ) ) {
+					return $saved;
+				}
+			} else {
+				YeffoPrint_Label_Svg::remove( $post_id );
+			}
+		}
+		if ( array_key_exists( 'svg_colorways', $params ) ) {
+			YeffoPrint_Label_Svg::update_colorways( $post_id, $params['svg_colorways'] );
+		}
+
 		// Only when sent, so an older admin tab without the Color choices
 		// editor never wipes them.
 		if ( array_key_exists( 'color_choices', $params ) ) {
@@ -122,6 +166,22 @@ class YeffoPrint_Admin_Template_Controller {
 				$choice['layer_url'] = $choice['layer_id'] ? (string) wp_get_attachment_image_url( $choice['layer_id'], 'medium' ) : '';
 				return $choice;
 			}, YeffoPrint_Label_Color_Meta::get_choices( $post_id ) ),
+			// The stored (already cleaned) file, or null.
+			'svg'                  => $this->svg_payload( $post_id ),
+			'svg_colorways'        => YeffoPrint_Label_Svg::get_colorways( $post_id ),
 		];
+	}
+
+	private function svg_payload( int $post_id ): ?array {
+		$svg = YeffoPrint_Label_Svg::get( $post_id );
+		if ( ! $svg ) {
+			return null;
+		}
+		$fields = YeffoPrint_Field_Schema::get( $post_id );
+		$svg['slot_fields'] = (object) array_filter( array_combine( $svg['slots'], array_map( static function ( $slot ) use ( $fields ) {
+			return YeffoPrint_Label_Svg::resolve_slot( $slot, $fields );
+		}, $svg['slots'] ) ?: [] ) ?: [] );
+		$svg['warnings'] = [];
+		return $svg;
 	}
 }
