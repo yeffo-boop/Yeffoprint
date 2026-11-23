@@ -1327,6 +1327,7 @@
 							customOrders.map( proofCardHtml ).join( '' ) +
 							'<section class="ypn-card">' +
 								'<h3 class="ypn-card__title">' + ( website ? 'Items' : 'Labels &amp; items' ) + ' <span>' + ( order.label_summary ? '<b class="ypn-count">' + esc( order.label_summary ) + '</b> · ' : '' ) + order.items.length + ( 1 === order.items.length ? ' line' : ' lines' ) + ( order.label_summary ? '' : ' · ' + units + ' total' ) + '</span>' +
+									( order.designed ? '<a class="ypn-more ypn-more--sheet" href="#/design-sheet/' + order.id + '" data-ypn-design-sheet title="All labels at a glance, in a window beside your design app">Production view <span class="ypn-pill ypn-pill--' + ( order.designed.done === order.designed.total ? 'grn' : 'ink' ) + '">' + order.designed.done + '/' + order.designed.total + ' designed</span></a>' : '' ) +
 									( ( order.label_lines || [] ).length ? '<button type="button" class="ypn-more" data-ypn-edit-labels>Edit labels</button>' : '' ) +
 								'</h3>' +
 								'<div data-ypn-label-form hidden></div>' +
@@ -1398,6 +1399,13 @@
 				YP.loadWebDesignPanel( order, wd );
 			}
 			viewEl.querySelector( '[data-ypn-edit-details]' ).addEventListener( 'click', function () { editDetails( order ); } );
+			var sheetLink = viewEl.querySelector( '[data-ypn-design-sheet]' );
+			if ( sheetLink && YP.openDesignSheet ) {
+				sheetLink.addEventListener( 'click', function ( e ) {
+					e.preventDefault();
+					YP.openDesignSheet( order.id );
+				} );
+			}
 			var editLabelsButton = viewEl.querySelector( '[data-ypn-edit-labels]' );
 			if ( editLabelsButton ) {
 				editLabelsButton.addEventListener( 'click', function () { editLabels( order ); } );
