@@ -70,6 +70,30 @@ class YeffoPrint_Admin_Label_Changes_Controller {
 			}
 		}
 
+		// Unpaid order, no quantity changed: Save still brings every label
+		// line to the order's current bulk tier (fixes an order whose
+		// older lines were priced before more labels were added).
+		if ( ! $resized && YeffoPrint_Order_Label_Changes::can_edit_quantities( $order ) ) {
+			$order    = wc_get_order( $order->get_id() );
+			$repriced = YeffoPrint_Order_Label_Changes::reprice_unpaid_labels( $order );
+			if ( $repriced ) {
+				if ( $order->get_coupon_codes() ) {
+					$order->recalculate_coupons();
+				} else {
+					$order->calculate_totals();
+				}
+				$order->add_order_note( sprintf(
+					/* translators: 1: who made the change, 2: one line per repriced item, 3: new order total */
+					__( "Labels repriced at the order's bulk tier (%1\$s):\n%2\$s\nNew total: %3\$s", 'yeffoprint-core' ),
+					$who,
+					implode( "\n", $repriced ),
+					wp_strip_all_tags( wc_price( (float) $order->get_total() ) )
+				) );
+				$order->save();
+				$resized = $repriced;
+			}
+		}
+
 		return rest_ensure_response( [ 'changed' => array_merge( $applied, $resized ), 'total' => (float) $order->get_total() ] );
 	}
 

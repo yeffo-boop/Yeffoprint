@@ -584,18 +584,41 @@ class YeffoPrint_Order_Label_Changes {
 	}
 
 	/**
-	 * Every label line on the order (Template batches and Custom Labels
-	 * rows, not stickers) priced at one pooled bulk tier — the same pool
-	 * a cart and Create Order use. $changed maps item id → its quantity
-	 * before this edit.
+	 * Brings every label line on an unpaid order to the bulk tier the
+	 * whole order reaches now. Direct report: an 870-label order taken
+	 * to 1,000 with Add items priced only the new line at the bigger
+	 * discount, so the total didn't show it. Called after Add items and
+	 * after lines are removed in Edit order. Hand-set prices are kept.
+	 * The caller recalculates the order totals.
+	 *
+	 * @return string[] One line per repriced item, for the order note.
 	 */
-	private static function reprice_labels( \WC_Order $order, array $changed ): void {
+	public static function reprice_unpaid_labels( \WC_Order $order ): array {
+		if ( ! self::can_edit_quantities( $order ) ) {
+			return [];
+		}
+		return self::reprice_labels( $order, [] );
+	}
+
+	/**
+	 * Every label line on the order (Template batches and Custom Labels
+	 * rows) priced at one pooled bulk tier — the same pool a cart and
+	 * Create Order use: labels plus stickers count toward it, but sticker
+	 * lines keep their own sticker pricing. $changed maps item id → its
+	 * quantity before this edit.
+	 *
+	 * @return string[] One line per repriced item.
+	 */
+	private static function reprice_labels( \WC_Order $order, array $changed ): array {
 		$label_items = [];
 		$tier        = 0;
+		$notes       = [];
 		foreach ( $order->get_items() as $item ) {
-			if ( ! $item instanceof \WC_Order_Item_Product
-				|| '' !== (string) $item->get_meta( '_yp_sticker_type' )
-				|| '' === (string) $item->get_meta( '_yp_batch_quantity' ) ) {
+			if ( ! $item instanceof \WC_Order_Item_Product || '' === (string) $item->get_meta( '_yp_batch_quantity' ) ) {
+				continue;
+			}
+			$tier += (int) $item->get_meta( '_yp_batch_quantity' );
+			if ( '' !== (string) $item->get_meta( '_yp_sticker_type' ) ) {
 				continue;
 			}
 			$snapshot = json_decode( (string) $item->get_meta( '_yp_pricing_snapshot' ), true );
@@ -603,7 +626,6 @@ class YeffoPrint_Order_Label_Changes {
 				continue;
 			}
 			$label_items[] = [ $item, $snapshot ];
-			$tier         += (int) $item->get_meta( '_yp_batch_quantity' );
 		}
 
 		foreach ( $label_items as [ $item, $snapshot ] ) {
@@ -634,10 +656,22 @@ class YeffoPrint_Order_Label_Changes {
 				$item->update_meta_data( '_yp_pricing_snapshot', wp_json_encode( $pricing ) );
 			}
 
+			if ( ! $was_edited ) {
+				$text    = trim( (string) $item->get_meta( '_yp_compound_strength_snapshot' ) );
+				$notes[] = sprintf(
+					/* translators: 1: item name, 2: old price, 3: new price */
+					__( '%1$s repriced at the order’s bulk tier: %2$s → %3$s', 'yeffoprint-core' ),
+					$item->get_name() . ( '' !== $text ? ' — ' . $text : '' ),
+					wp_strip_all_tags( wc_price( (float) $item->get_subtotal() ) ),
+					wp_strip_all_tags( wc_price( $total ) )
+				);
+			}
 			$item->set_subtotal( $total );
 			$item->set_total( $total );
 			$item->save();
 		}
+
+		return $notes;
 	}
 
 	/** "Custom Order Labels — MOTS-c 10mg (1x2 · Gloss)": which of many same-named lines changed. */

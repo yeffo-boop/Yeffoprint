@@ -1640,7 +1640,7 @@
 				'<div data-ypn-labels-error></div>' +
 				'<div class="ypn-form__acts"><button type="button" class="ypn-btn ypn-btn--primary" data-ypn-labels-save>Save changes</button><button type="button" class="ypn-btn" data-ypn-labels-cancel>Cancel</button></div>' +
 				'<p class="ypn-muted">' + ( qtyEditable
-					? 'Saved as an order note. The customer isn’t emailed. A new quantity reprices that line at the order’s bulk tier, and the pay link charges the new total. Size and material go through Add items.'
+					? 'Saved as an order note. The customer isn’t emailed. Saving prices every label line at the bulk tier the whole order reaches (hand-set prices stay), and the pay link charges the new total. Size and material go through Add items.'
 					: 'Saved as an order note. The customer isn’t emailed. The order is paid, so quantity, size and material changes go through Add items or a new order.' ) + '</p>';
 
 			form.querySelector( '[data-ypn-labels-cancel]' ).addEventListener( 'click', load );
