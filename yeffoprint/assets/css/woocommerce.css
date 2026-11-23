@@ -545,6 +545,52 @@
 	margin: 0;
 }
 
+/* International "Import fees may apply" note — international-duties-
+   checkout.js appends it under the shipping options when the address is
+   outside the US. Same amber card as the away notice above. */
+.yp-duties-notice {
+	display: flex;
+	gap: 0.65rem;
+	align-items: flex-start;
+	background: #FBF0DB;
+	border: 1px solid #EFDCAE;
+	border-radius: var(--wp--custom--radius--control);
+	padding: 0.85rem 1rem;
+	margin: 0.75rem 0 0;
+}
+
+.yp-duties-notice__icon {
+	flex-shrink: 0;
+	margin-top: 0.1rem;
+	color: #A87412;
+	line-height: 0;
+}
+
+.yp-duties-notice__title {
+	display: block;
+	font-family: var(--wp--preset--font-family--heading);
+	font-size: 0.92rem;
+	margin-bottom: 0.15rem;
+	color: var(--wp--preset--color--near-black);
+}
+
+.yp-duties-notice__body {
+	font-size: 0.85rem;
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal);
+	margin: 0;
+}
+
+.yp-duties-notice__body a {
+	color: var(--wp--preset--color--magenta-deep);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.yp-duties-notice__body a:hover {
+	text-decoration: underline;
+}
+
 /* The "Express: skip the line" checkbox — express-checkout.js inserts it
    right above Place Order. Same card shape as the away notice above, in
    the brand accent since it's an option to pick, not a warning. */
