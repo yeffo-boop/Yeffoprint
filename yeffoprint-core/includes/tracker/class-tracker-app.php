@@ -272,10 +272,11 @@ class YeffoPrint_Tracker_App {
 		return $nonce;
 	}
 
-	/** @return array{css:string,js:string} Content-hashed, so a deploy busts every cache (browser and service worker). */
+	/** @return array{css:string,es:string,js:string} Content-hashed, so a deploy busts every cache (browser and service worker). `es` is the Spanish phrase table tracker.js reads (Me › Language). */
 	public static function asset_urls(): array {
 		return [
 			'css' => YEFFOPRINT_CORE_URL . 'assets/tracker/tracker.css?ver=' . yeffoprint_core_asset_version( 'assets/tracker/tracker.css' ),
+			'es'  => YEFFOPRINT_CORE_URL . 'assets/tracker/tracker-es.js?ver=' . yeffoprint_core_asset_version( 'assets/tracker/tracker-es.js' ),
 			'js'  => YEFFOPRINT_CORE_URL . 'assets/tracker/tracker.js?ver=' . yeffoprint_core_asset_version( 'assets/tracker/tracker.js' ),
 		];
 	}

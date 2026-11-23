@@ -376,10 +376,22 @@ class YeffoPrint_Manual_Order_Creator {
 	 * (create() deletes the whole order, add_items() removes just the new
 	 * items).
 	 *
+	 * Bulk discount tiers use the storefront cart's two pools: labels
+	 * are priced on everything on the order (Custom Design rows,
+	 * Template labels and stickers, class-cart-pricing.php's
+	 * combined_label_quantity()), stickers on stickers only
+	 * (combined_sticker_quantity()). $existing adds labels/stickers
+	 * already on the order, so Add items prices new lines against the
+	 * whole order.
+	 *
 	 * @param array{id:int, email:string, name:string} $shell_customer
+	 * @param array{labels:int, stickers:int}           $existing
 	 * @return array<int, array{id:int, order_type:string}>|\WP_Error
 	 */
-	private static function add_groups( \WC_Order $order, array $groups, bool $requires_proof, array $shell_customer ) {
+	private static function add_groups( \WC_Order $order, array $groups, bool $requires_proof, array $shell_customer, array $existing = [ 'labels' => 0, 'stickers' => 0 ] ) {
+		$label_tier_quantity = self::group_label_quantity( $groups ) + (int) $existing['labels'] + (int) $existing['stickers'];
+		$sticker_existing    = (int) $existing['stickers'];
+
 		$custom_orders = [];
 		$cleanup       = static function () use ( &$custom_orders ) {
 			foreach ( $custom_orders as $created ) {
@@ -410,11 +422,13 @@ class YeffoPrint_Manual_Order_Creator {
 			}
 
 			if ( 'custom_design' === $type ) {
-				$result = self::add_custom_design_rows( $order, $group['batch'], $custom_order_id, $group['waive_design_fee'] );
+				$result = self::add_custom_design_rows( $order, $group['batch'], $custom_order_id, $group['waive_design_fee'], $label_tier_quantity );
 			} elseif ( 'sticker' === $type ) {
-				$result = self::add_sticker_row( $order, $group, $custom_order_id, $group['tier_quantity'] );
+				$result = self::add_sticker_row( $order, $group, $custom_order_id, $group['tier_quantity'] + $sticker_existing );
 			} elseif ( 'template' === $type ) {
-				$result = self::add_template_row( $order, $group, $custom_order_id );
+				$result = self::add_template_row( $order, $group, $custom_order_id, $label_tier_quantity );
+			} elseif ( 'print' === $type ) {
+				$result = self::add_print_row( $order, $group );
 			} else {
 				$result = self::add_web_design_row( $order, $group );
 			}
@@ -456,6 +470,56 @@ class YeffoPrint_Manual_Order_Creator {
 	 */
 	public static function is_editable( \WC_Order $order ): bool {
 		return $order->has_status( [ 'pending', 'failed' ] ) && ! $order->get_date_paid();
+	}
+
+	/** Everything in $groups that counts toward the label tier: Custom Design rows, Template variants and stickers (same as the storefront cart). */
+	private static function group_label_quantity( array $groups ): int {
+		$total = 0;
+		foreach ( $groups as list( $type, $group ) ) {
+			if ( 'custom_design' === $type ) {
+				$total += array_sum( array_map( 'intval', array_column( $group['batch'], 'quantity' ) ) );
+			} elseif ( 'template' === $type ) {
+				$total += array_sum( array_map( 'intval', array_column( $group['variants'], 'quantity' ) ) );
+			} elseif ( 'sticker' === $type ) {
+				$total += (int) $group['quantity'];
+			}
+		}
+		return $total;
+	}
+
+	/**
+	 * What Create Order's price previews add to the bulk tier when
+	 * adding items to order $order_id: the labels/stickers already on it
+	 * if it's still unpaid (add_items() puts new lines on that order),
+	 * nothing otherwise (no order, or a paid one whose add-ons go on a
+	 * new linked order with its own count).
+	 *
+	 * @return array{labels:int, stickers:int}
+	 */
+	public static function preview_existing_quantities( int $order_id ): array {
+		$order = $order_id ? wc_get_order( $order_id ) : false;
+		if ( ! $order instanceof \WC_Order || ! self::is_editable( $order ) ) {
+			return [ 'labels' => 0, 'stickers' => 0 ];
+		}
+		return self::existing_tier_quantities( $order );
+	}
+
+	/**
+	 * Labels and stickers already on $order, read from each line's
+	 * _yp_batch_quantity snapshot (stickers also carry _yp_sticker_type).
+	 *
+	 * @return array{labels:int, stickers:int}
+	 */
+	private static function existing_tier_quantities( \WC_Order $order ): array {
+		$quantities = [ 'labels' => 0, 'stickers' => 0 ];
+		foreach ( $order->get_items() as $item ) {
+			$quantity = (int) $item->get_meta( '_yp_batch_quantity' );
+			if ( $quantity <= 0 ) {
+				continue;
+			}
+			$quantities[ '' !== (string) $item->get_meta( '_yp_sticker_type' ) ? 'stickers' : 'labels' ] += $quantity;
+		}
+		return $quantities;
 	}
 
 	/**
@@ -509,7 +573,7 @@ class YeffoPrint_Manual_Order_Creator {
 
 		$existing_item_ids = array_keys( $order->get_items() );
 
-		$custom_orders = self::add_groups( $order, $groups, ! empty( $payload['requires_proof'] ), $shell_customer );
+		$custom_orders = self::add_groups( $order, $groups, ! empty( $payload['requires_proof'] ), $shell_customer, self::existing_tier_quantities( $order ) );
 		if ( is_wp_error( $custom_orders ) ) {
 			foreach ( array_keys( $order->get_items() ) as $item_id ) {
 				if ( ! in_array( $item_id, $existing_item_ids, true ) ) {
@@ -930,6 +994,17 @@ class YeffoPrint_Manual_Order_Creator {
 			$groups[] = [ 'template', $template ];
 		}
 
+		// 3D prints (Telegram chat orders): each entry its own line, no proof shell.
+		if ( ! empty( $payload['prints'] ) && is_array( $payload['prints'] ) ) {
+			foreach ( array_values( array_filter( $payload['prints'], 'is_array' ) ) as $raw_print ) {
+				$print = self::validate_print_fields( $raw_print );
+				if ( is_wp_error( $print ) ) {
+					return $print;
+				}
+				$groups[] = [ 'print', $print ];
+			}
+		}
+
 		if ( ! empty( $payload['web_design'] ) && is_array( $payload['web_design'] ) ) {
 			$web_design = self::validate_web_design_fields( $payload['web_design'] );
 			if ( is_wp_error( $web_design ) ) {
@@ -1004,7 +1079,7 @@ class YeffoPrint_Manual_Order_Creator {
 	 *
 	 * @return true|\WP_Error
 	 */
-	private static function add_custom_design_rows( \WC_Order $order, array $batch, int $custom_order_id, bool $waive_fee = false ) {
+	private static function add_custom_design_rows( \WC_Order $order, array $batch, int $custom_order_id, bool $waive_fee, int $tier_quantity ) {
 		$labels_product_id = YeffoPrint_Custom_Order_Labels_Product::get_product_id();
 		if ( ! $labels_product_id ) {
 			return new \WP_Error( 'yeffoprint_no_labels_product', __( 'Custom design orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
@@ -1035,15 +1110,9 @@ class YeffoPrint_Manual_Order_Creator {
 			}
 		}
 
-		// Same bulk-discount pool a real cart would use, computed across
-		// this order's own rows since there's no live WC()->cart here for
-		// YeffoPrint_Cart_Pricing::calculate_for_cart_item()'s own default
-		// to fall back on.
-		$tier_quantity = 0;
-		foreach ( $batch as $row ) {
-			$tier_quantity += (int) $row['quantity'];
-		}
-
+		// $tier_quantity is every label on the order (see add_groups()),
+		// the same pool a real cart would use; there's no live WC()->cart
+		// here for calculate_for_cart_item()'s own default to fall back on.
 		foreach ( $batch as $row_index => $row ) {
 			$values = [
 				YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID        => $custom_order_id,
@@ -1238,7 +1307,20 @@ class YeffoPrint_Manual_Order_Creator {
 			return new \WP_Error( 'yeffoprint_material_out_of_stock', __( 'That material is currently out of stock. Please choose a different one.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$variants = YeffoPrint_Field_Schema::sanitize_variants( $payload['variants'] ?? null, YeffoPrint_Field_Schema::get_with_colors( $template_id ) );
+		// optional_field_ids: fields the caller may leave blank even when the
+		// template marks them required (Telegram chat orders skip Brand on
+		// template labels, which Jeff said don't need one).
+		$schema   = YeffoPrint_Field_Schema::get_with_colors( $template_id );
+		$optional = array_map( 'strval', (array) ( $payload['optional_field_ids'] ?? [] ) );
+		if ( $optional ) {
+			foreach ( $schema as &$schema_field ) {
+				if ( in_array( (string) $schema_field['id'], $optional, true ) ) {
+					$schema_field['required'] = false;
+				}
+			}
+			unset( $schema_field );
+		}
+		$variants = YeffoPrint_Field_Schema::sanitize_variants( $payload['variants'] ?? null, $schema );
 		if ( is_wp_error( $variants ) ) {
 			return $variants;
 		}
@@ -1267,7 +1349,7 @@ class YeffoPrint_Manual_Order_Creator {
 	 *
 	 * @return true|\WP_Error
 	 */
-	private static function add_template_row( \WC_Order $order, array $template, int $custom_order_id ) {
+	private static function add_template_row( \WC_Order $order, array $template, int $custom_order_id, int $tier_quantity ) {
 		$product_id = YeffoPrint_Linked_Product::get_linked_product_id( $template['template_id'] );
 		if ( ! $product_id ) {
 			return new \WP_Error( 'yeffoprint_no_template_product', __( 'This design is not orderable yet.', 'yeffoprint-core' ), [ 'status' => 503 ] );
@@ -1285,10 +1367,9 @@ class YeffoPrint_Manual_Order_Creator {
 			YeffoPrint_Cart_Item_Keys::TOTAL_QTY       => $total_quantity,
 		];
 
-		// No cart-wide pool to combine against — same reasoning as
-		// add_sticker_row() above — this order's own combined variant
-		// quantity is the whole tier pool.
-		$pricing = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values, $total_quantity );
+		// $tier_quantity is every label on the order (see add_groups()),
+		// Custom Design rows included, same as the storefront cart.
+		$pricing = YeffoPrint_Cart_Pricing::calculate_for_cart_item( $values, $tier_quantity );
 		$total   = $pricing['total'] ?? 0.0;
 
 		$item_id = $order->add_product( $product, $total_quantity, [ 'subtotal' => $total, 'total' => $total ] );
@@ -1298,7 +1379,82 @@ class YeffoPrint_Manual_Order_Creator {
 
 		$item = $order->get_item( $item_id );
 		if ( $item instanceof \WC_Order_Item_Product ) {
-			YeffoPrint_Order_Item_Meta::apply( $item, $values, $total_quantity );
+			YeffoPrint_Order_Item_Meta::apply( $item, $values, $tier_quantity );
+			$item->save();
+		}
+
+		return true;
+	}
+
+	/**
+	 * A 3D print, checked the same way the product page's add to cart checks
+	 * it (class-print-controller.php): { print_id, size, colors: { slot index:
+	 * filament id }, text, text_color, quantity }. No lid image: that needs an
+	 * upload, so the Telegram bot doesn't offer it.
+	 *
+	 * @return array|\WP_Error
+	 */
+	private static function validate_print_fields( array $payload ) {
+		$print_id = absint( $payload['print_id'] ?? 0 );
+		if ( 'yp_print' !== get_post_type( $print_id ) || 'publish' !== get_post_status( $print_id ) ) {
+			return new \WP_Error( 'yeffoprint_print_not_found', __( 'That 3D print was not found.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		$size = YeffoPrint_Print_Meta::resolve_size( $print_id, $payload['size'] ?? '' );
+		if ( is_wp_error( $size ) ) {
+			return $size;
+		}
+		$picks = YeffoPrint_Print_Meta::resolve_picks( $print_id, (array) ( $payload['colors'] ?? [] ) );
+		if ( is_wp_error( $picks ) ) {
+			return $picks;
+		}
+		$addons = YeffoPrint_Print_Meta::resolve_addons( $print_id, $payload['text'] ?? '', 0, $payload['text_color'] ?? 0, 0 );
+		if ( is_wp_error( $addons ) ) {
+			return $addons;
+		}
+		$product_id = YeffoPrint_Print_Product::get_linked_product_id( $print_id );
+		$product    = $product_id ? wc_get_product( $product_id ) : false;
+		if ( ! $product || 'publish' !== $product->get_status() ) {
+			return new \WP_Error( 'yeffoprint_print_unavailable', __( "This 3D print isn't available to order yet.", 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		return [
+			'print_id'   => $print_id,
+			'product_id' => $product_id,
+			'size'       => $size,
+			'picks'      => $picks,
+			'addons'     => $addons,
+			'quantity'   => max( 1, min( 100, absint( $payload['quantity'] ?? 1 ) ) ),
+		];
+	}
+
+	/**
+	 * One line at the item's live price (size + colors + lid text), with the
+	 * same snapshot checkout writes, so the order screen, production board and
+	 * print shipping prices (class-print-shipping.php) read it like any other.
+	 *
+	 * @return true|\WP_Error
+	 */
+	private static function add_print_row( \WC_Order $order, array $print ) {
+		$product = wc_get_product( $print['product_id'] );
+		$unit    = YeffoPrint_Print_Meta::unit_price( $print['print_id'], $print['picks'], $print['size'], $print['addons']['text'], 0 );
+		$total   = round( $unit * $print['quantity'], 2 );
+
+		$item_id = $product ? $order->add_product( $product, $print['quantity'], [ 'subtotal' => $total, 'total' => $total ] ) : 0;
+		if ( ! $item_id ) {
+			return new \WP_Error( 'yeffoprint_add_item_failed', __( "Couldn't add this 3D print to the order.", 'yeffoprint-core' ), [ 'status' => 500 ] );
+		}
+
+		$item = $order->get_item( $item_id );
+		if ( $item instanceof \WC_Order_Item_Product ) {
+			YeffoPrint_Order_Item_Meta::apply( $item, [
+				YeffoPrint_Cart_Item_Keys::PRINT_ID          => $print['print_id'],
+				YeffoPrint_Cart_Item_Keys::PRINT_SIZE        => $print['size'],
+				YeffoPrint_Cart_Item_Keys::PRINT_COLORS      => $print['picks'],
+				YeffoPrint_Cart_Item_Keys::PRINT_TEXT        => $print['addons']['text'],
+				YeffoPrint_Cart_Item_Keys::PRINT_IMAGE       => 0,
+				YeffoPrint_Cart_Item_Keys::PRINT_TEXT_COLOR  => $print['addons']['text_color'],
+				YeffoPrint_Cart_Item_Keys::PRINT_IMAGE_COLOR => null,
+			], 0 );
 			$item->save();
 		}
 

@@ -224,6 +224,7 @@
 					'<p class="yp-panel__hint">Every Contact form submission is emailed here. Replying goes straight to the customer — their address is set as Reply-To.</p>' +
 				'</div>';
 
+			var autoInsure = settings.auto_insure || { enabled: false, threshold: 200, percent: 1.25 };
 			var liveRates = settings.live_rates || { enabled: false, markup: 1, keep_free: true, services: [], all: [], configured: false };
 			var production = settings.production_time || { enabled: false, per_day: 4, min_days: 1, busy_days: 4, closed_dates: [], now: null };
 			var shippingHtml =
@@ -268,6 +269,20 @@
 						} ).join( '' ) +
 					'</div>' +
 					'<p class="yp-panel__hint">Prices are quoted for the Shippo default package below, so set it to your usual mailer and weight. A 3D print with its own shipping price still charges that price when it’s higher.</p>' +
+				'</div>' +
+
+				// Direct request: insurance added automatically to orders over
+				// $200, folded into the shipping price, no separate line.
+				'<div class="yp-panel">' +
+					'<div class="yp-panel__head"><h2>Shipping insurance</h2></div>' +
+					'<p class="yp-panel__hint">On orders over the amount below, checkout adds the Shippo insurance cost into every paid shipping price. Customers see one shipping price, with no separate line. Free shipping stays free unless you tick the box below, and local pickup is never charged. The Ship screen ticks Add Shippo insurance for these orders.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-insure-enabled"' + ( autoInsure.enabled ? ' checked' : '' ) + ' /><label for="yp-set-insure-enabled">Insure bigger orders automatically</label></div>' +
+					'<div class="yp-form__row">' +
+						'<div class="yp-field"><label for="yp-set-insure-threshold">Orders over ($, items after discounts)</label><input type="number" min="0" step="1" inputmode="decimal" id="yp-set-insure-threshold" value="' + YP.escapeAttr( autoInsure.threshold ) + '" /></div>' +
+						'<div class="yp-field"><label for="yp-set-insure-percent">Insurance cost (% of the value)</label><input type="number" min="0" max="10" step="0.01" inputmode="decimal" id="yp-set-insure-percent" value="' + YP.escapeAttr( autoInsure.percent ) + '" /></div>' +
+					'</div>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-insure-free"' + ( autoInsure.on_free ? ' checked' : '' ) + ' /><label for="yp-set-insure-free">Also add it to free shipping (it then shows as "Discounted shipping" at the insurance cost)</label></div>' +
+					'<p class="yp-panel__hint">Shippo charges 1.25% for US packages (1.5% international). A $250 order adds $3.13 to shipping.</p>' +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -392,6 +407,24 @@
 					'<p class="yp-panel__hint">New orders, express reminders, abandoned carts, messages, reviews and tracker feedback always come to the phone app as push alerts. Tick this to get a copy in your Telegram chat too. Customers\' Telegram messages and order updates aren\'t affected.</p>' +
 					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-telegram-login-enabled"' + ( settings.telegram_login_enabled ? ' checked' : '' ) + ' /><label for="yp-set-telegram-login-enabled">Log in with Telegram</label></div>' +
 					'<p class="yp-panel__hint">Shows a "Log in with Telegram" button on the login/account pages, using the same bot token above — no separate app registration needed. One extra step on Telegram\'s side: message @BotFather with <code>/setdomain</code> and authorize this site\'s domain, or Telegram refuses to render the button.</p>' +
+				'</div>' +
+
+				// Direct request: build orders from customers chatting with Jeff's own Telegram (class-telegram-chat-orders.php).
+				'<div class="yp-panel" id="telegram-chat-orders">' +
+					'<div class="yp-panel__head"><h2>Telegram chat orders</h2></div>' +
+					'<p class="yp-panel__hint">When a customer sends you their label list in your own Telegram, type <code>/order</code> in that chat. The bot reads the chat with Claude, asks them only for what\'s missing (email if their Telegram isn\'t linked to an account, shipping address, brand, size, material or quantity), shows a summary, and when they reply YES it creates the order and sends the pay link there. You get a push alert for each one. Type <code>/cancel</code> in the chat to stop it. Size and material are picked with tap buttons. Customers can also start an order themselves in the bot\'s own chat with <code>/neworder</code>. Anything it can\'t do itself waits in Orders › Email Orders, and Create Order there sends the pay link in the chat.</p>' +
+					'<p class="yp-panel__hint"><strong>Setup:</strong> in @BotFather open your bot › Bot Settings › Business Mode and turn it on. Then in Telegram (needs Premium): Settings › Telegram Business › Chatbots, add your bot, pick which chats it can see, and allow it to reply to messages. Uses the Claude API key from Email orders above.</p>' +
+					'<div class="yp-field--checkbox yp-field"><input type="checkbox" id="yp-set-tgco-enabled"' + ( settings.telegram_chat_orders_enabled ? ' checked' : '' ) + ' /><label for="yp-set-tgco-enabled">Let /order (my chats) and /neworder (bot chat) build orders</label></div>' +
+					( function () {
+						var connection = settings.telegram_business_connection;
+						if ( ! connection ) {
+							return '<p class="yp-panel__hint">Not connected yet. Once you add the bot under Telegram Business › Chatbots, it shows here.</p>';
+						}
+						if ( ! connection.enabled ) {
+							return '<p class="yp-form__error">The bot was removed from Telegram Business › Chatbots. Add it again to use /order.</p>';
+						}
+						return '<p class="yp-panel__hint">Connected to ' + YP.escapeHtml( connection.name || 'your Telegram' ) + '.' + ( connection.can_reply ? '' : ' <strong>It isn\'t allowed to reply yet:</strong> turn on "Reply to messages" for the bot under Telegram Business › Chatbots.' ) + '</p>';
+					}() ) +
 				'</div>' +
 
 				'<div class="yp-panel">' +
@@ -555,6 +588,12 @@
 					closed_holidays: Array.prototype.filter.call( viewEl.querySelectorAll( '[data-yp-prod-holiday]' ), function ( input ) { return input.checked; } )
 						.map( function ( input ) { return input.getAttribute( 'data-yp-prod-holiday' ); } )
 				},
+				auto_insure: {
+					enabled: viewEl.querySelector( '#yp-set-insure-enabled' ).checked,
+					threshold: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-insure-threshold' ).value ) || 0 ),
+					percent: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-insure-percent' ).value ) || 0 ),
+					on_free: viewEl.querySelector( '#yp-set-insure-free' ).checked
+				},
 				live_rates: {
 					enabled: viewEl.querySelector( '#yp-set-live-enabled' ).checked,
 					markup: Math.max( 0, parseFloat( viewEl.querySelector( '#yp-set-live-markup' ).value ) || 0 ),
@@ -581,6 +620,7 @@
 				email_orders_password: viewEl.querySelector( '#yp-set-eo-password' ).value,
 				email_orders_senders: viewEl.querySelector( '#yp-set-eo-senders' ).value,
 				claude_api_key: viewEl.querySelector( '#yp-set-claude-key' ) ? viewEl.querySelector( '#yp-set-claude-key' ).value.trim() : '',
+				telegram_chat_orders_enabled: viewEl.querySelector( '#yp-set-tgco-enabled' ).checked,
 				telegram_bot_token: viewEl.querySelector( '#yp-set-telegram-token' ).value,
 				telegram_bot_username: viewEl.querySelector( '#yp-set-telegram-username' ).value,
 				telegram_enabled: viewEl.querySelector( '#yp-set-telegram-enabled' ).checked,

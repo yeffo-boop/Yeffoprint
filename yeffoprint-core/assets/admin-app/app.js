@@ -370,7 +370,7 @@
 		} ).join( '' ) + '</div>';
 	};
 
-	/** Printable invoice / packing slip page for these order ids (class-admin-order-actions-controller.php). `kind`: 'invoice' or 'slip'. */
+	/** Printable invoice / packing slip page for these order ids (class-admin-order-actions-controller.php). `kind`: 'invoice', 'slip' or 'value' (proof of value for a carrier claim). */
 	YP.printOrdersUrl = function ( ids, kind ) {
 		return yeffoprintAdminApp.printOrdersUrl + '&kind=' + encodeURIComponent( kind ) + '&ids=' + ids.map( Number ).join( ',' );
 	};
@@ -1392,7 +1392,7 @@
 
 	// The new app's shipping label screen (next/next.js) reuses these.
 	YP.printLabelUrl = function ( url ) { printLabelUrl( url ); };
-	YP.findBestMatchingRateId = function ( rates, method ) { return findBestMatchingRateId( rates, method ); };
+	YP.findBestMatchingRateId = function ( rates, method, service ) { return findBestMatchingRateId( rates, method, service ); };
 
 	// A list row's "open this order": its full page in the new app
 	// (next/next.js, #/order/{id}), the order window everywhere else.
@@ -3195,6 +3195,11 @@
 							'<div class="yp-field"><label for="yp-shippo-customs-value">Value (' + YP.escapeHtml( customs.currency ) + ')</label><input type="number" min="0.01" step="0.01" id="yp-shippo-customs-value" value="' + YP.escapeAttr( customs.value ) + '" /></div>' +
 						'</div>'
 					: '' ) +
+				'<p class="yp-panel__hint">Package value: ' + YP.escapeHtml( Number( ( order.shippo_package_value || {} ).value || 0 ).toFixed( 2 ) ) + ' ' + YP.escapeHtml( ( order.shippo_package_value || {} ).currency || 'USD' ) + ' (items after discounts).</p>' +
+				'<div class="yp-shippo-dims">' +
+					'<div class="yp-field yp-field--checkbox"><input type="checkbox" id="yp-shippo-insure"' + ( order.shippo_auto_insure ? ' checked' : '' ) + ' /><label for="yp-shippo-insure">Add Shippo insurance</label></div>' +
+					'<div class="yp-field"><label for="yp-shippo-insure-amount">Insure for</label><input type="number" min="0.01" step="0.01" id="yp-shippo-insure-amount" value="' + YP.escapeAttr( ( order.shippo_package_value || {} ).value || '' ) + '" /></div>' +
+				'</div>' +
 				'<button type="button" class="wp-block-button__link is-style-outline yp-shippo-get-rates" data-yp-shippo-get-rates>Get Rates</button>' +
 				'<div data-yp-shippo-rates></div>' +
 				'<div data-yp-shippo-error></div>' +
@@ -3295,6 +3300,12 @@
 			parcel.customs_value = panel.querySelector( '#yp-shippo-customs-value' ).value;
 		}
 
+		var insureBox = panel.querySelector( '#yp-shippo-insure' );
+		parcel.insure = !! ( insureBox && insureBox.checked );
+		parcel.insurance_amount = parcel.insure ? panel.querySelector( '#yp-shippo-insure-amount' ).value : 0;
+		// Shippo puts insurance on the shipment these rates belong to; the purchase records it.
+		panel.removeAttribute( 'data-yp-rated-insured' );
+
 		button.disabled = true;
 		button.textContent = 'Getting rates…';
 		errorEl.innerHTML = '';
@@ -3308,6 +3319,7 @@
 			.then( function ( response ) {
 				button.disabled = false;
 				button.textContent = 'Get Rates';
+				panel.setAttribute( 'data-yp-rated-insured', parcel.insure ? String( parseFloat( parcel.insurance_amount ) || 0 ) : '0' );
 				renderShippoRates( order, panel, response.rates || [] );
 			} )
 			.catch( function ( error ) {
@@ -3363,12 +3375,39 @@
 	 * method like "Flat rate" or "Local pickup" was chosen, which no
 	 * Shippo rate could ever legitimately match.
 	 */
-	function findBestMatchingRateId( rates, shippingMethod ) {
+	/*
+	 * Words that say nothing about which carrier service was picked —
+	 * direct bug report: international orders pre-ticked a FedEx rate
+	 * when the customer's "International Shipping" (the cheapest rate at
+	 * checkout, often UPS) was really meant. "International" alone was
+	 * matching "FedEx International Economy"/"Priority", which UPS's
+	 * "Worldwide Expedited"/"Standard" never contain. Ignoring these
+	 * words makes a carrier-less method like "International Shipping"
+	 * fall back to the cheapest rate, which is what checkout charged.
+	 */
+	var GENERIC_RATE_WORDS = [ 'international', 'shipping', 'flat', 'rate' ];
+
+	function findBestMatchingRateId( rates, shippingMethod, shippingService ) {
+		// Live checkout rates save the exact carrier service the price came
+		// from; when one is there, it wins outright.
+		if ( shippingService ) {
+			var wanted = normalizeForRateMatch( shippingService );
+			var exact = rates.filter( function ( rate ) {
+				return normalizeForRateMatch( rate.carrier_label + ' ' + rate.service ) === wanted;
+			} );
+			if ( exact.length ) {
+				return exact[ 0 ].id;
+			}
+		}
 		if ( ! shippingMethod ) {
 			return null;
 		}
 		var haystack = normalizeForRateMatch( shippingMethod );
-		var haystackWords = haystack ? haystack.split( ' ' ) : [];
+		var haystackWords = haystack ? haystack.split( ' ' ).filter( function ( word ) { return GENERIC_RATE_WORDS.indexOf( word ) === -1; } ) : [];
+		haystack = haystackWords.join( ' ' );
+		if ( ! haystack ) {
+			return null;
+		}
 		var bestId = null;
 		var bestScore = 0;
 
@@ -3380,9 +3419,9 @@
 				score += 1;
 			}
 			if ( service ) {
-				var serviceWords = service.split( ' ' );
+				var serviceWords = service.split( ' ' ).filter( function ( word ) { return GENERIC_RATE_WORDS.indexOf( word ) === -1; } );
 				var matchedWords = serviceWords.filter( function ( word ) { return haystackWords.indexOf( word ) !== -1; } );
-				score += 2 * ( matchedWords.length / serviceWords.length );
+				score += serviceWords.length ? 2 * ( matchedWords.length / serviceWords.length ) : 0;
 			}
 			if ( score > bestScore ) {
 				bestScore = score;
@@ -3401,7 +3440,7 @@
 			return;
 		}
 
-		var bestMatchId = findBestMatchingRateId( rates, order.shipping_method );
+		var bestMatchId = findBestMatchingRateId( rates, order.shipping_method, order.shipping_service );
 
 		// One pill per carrier actually present in this response — direct
 		// request: "I'd like to be able to filter carriers from shippo."
@@ -3529,7 +3568,7 @@
 		YP.request( yeffoprintAdminApp.restUrl + 'admin/order/' + order.id + '/shippo/purchase', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label } )
+			body: JSON.stringify( { rate_id: rate.id, carrier_id: rate.carrier_id, carrier_label: rate.carrier_label, insured_amount: parseFloat( panel.getAttribute( 'data-yp-rated-insured' ) ) || 0 } )
 		} )
 			.then( function ( response ) {
 				resultEl.innerHTML =

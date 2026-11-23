@@ -111,7 +111,14 @@ class YeffoPrint_Email_Customer_Shipped_Order extends \WC_Email {
 			// runtime state. WooCommerce → Status → Logs, source
 			// "yeffoprint-shipped-email", is where the next occurrence
 			// shows up in a fresh log entry.
-			if ( is_a( $this->object, \WC_Order::class ) ) {
+			// An add-on group shipped in one box gets one email, from
+			// the original order (class-order-addon-shipping.php).
+			if ( is_a( $this->object, \WC_Order::class ) && class_exists( 'YeffoPrint_Order_Addon_Shipping' ) && ! YeffoPrint_Order_Addon_Shipping::is_email_sender( $this->object ) ) {
+				wc_get_logger()->info(
+					sprintf( 'trigger() skipped order #%d — shipped in the same box as a linked order that sends the email.', $this->object->get_id() ),
+					[ 'source' => 'yeffoprint-shipped-email' ]
+				);
+			} elseif ( is_a( $this->object, \WC_Order::class ) ) {
 				$result = $this->send_notification();
 				wc_get_logger()->info(
 					sprintf(

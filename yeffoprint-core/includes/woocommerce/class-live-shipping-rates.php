@@ -39,8 +39,30 @@ class YeffoPrint_Live_Shipping_Rates {
 	/** Rate id prefix for services added on top of the zone's flat rates. */
 	public const METHOD_ID = 'yp_live_rate';
 
+	/** Shipping line meta: "Carrier Service" the live price was quoted from. */
+	public const SERVICE_META = '_yp_live_service';
+
 	/** Cheapest international rate from any carrier, rather than one Shippo service. */
 	public const INTERNATIONAL = 'international';
+
+	/**
+	 * Direct request: "Can we allow international customers to choose the
+	 * shipping option they want?" Ticked, international checkout lists each
+	 * carrier service Shippo quotes (cheapest first) instead of one
+	 * "International Shipping" option at the cheapest price.
+	 */
+	public const INTERNATIONAL_CHOICE = 'international_choice';
+
+	/** Most international options shown, cheapest first. */
+	private const INTERNATIONAL_CHOICE_LIMIT = 6;
+
+	/** Rate id part for one international carrier service: yp_live_rate:intl_<token>. */
+	private const INTERNATIONAL_RATE_PREFIX = 'intl_';
+
+	/** Checkbox on Settings › Shipping › Live shipping rates; not a Shippo service. */
+	private const EXTRA_SETTINGS = [
+		self::INTERNATIONAL_CHOICE => 'Let international customers pick the carrier (UPS, FedEx, USPS…)',
+	];
 
 	private const DEFAULT_MARKUP = 1.0;
 
@@ -58,7 +80,7 @@ class YeffoPrint_Live_Shipping_Rates {
 		self::INTERNATIONAL     => [ 'label' => 'Cheapest international option', 'match' => 'international', 'days' => '6–15' ],
 	];
 
-	private const DEFAULT_SERVICES = [ 'usps_ground_advantage', 'ups_second_day_air', 'usps_priority', self::INTERNATIONAL ];
+	private const DEFAULT_SERVICES = [ 'usps_ground_advantage', 'ups_second_day_air', 'usps_priority', self::INTERNATIONAL, self::INTERNATIONAL_CHOICE ];
 
 	/** Short, so checkout never hangs on Shippo: past this the flat rates show instead. */
 	private const TIMEOUT = 5;
@@ -95,13 +117,27 @@ class YeffoPrint_Live_Shipping_Rates {
 		return (bool) get_option( self::KEEP_FREE_OPTION, true );
 	}
 
-	/** @return string[] Ticked service keys from SERVICES. */
+	/** @return string[] Every key the services checkboxes can hold. */
+	private static function service_keys(): array {
+		return array_merge( array_keys( self::SERVICES ), array_keys( self::EXTRA_SETTINGS ) );
+	}
+
+	/** @return string[] Ticked service keys from SERVICES (plus INTERNATIONAL_CHOICE). */
 	public static function services(): array {
 		$saved = get_option( self::SERVICES_OPTION, null );
 		if ( ! is_array( $saved ) ) {
 			return self::DEFAULT_SERVICES;
 		}
-		return array_values( array_intersect( array_keys( self::SERVICES ), $saved ) );
+		// Saved before the international choice box existed: on, as asked.
+		if ( in_array( self::INTERNATIONAL, $saved, true ) && ! get_option( self::SERVICES_OPTION . '_choice_seen' ) ) {
+			$saved[] = self::INTERNATIONAL_CHOICE;
+		}
+		return array_values( array_intersect( self::service_keys(), $saved ) );
+	}
+
+	public static function international_choice(): bool {
+		$services = self::services();
+		return in_array( self::INTERNATIONAL, $services, true ) && in_array( self::INTERNATIONAL_CHOICE, $services, true );
 	}
 
 	/** Settings screen payload. */
@@ -111,7 +147,10 @@ class YeffoPrint_Live_Shipping_Rates {
 			'markup'     => self::markup(),
 			'keep_free'  => self::keep_free_shipping(),
 			'services'   => self::services(),
-			'all'        => array_map( static fn( string $key, array $service ): array => [ 'key' => $key, 'label' => $service['label'] ], array_keys( self::SERVICES ), self::SERVICES ),
+			'all'        => array_merge(
+				array_map( static fn( string $key, array $service ): array => [ 'key' => $key, 'label' => $service['label'] ], array_keys( self::SERVICES ), self::SERVICES ),
+				array_map( static fn( string $key, string $label ): array => [ 'key' => $key, 'label' => $label ], array_keys( self::EXTRA_SETTINGS ), self::EXTRA_SETTINGS )
+			),
 			'configured' => YeffoPrint_Shippo_Settings::is_configured(),
 		];
 	}
@@ -121,7 +160,8 @@ class YeffoPrint_Live_Shipping_Rates {
 		update_option( self::ENABLED_OPTION, (int) ! empty( $params['enabled'] ) );
 		update_option( self::MARKUP_OPTION, round( max( 0.0, (float) ( $params['markup'] ?? self::DEFAULT_MARKUP ) ), 2 ) );
 		update_option( self::KEEP_FREE_OPTION, (int) ! empty( $params['keep_free'] ) );
-		update_option( self::SERVICES_OPTION, array_values( array_intersect( array_keys( self::SERVICES ), array_map( 'strval', (array) ( $params['services'] ?? [] ) ) ) ) );
+		update_option( self::SERVICES_OPTION, array_values( array_intersect( self::service_keys(), array_map( 'strval', (array) ( $params['services'] ?? [] ) ) ) ) );
+		update_option( self::SERVICES_OPTION . '_choice_seen', 1 );
 	}
 
 	/**
@@ -175,6 +215,20 @@ class YeffoPrint_Live_Shipping_Rates {
 				continue;
 			}
 
+			// One option per carrier service instead of the cheapest one.
+			// Not for carts with a 3D print priced per shipping option: that
+			// price is keyed by this flat rate, so it stays the only option.
+			$choices = $domestic ? [] : (array) ( $quotes[ self::INTERNATIONAL_RATE_PREFIX ] ?? [] );
+			if ( $choices && self::international_choice() && empty( $package[ YeffoPrint_Print_Shipping::PACKAGE_KEY ] ) ) {
+				unset( $rates[ $id ] );
+				foreach ( $choices as $token => $choice ) {
+					$option = new WC_Shipping_Rate( self::METHOD_ID . ':' . self::INTERNATIONAL_RATE_PREFIX . $token, $choice['service'], 0, [], self::METHOD_ID );
+					self::reprice( $option, $choice, $markup, $package );
+					$rates[ $option->get_id() ] = $option;
+				}
+				continue;
+			}
+
 			$repriced[] = $key;
 			if ( isset( $quotes[ $key ] ) ) {
 				self::reprice( $rate, $quotes[ $key ], $markup, $package );
@@ -200,13 +254,21 @@ class YeffoPrint_Live_Shipping_Rates {
 		return $rates;
 	}
 
-	/** @param array{amount:float, days:?int} $quote */
+	/** @param array{amount:float, days:?int, service?:string} $quote */
 	private static function reprice( WC_Shipping_Rate $rate, array $quote, float $markup, array $package ): void {
 		$rate->set_cost( (string) round( $quote['amount'] + $markup, 2 ) );
 		$rate->set_taxes( [] );
 		$rate->add_meta_data( '_yp_live_rate', (string) round( $quote['amount'], 2 ) );
+		// The carrier service the price came from, so the admin Ship screen
+		// can pre-select it. International checkout only says "International
+		// Shipping", which names no carrier.
+		if ( ! empty( $quote['service'] ) ) {
+			$rate->add_meta_data( self::SERVICE_META, $quote['service'] );
+		}
 		if ( $quote['days'] ) {
 			$rate->set_delivery_time( self::delivery_text( (string) $quote['days'], $package ) );
+		} elseif ( 0 === strpos( $rate->get_id(), self::METHOD_ID . ':' . self::INTERNATIONAL_RATE_PREFIX ) ) {
+			$rate->set_delivery_time( self::delivery_text( self::SERVICES[ self::INTERNATIONAL ]['days'], $package ) );
 		}
 	}
 
@@ -299,7 +361,7 @@ class YeffoPrint_Live_Shipping_Rates {
 		// Domestic prices only depend on the ZIP, so the street isn't part of
 		// the key; international ones get the full address.
 		$cache_address = $domestic ? [ $address['country'], $address['zip'] ] : $address;
-		$cache_key     = 'yp_live_rates_v2_' . md5( wp_json_encode( [ $cache_address, $parcel, $domestic ? null : round( $value ) ] ) );
+		$cache_key     = 'yp_live_rates_v4_' . md5( wp_json_encode( [ $cache_address, $parcel, $domestic ? null : round( $value ) ] ) );
 
 		$cached = get_transient( $cache_key );
 		if ( is_array( $cached ) ) {
@@ -314,20 +376,48 @@ class YeffoPrint_Live_Shipping_Rates {
 			return null;
 		}
 
-		$quotes = [];
+		$quotes  = [];
+		$choices = [];
 		foreach ( $result['rates'] as $rate ) {
 			if ( 'USD' !== strtoupper( $rate['currency'] ) || $rate['amount'] <= 0 ) {
 				continue;
 			}
+			if ( ! $domestic ) {
+				$name  = self::service_name( $rate );
+				$token = sanitize_key( $rate['service_token'] ?: $name );
+				if ( '' !== $token && ( ! isset( $choices[ $token ] ) || $rate['amount'] < $choices[ $token ]['amount'] ) ) {
+					// Carriers' own transit estimate, so faster services show it.
+					$choices[ $token ] = [ 'amount' => $rate['amount'], 'days' => $rate['days'] ?: null, 'service' => $name ];
+				}
+			}
 			$key = $domestic ? $rate['service_token'] : self::INTERNATIONAL;
 			if ( isset( self::SERVICES[ $key ] ) && ( ! isset( $quotes[ $key ] ) || $rate['amount'] < $quotes[ $key ]['amount'] ) ) {
 				// Carriers' international estimates leave out customs, so those keep the usual range.
-				$quotes[ $key ] = [ 'amount' => $rate['amount'], 'days' => $domestic ? ( $rate['days'] ?: null ) : null ];
+				$quotes[ $key ] = [
+					'amount'  => $rate['amount'],
+					'days'    => $domestic ? ( $rate['days'] ?: null ) : null,
+					'service' => self::service_name( $rate ),
+				];
 			}
+		}
+
+		if ( $choices ) {
+			uasort( $choices, static fn( $a, $b ) => $a['amount'] <=> $b['amount'] );
+			$quotes[ self::INTERNATIONAL_RATE_PREFIX ] = array_slice( $choices, 0, self::INTERNATIONAL_CHOICE_LIMIT, true );
 		}
 
 		set_transient( $cache_key, [ 'ok' => true, 'quotes' => $quotes ], self::CACHE_TTL );
 
 		return $quotes;
+	}
+
+	/** "UPS Worldwide Expedited": carrier plus service, without saying the carrier twice. */
+	private static function service_name( array $rate ): string {
+		$carrier = trim( (string) $rate['carrier_label'] );
+		$service = trim( (string) $rate['service'] );
+		if ( '' !== $carrier && 0 === stripos( $service, $carrier ) ) {
+			return $service;
+		}
+		return trim( $carrier . ' ' . $service );
 	}
 }

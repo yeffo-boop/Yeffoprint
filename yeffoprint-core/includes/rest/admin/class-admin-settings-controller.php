@@ -60,6 +60,7 @@ class YeffoPrint_Admin_Settings_Controller {
 
 		update_option( YeffoPrint_Shippo_Settings::API_KEY_OPTION, sanitize_text_field( (string) ( $params['shippo_api_key'] ?? '' ) ) );
 		YeffoPrint_Email_Orders::save_settings( $params );
+		YeffoPrint_Telegram_Chat_Orders::save_settings( $params );
 		YeffoPrint_Spam_Guard::save_settings( $params );
 		// Only when sent, so an older copy of the app open on a phone can't blank it.
 		if ( array_key_exists( 'usda_api_key', $params ) ) {
@@ -78,6 +79,9 @@ class YeffoPrint_Admin_Settings_Controller {
 		// Only when sent, so an older copy of the app can't switch live rates off.
 		if ( is_array( $params['live_rates'] ?? null ) ) {
 			YeffoPrint_Live_Shipping_Rates::save( $params['live_rates'] );
+		}
+		if ( is_array( $params['auto_insure'] ?? null ) ) {
+			YeffoPrint_Shipping_Insurance::save( $params['auto_insure'] );
 		}
 		if ( is_array( $params['production_time'] ?? null ) ) {
 			YeffoPrint_Production_Time::save( $params['production_time'] );
@@ -191,6 +195,7 @@ class YeffoPrint_Admin_Settings_Controller {
 			'shippo_webhook_url'         => esc_url_raw( YeffoPrint_Shippo_Webhook_Secret::webhook_url() ),
 			'shippo_webhook_status'      => YeffoPrint_Shippo_Webhook_Sync::last_message(),
 			'live_rates'                 => YeffoPrint_Live_Shipping_Rates::settings(),
+			'auto_insure'                => YeffoPrint_Shipping_Insurance::settings(),
 			'production_time'            => YeffoPrint_Production_Time::settings(),
 			'local_pickup_enabled'       => YeffoPrint_Local_Pickup::is_enabled(),
 			'local_pickup_label'         => (string) get_option( YeffoPrint_Local_Pickup::LABEL_OPTION, '' ),
@@ -245,6 +250,6 @@ class YeffoPrint_Admin_Settings_Controller {
 			'apple_key_id'               => (string) get_option( $M::APPLE_KEY_ID_OPTION, '' ),
 			'apple_private_key'          => (string) get_option( $M::APPLE_PRIVATE_KEY_OPTION, '' ),
 			'apple_redirect_uri'         => esc_url_raw( YeffoPrint_Social_Login::callback_url( 'apple' ) ),
-		] + YeffoPrint_Email_Orders::settings();
+		] + YeffoPrint_Email_Orders::settings() + YeffoPrint_Telegram_Chat_Orders::settings();
 	}
 }

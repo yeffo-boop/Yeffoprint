@@ -99,14 +99,18 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-pay-address.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-checkout-phone-required.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-away-mode-checkout-notice.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-international-duties-notice.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-sales-pause.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-delay-email.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-value.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-label-count.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-express-order.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-holographic-vinyl.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-curing-status.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-local-pickup.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-print-shipping.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-live-shipping-rates.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-shipping-insurance.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-production-time.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-abandoned-carts.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-draft-order-retention.php';
@@ -179,6 +183,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-number-format.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-checkout.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-shipping.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-account.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-label-changes.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-order-addon-email-notice.php';
@@ -220,6 +225,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-address-update.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-log.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-unanswered-digest.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/telegram/class-telegram-chat-orders.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-telegram-webhook-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-web-chat-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/tracker/class-tracker-crypto.php';
@@ -267,6 +273,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Order_Pay_Address();
 		new YeffoPrint_Checkout_Phone_Required();
 		new YeffoPrint_Away_Mode_Checkout_Notice();
+		new YeffoPrint_International_Duties_Notice();
 		new YeffoPrint_Sales_Pause();
 		new YeffoPrint_Order_Delay_Email();
 		new YeffoPrint_Holographic_Vinyl();
@@ -275,6 +282,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Local_Pickup();
 		new YeffoPrint_Print_Shipping();
 		new YeffoPrint_Live_Shipping_Rates();
+		new YeffoPrint_Shipping_Insurance();
 		new YeffoPrint_Production_Time();
 		new YeffoPrint_Draft_Order_Retention();
 		new YeffoPrint_Away_Mode_Email_Notice();
@@ -348,6 +356,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Web_Design_Digest_Controller();
 		new YeffoPrint_Order_Number_Format();
 		new YeffoPrint_Order_Addon_Checkout();
+		new YeffoPrint_Order_Addon_Shipping();
 		new YeffoPrint_Order_Addon_Account();
 		new YeffoPrint_Order_Label_Changes();
 		new YeffoPrint_Order_Addon_Email_Notice();
@@ -387,6 +396,7 @@ final class YeffoPrint_Core {
 		new YeffoPrint_Llms_Txt();
 		new YeffoPrint_Telegram_Unanswered_Log();
 		new YeffoPrint_Telegram_Unanswered_Digest();
+		new YeffoPrint_Telegram_Chat_Orders();
 		new YeffoPrint_Proof_Reminder_Scheduler();
 		new YeffoPrint_Telegram_Express_Alerts();
 		new YeffoPrint_Abandoned_Carts();

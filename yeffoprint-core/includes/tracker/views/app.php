@@ -41,6 +41,7 @@ defined( 'ABSPATH' ) || exit;
 	</main>
 	<noscript><p style="padding:24px"><?php esc_html_e( 'YeffoHealth needs JavaScript turned on.', 'yeffoprint-core' ); ?></p></noscript>
 	<script nonce="<?php echo esc_attr( $script_nonce ); ?>">window.YP_TRACKER = <?php echo wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES ); ?>;</script>
+	<script src="<?php echo esc_url( $assets['es'] ); ?>" defer></script>
 	<script src="<?php echo esc_url( $assets['js'] ); ?>" defer></script>
 </body>
 </html>
