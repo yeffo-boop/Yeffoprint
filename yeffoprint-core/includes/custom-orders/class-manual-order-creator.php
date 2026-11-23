@@ -584,12 +584,15 @@ class YeffoPrint_Manual_Order_Creator {
 			return $custom_orders;
 		}
 
-		$order->calculate_totals();
+		// The new labels may lift the whole order into a bigger bulk
+		// tier, so the lines already on it are repriced too.
+		$repriced = YeffoPrint_Order_Label_Changes::reprice_unpaid_labels( $order );
+		self::recalculate( $order );
 		$order->add_order_note( sprintf(
 			/* translators: %s: staff display name */
 			__( 'Items added by %s via the admin app before payment.', 'yeffoprint-core' ),
 			wp_get_current_user()->display_name
-		) );
+		) . ( $repriced ? "\n" . implode( "\n", $repriced ) : '' ) );
 		$order->save();
 
 		if ( ! empty( $payload['send_invoice_email'] ) && function_exists( 'WC' ) && WC()->mailer() ) {
@@ -796,7 +799,11 @@ class YeffoPrint_Manual_Order_Creator {
 			}
 		}
 
-		$order->calculate_totals();
+		// Fewer labels can drop the order to a smaller bulk tier.
+		if ( $removals ) {
+			$changes = array_merge( $changes, YeffoPrint_Order_Label_Changes::reprice_unpaid_labels( $order ) );
+		}
+		self::recalculate( $order );
 
 		if ( $changes ) {
 			$order->add_order_note( sprintf(
@@ -830,6 +837,15 @@ class YeffoPrint_Manual_Order_Creator {
 		}
 
 		return $order;
+	}
+
+	/** Totals again, with any coupon worked out on the new line amounts. */
+	private static function recalculate( \WC_Order $order ): void {
+		if ( $order->get_coupon_codes() ) {
+			$order->recalculate_coupons();
+		} else {
+			$order->calculate_totals();
+		}
 	}
 
 	private static function not_editable_error(): \WP_Error {
