@@ -733,8 +733,12 @@ class YeffoPrint_Label_Svg {
 		if ( preg_match( '/^#[0-9a-f]{6}$/', $value ) ) {
 			return strtoupper( $value );
 		}
-		if ( preg_match( '/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/', $value, $m ) ) {
-			return sprintf( '#%02X%02X%02X', min( 255, (int) $m[1] ), min( 255, (int) $m[2] ), min( 255, (int) $m[3] ) );
+		// rgb(12, 34, 56) or rgb(9.2%, 10.4%, 21.4%) (PDF → SVG converters write the latter).
+		if ( preg_match( '/^rgba?\(\s*([\d.]+)(%?)\s*,\s*([\d.]+)(%?)\s*,\s*([\d.]+)(%?)/', $value, $m ) ) {
+			$channel = static function ( $n, $pct ) {
+				return (int) round( max( 0, min( 255, '%' === $pct ? (float) $n * 2.55 : (float) $n ) ) );
+			};
+			return sprintf( '#%02X%02X%02X', $channel( $m[1], $m[2] ), $channel( $m[3], $m[4] ), $channel( $m[5], $m[6] ) );
 		}
 		return '';
 	}
