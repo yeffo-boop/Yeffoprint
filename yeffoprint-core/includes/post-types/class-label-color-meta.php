@@ -311,6 +311,11 @@ class YeffoPrint_Label_Color_Meta {
 			return [];
 		}
 
+		// An SVG template's own color parts replace the dot-based choices.
+		if ( YeffoPrint_Label_Svg::has( $template_id ) ) {
+			return YeffoPrint_Label_Svg::virtual_fields( $template_id );
+		}
+
 		$choices = self::get_choices( $template_id );
 		if ( ! $choices ) {
 			return [];

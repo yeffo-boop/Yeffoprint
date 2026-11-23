@@ -67,6 +67,8 @@ class YeffoPrint_Template_Schema_Controller {
 			);
 		}
 
+		$field_schema = YeffoPrint_Field_Schema::get_with_colors( $template->ID );
+
 		return rest_ensure_response( [
 			'id'                    => $template->ID,
 			// Raw post_title, not get_the_title() — see format_size()
@@ -89,7 +91,10 @@ class YeffoPrint_Template_Schema_Controller {
 			'base_unit_price'       => function_exists( 'yeffoprint_core_base_unit_price' ) ? yeffoprint_core_base_unit_price() : 0,
 			'tiers'                 => YeffoPrint_Pricing_Rule::get_tiers(),
 			'quantity_presets'      => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
-			'field_schema'          => YeffoPrint_Field_Schema::get_with_colors( $template->ID ),
+			'field_schema'          => $field_schema,
+			// SVG template (class-label-svg.php): when set, Label View draws
+			// this file live instead of text over the artwork image.
+			'svg'                   => YeffoPrint_Label_Svg::customer_payload( $template->ID, $field_schema ),
 			// Product Type slugs (e.g. "peptide-vial-labels") —
 			// configurator.js shows its reconstitution/dose tip only on
 			// peptide templates, not on the cosmetics/skincare ones.

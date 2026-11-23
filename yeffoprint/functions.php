@@ -309,7 +309,13 @@ add_action( 'wp_enqueue_scripts', function () {
 		wp_enqueue_script(
 			'yeffoprint-configurator',
 			get_theme_file_uri( 'assets/js/configurator.js' ),
-			[ 'yeffoprint-label-pickers', 'yeffoprint-label-proofing' ],
+			// SVG templates' live renderer ships with the plugin
+			// (class-label-svg.php); only depended on when registered, so
+			// the theme still loads against an older plugin.
+			array_merge(
+				[ 'yeffoprint-label-pickers', 'yeffoprint-label-proofing' ],
+				wp_script_is( 'yeffoprint-label-svg', 'registered' ) ? [ 'yeffoprint-label-svg' ] : []
+			),
 			yeffoprint_asset_version( 'assets/js/configurator.js' ),
 			[ 'strategy' => 'defer' ]
 		);

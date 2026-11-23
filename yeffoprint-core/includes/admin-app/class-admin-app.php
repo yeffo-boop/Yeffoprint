@@ -298,9 +298,12 @@ class YeffoPrint_Admin_App {
 			wp_enqueue_script(
 				'yeffoprint-admin-app-view-' . $view,
 				YEFFOPRINT_CORE_URL . 'assets/admin-app/views/' . $view . '.js',
-				in_array( $view, [ 'templates', 'label-fields' ], true )
-					? [ 'yeffoprint-admin-app', 'yeffoprint-admin-app-field-schema-editor' ]
-					: [ 'yeffoprint-admin-app' ],
+				'templates' === $view
+					// label-svg.js: the SVG template preview (class-label-svg.php).
+					? [ 'yeffoprint-admin-app', 'yeffoprint-admin-app-field-schema-editor', 'yeffoprint-label-svg' ]
+					: ( 'label-fields' === $view
+						? [ 'yeffoprint-admin-app', 'yeffoprint-admin-app-field-schema-editor' ]
+						: [ 'yeffoprint-admin-app' ] ),
 				yeffoprint_core_asset_version( 'assets/admin-app/views/' . $view . '.js' ),
 				[ 'strategy' => 'defer' ]
 			);
