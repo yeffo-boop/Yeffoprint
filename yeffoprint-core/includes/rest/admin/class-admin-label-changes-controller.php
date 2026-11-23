@@ -39,13 +39,38 @@ class YeffoPrint_Admin_Label_Changes_Controller {
 			return new \WP_Error( 'yeffoprint_order_locked', __( 'This order has shipped, so its label details can no longer be changed.', 'yeffoprint-core' ), [ 'status' => 400 ] );
 		}
 
-		$user    = wp_get_current_user();
-		$applied = YeffoPrint_Order_Label_Changes::apply( $order, $request->get_param( 'changes' ), $user->display_name ?: __( 'staff', 'yeffoprint-core' ) );
+		$user = wp_get_current_user();
+		$who  = $user->display_name ?: __( 'staff', 'yeffoprint-core' );
+
+		// Unpaid orders: new quantities too. Checked before anything is
+		// written, so a bad quantity doesn't leave half the edit saved.
+		$quantities = $request->get_param( 'quantities' );
+		if ( $quantities && ! YeffoPrint_Order_Label_Changes::can_edit_quantities( $order ) ) {
+			return new \WP_Error( 'yeffoprint_order_not_editable', __( 'Quantities can only be changed before the order is paid.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+		foreach ( is_array( $quantities ) ? $quantities : [] as $labels ) {
+			foreach ( is_array( $labels ) ? $labels : [] as $value ) {
+				if ( '' !== $value && null !== $value && ( ! is_numeric( $value ) || (int) $value < 1 || (float) $value !== (float) (int) $value ) ) {
+					return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Quantity must be a whole number, 1 or more, for every label.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+				}
+			}
+		}
+
+		$applied = YeffoPrint_Order_Label_Changes::apply( $order, $request->get_param( 'changes' ), $who );
 		if ( is_wp_error( $applied ) ) {
 			return $applied;
 		}
 
-		return rest_ensure_response( [ 'changed' => $applied ] );
+		$resized = [];
+		if ( $quantities ) {
+			$order   = wc_get_order( $order->get_id() );
+			$resized = YeffoPrint_Order_Label_Changes::apply_quantities( $order, $quantities, $who );
+			if ( is_wp_error( $resized ) ) {
+				return $resized;
+			}
+		}
+
+		return rest_ensure_response( [ 'changed' => array_merge( $applied, $resized ), 'total' => (float) $order->get_total() ] );
 	}
 
 	/** @return \WP_REST_Response|\WP_Error */

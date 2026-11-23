@@ -17,8 +17,12 @@
  *
  * What can change: each label's own fields on a Template batch (stored
  * in _yp_variants, read through the order's frozen field_schema) and a
- * Custom Labels row's Compound/Strength. Size, material and quantity
- * change the price, so those still go through Add items or a new order.
+ * Custom Labels row's Label Fields. A row saved with only the older
+ * single Compound/Strength text (every Create Order row) edits the
+ * current Label Fields set, prefilled from that text. Staff can also
+ * change quantities while the order is still unpaid
+ * (apply_quantities()); the line is repriced and the pay link charges
+ * the new total. Size and material still go through Add items.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -119,13 +123,13 @@ class YeffoPrint_Order_Label_Changes {
 					];
 				}
 				if ( $labels ) {
-					$lines[] = [ 'item_id' => $item->get_id(), 'name' => $item->get_name(), 'kind' => 'template', 'labels' => $labels ];
+					$lines[] = array_merge( [ 'item_id' => $item->get_id(), 'name' => $item->get_name(), 'kind' => 'template', 'labels' => $labels ], self::line_extras( $item ) );
 				}
 				continue;
 			}
 
 			if ( self::is_custom_labels_row( $item ) ) {
-				$lines[] = [
+				$lines[] = array_merge( [
 					'item_id' => $item->get_id(),
 					'name'    => $item->get_name(),
 					'kind'    => 'custom',
@@ -134,11 +138,24 @@ class YeffoPrint_Order_Label_Changes {
 						'quantity' => (int) $item->get_meta( '_yp_batch_quantity' ),
 						'fields'   => self::custom_fields_payload( $item ),
 					] ],
-				];
+				], self::line_extras( $item ) );
 			}
 		}
 
 		return $lines;
+	}
+
+	/** Size, material and price, so a long list of same-named lines can be told apart. */
+	private static function line_extras( \WC_Order_Item_Product $item ): array {
+		$size     = (string) $item->get_meta( __( 'Size', 'yeffoprint-core' ) );
+		$material = (string) $item->get_meta( __( 'Material', 'yeffoprint-core' ) );
+		$brand    = (string) $item->get_meta( '_yp_brand_name' );
+		return [
+			'details' => implode( ' · ', array_filter( [ $brand, $size, $material ], static function ( $part ) {
+				return '' !== $part && '—' !== $part;
+			} ) ),
+			'total'   => (float) $item->get_total(),
+		];
 	}
 
 	/** A Template batch's frozen field_schema, or [] for any other line. */
@@ -159,7 +176,10 @@ class YeffoPrint_Order_Label_Changes {
 	 * text lives in the drawn design instead.
 	 */
 	private static function is_custom_labels_row( \WC_Order_Item_Product $item ): bool {
-		return (int) $item->get_meta( '_yp_custom_order_id' )
+		// _yp_custom_order_id is 0 on a Create Order row made without
+		// proof approval (no design request behind it), but still there.
+		return '' !== (string) $item->get_meta( '_yp_custom_order_id' )
+			&& '' === (string) $item->get_meta( '_yp_template_snapshot' )
 			&& '' !== (string) $item->get_meta( '_yp_batch_quantity' )
 			&& '' === (string) $item->get_meta( '_yp_sticker_type' )
 			&& '' === (string) $item->get_meta( '_yp_canvas_width_mm' );
@@ -185,12 +205,89 @@ class YeffoPrint_Order_Label_Changes {
 		return is_array( $values ) ? $values : [];
 	}
 
-	private static function custom_fields_payload( \WC_Order_Item_Product $item ): array {
+	/**
+	 * The fields a Custom Labels row edits: its own saved Label Fields,
+	 * or — direct report: Edit labels on a Create Order order showed only
+	 * one Compound/Strength box per line — the current Label Fields set
+	 * (Catalog › Label Fields' Default Template) for a row that only
+	 * carries the older single text. [] only when no Label Fields set
+	 * exists at all, which falls back to that one text box.
+	 */
+	private static function custom_edit_fields( \WC_Order_Item_Product $item ): array {
 		$fields = self::custom_row_fields( $item );
+		if ( $fields || ! class_exists( 'YeffoPrint_Custom_Order_Meta' ) ) {
+			return $fields;
+		}
+		$fields = array_values( array_filter( YeffoPrint_Custom_Order_Meta::label_fields(), static function ( $field ) {
+			return is_array( $field ) && isset( $field['id'] ) && 'color_choice' !== ( $field['type'] ?? '' );
+		} ) );
+		// The old text has to land somewhere: if no field can take it,
+		// keep the single Compound/Strength box rather than lose it.
+		$text = trim( (string) $item->get_meta( '_yp_compound_strength_snapshot' ) );
+		if ( '' !== $text && ! self::legacy_values( $fields, $text ) ) {
+			return [];
+		}
+		return $fields;
+	}
+
+	/** custom_edit_fields()' current answers: the saved ones, or the older Compound/Strength text spread over them. */
+	private static function custom_edit_values( \WC_Order_Item_Product $item ): array {
+		if ( self::custom_row_fields( $item ) ) {
+			return self::custom_row_values( $item );
+		}
+		return self::legacy_values( self::custom_edit_fields( $item ), (string) $item->get_meta( '_yp_compound_strength_snapshot' ) );
+	}
+
+	/**
+	 * "MOTS-c 10mg" into Label Fields: one combined Compound/Strength
+	 * field takes it whole; separate Compound and Strength fields get the
+	 * name and a trailing dose ("10mg", "5 mg/ml", "2000 IU") when one
+	 * is there, else the whole text goes in Compound.
+	 */
+	private static function legacy_values( array $fields, string $text ): array {
+		$text = trim( $text );
+		if ( '' === $text || ! $fields ) {
+			return [];
+		}
+
+		$compound = '';
+		$strength = '';
+		$first    = '';
+		foreach ( $fields as $field ) {
+			if ( ! in_array( $field['type'] ?? 'text', [ 'text', 'textarea' ], true ) ) {
+				continue;
+			}
+			$label  = (string) ( $field['label'] ?? '' );
+			$is_cmp = (bool) preg_match( '/compound|peptide/i', $label );
+			$is_str = (bool) preg_match( '/strength|dose|dosage/i', $label );
+			if ( $is_cmp && $is_str ) {
+				return [ $field['id'] => $text ];
+			}
+			if ( $is_str && '' === $strength ) {
+				$strength = (string) $field['id'];
+			} elseif ( $is_cmp && '' === $compound ) {
+				$compound = (string) $field['id'];
+			} elseif ( '' === $first && ! preg_match( '/brand|batch|lot|exp|date|code|url|note|warning|direction|instruction/i', $label ) ) {
+				$first = (string) $field['id'];
+			}
+		}
+
+		$compound = '' !== $compound ? $compound : $first;
+		if ( '' === $compound ) {
+			return [];
+		}
+		if ( '' !== $strength && preg_match( '/^(.*\S)\s+(\d[\d.,]*\s*(?:mg|mcg|µg|ug|iu|ml|g|units?|%)(?:\s*\/\s*\S+)?)$/iu', $text, $match ) ) {
+			return [ $compound => $match[1], $strength => $match[2] ];
+		}
+		return [ $compound => $text ];
+	}
+
+	private static function custom_fields_payload( \WC_Order_Item_Product $item ): array {
+		$fields = self::custom_edit_fields( $item );
 		if ( ! $fields ) {
 			return [ self::field_payload( self::compound_field(), (string) $item->get_meta( '_yp_compound_strength_snapshot' ) ) ];
 		}
-		$values = self::custom_row_values( $item );
+		$values = self::custom_edit_values( $item );
 		return array_map( static function ( array $field ) use ( $values ) {
 			return self::field_payload( $field, (string) ( $values[ $field['id'] ] ?? '' ) );
 		}, $fields );
@@ -252,7 +349,7 @@ class YeffoPrint_Order_Label_Changes {
 				continue;
 			}
 			$item   = $order->get_item( $item_id );
-			$row_fields = 'custom' === $line['kind'] ? self::custom_row_fields( $item ) : [];
+			$row_fields = 'custom' === $line['kind'] ? self::custom_edit_fields( $item ) : [];
 			$schema     = 'template' === $line['kind'] ? self::template_schema( $item ) : ( $row_fields ?: [ self::compound_field() ] );
 
 			foreach ( $line['labels'] as $label ) {
@@ -343,7 +440,7 @@ class YeffoPrint_Order_Label_Changes {
 				}
 				$item->update_meta_data( '_yp_variants', wp_json_encode( $variants ) );
 				YeffoPrint_Order_Item_Meta::rewrite_variant_rows( $item, $variants, $schema );
-			} elseif ( self::custom_row_fields( $item ) ) {
+			} elseif ( self::custom_edit_fields( $item ) ) {
 				self::apply_custom_row_fields( $item, (array) ( $labels[0] ?? [] ) );
 			} else {
 				$value = (string) ( $labels[0][ self::COMPOUND_FIELD ] ?? '' );
@@ -367,14 +464,229 @@ class YeffoPrint_Order_Label_Changes {
 		return $result['lines'];
 	}
 
+	/* ---------- Quantities (unpaid orders only) ---------- */
+
+	/** Quantities change the price, so only while the pay link hasn't been paid. */
+	public static function can_edit_quantities( \WC_Order $order ): bool {
+		return class_exists( 'YeffoPrint_Manual_Order_Creator' ) && YeffoPrint_Manual_Order_Creator::is_editable( $order );
+	}
+
+	/**
+	 * New quantities for an unpaid order's labels. Each changed line is
+	 * repriced at the order's bulk tier (every label line pooled, like a
+	 * cart), and the other label lines follow if that tier moved. A line
+	 * whose price staff set by hand (Edit order) keeps its per-label
+	 * price instead. The pay link stays the same and charges the new total.
+	 *
+	 * @param mixed $raw {item_id: {label_index: quantity}}
+	 * @return string[]|\WP_Error The change lines that were applied.
+	 */
+	public static function apply_quantities( \WC_Order $order, $raw, string $who ) {
+		$raw = is_array( $raw ) ? $raw : [];
+		if ( ! $raw ) {
+			return [];
+		}
+		if ( ! self::can_edit_quantities( $order ) ) {
+			return new \WP_Error( 'yeffoprint_order_not_editable', __( 'Quantities can only be changed before the order is paid.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+		}
+
+		$planned = [];
+		$lines   = [];
+		foreach ( self::editable_lines( $order ) as $line ) {
+			$submitted = $raw[ $line['item_id'] ] ?? $raw[ (string) $line['item_id'] ] ?? null;
+			if ( ! is_array( $submitted ) ) {
+				continue;
+			}
+			foreach ( $line['labels'] as $label ) {
+				$value = $submitted[ $label['index'] ] ?? $submitted[ (string) $label['index'] ] ?? null;
+				if ( null === $value || '' === $value ) {
+					continue;
+				}
+				if ( ! is_numeric( $value ) || (int) $value < 1 || (float) $value !== (float) (int) $value ) {
+					return new \WP_Error( 'yeffoprint_invalid_quantity', __( 'Quantity must be a whole number, 1 or more, for every label.', 'yeffoprint-core' ), [ 'status' => 400 ] );
+				}
+				$quantity = (int) $value;
+				if ( $quantity === (int) $label['quantity'] ) {
+					continue;
+				}
+				$planned[ $line['item_id'] ][ $label['index'] ] = $quantity;
+				$lines[] = sprintf(
+					/* translators: 1: where the label is (item and label number), 2: old quantity, 3: new quantity */
+					__( '%1$s · quantity: %2$d → %3$d', 'yeffoprint-core' ),
+					count( $line['labels'] ) > 1
+						/* translators: 1: item name, 2: label number */
+						? sprintf( __( '%1$s, label %2$d', 'yeffoprint-core' ), $line['name'], $label['index'] + 1 )
+						: self::line_title( $order, $line ),
+					(int) $label['quantity'],
+					$quantity
+				);
+			}
+		}
+
+		if ( ! $planned ) {
+			return [];
+		}
+
+		$old_quantities = [];
+		foreach ( $planned as $item_id => $labels ) {
+			$item = $order->get_item( (int) $item_id );
+			if ( ! $item instanceof \WC_Order_Item_Product ) {
+				continue;
+			}
+			$old_quantities[ $item->get_id() ] = (int) $item->get_meta( '_yp_batch_quantity' );
+
+			$schema = self::template_schema( $item );
+			if ( $schema ) {
+				$variants = self::variants( $item );
+				self::delete_variant_rows( $item, $variants );
+				foreach ( $labels as $index => $quantity ) {
+					if ( isset( $variants[ $index ] ) ) {
+						$variants[ $index ]['quantity'] = $quantity;
+					}
+				}
+				$total_quantity = (int) array_sum( array_map( static function ( $variant ) {
+					return (int) ( $variant['quantity'] ?? 0 );
+				}, $variants ) );
+				$item->update_meta_data( '_yp_variants', wp_json_encode( $variants ) );
+				$item->update_meta_data( '_yp_batch_quantity', $total_quantity );
+				$item->set_quantity( $total_quantity );
+				YeffoPrint_Order_Item_Meta::rewrite_variant_rows( $item, $variants, $schema );
+				self::update_custom_order_template_variants( (int) $item->get_meta( '_yp_custom_order_id' ), $variants );
+			} else {
+				$quantity = (int) ( $labels[0] ?? 0 );
+				$item->update_meta_data( '_yp_batch_quantity', $quantity );
+				$item->update_meta_data( __( 'Quantity', 'yeffoprint-core' ), $quantity );
+				$item->set_quantity( $quantity );
+				self::update_custom_order_row_quantity( (int) $item->get_meta( '_yp_custom_order_id' ), (int) $item->get_meta( '_yp_batch_row_index' ), $quantity );
+			}
+			$item->save();
+		}
+
+		self::reprice_labels( $order, $old_quantities );
+
+		// Line totals were just reset to their full price, so a coupon on
+		// the order is worked out again on top of the new amounts.
+		if ( $order->get_coupon_codes() ) {
+			$order->recalculate_coupons();
+		} else {
+			$order->calculate_totals();
+		}
+		$order->add_order_note( sprintf(
+			/* translators: 1: who made the change, 2: one line per changed quantity, 3: new order total */
+			__( "Label quantities changed before payment (%1\$s):\n%2\$s\nNew total: %3\$s", 'yeffoprint-core' ),
+			$who,
+			implode( "\n", $lines ),
+			wp_strip_all_tags( wc_price( (float) $order->get_total() ) )
+		) );
+		$order->save();
+
+		return $lines;
+	}
+
+	/**
+	 * Every label line on the order (Template batches and Custom Labels
+	 * rows, not stickers) priced at one pooled bulk tier — the same pool
+	 * a cart and Create Order use. $changed maps item id → its quantity
+	 * before this edit.
+	 */
+	private static function reprice_labels( \WC_Order $order, array $changed ): void {
+		$label_items = [];
+		$tier        = 0;
+		foreach ( $order->get_items() as $item ) {
+			if ( ! $item instanceof \WC_Order_Item_Product
+				|| '' !== (string) $item->get_meta( '_yp_sticker_type' )
+				|| '' === (string) $item->get_meta( '_yp_batch_quantity' ) ) {
+				continue;
+			}
+			$snapshot = json_decode( (string) $item->get_meta( '_yp_pricing_snapshot' ), true );
+			if ( ! is_array( $snapshot ) || ! isset( $snapshot['total'] ) ) {
+				continue;
+			}
+			$label_items[] = [ $item, $snapshot ];
+			$tier         += (int) $item->get_meta( '_yp_batch_quantity' );
+		}
+
+		foreach ( $label_items as [ $item, $snapshot ] ) {
+			$quantity   = max( 1, (int) $item->get_meta( '_yp_batch_quantity' ) );
+			$was_edited = isset( $changed[ $item->get_id() ] );
+			// Staff typed their own price for this line (Edit order): keep
+			// that per-label price rather than overwrite it with the list price.
+			$hand_priced = abs( (float) $item->get_subtotal() - (float) $snapshot['total'] ) >= 0.005;
+
+			if ( $hand_priced ) {
+				if ( ! $was_edited ) {
+					continue;
+				}
+				$old   = max( 1, (int) $changed[ $item->get_id() ] );
+				$total = round( (float) $item->get_subtotal() / $old * $quantity, 2 );
+			} else {
+				$pricing = YeffoPrint_Pricing_Rule::calculate(
+					(float) ( $snapshot['material_adjustment'] ?? 0 ),
+					(float) ( $snapshot['size_adjustment'] ?? 0 ),
+					$quantity,
+					$tier,
+					isset( $snapshot['base_unit_price'] ) ? (float) $snapshot['base_unit_price'] : null
+				);
+				$total = (float) $pricing['total'];
+				if ( ! $was_edited && abs( $total - (float) $item->get_subtotal() ) < 0.005 ) {
+					continue;
+				}
+				$item->update_meta_data( '_yp_pricing_snapshot', wp_json_encode( $pricing ) );
+			}
+
+			$item->set_subtotal( $total );
+			$item->set_total( $total );
+			$item->save();
+		}
+	}
+
+	/** "Custom Order Labels — MOTS-c 10mg (1x2 · Gloss)": which of many same-named lines changed. */
+	private static function line_title( \WC_Order $order, array $line ): string {
+		$item = $order->get_item( (int) $line['item_id'] );
+		$text = $item instanceof \WC_Order_Item_Product ? trim( (string) $item->get_meta( '_yp_compound_strength_snapshot' ) ) : '';
+		return $line['name'] . ( '' !== $text ? ' — ' . $text : '' ) . ( '' !== ( $line['details'] ?? '' ) ? ' (' . $line['details'] . ')' : '' );
+	}
+
+	/** Removes a Template batch's readable "Label N (qty Q)" rows, keyed by the quantities about to change. */
+	private static function delete_variant_rows( \WC_Order_Item_Product $item, array $variants ): void {
+		foreach ( $variants as $index => $variant ) {
+			$item->delete_meta_data( sprintf(
+				/* translators: 1: label number within the batch, 2: that label's own quantity */
+				__( 'Label %1$d (qty %2$d)', 'yeffoprint-core' ),
+				$index + 1,
+				(int) ( $variant['quantity'] ?? 0 )
+			) );
+		}
+	}
+
+	private static function update_custom_order_row_quantity( int $custom_order_id, int $row_index, int $quantity ): void {
+		if ( ! $custom_order_id ) {
+			return;
+		}
+		$batch = json_decode( (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BATCH, true ), true );
+		if ( is_array( $batch ) && isset( $batch[ $row_index ] ) && is_array( $batch[ $row_index ] ) ) {
+			$batch[ $row_index ]['quantity'] = $quantity;
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::BATCH, wp_slash( wp_json_encode( $batch ) ) );
+		}
+		if ( 0 === $row_index ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::QUANTITY, $quantity );
+		}
+	}
+
+	private static function update_custom_order_template_variants( int $custom_order_id, array $variants ): void {
+		if ( $custom_order_id && '' !== (string) get_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::TEMPLATE_VARIANTS, true ) ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::TEMPLATE_VARIANTS, wp_slash( wp_json_encode( $variants ) ) );
+		}
+	}
+
 	/**
 	 * A Custom Labels row with Label Fields: the new answers, the
 	 * readable rows, the compound/QR text worked out from them, and the
 	 * design request's own copy of the row.
 	 */
 	private static function apply_custom_row_fields( \WC_Order_Item_Product $item, array $changed ): void {
-		$fields = self::custom_row_fields( $item );
-		$values = array_merge( self::custom_row_values( $item ), $changed );
+		$fields = self::custom_edit_fields( $item );
+		$values = array_merge( self::custom_edit_values( $item ), $changed );
 		$legacy = YeffoPrint_Custom_Order_Meta::legacy_row_text( $values, $fields );
 
 		YeffoPrint_Order_Item_Meta::write_custom_row_fields( $item, $values, $fields );
