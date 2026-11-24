@@ -1329,21 +1329,15 @@ body.yp-has-sticky-bar .yp-chat-widget {
 	mix-blend-mode: multiply;
 }
 
-/* Prism: shattered-glass holographic vinyl. A mosaic of dark silver
-   shards (prism-shards.svg) around brightly colored ones
-   (prism-glints.svg); the colored shards shift hue as the light moves
-   (--yp-tilt-deg from configurator.js), so they flash like the real
-   material. Both are multiplied, so ink stays put. */
-.yp-configurator__stage.is-svg[data-finish="prism"] .yp-stage__svg::after {
-	opacity: 1;
-	background: url(../images/prism-shards.svg) 0 0 / 34% auto;
-	mix-blend-mode: multiply;
-}
-
+/* Prism: shattered-glass holographic vinyl. prism-shards.svg is a
+   mosaic of dark silver shards with brightly colored ones scattered on
+   top; it's multiplied over the art (white shows the material, ink stays
+   put) and its colors shift as the light moves (--yp-tilt-deg from
+   configurator.js), so the shards flash like the real material. */
 .yp-configurator__stage.is-svg[data-finish="prism"] .yp-stage__svg::before {
 	opacity: 1;
-	background: url(../images/prism-glints.svg) 0 0 / 34% auto;
-	filter: hue-rotate(var(--yp-tilt-deg, 0deg)) saturate(1.2);
+	background: url(../images/prism-shards.svg) 0 0 / 40% auto;
+	filter: hue-rotate(var(--yp-tilt-deg, 0deg)) saturate(1.15);
 	mix-blend-mode: multiply;
 }
 
