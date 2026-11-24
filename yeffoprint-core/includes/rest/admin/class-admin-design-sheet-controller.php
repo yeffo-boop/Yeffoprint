@@ -36,9 +36,14 @@ class YeffoPrint_Admin_Design_Sheet_Controller {
 			return $order;
 		}
 
+		$sheet = YeffoPrint_Order_Design_Sheet::sheet( $order );
+
 		return rest_ensure_response( array_merge(
-			YeffoPrint_Order_Design_Sheet::sheet( $order ),
-			[ 'designed' => (object) YeffoPrint_Order_Design_Sheet::designed( $order ) ]
+			$sheet,
+			[
+				'designed' => (object) YeffoPrint_Order_Design_Sheet::designed( $order ),
+				'qr_svgs'  => (object) YeffoPrint_Order_Design_Sheet::qr_svgs( $sheet['labels'] ),
+			]
 		) );
 	}
 

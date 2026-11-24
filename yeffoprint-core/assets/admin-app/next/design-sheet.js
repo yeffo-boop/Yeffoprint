@@ -10,6 +10,12 @@
  * only one or two labels have ("Exp Mar 2029", a design note) shows on
  * those labels' rows. Click any value to copy it.
  *
+ * A label's QR link (Custom Labels QR box, or a template's QR field)
+ * shows as the code itself with PNG / SVG / PDF downloads: once under
+ * "Set up once" when the whole batch shares it, else on each row. The
+ * server sends every code already drawn as SVG (qr_svgs), so a big
+ * order doesn't fire one request per code.
+ *
  * Each label's "designed" check is saved on the order
  * (/admin/order/{id}/designed, class-order-design-sheet.php), so it
  * survives closing the window and shows on any computer or phone.
@@ -162,6 +168,12 @@
 			group.columns.push( { label: name, type: types[ name ] } );
 		} );
 
+		// One QR link on every label in the batch: show it once, under "Set up once".
+		var qrSig = group.labels.map( function ( l ) { return JSON.stringify( l.qr_codes || [] ); } );
+		group.sharedQr = ( group.labels[ 0 ].qr_codes || [] ).length && qrSig.every( function ( q ) { return q === qrSig[ 0 ]; } )
+			? group.labels[ 0 ].qr_codes
+			: null;
+
 		var qty = group.labels.map( function ( l ) { return l.quantity; } );
 		group.sameQty = qty.every( function ( q ) { return q === qty[ 0 ]; } ) ? qty[ 0 ] : null;
 		group.pieces = qty.reduce( function ( a, b ) { return a + b; }, 0 );
@@ -179,6 +191,44 @@
 			return '<span class="ypn-ds__none">—</span>';
 		}
 		return '<button type="button" class="ypn-ds__cp' + ( extraClass ? ' ' + extraClass : '' ) + '" data-copy="' + escAttr( text ) + '" title="Copy">' + esc( text ) + '</button>';
+	}
+
+	function slug( text ) {
+		return String( text ).replace( /[^a-z0-9]+/gi, '-' ).replace( /^-|-$/g, '' ).toLowerCase();
+	}
+
+	function qrUrl( url, format, filename ) {
+		var q = 'text=' + encodeURIComponent( url ) + '&format=' + format + '&download=1&filename=' + encodeURIComponent( filename );
+		if ( 'png' === format ) {
+			q += '&module_px=20'; // ~600px+ square: sharp at label sizes.
+		}
+		return api( 'qr' ) + ( api( 'qr' ).indexOf( '?' ) === -1 ? '?' : '&' ) + q;
+	}
+
+	/** One QR code: the code itself (click to enlarge), its link, and downloads. */
+	function qrHtml( qr, filename, state ) {
+		var svg = state.svgs[ qr.url ];
+		var big = !! state.qrBig[ qr.url ];
+		return '<div class="ypn-ds__qr' + ( big ? ' is-big' : '' ) + '">' +
+			( svg
+				? '<button type="button" class="ypn-ds__qrimg" data-ypn-ds-qrzoom="' + escAttr( qr.url ) + '" title="' + ( big ? 'Smaller' : 'Bigger, to test scan' ) + '">' + svg + '</button>'
+				: '<span class="ypn-ds__qrimg is-missing">No code</span>' ) +
+			'<div class="ypn-ds__qrinfo">' +
+				'<span class="ypn-ds__qrlbl">' + esc( qr.label || 'QR code' ) + '</span>' +
+				copyable( qr.url, 'ypn-ds__qrlink' ) +
+				'<span class="ypn-ds__qrbtns">' +
+					'<a class="ypn-btn" href="' + escAttr( qrUrl( qr.url, 'png', filename ) ) + '" download>PNG</a>' +
+					( svg ? '<button type="button" class="ypn-btn" data-ypn-ds-qrsvg="' + escAttr( qr.url ) + '" data-name="' + escAttr( filename ) + '">SVG</button>' : '' ) +
+					'<a class="ypn-btn" href="' + escAttr( qrUrl( qr.url, 'pdf', filename ) ) + '" download>PDF</a>' +
+				'</span>' +
+			'</div>' +
+		'</div>';
+	}
+
+	function qrListHtml( list, base, state ) {
+		return '<div class="ypn-ds__qrs">' + list.map( function ( qr, i ) {
+			return qrHtml( qr, base + ( list.length > 1 ? '-' + ( i + 1 ) : '' ), state );
+		} ).join( '' ) + '</div>';
 	}
 
 	/** A small label drawn from the batch's colors, when the line has no picture. */
@@ -224,12 +274,16 @@
 				? '<span class="ypn-ds__note"><b>' + esc( e.label ) + ':</b> ' + esc( e.display ) + '</span>'
 				: '<span class="ypn-ds__diff">' + swatch( e.value ) + esc( e.label ) + ': ' + esc( e.display ) + '</span>';
 		} ).join( '' );
+		var qrs = ! group.sharedQr && ( label.qr_codes || [] ).length
+			? qrListHtml( label.qr_codes, 'order-' + slug( state.order.number ) + '-label-' + label.n + '-qr', state )
+			: '';
 		return '<div class="' + cls + '" data-key="' + escAttr( label.key ) + '">' +
 			'<button type="button" class="ypn-ds__ck" role="checkbox" aria-checked="' + ( done ? 'true' : 'false' ) + '" aria-label="Designed" data-ypn-ds-check="' + escAttr( label.key ) + '"></button>' +
 			'<span class="ypn-ds__n">' + label.n + '</span>' +
 			'<span class="ypn-ds__cells">' + cells + '</span>' +
 			'<span class="ypn-ds__q">' + Number( label.quantity ).toLocaleString() + '</span>' +
 			( ex ? '<span class="ypn-ds__ex">' + ex + '</span>' : '' ) +
+			qrs +
 		'</div>';
 	}
 
@@ -269,6 +323,7 @@
 							} ).join( '' ) +
 							( null !== group.sameQty ? '<dt>Qty each</dt><dd>' + Number( group.sameQty ).toLocaleString() + '</dd>' : '' ) +
 						'</dl>' +
+						( group.sharedQr ? qrListHtml( group.sharedQr, 'order-' + slug( state.order.number ) + '-' + slug( group.name ) + '-qr', state ) : '' ) +
 					'</div>' +
 					'<div class="ypn-ds__rows" style="--cols:' + Math.max( 1, group.columns.length ) + '">' +
 						'<div class="ypn-ds__row ypn-ds__head"><span></span><span>#</span><span class="ypn-ds__cells">' + cols + '</span><span class="ypn-ds__q">Qty</span></div>' +
@@ -302,7 +357,7 @@
 			return;
 		}
 
-		var state = { order: null, groups: [], other: [], designed: {}, hideDone: storedHide(), open: {}, nextKey: null };
+		var state = { order: null, groups: [], other: [], designed: {}, svgs: {}, qrBig: {}, hideDone: storedHide(), open: {}, nextKey: null };
 		var saving = Promise.resolve();
 		var toastTimer;
 		var lastChecked = [];
@@ -319,6 +374,7 @@
 				state.groups = groupLabels( results[ 1 ].labels || [] );
 				state.other = results[ 1 ].other_items || [];
 				state.designed = results[ 1 ].designed || {};
+				state.svgs = results[ 1 ].qr_svgs || {};
 				draw();
 			} ).catch( function ( error ) {
 				if ( quiet ) {
@@ -470,17 +526,32 @@
 				v = String( null === v || undefined === v ? '' : v );
 				return /[",\n]/.test( v ) ? '"' + v.replace( /"/g, '""' ) + '"' : v;
 			};
-			var lines = [ [ '#', 'Size', 'Material' ].concat( names, [ 'Quantity', 'Designed' ] ).map( cell ).join( ',' ) ];
+			var qrNames = [];
+			group.labels.forEach( function ( l ) {
+				( l.qr_codes || [] ).forEach( function ( q ) {
+					if ( qrNames.indexOf( q.label ) === -1 ) {
+						qrNames.push( q.label );
+					}
+				} );
+			} );
+			var lines = [ [ '#', 'Size', 'Material' ].concat( names, qrNames, [ 'Quantity', 'Designed' ] ).map( cell ).join( ',' ) ];
 			group.labels.forEach( function ( l ) {
 				lines.push( [ l.n, l.size, l.material ].concat( names.map( function ( name ) {
 					var f = fieldOf( l, name );
 					return f ? f.display : '';
+				} ), qrNames.map( function ( name ) {
+					var q = ( l.qr_codes || [] ).filter( function ( c ) { return c.label === name; } )[ 0 ];
+					return q ? q.url : '';
 				} ), [ l.quantity, state.designed[ l.key ] ? 'yes' : '' ] ).map( cell ).join( ',' ) );
 			} );
 			var blob = new Blob( [ '﻿' + lines.join( '\r\n' ) ], { type: 'text/csv' } );
+			saveBlob( blob, 'order-' + state.order.number + '-' + group.name.replace( /[^a-z0-9]+/gi, '-' ).toLowerCase() + '.csv' );
+		}
+
+		function saveBlob( blob, filename ) {
 			var a = document.createElement( 'a' );
 			a.href = URL.createObjectURL( blob );
-			a.download = 'order-' + state.order.number + '-' + group.name.replace( /[^a-z0-9]+/gi, '-' ).toLowerCase() + '.csv';
+			a.download = filename;
 			document.body.appendChild( a );
 			a.click();
 			setTimeout( function () { URL.revokeObjectURL( a.href ); a.remove(); }, 500 );
@@ -491,6 +562,21 @@
 			var cp = t.closest( '[data-copy]' );
 			if ( cp ) {
 				copy( cp.getAttribute( 'data-copy' ) );
+				return;
+			}
+			var qrZoom = t.closest( '[data-ypn-ds-qrzoom]' );
+			if ( qrZoom ) {
+				var zoomUrl = qrZoom.getAttribute( 'data-ypn-ds-qrzoom' );
+				state.qrBig[ zoomUrl ] = ! state.qrBig[ zoomUrl ];
+				draw();
+				return;
+			}
+			var qrSvg = t.closest( '[data-ypn-ds-qrsvg]' );
+			if ( qrSvg ) {
+				var svgText = state.svgs[ qrSvg.getAttribute( 'data-ypn-ds-qrsvg' ) ];
+				if ( svgText ) {
+					saveBlob( new Blob( [ '<?xml version="1.0" encoding="UTF-8"?>\n' + svgText ], { type: 'image/svg+xml' } ), qrSvg.getAttribute( 'data-name' ) + '.svg' );
+				}
 				return;
 			}
 			var ck = t.closest( '[data-ypn-ds-check]' );

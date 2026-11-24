@@ -1,7 +1,7 @@
 <?php
 /**
  * Renders a YeffoPrint_QrCodeGen_QrCode's module grid to raster/PDF
- * bytes — the two formats a label field's QR value needs: PNG for the
+ * bytes (and SVG markup, for design software) — PNG for the
  * live configurator preview and general download, PDF for staff
  * pulling a print-ready file when producing an order (direct request:
  * "so I don't need to use a 3rd party site").
@@ -67,6 +67,38 @@ class YeffoPrint_Qr_Renderer {
 		return false === $data
 			? new \WP_Error( 'yeffoprint_qr_png_failed', __( 'Could not render the QR code image.', 'yeffoprint-core' ) )
 			: $data;
+	}
+
+	/**
+	 * Vector QR code for design software (direct request: QR codes
+	 * "ready for design use" on the production view). One path, one
+	 * square per dark module, on a white quiet zone; crispEdges keeps
+	 * the squares from blurring together when it is scaled.
+	 *
+	 * @return string|\WP_Error SVG markup.
+	 */
+	public static function render_svg( string $text, int $ecl = YeffoPrint_QrCodeGen_Ecc::MEDIUM ) {
+		$qr = self::encode( $text, $ecl );
+		if ( is_wp_error( $qr ) ) {
+			return $qr;
+		}
+
+		$modules = $qr->size + 2 * self::MARGIN_MODULES;
+		$path    = '';
+		for ( $y = 0; $y < $qr->size; $y++ ) {
+			for ( $x = 0; $x < $qr->size; $x++ ) {
+				if ( $qr->get_module( $x, $y ) ) {
+					$path .= 'M' . ( $x + self::MARGIN_MODULES ) . ' ' . ( $y + self::MARGIN_MODULES ) . 'h1v1h-1z';
+				}
+			}
+		}
+
+		return sprintf(
+			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %1$d %1$d" width="%2$d" height="%2$d" shape-rendering="crispEdges"><rect width="%1$d" height="%1$d" fill="#fff"/><path d="%3$s" fill="#000"/></svg>',
+			$modules,
+			$modules * 10,
+			$path
+		);
 	}
 
 	/**

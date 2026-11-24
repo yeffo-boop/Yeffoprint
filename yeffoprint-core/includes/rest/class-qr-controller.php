@@ -61,9 +61,13 @@ class YeffoPrint_Qr_Controller {
 		}
 
 		$format = (string) $request->get_param( 'format' );
-		$format = in_array( $format, [ 'png', 'pdf' ], true ) ? $format : 'png';
+		$format = in_array( $format, [ 'png', 'pdf', 'svg' ], true ) ? $format : 'png';
 
-		if ( 'pdf' === $format ) {
+		if ( 'svg' === $format ) {
+			$data = YeffoPrint_Qr_Renderer::render_svg( $text );
+			$mime = 'image/svg+xml';
+			$ext  = 'svg';
+		} elseif ( 'pdf' === $format ) {
 			$size_in = (float) $request->get_param( 'size_in' );
 			$size_in = $size_in > 0 ? min( 12, max( 0.5, $size_in ) ) : 2.0;
 			$data    = YeffoPrint_Qr_Renderer::render_pdf( $text, $size_in );
@@ -95,7 +99,11 @@ class YeffoPrint_Qr_Controller {
 		// endpoint needing its own generated-image cache.
 		header( 'Cache-Control: public, max-age=300' );
 		if ( $request->get_param( 'download' ) ) {
-			header( 'Content-Disposition: attachment; filename="qr-code.' . $ext . '"' );
+			// The production view names each file after its order and
+			// label, so a batch of downloads doesn't land as qr-code (7).png.
+			$name = sanitize_file_name( (string) $request->get_param( 'filename' ) );
+			$name = '' !== $name ? substr( preg_replace( '/\.(png|pdf|svg)$/i', '', $name ), 0, 80 ) : 'qr-code';
+			header( 'Content-Disposition: attachment; filename="' . $name . '.' . $ext . '"' );
 		}
 
 		echo $data; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- raw binary image/PDF data, not HTML.

@@ -14,6 +14,11 @@
  * same list the Edit labels form uses, so a label edited there shows its
  * new text here. That list leaves the Label Color picks off a Custom
  * Labels row (they aren't editable there), so they're added back here.
+ *
+ * A label's QR links come as their own list (qr_codes), drawn as SVG
+ * in qr_svgs(), so the screen shows each code with PNG/SVG/PDF downloads
+ * (direct request: "a one stop shop screen so I don't need to flip
+ * around").
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -41,10 +46,17 @@ class YeffoPrint_Order_Design_Sheet {
 			$product      = $item->get_product();
 
 			foreach ( $line['labels'] as $label ) {
-				$fields = [];
+				$fields   = [];
+				$qr_codes = [];
 				foreach ( array_merge( $label['fields'], $extra_fields ) as $field ) {
+					// A QR link isn't text to retype: it gets its own code
+					// and downloads on the screen instead of a field value.
 					if ( 'qr_code' === $field['type'] ) {
-						$field['display'] = '' !== $field['value'] ? __( 'Yes', 'yeffoprint-core' ) : '';
+						$url = trim( (string) $field['value'] );
+						if ( '' !== $url ) {
+							$qr_codes[] = [ 'label' => (string) $field['label'], 'url' => $url ];
+						}
+						continue;
 					}
 					$fields[] = [
 						'label'   => (string) $field['label'],
@@ -53,6 +65,13 @@ class YeffoPrint_Order_Design_Sheet {
 						'value'   => 'color_choice' === $field['type'] ? (string) $field['value'] : '',
 						'display' => (string) $field['display'],
 					];
+				}
+
+				// An older Custom Labels row keeps its QR link only in
+				// its own meta, with no QR field to carry it.
+				$row_qr = 'custom' === $line['kind'] ? trim( (string) $item->get_meta( '_yp_qr_url_snapshot' ) ) : '';
+				if ( '' !== $row_qr && ! in_array( $row_qr, array_column( $qr_codes, 'url' ), true ) ) {
+					$qr_codes[] = [ 'label' => __( 'QR code', 'yeffoprint-core' ), 'url' => $row_qr ];
 				}
 
 				$labels[] = [
@@ -65,6 +84,7 @@ class YeffoPrint_Order_Design_Sheet {
 					'quantity'  => (int) $label['quantity'],
 					'image_url' => $product ? ( wp_get_attachment_image_url( $product->get_image_id(), 'medium' ) ?: null ) : null,
 					'fields'    => $fields,
+					'qr_codes'  => $qr_codes,
 				];
 			}
 		}
@@ -73,6 +93,28 @@ class YeffoPrint_Order_Design_Sheet {
 			'labels'      => $labels,
 			'other_items' => self::other_items( $order, $covered ),
 		];
+	}
+
+	/**
+	 * Each QR link on the sheet drawn once as SVG, for the screen to
+	 * show and download without a request per code.
+	 *
+	 * @return array<string, string> url => SVG markup
+	 */
+	public static function qr_svgs( array $labels ): array {
+		$svgs = [];
+		foreach ( $labels as $label ) {
+			foreach ( $label['qr_codes'] ?? [] as $qr ) {
+				if ( isset( $svgs[ $qr['url'] ] ) ) {
+					continue;
+				}
+				$svg = YeffoPrint_Qr_Renderer::render_svg( $qr['url'] );
+				if ( ! is_wp_error( $svg ) ) {
+					$svgs[ $qr['url'] ] = $svg;
+				}
+			}
+		}
+		return $svgs;
 	}
 
 	/** @return array<string, int> */
