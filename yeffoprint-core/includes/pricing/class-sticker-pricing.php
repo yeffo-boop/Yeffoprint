@@ -33,6 +33,9 @@ class YeffoPrint_Sticker_Pricing {
 	public const TYPES = [
 		'sheet'    => 'Sticker Sheet',
 		'die_cut'  => 'Die-Cut',
+		// Cut through the vinyl only; the backing stays a rectangle
+		// around each sticker (Sticker Designer, 2026-11-24).
+		'kiss_cut' => 'Kiss-Cut',
 	];
 
 	public const SHAPES = [
@@ -40,6 +43,7 @@ class YeffoPrint_Sticker_Pricing {
 		'rounded_square' => 'Square (rounded corners)',
 		'circle'         => 'Circle',
 		'custom'         => 'Custom shape (contour-cut to artwork)',
+		'oval'           => 'Oval',
 	];
 
 	private const DEFAULT_CUSTOM_RATE_PER_SQ_IN = 0.75;

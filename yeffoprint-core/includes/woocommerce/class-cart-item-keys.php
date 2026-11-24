@@ -62,6 +62,9 @@ class YeffoPrint_Cart_Item_Keys {
 	public const CUSTOM_WIDTH_IN  = 'yp_custom_width_in';
 	public const CUSTOM_HEIGHT_IN = 'yp_custom_height_in';
 
+	/** Custom Stickers from the Sticker Designer: border, corners, background, preview (YeffoPrint_Sticker_Design::sanitize()). */
+	public const STICKER_DESIGN   = 'yp_sticker_design';
+
 	/** Holographic material only: 'yes' or 'no' to a thin unprinted holo border (class-holographic-vinyl.php). */
 	public const HOLO_BORDER = 'yp_holo_border';
 

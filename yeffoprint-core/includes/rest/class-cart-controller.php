@@ -299,6 +299,13 @@ class YeffoPrint_Cart_Controller {
 		if ( ! $thumbnail && $template_id ) {
 			$thumbnail = (string) get_the_post_thumbnail_url( $template_id, 'medium' );
 		}
+		// Custom Stickers: the Sticker Designer's own preview, and a
+		// "Custom Stickers" title instead of a blank one.
+		$is_sticker = ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_TYPE ] );
+		if ( $is_sticker ) {
+			$thumbnail = YeffoPrint_Sticker_Design::preview_url( (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_DESIGN ] ?? [] ), 'medium' );
+		}
+		$title    = $template_id ? get_the_title( $template_id ) : ( $is_sticker ? __( 'Custom Stickers', 'yeffoprint-core' ) : '' );
 		$edit_url = $template_id ? add_query_arg( 'edit', $cart_item_key, get_permalink( $template_id ) ) : '';
 		?>
 		<div class="yp-cart-drawer__item">
@@ -306,18 +313,24 @@ class YeffoPrint_Cart_Controller {
 				<img class="yp-cart-drawer__thumb" src="<?php echo esc_url( $thumbnail ); ?>" alt="" />
 			<?php endif; ?>
 			<div class="yp-cart-drawer__details">
-				<strong><?php echo esc_html( $template_id ? get_the_title( $template_id ) : '' ); ?></strong>
+				<strong><?php echo esc_html( $title ); ?></strong>
 				<span>
 					<?php
 					echo esc_html( implode( ' · ', array_filter( [
 						$size ? $size->post_title : '',
 						$material ? $material->post_title : '',
 						'no' === ( $cart_item[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] ?? '' ) ? __( 'No border', 'yeffoprint-core' ) : ( ! empty( $cart_item[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] ) ? __( 'Holo border', 'yeffoprint-core' ) : '' ),
-						sprintf(
-							/* translators: %d: quantity */
-							_n( '%d label', '%d labels', (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ], 'yeffoprint-core' ),
-							(int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ]
-						),
+						$is_sticker
+							? sprintf(
+								/* translators: %d: quantity */
+								_n( '%d sticker', '%d stickers', (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ], 'yeffoprint-core' ),
+								(int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ]
+							)
+							: sprintf(
+								/* translators: %d: quantity */
+								_n( '%d label', '%d labels', (int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ], 'yeffoprint-core' ),
+								(int) $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ]
+							),
 					] ) ) );
 					?>
 				</span>

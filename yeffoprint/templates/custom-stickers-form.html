@@ -1,86 +1,119 @@
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 
-<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"760px"}} -->
+<!-- wp:group {"tagName":"main","layout":{"type":"constrained","contentSize":"1240px"}} -->
 <main class="wp-block-group">
 
 	<!-- wp:html -->
-	<div id="yp-custom-sticker" class="yp-custom-order yp-section">
+	<div id="yp-custom-sticker" class="yp-sd yp-section">
 
 		<p class="yp-eyebrow">Custom Stickers</p>
-		<h1>Order Custom Stickers</h1>
-		<p>Upload your print-ready artwork and we'll take it from there. A designer reviews every request and sends a proof before anything prints.</p>
+		<h1 class="yp-sd__title">Design your stickers</h1>
+		<p class="yp-sd__lede">Upload your art and watch it become a sticker. Pick how it's cut, the shape, size and material, and see the price as you go. A designer still checks every file before it prints.</p>
 
 		<div class="yp-configurator__status" role="status" aria-live="polite">Loading&hellip;</div>
 
-		<form id="yp-custom-sticker-form" hidden>
+		<form id="yp-custom-sticker-form" class="yp-sd__layout" hidden novalidate>
 
-			<div class="yp-field">
-				<label for="yp-cs-type">Sticker type</label>
-				<select id="yp-cs-type" name="sticker_type" required></select>
-			</div>
-
-			<div class="yp-field">
-				<label for="yp-cs-shape">
-					Shape
-					<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-sticker-size-info-modal" aria-label="Shape and size guide" aria-haspopup="dialog">?</button>
-				</label>
-				<select id="yp-cs-shape" name="shape" required></select>
-			</div>
-
-			<div class="yp-field">
-				<label for="yp-cs-size">
-					Size
-					<button type="button" class="yp-field__tooltip-trigger" data-yp-drawer-trigger="yp-sticker-size-info-modal" aria-label="Shape and size guide" aria-haspopup="dialog">?</button>
-				</label>
-				<select id="yp-cs-size" name="size_id" required></select>
-			</div>
-
-			<div class="yp-field" data-yp-cs-custom-dimensions hidden>
-				<label for="yp-cs-width">Width &times; height (inches)</label>
-				<div class="yp-custom-sticker__dimensions">
-					<input type="number" id="yp-cs-width" name="custom_width_in" min="0.1" step="0.1" placeholder="Width" />
-					<span aria-hidden="true">&times;</span>
-					<input type="number" id="yp-cs-height" name="custom_height_in" min="0.1" step="0.1" placeholder="Height" />
+			<section class="yp-sd__preview" aria-label="Live preview">
+				<div class="yp-sd__stage-wrap">
+					<div class="yp-sd__stage-bar">
+						<div class="yp-sd__seg" role="group" aria-label="Preview view">
+							<button type="button" data-sd-view="close" aria-pressed="true">Close-up</button>
+							<button type="button" data-sd-view="laptop" aria-pressed="false">On laptop</button>
+							<button type="button" data-sd-view="bottle" aria-pressed="false">On bottle</button>
+						</div>
+						<label class="yp-sd__toggle"><input type="checkbox" id="yp-sd-cutline" checked /> Cut line</label>
+						<label class="yp-sd__toggle yp-sd__toggle--dark"><input type="checkbox" id="yp-sd-dark" /> Dark</label>
+					</div>
+					<div class="yp-sd__stage" data-sd-stage>
+						<canvas data-sd-canvas aria-label="Preview of your sticker" role="img"></canvas>
+						<label class="yp-sd__empty" data-sd-empty for="yp-sd-file">
+							<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+							<strong>Drop your art here</strong>
+							<span>or tap to upload &middot; PNG, SVG, PDF or JPG</span>
+						</label>
+						<div class="yp-sd__hint" data-sd-hint hidden>Move over the sticker to tilt the light</div>
+					</div>
 				</div>
-			</div>
+				<div class="yp-sd__legend"><span><i></i> Where we cut</span><span><i class="is-backing"></i> Backing paper</span><span data-sd-legend-size></span></div>
+			</section>
 
-			<div class="yp-field">
-				<label for="yp-cs-material">Material</label>
-				<select id="yp-cs-material" name="material_id" required></select>
-			</div>
+			<section class="yp-sd__steps" aria-label="Sticker options">
 
-			<div class="yp-field">
-				<label for="yp-cs-quantity-input">Quantity</label>
-				<div class="yp-quantity-control" data-yp-cs-quantity></div>
-			</div>
-
-			<div class="yp-field">
-				<label for="yp-cs-instructions">Instructions <span class="description">(optional)</span></label>
-				<textarea id="yp-cs-instructions" name="instructions" rows="4" maxlength="1000" class="widefat"></textarea>
-			</div>
-
-			<div class="yp-field">
-				<label for="yp-cs-files">Print-ready artwork <span class="description">(required — PDF, SVG, PNG, or JPG, up to 5 files)</span></label>
-				<input type="file" id="yp-cs-files" name="files" multiple accept=".pdf,.svg,.png,.jpg,.jpeg,application/pdf,image/svg+xml,image/png,image/jpeg" />
-				<ul class="yp-custom-order__file-list" data-yp-cs-file-list></ul>
-			</div>
-
-			<div class="yp-custom-order__pricing">
-				<div class="yp-custom-order__fee">
-					<span>Stickers (<span data-yp-cs-qty>&mdash;</span> @ <span data-yp-cs-unit-price>&mdash;</span>/sticker)</span>
-					<strong data-yp-cs-subtotal>&mdash;</strong>
+				<div class="yp-sd__step">
+					<div class="yp-sd__step-h"><span class="yp-sd__n">1</span><span class="yp-sd__step-t">Your artwork</span><span class="yp-sd__aside">PNG &middot; SVG &middot; PDF &middot; JPG</span></div>
+					<label class="yp-sd__drop" data-sd-drop for="yp-sd-file">
+						<span class="yp-sd__thumb"><img data-sd-thumb alt="" hidden /></span>
+						<span class="yp-sd__drop-meta"><span class="yp-sd__drop-name" data-sd-file-name>Upload your art</span><span class="yp-sd__drop-sub" data-sd-file-sub>A transparent PNG or a vector file cuts cleanest</span></span>
+						<span class="yp-sd__btn-ghost" data-sd-file-btn>Choose file</span>
+					</label>
+					<input type="file" id="yp-sd-file" accept=".pdf,.svg,.png,.jpg,.jpeg,application/pdf,image/svg+xml,image/png,image/jpeg" hidden />
+					<div class="yp-sd__checks" data-sd-checks></div>
 				</div>
-				<div class="yp-custom-order__fee yp-custom-order__fee--total">
-					<span>Total due today</span>
-					<strong data-yp-cs-total>&mdash;</strong>
+
+				<div class="yp-sd__step">
+					<div class="yp-sd__step-h"><span class="yp-sd__n">2</span><span class="yp-sd__step-t">How it's cut</span>
+						<button type="button" class="yp-sd__guide" data-yp-drawer-trigger="yp-sticker-size-info-modal" aria-haspopup="dialog">Size &amp; shape guide</button></div>
+					<div class="yp-sd__cards" role="group" aria-label="Cut type" data-sd-types></div>
+					<div class="yp-sd__sub">Shape</div>
+					<div class="yp-sd__shapes" role="group" aria-label="Shape" data-sd-shapes></div>
+					<div class="yp-sd__slider">
+						<label class="yp-sd__sub" for="yp-sd-border">Border</label>
+						<input type="range" id="yp-sd-border" min="0" max="5" step="1" value="3" />
+						<span class="yp-sd__slider-val" data-sd-border-val>1/8&Prime;</span>
+					</div>
+					<div class="yp-sd__slider" data-sd-radius-row hidden>
+						<label class="yp-sd__sub" for="yp-sd-radius">Corners</label>
+						<input type="range" id="yp-sd-radius" min="4" max="40" step="1" value="16" />
+						<span class="yp-sd__slider-val" data-sd-radius-val>16%</span>
+					</div>
+					<p class="yp-sd__hint-text" data-sd-cut-hint></p>
 				</div>
+
+				<div class="yp-sd__step">
+					<div class="yp-sd__step-h"><span class="yp-sd__n">3</span><span class="yp-sd__step-t">Size</span><span class="yp-sd__aside">longest side</span></div>
+					<div class="yp-sd__chips" role="group" aria-label="Size" data-sd-sizes></div>
+					<div class="yp-sd__custom-size" data-sd-custom-size hidden>
+						<label for="yp-sd-custom">Longest side</label>
+						<input type="number" id="yp-sd-custom" min="0.5" max="24" step="0.25" value="4" /> inches
+					</div>
+					<p class="yp-sd__size-out" data-sd-size-out></p>
+				</div>
+
+				<div class="yp-sd__step">
+					<div class="yp-sd__step-h"><span class="yp-sd__n">4</span><span class="yp-sd__step-t">Material</span></div>
+					<div class="yp-sd__swatches" role="group" aria-label="Material" data-sd-materials></div>
+					<div class="yp-holo-note yp-sd__holo" data-sd-holo hidden>
+						<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+						<div><strong>Worth the extra day ✨</strong> We let holographic stickers rest 24 hours after printing so they arrive crisp, flat and scratch-free. Adds 1 business day (Express orders aren&rsquo;t delayed). Your border shows the bare holographic vinyl.</div>
+					</div>
+					<label class="yp-sd__inline-toggle" data-sd-underlay-row hidden><input type="checkbox" id="yp-sd-underlay" checked /> Print white under my art so colors stay solid</label>
+				</div>
+
+				<div class="yp-sd__step">
+					<div class="yp-sd__step-h"><span class="yp-sd__n">5</span><span class="yp-sd__step-t">Quantity</span><span class="yp-sd__aside">price per sticker</span></div>
+					<div class="yp-sd__qty" data-sd-qty></div>
+					<details class="yp-sd__notes">
+						<summary>Add a note for our designer <span>(optional)</span></summary>
+						<textarea id="yp-cs-instructions" name="instructions" rows="3" maxlength="1000" placeholder="Anything we should know about this design"></textarea>
+					</details>
+				</div>
+
+				<div class="yp-sd__summary" aria-live="polite">
+					<div class="yp-sd__sum-row"><span data-sd-sum-what>&mdash;</span><span data-sd-sum-unit>&mdash;</span></div>
+					<div class="yp-sd__sum-row"><span data-sd-sum-mat>&mdash;</span><span data-sd-sum-qty>&mdash;</span></div>
+					<div class="yp-sd__sum-row" data-sd-sum-save-row hidden><span>Bulk savings</span><span data-sd-sum-save></span></div>
+					<div class="yp-sd__sum-total"><small>Total</small><b data-sd-total>&mdash;</b></div>
+					<button type="submit" class="yp-sd__cta" data-yp-cs-submit>Add to cart</button>
+					<p class="yp-sd__fine"><span aria-hidden="true">✓</span><span>A designer checks your file and the cut line before printing. If anything looks off, we&rsquo;ll message you first.</span></p>
+					<p class="yp-sd__fine"><span aria-hidden="true">+</span><span>More designs? Add this one, then upload the next. Mixed designs ship together.</span></p>
+				</div>
+			</section>
+
+			<div class="yp-sd__mbar" aria-hidden="true">
+				<div class="yp-sd__mbar-p"><b data-sd-m-total>&mdash;</b><small data-sd-m-sub></small></div>
+				<button type="submit" class="yp-sd__cta" tabindex="-1">Add to cart</button>
 			</div>
-			<p class="description">A designer reviews your artwork and sends a proof before anything prints — production begins once you approve it.</p>
-
-			<p>
-				<button type="submit" class="wp-block-button__link is-style-accent" data-yp-cs-submit>Add to Cart</button>
-			</p>
-
 		</form>
 
 	</div>

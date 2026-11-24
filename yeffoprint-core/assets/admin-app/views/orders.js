@@ -211,6 +211,12 @@
 				fieldsHtml += field( 'Size', s.is_custom_size ? ( 'Custom: ' + YP.escapeHtml( s.custom_width_in ) + '&Prime; &times; ' + YP.escapeHtml( s.custom_height_in ) + '&Prime;' ) : YP.escapeHtml( s.size_label || '—' ) );
 				fieldsHtml += field( 'Material', YP.escapeHtml( s.material_label || '—' ) );
 				fieldsHtml += field( 'Quantity', String( s.quantity ) );
+				( s.design_rows || [] ).forEach( function ( row ) {
+					fieldsHtml += field( row.key, YP.escapeHtml( row.value ) );
+				} );
+				if ( s.preview_url ) {
+					fieldsHtml += field( 'Sticker Preview', '<a href="' + YP.escapeAttr( s.preview_url ) + '" target="_blank" rel="noopener noreferrer"><img src="' + YP.escapeAttr( s.preview_url ) + '" alt="" style="max-width:180px;height:auto;border-radius:8px;background:#eee"></a>' );
+				}
 				fieldsHtml += field( 'Instructions', s.instructions ? YP.escapeHtml( s.instructions ).replace( /\n/g, '<br>' ) : '—' );
 				fieldsHtml += field( 'Artwork Files', uploadListHtml( s.artwork_uploads ) );
 			} else if ( 'template' === order.order_type ) {

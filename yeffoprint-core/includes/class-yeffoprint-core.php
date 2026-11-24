@@ -123,6 +123,7 @@ final class YeffoPrint_Core {
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-design-fee-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-order-labels-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-custom-sticker-product.php';
+		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-sticker-design.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/woocommerce/class-print-product.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/rest/class-print-controller.php';
 		require_once YEFFOPRINT_CORE_PATH . 'includes/uploads/class-secure-upload.php';

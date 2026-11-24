@@ -27,7 +27,7 @@ class YeffoPrint_Custom_Order_Controller {
 	// requests one IP can make in a window, independent of
 	// YeffoPrint_Secure_Upload's per-request file count/size limits.
 	private const UPLOAD_RATE_LIMIT_WINDOW  = 600; // 10 minutes
-	private const UPLOAD_RATE_LIMIT_MAX     = 20;
+	private const UPLOAD_RATE_LIMIT_MAX     = 40; // Sticker Designer sends two per sticker (the art, then its preview).
 
 	// Label Designer only — sane bounds on a customer-entered label size,
 	// same "never trust the client" reasoning as everything else in this
@@ -143,6 +143,9 @@ class YeffoPrint_Custom_Order_Controller {
 				$artwork_data[] = [
 					'id'   => $attachment_id,
 					'name' => get_the_title( $attachment_id ) ?: basename( $url ),
+					// The Sticker Designer reloads the art into its preview on reorder.
+					'url'  => $url,
+					'mime' => (string) get_post_mime_type( $attachment_id ),
 				];
 			}
 		}
@@ -178,6 +181,7 @@ class YeffoPrint_Custom_Order_Controller {
 			'custom_width_in'   => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOM_WIDTH_IN, true ),
 			'custom_height_in'  => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CUSTOM_HEIGHT_IN, true ),
 			'artwork'           => $artwork_data,
+			'sticker_design'    => json_decode( (string) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::STICKER_DESIGN, true ), true ) ?: null,
 			'canvas_design'     => $canvas_json,
 			'canvas_width_mm'   => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CANVAS_WIDTH_MM, true ),
 			'canvas_height_mm'  => (float) get_post_meta( $id, YeffoPrint_Custom_Order_Meta::CANVAS_HEIGHT_MM, true ),
