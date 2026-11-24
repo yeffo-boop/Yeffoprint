@@ -1254,13 +1254,15 @@ body.yp-has-sticky-bar .yp-chat-widget {
    proportions (set inline) and sits on white like a printed sticker. */
 .yp-configurator__stage.is-svg {
 	background: var(--wp--preset--color--white);
-	padding: 4%;
-	box-sizing: border-box;
 }
 
+/* Absolutely placed instead of padding the stage: percentage padding is
+   measured from the stage's width on all four sides, and Safari doesn't
+   resolve height:100% inside an aspect-ratio box, so the label was drawn
+   too tall and its bottom edge cut off. top/bottom % use the height. */
 .yp-stage__svg {
-	width: 100%;
-	height: 100%;
+	position: absolute;
+	inset: 5% 3.5%;
 	filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.16));
 }
 
