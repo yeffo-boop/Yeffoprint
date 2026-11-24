@@ -563,6 +563,9 @@
 				state.materialId = parseInt( button.getAttribute( 'data-option-id' ), 10 );
 				updateSelectedPill( materialOptionsEl, state.materialId );
 				renderHolo();
+				if ( usesSvg() ) {
+					applyStageFinish();
+				}
 				renderSummary();
 			} );
 		} );
@@ -1607,6 +1610,70 @@
 			refit: function () { labels.forEach( function ( l ) { l.refit(); } ); }
 		};
 		refreshColorwayText();
+		applyStageFinish();
+	}
+
+	/* ---------- Material finish on the SVG label preview ---------- */
+
+	var FOIL_FINISHES = { holographic: 1, prism: 1, metallic: 1 };
+	var finishLight = { x: 50, target: null, raf: 0, started: 0, bound: false };
+
+	/**
+	 * Direct request: the label preview should show the material (holo
+	 * sheen, prism, clear, glossy/matte). The look itself is CSS keyed
+	 * on data-finish; this sets it and moves the light (--yp-tilt-x):
+	 * toward the pointer while it's over the label, and a slow sweep on
+	 * its own for the foils so the effect reads without hovering.
+	 */
+	function applyStageFinish() {
+		var material = selectedMaterial();
+		var finish = material && material.swatch_finish ? material.swatch_finish : 'glossy';
+		stageEl.setAttribute( 'data-finish', finish );
+
+		if ( ! finishLight.bound ) {
+			finishLight.bound = true;
+			stageEl.addEventListener( 'pointermove', function ( event ) {
+				var rect = stageEl.getBoundingClientRect();
+				finishLight.target = rect.width ? ( ( event.clientX - rect.left ) / rect.width ) * 100 : null;
+				startFinishLight();
+			} );
+			stageEl.addEventListener( 'pointerleave', function () {
+				finishLight.target = null;
+				startFinishLight();
+			} );
+		}
+		startFinishLight();
+	}
+
+	function startFinishLight() {
+		if ( finishLight.raf ) {
+			return;
+		}
+		finishLight.started = finishLight.started || performance.now();
+		finishLight.raf = requestAnimationFrame( stepFinishLight );
+	}
+
+	function stepFinishLight( now ) {
+		finishLight.raf = 0;
+		var wrap = stageEl.querySelector( '.yp-stage__svg' );
+		if ( ! wrap ) {
+			return;
+		}
+		var reduced = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+		var foil = !! FOIL_FINISHES[ stageEl.getAttribute( 'data-finish' ) ];
+		var goal = finishLight.target;
+		if ( null === goal ) {
+			// Idle: foils drift slowly back and forth; others rest.
+			goal = foil && ! reduced ? 50 + 45 * Math.sin( ( now - finishLight.started ) / 2600 ) : 50;
+		}
+		finishLight.x += ( goal - finishLight.x ) * 0.12;
+		wrap.style.setProperty( '--yp-tilt-x', finishLight.x.toFixed( 2 ) + '%' );
+
+		var settled = Math.abs( goal - finishLight.x ) < 0.1;
+		var keepGoing = null !== finishLight.target ? ! settled : ( foil && ! reduced ) || ! settled;
+		if ( keepGoing && document.body.contains( wrap ) && stageEl.classList.contains( 'is-svg' ) ) {
+			finishLight.raf = requestAnimationFrame( stepFinishLight );
+		}
 	}
 
 	var miniObserver = null;
