@@ -1,0 +1,179 @@
+/*
+ * Sticker Designer (Custom Stickers page, templates/custom-stickers-form.html,
+ * assets/js/custom-sticker-form.js). Desktop: big live preview on the left
+ * (sticky), numbered option steps + summary on the right. Phone: preview
+ * stays pinned on top while the steps scroll, with a sticky total bar.
+ */
+.yp-sd {
+	--sd-card: #fff;
+	--sd-line: var(--wp--preset--color--light-gray, #E7E5E1);
+	--sd-ink: var(--wp--preset--color--near-black, #141414);
+	--sd-ink-2: var(--wp--preset--color--charcoal, #3A3A3C);
+	--sd-muted: #76726B;
+	--sd-stage: #EFEDE8;
+	--sd-cyan: var(--wp--preset--color--cyan, #00AEEF);
+	--sd-magenta: var(--wp--preset--color--magenta, #EC008C);
+	--sd-magenta-deep: var(--wp--preset--color--magenta-deep, #C2007A);
+	--sd-ok: #1E7F4F;
+	--sd-warn: #A45C00;
+	--sd-bad: #B3261E;
+	--sd-mono: var(--wp--preset--font-family--mono, 'IBM Plex Mono', monospace);
+	--sd-head: var(--wp--preset--font-family--heading, 'Geist', 'Inter', sans-serif);
+	font-size: 15px;
+	line-height: 1.45;
+}
+.yp-sd [hidden] { display: none !important; }
+.yp-sd *, .yp-sd *::before, .yp-sd *::after { box-sizing: border-box; }
+.yp-sd button { font: inherit; color: inherit; cursor: pointer; }
+.yp-sd :focus-visible { outline: 2px solid var(--sd-cyan); outline-offset: 2px; }
+
+.yp-sd__title { margin: 6px 0; letter-spacing: -0.025em; text-wrap: balance; }
+.yp-sd__lede { color: var(--sd-ink-2); max-width: 62ch; margin: 0 0 24px; }
+
+.yp-sd__layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+.yp-sd__preview { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* stage */
+.yp-sd__stage-wrap { background: var(--sd-card); border: 1px solid var(--sd-line); border-radius: 16px; overflow: hidden; }
+.yp-sd__stage-bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--sd-line); }
+.yp-sd__seg { display: inline-flex; background: var(--sd-stage); border-radius: 999px; padding: 3px; gap: 2px; }
+.yp-sd__seg button { white-space: nowrap; border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; font-size: 13px; color: var(--sd-ink-2); }
+.yp-sd__seg button[aria-pressed="true"] { background: #fff; color: var(--sd-ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.yp-sd__toggle { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sd-ink-2); user-select: none; margin: 0; }
+.yp-sd__toggle:first-of-type { margin-left: auto; }
+.yp-sd__toggle input { accent-color: var(--sd-magenta); width: 16px; height: 16px; margin: 0; }
+.yp-sd__stage { position: relative; aspect-ratio: 1 / 1; max-width: 100%; background: var(--sd-stage); touch-action: pan-y; }
+.yp-sd__stage.is-clear { background: repeating-conic-gradient(#e6e3dd 0 25%, #f6f5f1 0 50%) 0 0 / 18px 18px; }
+.yp-sd__stage.is-dark { background: #24252a; }
+.yp-sd__stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.yp-sd__stage.is-drag { box-shadow: inset 0 0 0 3px var(--sd-cyan); }
+.yp-sd__empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--sd-ink-2); cursor: pointer; text-align: center; padding: 24px; }
+.yp-sd__empty strong { font-family: var(--sd-head); font-size: 20px; color: var(--sd-ink); }
+.yp-sd__empty span { font-size: 13px; color: var(--sd-muted); }
+.yp-sd__empty svg { color: var(--sd-magenta); }
+.yp-sd__hint { position: absolute; left: 12px; bottom: 10px; font-size: 12px; color: var(--sd-muted); background: rgba(255, 255, 255, .8); padding: 3px 8px; border-radius: 999px; pointer-events: none; }
+.yp-sd__stage.is-dark .yp-sd__hint { background: rgba(0, 0, 0, .45); color: #ddd; }
+.yp-sd__legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--sd-muted); padding: 0 4px; }
+.yp-sd__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.yp-sd__legend i { display: inline-block; width: 18px; border-top: 2px solid var(--sd-magenta); }
+.yp-sd__legend i.is-backing { border-top-color: #c9c5bd; }
+
+/* steps */
+.yp-sd__steps { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.yp-sd__step { background: var(--sd-card); border: 1px solid var(--sd-line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.yp-sd__step-h { display: flex; align-items: center; gap: 10px; }
+.yp-sd__n { width: 24px; height: 24px; border-radius: 50%; background: var(--sd-ink); color: #fff; font-size: 12px; font-weight: 600; display: grid; place-items: center; flex: none; }
+.yp-sd__step-t { font-family: var(--sd-head); font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+.yp-sd__aside { margin-left: auto; font-family: var(--sd-mono); font-size: 12px; color: var(--sd-muted); }
+.yp-sd__guide { margin-left: auto; border: 0; background: none; padding: 0; font-size: 13px; color: var(--sd-ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.yp-sd__sub { font-size: 13px; font-weight: 600; color: var(--sd-ink-2); margin: 0; }
+
+/* upload */
+.yp-sd__drop { border: 1.5px dashed #cfcac1; border-radius: 12px; padding: 12px; display: flex; gap: 12px; align-items: center; background: #fcfbf9; cursor: pointer; margin: 0; }
+.yp-sd__drop.is-drag { border-color: var(--sd-cyan); background: #eefaff; }
+.yp-sd__thumb { width: 64px; height: 64px; border-radius: 8px; background: repeating-conic-gradient(#ebe8e2 0 25%, #fff 0 50%) 0 0 / 10px 10px; display: grid; place-items: center; flex: none; overflow: hidden; }
+.yp-sd__thumb img { max-width: 56px; max-height: 56px; }
+.yp-sd__drop-meta { min-width: 0; flex: 1; }
+.yp-sd__drop-name, .yp-sd__drop-sub { display: block; }
+.yp-sd__drop-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yp-sd__drop-sub { font-size: 12.5px; color: var(--sd-muted); }
+.yp-sd__btn-ghost { border: 1px solid var(--sd-line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.yp-sd__checks { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.yp-sd__checks:empty { display: none; }
+.yp-sd__check { display: flex; gap: 8px; align-items: flex-start; }
+.yp-sd__check b { font-weight: 600; }
+.yp-sd__dot { width: 18px; height: 18px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700; margin-top: 1px; }
+.yp-sd__dot.is-ok { background: var(--sd-ok); }
+.yp-sd__dot.is-warn { background: var(--sd-warn); }
+.yp-sd__dot.is-bad { background: var(--sd-bad); }
+.yp-sd__dot.is-busy { background: var(--sd-muted); }
+.yp-sd__inline-toggle { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: 13px; }
+.yp-sd__inline-toggle input { accent-color: var(--sd-magenta); margin: 0; }
+
+/* cut type cards */
+.yp-sd__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 8px; }
+.yp-sd__card { border: 1.5px solid var(--sd-line); background: #fff; border-radius: 12px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 6px; position: relative; }
+.yp-sd__card[aria-pressed="true"], .yp-sd__shape[aria-pressed="true"], .yp-sd__chip[aria-pressed="true"], .yp-sd__q[aria-pressed="true"] { border-color: var(--sd-ink); box-shadow: 0 0 0 1px var(--sd-ink) inset; }
+.yp-sd__card-t { font-weight: 600; font-size: 13.5px; }
+.yp-sd__card-d { font-size: 12px; color: var(--sd-muted); line-height: 1.35; }
+.yp-sd__card svg { width: 100%; height: 52px; }
+
+.yp-sd__shapes { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 8px; }
+.yp-sd__shape { border: 1.5px solid var(--sd-line); background: #fff; border-radius: 12px; padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; }
+.yp-sd__shape svg { width: 34px; height: 34px; }
+
+.yp-sd__slider { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.yp-sd__slider input[type=range] { width: 100%; accent-color: var(--sd-magenta); }
+.yp-sd__slider-val { font-family: var(--sd-mono); font-size: 12.5px; min-width: 7ch; text-align: right; }
+.yp-sd__hint-text { font-size: 12.5px; color: var(--sd-muted); margin: 0; }
+
+.yp-sd__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.yp-sd__chip { border: 1.5px solid var(--sd-line); background: #fff; border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 76px; }
+.yp-sd__chip-t { font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+.yp-sd__chip-s { font-family: var(--sd-mono); font-size: 11px; color: var(--sd-muted); }
+.yp-sd__custom-size { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.yp-sd__custom-size label { margin: 0; }
+.yp-sd__custom-size input { width: 80px; border: 1px solid var(--sd-line); border-radius: 8px; padding: 6px 8px; background: #fff; }
+.yp-sd__size-out { font-size: 13px; color: var(--sd-ink-2); margin: 0; }
+.yp-sd__size-out b { font-variant-numeric: tabular-nums; }
+
+.yp-sd__swatches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.yp-sd__sw { border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; font-size: 12px; font-weight: 500; text-align: center; line-height: 1.25; }
+.yp-sd__sw-c { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--sd-line); box-shadow: inset 0 0 0 3px #fff; background: #fff; }
+.yp-sd__sw[aria-pressed="true"] .yp-sd__sw-c { outline: 2px solid var(--sd-ink); outline-offset: 2px; }
+.yp-sd__sw-p { font-family: var(--sd-mono); font-size: 10.5px; color: var(--sd-muted); }
+.yp-sd__sw:disabled { opacity: .45; cursor: not-allowed; }
+.yp-sd__holo { display: flex; gap: 10px; background: linear-gradient(110deg, #eaf7ff, #fdeefa 50%, #fffbe3); border: 1px solid #e9def0; border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.yp-sd__holo svg { flex: none; color: var(--sd-magenta-deep); }
+
+.yp-sd__qty { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.yp-sd__q { border: 1.5px solid var(--sd-line); background: #fff; border-radius: 10px; padding: 8px 10px; text-align: left; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.yp-sd__q-n { font-weight: 600; font-variant-numeric: tabular-nums; }
+.yp-sd__q-p { font-family: var(--sd-mono); font-size: 11px; color: var(--sd-muted); font-variant-numeric: tabular-nums; }
+.yp-sd__q-save { font-family: var(--sd-mono); font-size: 10.5px; color: var(--sd-ok); }
+.yp-sd__q input { width: 100%; border: 0; border-bottom: 1px solid var(--sd-line); padding: 0; font-weight: 600; background: transparent; font-size: 15px; }
+.yp-sd__notes summary { cursor: pointer; font-size: 13px; color: var(--sd-ink-2); }
+.yp-sd__notes summary span { color: var(--sd-muted); }
+.yp-sd__notes textarea { width: 100%; margin-top: 8px; border: 1px solid var(--sd-line); border-radius: 10px; padding: 8px 10px; font: inherit; }
+
+.yp-sd__summary { background: var(--sd-card); border: 1px solid var(--sd-line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.yp-sd__sum-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; color: var(--sd-ink-2); }
+.yp-sd__sum-row span:last-child { font-variant-numeric: tabular-nums; text-align: right; }
+.yp-sd__sum-total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--sd-line); padding-top: 10px; }
+.yp-sd__sum-total b { font-family: var(--sd-head); font-size: 26px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.yp-sd__sum-total small { color: var(--sd-muted); font-size: 13px; }
+.yp-sd__cta { border: 0; background: var(--sd-cyan); color: #fff !important; font-weight: 600; font-size: 16px; padding: 13px 18px; border-radius: 12px; }
+.yp-sd__cta:hover { background: #009bd6; }
+.yp-sd__cta:disabled { opacity: .6; cursor: wait; }
+.yp-sd__fine { font-size: 12.5px; color: var(--sd-muted); display: flex; gap: 8px; align-items: flex-start; margin: 0; }
+.yp-sd .yp-configurator__cart-status { margin: 0; font-size: 13.5px; }
+
+.yp-sd__mbar { display: none; }
+
+@media (max-width: 900px) {
+	.yp-sd__layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+	.yp-sd__preview { top: 0; z-index: 5; background: var(--wp--preset--color--warm-white, #FAF9F6); padding-top: 6px; margin-top: -6px; }
+	.yp-sd__stage { aspect-ratio: 4 / 3; }
+	.yp-sd__legend { display: none; }
+	.yp-sd__summary .yp-sd__sum-total, .yp-sd__summary > .yp-sd__cta { display: none; }
+	.yp-sd__mbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff; border-top: 1px solid var(--sd-line); padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); align-items: center; gap: 12px; box-shadow: 0 -6px 20px rgba(0, 0, 0, .06); }
+	.yp-sd__mbar-p { display: flex; flex-direction: column; line-height: 1.15; }
+	.yp-sd__mbar-p b { font-family: var(--sd-head); font-size: 20px; font-variant-numeric: tabular-nums; }
+	.yp-sd__mbar-p small { font-size: 12px; color: var(--sd-muted); }
+	.yp-sd__mbar .yp-sd__cta { margin-left: auto; padding: 11px 18px; font-size: 15px; }
+	.yp-sd { padding-bottom: 90px; }
+}
+@media (max-width: 520px) {
+	.yp-sd__card { padding: 8px; }
+	.yp-sd__card-d { display: none; }
+	.yp-sd__card svg { height: 40px; }
+	.yp-sd__swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
+	.yp-sd__qty { gap: 6px; }
+	.yp-sd__q { padding: 7px; }
+	.yp-sd__step { padding: 14px; }
+	.yp-sd__shapes { gap: 6px; }
+	.yp-sd__stage-bar { gap: 6px; padding: 8px; }
+	.yp-sd__seg button { font-size: 12px; padding: 4px 8px; }
+	.yp-sd__toggle { font-size: 12px; gap: 4px; }
+	.yp-sd__toggle--dark, .yp-sd__hint { display: none !important; }
+}

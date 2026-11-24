@@ -271,6 +271,23 @@ class YeffoPrint_Cart_Pricing {
 	 * WooCommerce's gray placeholder at checkout.
 	 */
 	public function label_item_images( $images, array $cart_item ) {
+		// Sticker Designer lines show the customer's own sticker preview.
+		$design     = (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_DESIGN ] ?? [] );
+		$preview_id = (int) ( $design['preview_id'] ?? 0 );
+		if ( $preview_id && ( $preview_src = wp_get_attachment_image_url( $preview_id, 'medium_large' ) ) ) {
+			return [
+				(object) [
+					'id'        => $preview_id,
+					'src'       => $preview_src,
+					'thumbnail' => wp_get_attachment_image_url( $preview_id, 'woocommerce_thumbnail' ) ?: $preview_src,
+					'srcset'    => (string) wp_get_attachment_image_srcset( $preview_id, 'full' ),
+					'sizes'     => (string) wp_get_attachment_image_sizes( $preview_id, 'full' ),
+					'name'      => get_the_title( $preview_id ),
+					'alt'       => __( 'Your sticker', 'yeffoprint-core' ),
+				],
+			];
+		}
+
 		$template_id = (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TEMPLATE_ID ] ?? 0 );
 		if ( ! $template_id ) {
 			return $images;
@@ -467,6 +484,11 @@ class YeffoPrint_Cart_Pricing {
 			'key'   => __( 'Quantity', 'yeffoprint-core' ),
 			'value' => number_format_i18n( (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::TOTAL_QTY ] ?? 0 ) ),
 		];
+
+		$design = (array) ( $cart_item[ YeffoPrint_Cart_Item_Keys::STICKER_DESIGN ] ?? [] );
+		foreach ( YeffoPrint_Sticker_Design::display_rows( $design, (string) ( $cart_item[ YeffoPrint_Cart_Item_Keys::SHAPE ] ?? '' ), (int) ( $cart_item[ YeffoPrint_Cart_Item_Keys::MATERIAL_ID ] ?? 0 ) ) as $row ) {
+			$item_data[] = $row;
+		}
 
 		return $item_data;
 	}

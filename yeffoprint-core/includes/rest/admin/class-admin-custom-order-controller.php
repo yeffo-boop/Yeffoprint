@@ -270,6 +270,7 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 			$is_custom_size = $size_id && (bool) get_post_meta( $size_id, YeffoPrint_Sticker_Size_Meta::IS_CUSTOM, true );
 			$sticker_type   = (string) $m( YeffoPrint_Custom_Order_Meta::STICKER_TYPE );
 			$shape          = (string) $m( YeffoPrint_Custom_Order_Meta::SHAPE );
+			$sticker_design = json_decode( (string) $m( YeffoPrint_Custom_Order_Meta::STICKER_DESIGN ), true ) ?: [];
 
 			$payload['sticker'] = [
 				'sticker_type'       => $sticker_type,
@@ -286,6 +287,9 @@ class YeffoPrint_Admin_Custom_Order_Controller {
 				'quantity'           => (int) $m( YeffoPrint_Custom_Order_Meta::QUANTITY ),
 				'instructions'       => (string) $m( YeffoPrint_Custom_Order_Meta::INSTRUCTIONS ),
 				'artwork_uploads'    => $this->upload_payload( (array) $m( YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS ) ),
+				// Sticker Designer orders: border/corners/background rows and the preview picture.
+				'design_rows'        => YeffoPrint_Sticker_Design::display_rows( $sticker_design, $shape, $material_id ),
+				'preview_url'        => YeffoPrint_Sticker_Design::preview_url( $sticker_design ),
 			];
 		} elseif ( $is_template ) {
 			$template_id = (int) $m( YeffoPrint_Custom_Order_Meta::TEMPLATE_ID );

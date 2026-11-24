@@ -433,6 +433,22 @@ class YeffoPrint_Order_Item_Meta {
 		);
 		$item->add_meta_data( __( 'Material', 'yeffoprint-core' ), $material_id ? get_the_title( $material_id ) : '—', true );
 		$item->add_meta_data( __( 'Quantity', 'yeffoprint-core' ), $quantity, true );
+
+		// Sticker Designer choices + its preview picture (with cut line).
+		$design = (array) ( $values[ YeffoPrint_Cart_Item_Keys::STICKER_DESIGN ] ?? [] );
+		if ( $design ) {
+			$item->add_meta_data( YeffoPrint_Sticker_Design::ITEM_META, wp_json_encode( $design ), true );
+			foreach ( YeffoPrint_Sticker_Design::display_rows( $design, $shape, $material_id ) as $row ) {
+				$item->add_meta_data( $row['key'], $row['value'], true );
+			}
+			if ( ! empty( $design['preview_id'] ) ) {
+				$item->add_meta_data( YeffoPrint_Sticker_Design::ITEM_PREVIEW_META, (int) $design['preview_id'], true );
+				$url = YeffoPrint_Sticker_Design::preview_url( $design );
+				if ( $url ) {
+					$item->add_meta_data( __( 'Sticker preview', 'yeffoprint-core' ), $url, true );
+				}
+			}
+		}
 	}
 
 	/**
@@ -911,6 +927,8 @@ class YeffoPrint_Order_Item_Meta {
 			'_yp_custom_order_id',
 			'_yp_sticker_type',
 			'_yp_shape',
+			'_yp_sticker_design',
+			'_yp_sticker_preview_id',
 			'_yp_batch_row_index',
 			'_yp_compound_strength_snapshot',
 			'_yp_qr_url_snapshot',

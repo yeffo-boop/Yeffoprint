@@ -822,7 +822,9 @@ class YeffoPrint_Admin_Order_Controller {
 			// missing image (falls back to a placeholder swatch).
 			// 'medium' keeps the image's own shape; 'thumbnail' is a
 			// square crop that cut wide label previews off (direct report).
-			'image_url' => $product ? ( wp_get_attachment_image_url( $product->get_image_id(), 'medium' ) ?: null ) : null,
+			// A Sticker Designer line shows the customer's sticker preview.
+			'image_url' => YeffoPrint_Sticker_Design::preview_url( YeffoPrint_Sticker_Design::from_item( $item ), 'medium' )
+				?: ( $product ? ( wp_get_attachment_image_url( $product->get_image_id(), 'medium' ) ?: null ) : null ),
 			// The custom design request (yp_custom_order) behind this line,
 			// if any — the new admin's order page shows its proof there.
 			'custom_order_id' => (int) $item->get_meta( '_yp_custom_order_id' ),

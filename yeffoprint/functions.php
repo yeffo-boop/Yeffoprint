@@ -518,6 +518,13 @@ add_action( 'wp_enqueue_scripts', function () {
 			yeffoprint_asset_version( 'assets/css/custom-order.css' )
 		);
 
+		wp_enqueue_style(
+			'yeffoprint-sticker-designer',
+			get_theme_file_uri( 'assets/css/sticker-designer.css' ),
+			[ 'yeffoprint-custom-order' ],
+			yeffoprint_asset_version( 'assets/css/sticker-designer.css' )
+		);
+
 		wp_enqueue_script(
 			'yeffoprint-custom-sticker-form',
 			get_theme_file_uri( 'assets/js/custom-sticker-form.js' ),
@@ -533,8 +540,10 @@ add_action( 'wp_enqueue_scripts', function () {
 		}
 
 		wp_localize_script( 'yeffoprint-custom-sticker-form', 'yeffoprintCustomSticker', [
-			'restUrl' => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
-			'nonce'   => wp_create_nonce( 'wp_rest' ),
+			'restUrl'  => esc_url_raw( rest_url( 'yeffoprint-core/v1/' ) ),
+			'nonce'    => wp_create_nonce( 'wp_rest' ),
+			// Same shard pattern the label preview's prism finish uses.
+			'prismUrl' => esc_url_raw( get_theme_file_uri( 'assets/images/prism-shards.svg' ) ),
 		] );
 	}
 

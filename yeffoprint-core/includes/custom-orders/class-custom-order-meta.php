@@ -70,6 +70,8 @@ class YeffoPrint_Custom_Order_Meta {
 	/** Sticker orders only, and only meaningful when SIZE_ID points at the Sticker Size marked is_custom — the customer's own entered dimensions. */
 	public const CUSTOM_WIDTH_IN     = '_yp_custom_width_in';
 	public const CUSTOM_HEIGHT_IN    = '_yp_custom_height_in';
+	/** Sticker orders from the Sticker Designer only — JSON of YeffoPrint_Sticker_Design::sanitize() (border, corners, background, cut size, preview_id). */
+	public const STICKER_DESIGN      = '_yp_sticker_design';
 	/** Template orders only — the yp_template this shell wraps. */
 	public const TEMPLATE_ID         = '_yp_co_template_id';
 	/**

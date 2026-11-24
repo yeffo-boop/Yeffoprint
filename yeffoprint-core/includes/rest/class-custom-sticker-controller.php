@@ -76,6 +76,10 @@ class YeffoPrint_Custom_Sticker_Controller {
 				'id'       => $post->ID,
 				'name'     => $post->post_title,
 				'in_stock' => (bool) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::IN_STOCK, true ),
+				// The Sticker Designer prices every option live and draws
+				// the material's finish (glossy, holographic, prism...).
+				'price_adjustment' => (float) get_post_meta( $post->ID, YeffoPrint_Commerce_Record_Meta::PRICE_ADJUSTMENT, true ),
+				'finish'           => YeffoPrint_Commerce_Record_Meta::swatch_finish( $post ),
 			];
 		};
 
@@ -85,6 +89,16 @@ class YeffoPrint_Custom_Sticker_Controller {
 			'sticker_types'    => YeffoPrint_Sticker_Pricing::TYPES,
 			'shapes'           => YeffoPrint_Sticker_Pricing::SHAPES,
 			'quantity_presets' => function_exists( 'yeffoprint_core_quantity_presets' ) ? yeffoprint_core_quantity_presets() : [],
+			// Same numbers YeffoPrint_Sticker_Pricing::calculate() uses, so
+			// the designer can show a price on every quantity button
+			// without a request per button. The cart still prices
+			// server-side; this is display only.
+			'pricing'          => [
+				'type_adjustments'      => YeffoPrint_Sticker_Pricing::get_type_adjustments(),
+				'shape_adjustments'     => YeffoPrint_Sticker_Pricing::get_shape_adjustments(),
+				'custom_rate_per_sq_in' => YeffoPrint_Sticker_Pricing::get_custom_rate_per_sq_in(),
+				'tiers'                 => YeffoPrint_Sticker_Pricing::get_tiers(),
+			],
 		] );
 	}
 
@@ -157,6 +171,7 @@ class YeffoPrint_Custom_Sticker_Controller {
 
 		$instructions = sanitize_textarea_field( (string) $request->get_param( 'instructions' ) );
 		$uploads      = $this->sanitize_upload_ids( $request->get_param( 'uploads' ) );
+		$design       = YeffoPrint_Sticker_Design::sanitize( $request->get_param( 'design' ) );
 
 		if ( ! $uploads ) {
 			return new \WP_Error( 'yeffoprint_missing_artwork', __( 'Please upload your print-ready artwork.', 'yeffoprint-core' ), [ 'status' => 400 ] );
@@ -182,6 +197,9 @@ class YeffoPrint_Custom_Sticker_Controller {
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::CUSTOM_HEIGHT_IN, $custom_height_in );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::INSTRUCTIONS, $instructions );
 		update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::ARTWORK_UPLOADS, $uploads );
+		if ( $design ) {
+			update_post_meta( $custom_order_id, YeffoPrint_Custom_Order_Meta::STICKER_DESIGN, wp_json_encode( $design ) );
+		}
 
 		// Same reasoning as the label flow's own access token — generated
 		// up front so the one link (grabbed from the admin screen and
@@ -195,8 +213,7 @@ class YeffoPrint_Custom_Sticker_Controller {
 			return new \WP_Error( 'yeffoprint_no_sticker_product', __( 'Custom Stickers orders are not available right now.', 'yeffoprint-core' ), [ 'status' => 503 ] );
 		}
 
-		YeffoPrint_Cart_Pricing::allow_next_add( true );
-		$cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity, 0, [], [
+		$cart_item_data = [
 			YeffoPrint_Cart_Item_Keys::CUSTOM_ORDER_ID    => $custom_order_id,
 			YeffoPrint_Cart_Item_Keys::SIZE_ID            => $size_id,
 			YeffoPrint_Cart_Item_Keys::MATERIAL_ID        => $material_id,
@@ -205,7 +222,18 @@ class YeffoPrint_Custom_Sticker_Controller {
 			YeffoPrint_Cart_Item_Keys::CUSTOM_WIDTH_IN    => $custom_width_in,
 			YeffoPrint_Cart_Item_Keys::CUSTOM_HEIGHT_IN   => $custom_height_in,
 			YeffoPrint_Cart_Item_Keys::TOTAL_QTY          => $quantity,
-		] );
+		];
+		if ( $design ) {
+			$cart_item_data[ YeffoPrint_Cart_Item_Keys::STICKER_DESIGN ] = $design;
+			// Holographic: the designer's border is the bare holo vinyl
+			// the border question asks about, so answer it from that.
+			if ( class_exists( 'YeffoPrint_Holographic_Vinyl' ) && YeffoPrint_Holographic_Vinyl::is_holographic( $material_id ) ) {
+				$cart_item_data[ YeffoPrint_Cart_Item_Keys::HOLO_BORDER ] = $design['border_in'] > 0 ? 'yes' : 'no';
+			}
+		}
+
+		YeffoPrint_Cart_Pricing::allow_next_add( true );
+		$cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity, 0, [], $cart_item_data );
 		YeffoPrint_Cart_Pricing::allow_next_add( false );
 
 		if ( ! $cart_item_key ) {
