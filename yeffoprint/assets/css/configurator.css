@@ -1330,19 +1330,27 @@ body.yp-has-sticky-bar .yp-chat-widget {
 	mix-blend-mode: multiply;
 }
 
-/* Prism: a clear faceted laminate over everything, so color flashes
-   across the whole label in small cells. */
+/* Prism: shattered-glass holographic vinyl. A silver base full of
+   colored shards shows wherever the label is white or light (multiplied,
+   so ink stays put), and brighter glints light up in a band that follows
+   the light. */
 .yp-configurator__stage.is-svg[data-finish="prism"] .yp-stage__svg::before {
-	opacity: 0.32;
+	opacity: 1;
+	background: url(../images/prism-shards.svg) 0 0 / 90px 90px;
+	mix-blend-mode: multiply;
+}
+
+.yp-configurator__stage.is-svg[data-finish="prism"] .yp-stage__svg::after {
 	background:
-		repeating-conic-gradient(from 20deg, rgba(0, 200, 255, 0.5) 0 25%, rgba(255, 70, 200, 0.45) 0 50%, rgba(255, 240, 90, 0.45) 0 75%, rgba(120, 255, 210, 0.45) 0 100%) 0 0 / 8px 8px;
-	-webkit-mask-image: linear-gradient(110deg, transparent 15%, #000 42%, #000 58%, transparent 85%);
-	mask-image: linear-gradient(110deg, transparent 15%, #000 42%, #000 58%, transparent 85%);
+		url(../images/prism-glints.svg) 23px 41px / 90px 90px;
+	-webkit-mask-image: linear-gradient(110deg, transparent 20%, rgba(0, 0, 0, 0.9) 45%, rgba(0, 0, 0, 0.9) 55%, transparent 80%);
+	mask-image: linear-gradient(110deg, transparent 20%, rgba(0, 0, 0, 0.9) 45%, rgba(0, 0, 0, 0.9) 55%, transparent 80%);
 	-webkit-mask-size: 250% 100%;
 	mask-size: 250% 100%;
 	-webkit-mask-position: var(--yp-tilt-x) 0;
 	mask-position: var(--yp-tilt-x) 0;
-	mix-blend-mode: normal;
+	mix-blend-mode: soft-light;
+	opacity: 1;
 }
 
 /* Clear: white areas are see-through, shown over a light checkerboard. */
