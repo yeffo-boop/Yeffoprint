@@ -1668,6 +1668,7 @@
 		}
 		finishLight.x += ( goal - finishLight.x ) * 0.12;
 		wrap.style.setProperty( '--yp-tilt-x', finishLight.x.toFixed( 2 ) + '%' );
+		wrap.style.setProperty( '--yp-tilt-deg', ( ( finishLight.x - 50 ) * 1.2 ).toFixed( 1 ) + 'deg' );
 
 		var settled = Math.abs( goal - finishLight.x ) < 0.1;
 		var keepGoing = null !== finishLight.target ? ! settled : ( foil && ! reduced ) || ! settled;

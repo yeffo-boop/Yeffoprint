@@ -1296,7 +1296,6 @@ body.yp-has-sticky-bar .yp-chat-widget {
 .yp-configurator__stage.is-svg[data-finish="glossy"] .yp-stage__svg::after,
 .yp-configurator__stage.is-svg[data-finish="holographic"] .yp-stage__svg::after,
 .yp-configurator__stage.is-svg[data-finish="metallic"] .yp-stage__svg::after,
-.yp-configurator__stage.is-svg[data-finish="prism"] .yp-stage__svg::after,
 .yp-configurator__stage.is-svg[data-finish="clear"] .yp-stage__svg::after {
 	opacity: 1;
 	background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.3) 47%, rgba(255, 255, 255, 0.08) 53%, transparent 60%) 0 0 / 250% 100%;
@@ -1330,19 +1329,16 @@ body.yp-has-sticky-bar .yp-chat-widget {
 	mix-blend-mode: multiply;
 }
 
-/* Prism: a clear faceted laminate over everything, so color flashes
-   across the whole label in small cells. */
+/* Prism: shattered-glass holographic vinyl. prism-shards.svg is a
+   mosaic of dark silver shards with brightly colored ones scattered on
+   top; it's multiplied over the art (white shows the material, ink stays
+   put) and its colors shift as the light moves (--yp-tilt-deg from
+   configurator.js), so the shards flash like the real material. */
 .yp-configurator__stage.is-svg[data-finish="prism"] .yp-stage__svg::before {
-	opacity: 0.32;
-	background:
-		repeating-conic-gradient(from 20deg, rgba(0, 200, 255, 0.5) 0 25%, rgba(255, 70, 200, 0.45) 0 50%, rgba(255, 240, 90, 0.45) 0 75%, rgba(120, 255, 210, 0.45) 0 100%) 0 0 / 8px 8px;
-	-webkit-mask-image: linear-gradient(110deg, transparent 15%, #000 42%, #000 58%, transparent 85%);
-	mask-image: linear-gradient(110deg, transparent 15%, #000 42%, #000 58%, transparent 85%);
-	-webkit-mask-size: 250% 100%;
-	mask-size: 250% 100%;
-	-webkit-mask-position: var(--yp-tilt-x) 0;
-	mask-position: var(--yp-tilt-x) 0;
-	mix-blend-mode: normal;
+	opacity: 0.6;
+	background: url(../images/prism-shards.svg) 0 0 / 40% auto;
+	filter: hue-rotate(var(--yp-tilt-deg, 0deg)) saturate(1.3) brightness(1.15);
+	mix-blend-mode: multiply;
 }
 
 /* Clear: white areas are see-through, shown over a light checkerboard. */
