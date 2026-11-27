@@ -3739,3 +3739,98 @@ body.yp-next .ypn-card__title:has(.ypn-more--sheet) {
 	font-weight: 700;
 	cursor: pointer;
 }
+
+/* ---------- Linked add-on orders (same box) ---------- */
+
+.ypn-linked {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 14px;
+	padding: 14px 16px;
+	border: 2px solid var(--ypn-mag);
+	border-radius: var(--ypn-radius);
+	background: #fff5fb;
+}
+
+.ypn-linked.is-warn {
+	border-color: #d9472b;
+	background: #fff1ee;
+}
+
+.ypn-linked__head {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+}
+
+.ypn-linked__icon {
+	font-size: 22px;
+	line-height: 1;
+}
+
+.ypn-linked__head b {
+	display: block;
+	font-size: 15px;
+}
+
+.ypn-linked__head span {
+	display: block;
+	color: var(--ypn-mute);
+	font-size: 13px;
+}
+
+.ypn-linked__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 10px;
+	align-items: center;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: var(--ypn-card);
+	color: var(--ypn-ink);
+	text-decoration: none;
+	border: 1px solid var(--ypn-line);
+}
+
+.ypn-linked__row:hover,
+.ypn-linked__row:focus {
+	border-color: var(--ypn-mag);
+	color: var(--ypn-ink);
+}
+
+.ypn-linked__count {
+	font-weight: 600;
+}
+
+.ypn-linked__go {
+	margin-left: auto;
+	color: var(--ypn-mag);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.ypn-order__linked {
+	margin-top: 6px;
+	padding: 4px 8px;
+	border-radius: 8px;
+	background: #fde7f3;
+	color: #b0006a;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.ypn-q__text .ypn-q__linked {
+	display: block;
+	color: #b0006a;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.ypn-q__text .ypn-q__linked.is-warn {
+	color: #9f2a17;
+}
+
+.ypn-ds__body .ypn-linked {
+	margin: 0 0 14px;
+}

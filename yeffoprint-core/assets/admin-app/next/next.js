@@ -313,6 +313,86 @@
 		return ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + o.number;
 	}
 
+	/**
+	 * Direct report: a customer's add-on order (same box, linked by
+	 * class-order-addon-shipping.php) went unnoticed while the original
+	 * was prepped and shipped. Banner naming the other orders in the box,
+	 * with their label counts, for the order page ('order'), the Ship
+	 * screen ('ship') and the production view ('sheet', design-sheet.js).
+	 */
+	function linkedOrdersHtml( order, where ) {
+		var linked = order.linked_orders || [];
+		if ( ! linked.length ) {
+			return '';
+		}
+		var names = linked.map( orderLabel ).join( ' and ' );
+		var toPrint = linked.filter( function ( l ) { return l.needs_printing && ! l.unpaid; } );
+		var open = [ 'processing', 'in-production', 'curing' ].indexOf( order.status ) !== -1;
+		var title = 'sheet' === where
+			? names + ' goes in this box too'
+			: ( 'ship' === where ? 'This box also holds ' + names : 'Ships in one box with ' + names );
+		var hint;
+		if ( toPrint.length && open ) {
+			hint = 'ship' === where
+				? 'Make ' + toPrint.map( orderLabel ).join( ' and ' ) + '’s labels before you buy this label. Buying it marks the linked orders Shipped too.'
+				: 'Make its labels too before you ship. Buying a label on either order ships them all with the same tracking number.';
+		} else if ( open ) {
+			hint = 'Pack them together. Buying a label on either order ships them all with the same tracking number.';
+		} else {
+			hint = 'Shipped in the same box, with the same tracking number.';
+		}
+
+		var rows = linked.map( function ( l ) {
+			var pills = [ '<span class="ypn-pill">' + ( 'original' === l.role ? 'Original order' : 'Add-on' ) + '</span>' ];
+			if ( l.unpaid ) {
+				pills.push( '<span class="ypn-pill ypn-pill--yel">Unpaid · stays behind until paid</span>' );
+			} else if ( l.needs_printing && open ) {
+				pills.push( '<span class="ypn-pill ypn-pill--red">Not printed yet</span>' );
+			} else {
+				pills.push( '<span class="ypn-pill ypn-pill--ink">' + esc( l.status_label ) + '</span>' );
+			}
+			if ( 'sheet' === where && l.designed ) {
+				pills.push( '<span class="ypn-pill' + ( l.designed.done === l.designed.total ? ' ypn-pill--grn' : '' ) + '">' + l.designed.done + '/' + l.designed.total + ' designed</span>' );
+			}
+			var href = 'sheet' === where && l.designed ? '#/design-sheet/' + l.id : '#/order/' + l.id;
+			return (
+				'<a class="ypn-linked__row" href="' + escAttr( href ) + '"' + ( 'sheet' === where && ! l.designed ? ' data-ypn-ds-order="' + l.id + '"' : '' ) + '>' +
+					'<b class="ypn-mono">' + esc( orderLabel( l ) ) + '</b>' +
+					'<span class="ypn-linked__count">' + esc( l.label_summary || 'No labels' ) + '</span>' +
+					pills.join( '' ) +
+					'<span class="ypn-linked__go">' + ( 'sheet' === where && l.designed ? 'Production view' : 'Open' ) + ' &rarr;</span>' +
+				'</a>'
+			);
+		} ).join( '' );
+
+		return (
+			'<div class="ypn-linked' + ( toPrint.length && open ? ' is-warn' : '' ) + '" role="note">' +
+				'<div class="ypn-linked__head"><span class="ypn-linked__icon" aria-hidden="true">📦</span><div><b>' + esc( title ) + '</b><span>' + esc( hint ) + '</span></div></div>' +
+				rows +
+			'</div>'
+		);
+	}
+	YP.next.linkedOrdersHtml = linkedOrdersHtml;
+
+	/** Today's Ready to ship row: the other orders going in the box, red while one still needs printing. */
+	function todayLinkedHtml( o ) {
+		var active = ( o.linked || [] ).filter( function ( l ) { return 'shipped' !== l.column; } );
+		if ( ! active.length ) {
+			return '';
+		}
+		var behind = active.filter( function ( l ) { return [ 'ready', 'proof', 'approval' ].indexOf( l.column ) !== -1; } );
+		return '<span class="ypn-q__linked' + ( behind.length ? ' is-warn' : '' ) + '">📦 Same box: ' + esc( active.map( function ( l ) {
+			return orderLabel( l ) + ( l.label_summary ? ' (' + l.label_summary + ')' : '' ) + ( -1 !== behind.indexOf( l ) ? ', not printed yet' : ( 'unpaid' === l.column ? ', unpaid' : '' ) );
+		} ).join( ', ' ) ) + '</span>';
+	}
+
+	/** Board/Today: "+ #YP-904 · 12 labels" for the other orders in a card's box. */
+	function linkedCardText( o ) {
+		return ( o.linked || [] ).map( function ( l ) {
+			return ( 'original' === l.role ? 'Add-on to ' : 'Has add-on ' ) + orderLabel( l ) + ( l.label_summary ? ' · ' + l.label_summary : '' );
+		} ).join( ', ' );
+	}
+
 	/* Stops an express order's 30-minute reminders (phone push and Telegram), like "Got it" / /ack on Telegram. */
 	function acknowledgeExpress( orderId ) {
 		return YP.request( api( 'admin/order/' + parseInt( orderId, 10 ) + '/express-ack' ), { method: 'POST' } );
@@ -375,7 +455,7 @@
 			var promiseMeta = o.promise && risk
 				? ( 'late' === risk ? late + ( 1 === late ? ' day' : ' days' ) + ' past the promised ship date' : 'Promised to ship ' + o.promise.ship_label )
 				: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) : '' );
-			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + ( o.label_summary || o.items ) + ' · ' + ago( o.date ) };
+			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + ( o.label_summary || o.items ) + ( ( o.linked || [] ).length ? ' · ' + linkedCardText( o ) : '' ) + ' · ' + ago( o.date ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
@@ -460,7 +540,7 @@
 			? ship.map( function ( o ) {
 				return (
 					'<div class="ypn-q">' +
-						'<a class="ypn-q__text" href="#/order/' + o.id + '"><b class="ypn-mono">' + esc( orderLabel( o ) ) + ( o.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( o.promise && 'late' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : ( o.promise && 'at_risk' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--yel">Ship today</span>' : '' ) ) + '</b><span>' + esc( ( o.customer || 'Guest' ) + ( o.shipping ? ' · ' + o.shipping : '' ) + ( o.promise && o.promise.ship_date ? ' · promised ' + o.promise.ship_label : '' ) ) + '</span></a>' +
+						'<a class="ypn-q__text" href="#/order/' + o.id + '"><b class="ypn-mono">' + esc( orderLabel( o ) ) + ( o.express ? ' <span class="ypn-tag-express">EXPRESS</span>' : '' ) + ( o.promise && 'late' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--red">Late</span>' : ( o.promise && 'at_risk' === o.promise.risk ? ' <span class="ypn-pill ypn-pill--yel">Ship today</span>' : '' ) ) + '</b><span>' + esc( ( o.customer || 'Guest' ) + ( o.shipping ? ' · ' + o.shipping : '' ) + ( o.promise && o.promise.ship_date ? ' · promised ' + o.promise.ship_label : '' ) ) + '</span>' + todayLinkedHtml( o ) + '</a>' +
 						'<button type="button" class="ypn-btn" data-ypn-q-label="' + o.id + '">Label</button>' +
 					'</div>'
 				);
@@ -553,13 +633,14 @@
 		function cardHtml( o ) {
 			var canPrint = PRINTABLE.indexOf( o.column ) !== -1;
 			return (
-				'<div class="ypn-order' + ( o.express ? ' is-express' : '' ) + '" data-ypn-order="' + o.id + '"' + ( canPrint ? ' draggable="true"' : '' ) + ' tabindex="0" role="button">' +
+				'<div class="ypn-order' + ( o.express ? ' is-express' : '' ) + ( ( o.linked || [] ).length ? ' is-linked' : '' ) + '" data-ypn-order="' + o.id + '"' + ( canPrint ? ' draggable="true"' : '' ) + ' tabindex="0" role="button">' +
 					'<div class="ypn-order__row"><span class="ypn-order__num">' + ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + esc( String( o.number ) ) + '</span>' +
 						( o.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '<span class="ypn-order__age">' + esc( ago( o.date ) ) + '</span>' ) +
 					'</div>' +
 					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.holo_cure ? ' ' + HOLO_TAG : '' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
 					( o.label_summary ? '<div class="ypn-order__count">' + esc( o.label_summary ) + '</div>' : '' ) +
+					( ( o.linked || [] ).length ? '<div class="ypn-order__linked" title="Same box: shipping either order ships them all"><span aria-hidden="true">📦</span> ' + esc( linkedCardText( o ) ) + '</div>' : '' ) +
 					( o.promise && 'shipped' !== o.column ? '<div class="ypn-order__items">' + promiseHtml( o.promise, false ) + '</div>' : '' ) +
 					( 'curing' === o.column && o.curing_ready_at ? '<div class="ypn-order__cure' + ( curingDone( o ) ? ' is-done' : '' ) + '">' + esc( curingText( o ) ) + '</div>' : '' ) +
 					'<div class="ypn-order__row"><span class="ypn-order__meta">' + esc( o.payment_method || o.status_label ) + '</span><b>' + esc( money( o.total ) ) + '</b></div>' +
@@ -1305,6 +1386,7 @@
 			viewEl.innerHTML =
 				'<div class="ypn-op">' +
 					changeRequestHtml( order.change_request ) +
+					linkedOrdersHtml( order, 'order' ) +
 					( order.express_waiting
 						? '<div class="ypn-banner ypn-ack">' +
 							'<div><b>Express order waiting on you</b><span>Reminders go out every 30 minutes until you acknowledge it or move it to In Production.</span></div>' +
@@ -1874,6 +1956,7 @@
 						'<span>' + esc( order.customer_name || 'Guest' ) + ( order.shipping_method ? ' picked ' + esc( order.shipping_method ) : '' ) + '</span>' +
 						'<a class="ypn-link" href="#/order/' + order.id + '">Open order</a>' +
 					'</div>' +
+					linkedOrdersHtml( order, 'ship' ) +
 					'<div class="ypn-op__grid">' +
 						'<div class="ypn-op__main">' +
 							( labels.length
