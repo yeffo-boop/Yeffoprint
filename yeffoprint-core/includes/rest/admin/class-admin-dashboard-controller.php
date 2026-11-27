@@ -163,7 +163,8 @@ class YeffoPrint_Admin_Dashboard_Controller {
 		}
 
 		return array_map( function ( \WC_Order $order ) use ( $root_ids, $groups, $numbers_by_id, $express ) {
-			$date     = $order->get_date_created();
+			// Overdue counts from payment, not creation (class-order-queue-date.php).
+			$date     = YeffoPrint_Order_Queue_Date::get( $order );
 			$order_id = $order->get_id();
 			$group    = $groups[ $root_ids[ $order_id ] ] ?? [ $order_id ];
 

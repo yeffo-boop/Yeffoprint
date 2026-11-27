@@ -442,7 +442,9 @@
 
 		var day = 86400000;
 		( todayBoard || [] ).forEach( function ( o ) {
-			var age = o.date ? Date.now() - new Date( o.date ).getTime() : 0;
+			// Paid orders count from when they were paid, unpaid ones from when they were placed.
+			var since = o.queue_date || o.date;
+			var age = since ? Date.now() - new Date( since ).getTime() : 0;
 			// Same rule as the old dashboard's "Needs attention": open longer than the due date setting.
 			// Holographic orders get one more day: the vinyl cures 24 hours before shipping.
 			var lateBy = todayDueDays && 'unpaid' !== o.column ? Math.floor( age / day ) - todayDueDays - ( o.holo_cure ? 1 : 0 ) : 0;
@@ -455,7 +457,7 @@
 			var promiseMeta = o.promise && risk
 				? ( 'late' === risk ? late + ( 1 === late ? ' day' : ' days' ) + ' past the promised ship date' : 'Promised to ship ' + o.promise.ship_label )
 				: ( late ? late + ( 1 === late ? ' day late' : ' days late' ) : '' );
-			var base = { id: o.id, express: o.express, date: o.date, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + ( o.label_summary || o.items ) + ( ( o.linked || [] ).length ? ' · ' + linkedCardText( o ) : '' ) + ' · ' + ago( o.date ) };
+			var base = { id: o.id, express: o.express, date: since, late: late, atRisk: 'at_risk' === risk, meta: ( promiseMeta ? promiseMeta + ' · ' : '' ) + ( o.customer || 'Guest' ) + ' · ' + ( o.label_summary || o.items ) + ( ( o.linked || [] ).length ? ' · ' + linkedCardText( o ) : '' ) + ' · ' + ago( since ) };
 			// Express reminders keep going out every 30 minutes until acknowledged.
 			if ( o.express_waiting ) {
 				items.push( Object.assign( {}, base, { kind: 'express', title: 'Express order ' + orderLabel( o ) + ' is waiting on you', action: 'Acknowledge', ack: true } ) );
@@ -635,7 +637,7 @@
 			return (
 				'<div class="ypn-order' + ( o.express ? ' is-express' : '' ) + ( ( o.linked || [] ).length ? ' is-linked' : '' ) + '" data-ypn-order="' + o.id + '"' + ( canPrint ? ' draggable="true"' : '' ) + ' tabindex="0" role="button">' +
 					'<div class="ypn-order__row"><span class="ypn-order__num">' + ( /^\d+$/.test( String( o.number ) ) ? '#' : '' ) + esc( String( o.number ) ) + '</span>' +
-						( o.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '<span class="ypn-order__age">' + esc( ago( o.date ) ) + '</span>' ) +
+						( o.express ? '<span class="ypn-tag-express">EXPRESS</span>' : '<span class="ypn-order__age"' + ( o.date_paid ? ' title="Time since paid"' : '' ) + '>' + esc( ago( o.queue_date || o.date ) ) + '</span>' ) +
 					'</div>' +
 					'<div class="ypn-order__name">' + esc( o.customer || 'Guest' ) + ( o.holo_cure ? ' ' + HOLO_TAG : '' ) + ( o.change_requested ? ' <span class="ypn-pill ypn-pill--yel">Change requested</span>' : '' ) + '</div>' +
 					'<div class="ypn-order__items">' + esc( o.items ) + '</div>' +
@@ -1331,7 +1333,10 @@
 			var sub = [
 				esc( order.customer_name || order.customer_email || 'Guest' ),
 				esc( money( order.total ) ) + ( paid ? ' paid' : ' unpaid' ) + ( order.payment_method_title ? ( paid ? ' by ' : ' · ' ) + esc( order.payment_method_title ) : '' ),
-				order.date ? esc( ago( order.date ) ) + ' ago' : ''
+				// Paid later than placed (Venmo/Zelle, pay links): show both, the queue runs from payment.
+				order.date_paid && order.date && new Date( order.date_paid ) - new Date( order.date ) > 3600000
+					? 'placed ' + esc( ago( order.date ) ) + ' ago, paid ' + esc( ago( order.date_paid ) ) + ' ago'
+					: ( order.date ? esc( ago( order.date ) ) + ' ago' : '' )
 			].filter( Boolean ).join( ' · ' );
 
 			// Actions, most likely next step first.

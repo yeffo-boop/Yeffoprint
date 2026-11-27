@@ -126,7 +126,7 @@ class YeffoPrint_Admin_Next_Controller {
 				return $a['sort_express'] ? -1 : 1;
 			}
 			return strcmp( (string) $a['sort_date'], (string) $b['sort_date'] )
-				?: strcmp( (string) $a['date'], (string) $b['date'] );
+				?: strcmp( (string) $a['queue_date'], (string) $b['queue_date'] );
 		} );
 
 		return rest_ensure_response( [
@@ -158,7 +158,7 @@ class YeffoPrint_Admin_Next_Controller {
 			$root = $by_id[ $card['root_id'] ] ?? $card;
 
 			$cards[ $i ]['sort_express'] = $card['express'] || $root['express'];
-			$cards[ $i ]['sort_date']    = $root['date'];
+			$cards[ $i ]['sort_date']    = $root['queue_date'];
 			$cards[ $i ]['linked']       = [];
 			foreach ( $groups[ $card['root_id'] ] as $id ) {
 				if ( $id === $card['id'] ) {
@@ -216,6 +216,9 @@ class YeffoPrint_Admin_Next_Controller {
 			'column'         => $column,
 			'proof'          => $proof,
 			'date'           => $date ? $date->date( 'c' ) : null,
+			'date_paid'      => $order->get_date_paid() ? $order->get_date_paid()->date( 'c' ) : null,
+			// Queue age, Late tag and column order count from payment (class-order-queue-date.php).
+			'queue_date'     => YeffoPrint_Order_Queue_Date::iso( $order ),
 			'customer'       => trim( $order->get_formatted_billing_full_name() ) ?: $order->get_billing_email(),
 			'items'          => $first_name . ( $more ? sprintf( ' + %d more', $more ) : '' ),
 			// "120 labels · 20 stickers" (class-order-label-count.php); '' for orders with no labels.

@@ -58,6 +58,9 @@ class YeffoPrint_Production_Time {
 	/** Custom label orders waiting on a proof: business days promised after approval, turned into a ship date on approval. */
 	public const META_AFTER_PROOF_DAYS = '_yp_promised_after_proof_days';
 
+	/** Set once the ship date has been moved to count from payment (shift_for_payment()). */
+	public const META_FROM_PAID = '_yp_promise_from_paid';
+
 	/** "risk|ship date" last pushed to the admin app, so each warning goes out once. */
 	public const META_ALERTED = '_yp_promise_alerted';
 
@@ -89,6 +92,11 @@ class YeffoPrint_Production_Time {
 		// at risk of missing the date".
 		add_action( self::ALERT_HOOK, [ __CLASS__, 'send_alerts' ] );
 		add_action( 'init', [ __CLASS__, 'ensure_scheduled' ] );
+
+		// Direct request: the queue and overdue "need to go by the date the
+		// order is paid". A Venmo/Zelle or pay-link order paid days after
+		// checkout gets its promised ship date moved by those days.
+		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'shift_for_payment' ], 5, 4 );
 
 		// A new paid order or a status change moves the queue.
 		add_action( 'woocommerce_order_status_changed', [ __CLASS__, 'forget_count' ] );
@@ -288,6 +296,56 @@ class YeffoPrint_Production_Time {
 		}
 
 		$order->update_meta_data( self::META_SHIP_DATE, self::add_business_days( $days )->format( 'Y-m-d' ) );
+		$order->save();
+	}
+
+	/**
+	 * When an unpaid order (Pending payment / On hold) turns paid on a later
+	 * day than it was placed, push its promised ship date out by the
+	 * business days in between, so production time counts from payment.
+	 * Runs once per order. Custom label orders still waiting on a proof
+	 * have no ship date yet and get theirs on approval as before.
+	 *
+	 * @param int|string $order_id
+	 */
+	public static function shift_for_payment( $order_id, string $from, string $to, $order = null ): void {
+		if ( ! in_array( $from, [ 'pending', 'on-hold', 'failed' ], true ) || ! in_array( $to, wc_get_is_paid_statuses(), true ) ) {
+			return;
+		}
+		$order = $order instanceof \WC_Order ? $order : wc_get_order( $order_id );
+		if ( ! $order || $order->get_meta( self::META_FROM_PAID ) ) {
+			return;
+		}
+		$saved = (string) $order->get_meta( self::META_SHIP_DATE );
+		$placed = $order->get_date_created();
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $saved ) || ! $placed ) {
+			return;
+		}
+
+		$tz   = wp_timezone();
+		$paid = $order->get_date_paid();
+		$day  = ( new \DateTimeImmutable( '@' . $placed->getTimestamp() ) )->setTimezone( $tz )->setTime( 0, 0 );
+		$end  = ( new \DateTimeImmutable( '@' . ( $paid ? $paid->getTimestamp() : time() ) ) )->setTimezone( $tz )->setTime( 0, 0 );
+
+		$waited = 0;
+		while ( $day < $end && $waited < 60 ) {
+			$day = $day->modify( '+1 day' );
+			if ( self::is_business_day( $day ) ) {
+				++$waited;
+			}
+		}
+
+		$order->update_meta_data( self::META_FROM_PAID, '1' );
+		if ( $waited > 0 ) {
+			$ship = self::add_business_days( $waited, new \DateTimeImmutable( $saved, $tz ) );
+			$order->update_meta_data( self::META_SHIP_DATE, $ship->format( 'Y-m-d' ) );
+			$order->add_order_note( sprintf(
+				/* translators: 1: business days, 2: new ship date */
+				__( 'Paid %1$d business day(s) after it was placed, so the promised ship date moved to %2$s.', 'yeffoprint-core' ),
+				$waited,
+				self::format_date( $ship )
+			) );
+		}
 		$order->save();
 	}
 

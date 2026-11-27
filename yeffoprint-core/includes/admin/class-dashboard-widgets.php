@@ -117,7 +117,8 @@ class YeffoPrint_Dashboard_Widgets {
 		] );
 
 		$rows = array_map( function ( \WC_Order $order ) use ( $due_date_days ) {
-			$date = $order->get_date_created();
+			// Overdue counts from payment, not creation (class-order-queue-date.php).
+			$date = YeffoPrint_Order_Queue_Date::get( $order );
 			return [
 				'label'    => sprintf(
 					/* translators: %s: order number */
