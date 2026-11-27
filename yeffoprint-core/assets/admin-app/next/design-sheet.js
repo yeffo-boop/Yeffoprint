@@ -186,6 +186,42 @@
 		return /^#[0-9a-f]{3,8}$/i.test( hex || '' ) ? '<i class="ypn-ds__sw" style="background:' + escAttr( hex ) + '"></i>' : '';
 	}
 
+	/** "Custom #F0E800" -> "#F0E800": the swatch already shows it's a color. */
+	function shortDisplay( f ) {
+		var d = f && null !== f.display && undefined !== f.display ? String( f.display ) : '';
+		var hex = f && /^#[0-9a-f]{3,8}$/i.test( f.value || '' ) ? String( f.value ).toUpperCase() : '';
+		if ( hex && /^custom\b/i.test( d ) && d.toUpperCase().indexOf( hex ) !== -1 ) {
+			return hex;
+		}
+		return d;
+	}
+
+	/**
+	 * Column widths for a batch's label table, sized to its longest values so
+	 * names, batch numbers and dates never break mid-word. Every row uses the
+	 * same template, so columns line up; the table scrolls sideways if needed.
+	 */
+	function columnLayout( group ) {
+		var total = 0;
+		var tpl = group.columns.map( function ( c, ci ) {
+			var head = String( c.label ).split( /\s+/ ).reduce( function ( m, w ) { return Math.max( m, w.length ); }, 0 );
+			var full = 1;
+			var word = 1;
+			group.labels.forEach( function ( l ) {
+				var d = shortDisplay( fieldOf( l, c.label ) );
+				full = Math.max( full, d.length );
+				d.split( /\s+/ ).forEach( function ( w ) { word = Math.max( word, w.length ); } );
+			} );
+			var px = 0 === ci ? 10 : 9; // rough bold character width; first column is bigger.
+			var min = Math.max( Math.min( full, 18 ) * px, word * px, head * 8.5 ) + 34; // + swatch and copy icon.
+			min = Math.ceil( min );
+			total += min + 12;
+			return 'minmax(' + min + 'px, ' + Math.max( 1, Math.min( full, 24 ) ) + 'fr)';
+		} ).join( ' ' );
+		// Checkbox, #, qty, gaps and padding around the value columns.
+		return { tpl: tpl, minWidth: total + 24 + 28 + 56 + 36 + 16 };
+	}
+
 	function copyable( text, extraClass ) {
 		if ( '' === text || null === text || undefined === text ) {
 			return '<span class="ypn-ds__none">—</span>';
@@ -264,7 +300,7 @@
 		var cls = 'ypn-ds__row' + ( done ? ' is-done' : '' ) + ( label.key === state.nextKey ? ' is-next' : '' );
 		var cells = group.columns.map( function ( c ) {
 			var f = fieldOf( label, c.label ) || {};
-			return '<span class="ypn-ds__cell" data-col="' + escAttr( c.label ) + '">' + swatch( f.value ) + copyable( f.display ) + '</span>';
+			return '<span class="ypn-ds__cell" data-col="' + escAttr( c.label ) + '">' + swatch( f.value ) + copyable( shortDisplay( f ) ) + '</span>';
 		} ).join( '' );
 		if ( ! group.columns.length ) {
 			cells = '<span class="ypn-ds__cell">Label ' + ( group.labels.indexOf( label ) + 1 ) + '</span>';
@@ -272,7 +308,7 @@
 		var ex = label.exceptions.map( function ( e ) {
 			return e.note
 				? '<span class="ypn-ds__note"><b>' + esc( e.label ) + ':</b> ' + esc( e.display ) + '</span>'
-				: '<span class="ypn-ds__diff">' + swatch( e.value ) + esc( e.label ) + ': ' + esc( e.display ) + '</span>';
+				: '<span class="ypn-ds__diff">' + swatch( e.value ) + esc( e.label ) + ': ' + esc( shortDisplay( e ) ) + '</span>';
 		} ).join( '' );
 		var qrs = ! group.sharedQr && ( label.qr_codes || [] ).length
 			? qrListHtml( label.qr_codes, 'order-' + slug( state.order.number ) + '-label-' + label.n + '-qr', state )
@@ -295,6 +331,7 @@
 		var hiddenDone = state.hideDone && ! all ? done : 0;
 		var rows = group.labels.filter( function ( l ) { return ! ( state.hideDone && ! all && state.designed[ l.key ] ); } );
 		var preview = previewHtml( group );
+		var layout = group.columns.length ? columnLayout( group ) : null;
 		var cols = group.columns.length ? group.columns.map( function ( c ) { return '<span>' + esc( c.label ) + '</span>'; } ).join( '' ) : '<span>Label</span>';
 
 		return '<section class="ypn-ds__batch' + ( all ? ' is-done' : '' ) + '" data-group="' + escAttr( group.key ) + '">' +
@@ -319,13 +356,13 @@
 							( group.size ? '<dt>Size</dt><dd>' + copyable( group.size ) + '</dd>' : '' ) +
 							( group.material ? '<dt>Material</dt><dd>' + copyable( group.material ) + '</dd>' : '' ) +
 							group.setup.map( function ( s ) {
-								return '<dt>' + esc( s.label ) + '</dt><dd>' + swatch( s.value ) + copyable( s.display ) + '</dd>';
+								return '<dt>' + esc( s.label ) + '</dt><dd>' + swatch( s.value ) + copyable( shortDisplay( s ) ) + '</dd>';
 							} ).join( '' ) +
 							( null !== group.sameQty ? '<dt>Qty each</dt><dd>' + Number( group.sameQty ).toLocaleString() + '</dd>' : '' ) +
 						'</dl>' +
 						( group.sharedQr ? qrListHtml( group.sharedQr, 'order-' + slug( state.order.number ) + '-' + slug( group.name ) + '-qr', state ) : '' ) +
 					'</div>' +
-					'<div class="ypn-ds__rows" style="--cols:' + Math.max( 1, group.columns.length ) + '">' +
+					'<div class="ypn-ds__rows" style="--cols:' + Math.max( 1, group.columns.length ) + ( layout ? ';--tpl:' + escAttr( layout.tpl ) + ';--minw:' + layout.minWidth + 'px' : '' ) + '">' +
 						'<div class="ypn-ds__row ypn-ds__head"><span></span><span>#</span><span class="ypn-ds__cells">' + cols + '</span><span class="ypn-ds__q">Qty</span></div>' +
 						( hiddenDone ? '<button type="button" class="ypn-ds__donebar" data-ypn-ds-showdone><i class="ypn-ds__ck" aria-hidden="true"></i>' + hiddenDone + ' designed · show</button>' : '' ) +
 						rows.map( function ( l ) { return rowHtml( group, l, state ); } ).join( '' ) +

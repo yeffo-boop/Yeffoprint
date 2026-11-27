@@ -3181,13 +3181,15 @@ body.yp-next .ypn-note-add textarea {
 .ypn-ds__rows {
 	padding: 4px 10px 8px;
 	min-width: 0;
+	overflow-x: auto;
 }
 
 .ypn-ds__row {
 	display: grid;
-	grid-template-columns: 24px 28px minmax(0, 1.6fr) 56px minmax(0, 1fr);
+	grid-template-columns: 24px 28px minmax(0, 1fr) 56px;
 	align-items: center;
 	gap: 6px 12px;
+	min-width: var(--minw, 0);
 	padding: 8px;
 	border-bottom: 1px solid #f2f0eb;
 }
@@ -3208,9 +3210,20 @@ body.yp-next .ypn-note-add textarea {
 
 .ypn-ds__cells {
 	display: grid;
-	grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+	grid-template-columns: var(--tpl, repeat(var(--cols, 1), minmax(0, 1fr)));
 	gap: 12px;
 	min-width: 0;
+	font-size: 14px;
+}
+
+.ypn-ds__head .ypn-ds__cells {
+	font-size: 11px;
+	align-items: end;
+}
+
+.ypn-ds__head .ypn-ds__cells > span {
+	overflow-wrap: normal;
+	word-break: normal;
 }
 
 .ypn-ds__cell {
@@ -3236,6 +3249,7 @@ body.yp-next .ypn-note-add textarea {
 }
 
 .ypn-ds__ex {
+	grid-column: 3 / -1;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
@@ -3276,7 +3290,7 @@ body.yp-next .ypn-note-add textarea {
 	font-weight: 700;
 	text-align: left;
 	cursor: copy;
-	overflow-wrap: anywhere;
+	overflow-wrap: break-word;
 }
 
 .ypn-ds__cp::after {
@@ -3636,7 +3650,12 @@ body.yp-next .ypn-note-add textarea {
 
 	.ypn-ds__row {
 		grid-template-columns: 24px minmax(0, 1fr) auto;
+		min-width: 0;
 		padding: 9px 6px;
+	}
+
+	.ypn-ds__rows {
+		overflow-x: visible;
 	}
 
 	.ypn-ds__n,
@@ -3679,6 +3698,11 @@ body.yp-next .ypn-note-add textarea {
 		justify-content: flex-start;
 		font-size: 13px;
 		color: var(--ypn-mute);
+	}
+
+	/* Blank extra fields ("—") just take up lines on a phone. */
+	.ypn-ds__cell:nth-child(n+3):has(> .ypn-ds__none:only-child) {
+		display: none;
 	}
 }
 
