@@ -116,19 +116,70 @@ class YeffoPrint_Admin_Next_Controller {
 		] );
 
 		$cards = array_map( [ $this, 'card_payload' ], array_merge( $open, $shipped ) );
+		$cards = self::link_addon_groups( $cards );
 
 		// Express orders first in every column, oldest first after that.
+		// An add-on sorts by its original order (same box), so it sits
+		// right under it instead of further down the column.
 		usort( $cards, static function ( array $a, array $b ): int {
-			if ( $a['express'] !== $b['express'] ) {
-				return $a['express'] ? -1 : 1;
+			if ( $a['sort_express'] !== $b['sort_express'] ) {
+				return $a['sort_express'] ? -1 : 1;
 			}
-			return strcmp( (string) $a['date'], (string) $b['date'] );
+			return strcmp( (string) $a['sort_date'], (string) $b['sort_date'] )
+				?: strcmp( (string) $a['date'], (string) $b['date'] );
 		} );
 
 		return rest_ensure_response( [
 			'orders'       => $cards,
 			'shipped_days' => self::SHIPPED_DAYS,
 		] );
+	}
+
+	/**
+	 * Direct report: an add-on order (YeffoPrint_Order_Addon) sat lower on
+	 * the board as a separate card with nothing tying it to the original,
+	 * so its labels were never made before the original's label was
+	 * bought. Gives every card in a group 'linked' (the other cards in it)
+	 * and the original's sort position. Grouped among the fetched cards
+	 * only: a group's orders are all open or recently shipped together.
+	 *
+	 * @param array<int, array<string, mixed>> $cards
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function link_addon_groups( array $cards ): array {
+		$by_id  = [];
+		$groups = [];
+		foreach ( $cards as $card ) {
+			$by_id[ $card['id'] ]         = $card;
+			$groups[ $card['root_id'] ][] = $card['id'];
+		}
+
+		foreach ( $cards as $i => $card ) {
+			$root = $by_id[ $card['root_id'] ] ?? $card;
+
+			$cards[ $i ]['sort_express'] = $card['express'] || $root['express'];
+			$cards[ $i ]['sort_date']    = $root['date'];
+			$cards[ $i ]['linked']       = [];
+			foreach ( $groups[ $card['root_id'] ] as $id ) {
+				if ( $id === $card['id'] ) {
+					continue;
+				}
+				$other = $by_id[ $id ];
+				$cards[ $i ]['linked'][] = [
+					'id'            => $other['id'],
+					'number'        => $other['number'],
+					'role'          => $other['id'] === $card['root_id'] ? 'original' : 'add-on',
+					'column'        => $other['column'],
+					'status_label'  => $other['status_label'],
+					'label_summary' => $other['label_summary'],
+				];
+			}
+		}
+
+		return array_map( static function ( array $card ): array {
+			unset( $card['root_id'] );
+			return $card;
+		}, $cards );
 	}
 
 	private function card_payload( \WC_Order $order ): array {
@@ -158,6 +209,8 @@ class YeffoPrint_Admin_Next_Controller {
 		return [
 			'id'             => $order->get_id(),
 			'number'         => $order->get_order_number(),
+			// Add-on group (link_addon_groups()); removed before it's sent.
+			'root_id'        => class_exists( 'YeffoPrint_Order_Addon' ) ? YeffoPrint_Order_Addon::root_id_for( $order ) : $order->get_id(),
 			'status'         => $status,
 			'status_label'   => wc_get_order_status_name( $status ),
 			'column'         => $column,

@@ -71,6 +71,56 @@ class YeffoPrint_Order_Addon_Shipping {
 		return array_values( array_unique( $ids ) );
 	}
 
+	/** Statuses where an order in a group no longer counts: it won't be made or shipped. */
+	private const DEAD_STATUSES = [ 'cancelled', 'refunded', 'failed', 'trash', 'checkout-draft' ];
+
+	/**
+	 * Direct report: "I didn't see the second order in the list and
+	 * didn't know it existed because I prepped the first order and didn't
+	 * see any mention of a second order, so went right to shipping."
+	 * Every other live order in $order's add-on group, for the order page,
+	 * Ship screen and production view banners.
+	 *
+	 * 'needs_printing' — paid, still Processing (not sent to the printer):
+	 * its labels haven't been made yet but it will go in this box.
+	 * 'unpaid' — won't ship with the box until it's paid.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function linked_payload( \WC_Order $order ): array {
+		$ids = self::group_ids( $order );
+		if ( count( $ids ) < 2 ) {
+			return [];
+		}
+
+		$root_id = $ids[0];
+		$rows    = [];
+		foreach ( $ids as $id ) {
+			if ( $id === $order->get_id() ) {
+				continue;
+			}
+			$other = wc_get_order( $id );
+			if ( ! $other instanceof \WC_Order || in_array( $other->get_status(), self::DEAD_STATUSES, true ) ) {
+				continue;
+			}
+			$status = $other->get_status();
+			$unpaid = in_array( $status, [ 'pending', 'on-hold' ], true );
+			$rows[] = [
+				'id'             => $other->get_id(),
+				'number'         => $other->get_order_number(),
+				'status'         => $status,
+				'status_label'   => wc_get_order_status_name( $status ),
+				'role'           => $id === $root_id ? 'original' : 'add-on',
+				'unpaid'         => $unpaid,
+				'needs_printing' => 'processing' === $status,
+				'label_summary'  => class_exists( 'YeffoPrint_Order_Label_Count' ) ? YeffoPrint_Order_Label_Count::summary( $other ) : '',
+				'designed'       => class_exists( 'YeffoPrint_Order_Design_Sheet' ) ? YeffoPrint_Order_Design_Sheet::progress( $other ) : null,
+			];
+		}
+
+		return $rows;
+	}
+
 	/**
 	 * Every other order that went out in the same box as $order.
 	 *

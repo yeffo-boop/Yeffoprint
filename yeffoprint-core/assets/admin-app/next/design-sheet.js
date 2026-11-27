@@ -419,6 +419,8 @@
 						'</div>' +
 					'</div>' +
 					'<div class="ypn-ds__body">' +
+						// Add-on orders going in the same box (next.js).
+						( YP.next && YP.next.linkedOrdersHtml ? YP.next.linkedOrdersHtml( order, 'sheet' ) : '' ) +
 						( labels.length
 							? ( labels.length === done ? '<div class="ypn-ds__alldone">All ' + labels.length + ' labels designed. Nice work.</div>' : '' ) +
 								state.groups.map( function ( g, i ) { return groupHtml( g, i, state ); } ).join( '' )
@@ -630,7 +632,7 @@
 			if ( orderLink && window.opener && ! window.opener.closed ) {
 				// Opened from the order page: show the order there, keep this window as it is.
 				try {
-					window.opener.location.hash = '#/order/' + id;
+					window.opener.location.hash = '#/order/' + ( parseInt( orderLink.getAttribute( 'data-ypn-ds-order' ), 10 ) || id );
 					window.opener.focus();
 					e.preventDefault();
 				} catch ( err ) {}

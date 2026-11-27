@@ -635,7 +635,10 @@ class YeffoPrint_Admin_Order_Controller {
 			'label_summary'        => YeffoPrint_Order_Label_Count::summary( $order ),
 			// {done, total} labels checked off on the production screen, or null.
 			'designed'             => YeffoPrint_Order_Design_Sheet::progress( $order ),
-			'subtotal'             => (float) $order->get_subtotal(),
+			// The other orders in this add-on group (same box): banners on
+			// the order page, Ship screen and production view.
+			'linked_orders'        => YeffoPrint_Order_Addon_Shipping::linked_payload( $order ),
+			'subtotal'           => (float) $order->get_subtotal(),
 			'shipping_total'       => (float) $order->get_shipping_total(),
 			'discount_total'       => (float) $order->get_discount_total(),
 			'total_tax'            => (float) $order->get_total_tax(),
